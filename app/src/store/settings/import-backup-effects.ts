@@ -19,11 +19,9 @@ import {
 } from '@/models/feed-models';
 import { deserializeDatabaseAsync } from 'expo-sqlite';
 import { drizzle } from 'drizzle-orm/expo-sqlite';
-import { eq } from 'drizzle-orm';
 import { DatabaseMigrationService } from '@/services/database-migration-service';
 import { FeedBackupData } from '@/models/backup';
 import {
-  dataMigrationsSchema,
   exercisesSchema,
   feedFollowedUsersSchema,
   feedFollowerUsersSchema,
@@ -34,7 +32,7 @@ import {
   programsSchema,
   sessionsSchema,
 } from '@/db/schema';
-import { migrateNilWeightUnitsDataMigration } from '@/services/data-migrations/migrate-nil-weight-units';
+import { coalesceNilWeights } from '@/services/data-migrations/migrate-nil-weight-units';
 import { toRecord } from '@/utils/reduce';
 import {
   followRequestInboxMessageMigrations,
@@ -83,8 +81,16 @@ export function addImportBackupEffects(addEffect: AddEffectFn) {
     }
   });
 
-  addEffect(importBackupData, async ({ payload }, { dispatch, extra: { db, databaseMigrationService } }) => {
-    const { workouts, programs, exercises, feed, successMessage } = payload;
+  addEffect(importBackupData, async ({ payload }, { dispatch, getState }) => {
+    const { programs, exercises, feed, successMessage } = payload;
+    // Old backups can hold weights with no unit. Settle them before anything is stored: re-running the
+    // nil-weight data migration afterwards raced the upsert's write, so a slow write kept its nil units.
+    const preferredUnit = getState().settings.useImperialUnits ? 'pounds' : 'kilograms';
+    const workouts = payload.workouts.map((session) => {
+      const json = session.toJSON();
+      const coalesced = coalesceNilWeights(json, preferredUnit);
+      return coalesced === json ? session : Session.fromJSON(coalesced);
+    });
     dispatch(upsertStoredSessions(workouts));
     dispatch(upsertSavedPlans(programs));
     if (exercises) {
@@ -95,9 +101,6 @@ export function addImportBackupEffects(addEffect: AddEffectFn) {
         text: successMessage,
       }),
     );
-    // Let the data migration re-run on next launch so imported nil-unit weights get coalesced
-    await db.delete(dataMigrationsSchema).where(eq(dataMigrationsSchema.id, migrateNilWeightUnitsDataMigration));
-    await databaseMigrationService.migrate();
     if (feed) {
       dispatch(beginFeedImport(feed));
     }

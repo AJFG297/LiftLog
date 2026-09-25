@@ -1,7 +1,7 @@
 import { ExpoSQLiteDatabase } from 'drizzle-orm/expo-sqlite';
 import { eq } from 'drizzle-orm';
 import { dataMigrationsSchema, sessionsSchema } from '@/db/schema';
-import { RecordedExerciseJSON } from '@/models/storage/versions/latest';
+import { RecordedExerciseJSON, SessionJSON } from '@/models/storage/versions/latest';
 import { PreferenceService } from '../preference-service';
 import { sessionMigrations } from '@/models/storage/versions/migrations/session';
 
@@ -14,29 +14,32 @@ export async function migrateNilWeightUnits(db: ExpoSQLiteDatabase, preferenceSe
     const sessions = await tx.select().from(sessionsSchema);
     for (const row of sessions) {
       const session = sessionMigrations.migrate(row.payload);
-      let hasNilWeight = false;
-      const recordedExercises = session.recordedExercises.map((ex): RecordedExerciseJSON => {
-        if (ex.type !== 'RecordedWeightedExercise') {
-          return ex;
-        }
-        return {
-          ...ex,
-          potentialSets: ex.potentialSets.map((ps) => {
-            if (ps.weight.unit !== 'nil') {
-              return ps;
-            }
-            hasNilWeight = true;
-            return { ...ps, weight: { unit: preferredUnit, value: ps.weight.value } };
-          }),
-        };
-      });
-      if (hasNilWeight) {
-        await tx
-          .update(sessionsSchema)
-          .set({ payload: { ...session, recordedExercises } })
-          .where(eq(sessionsSchema.id, session.id));
+      const coalesced = coalesceNilWeights(session, preferredUnit);
+      if (coalesced !== session) {
+        await tx.update(sessionsSchema).set({ payload: coalesced }).where(eq(sessionsSchema.id, session.id));
       }
     }
     await tx.insert(dataMigrationsSchema).values({ id: migrateNilWeightUnitsDataMigration });
   });
+}
+
+/** Gives unit-less weights the user's unit. Returns the same object when there were none. */
+export function coalesceNilWeights(session: SessionJSON, preferredUnit: 'kilograms' | 'pounds'): SessionJSON {
+  let hasNilWeight = false;
+  const recordedExercises = session.recordedExercises.map((ex): RecordedExerciseJSON => {
+    if (ex.type !== 'RecordedWeightedExercise') {
+      return ex;
+    }
+    return {
+      ...ex,
+      potentialSets: ex.potentialSets.map((ps) => {
+        if (ps.weight.unit !== 'nil') {
+          return ps;
+        }
+        hasNilWeight = true;
+        return { ...ps, weight: { unit: preferredUnit, value: ps.weight.value } };
+      }),
+    };
+  });
+  return hasNilWeight ? { ...session, recordedExercises } : session;
 }
