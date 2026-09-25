@@ -9,10 +9,28 @@ function localeUsesComma(): boolean {
 }
 
 export function localeParseBigNumber(numStr: string): BigNumber {
-  if (localeUsesComma()) {
-    return new BigNumber(numStr.replace('.', '').replace(',', '.'));
+  return parseDecimal(numStr, localeUsesComma());
+}
+
+/**
+ * Parses user-typed decimals leniently: keyboards don't always match the locale, so either `.` or `,` is
+ * accepted as the decimal separator. Group separators our own formatting emits (space for comma locales,
+ * `,` for dot locales) are stripped, so a formatted value seeded into an editor still parses.
+ */
+export function parseDecimal(numStr: string, usesComma: boolean): BigNumber {
+  const str = numStr.replace(/\s/g, '');
+  const lastDot = str.lastIndexOf('.');
+  const lastComma = str.lastIndexOf(',');
+  if (lastDot !== -1 && lastComma !== -1) {
+    // Both present: whichever comes last is the decimal separator, the other is grouping.
+    const [group, decimal] = lastDot > lastComma ? [',', '.'] : ['.', ','];
+    return new BigNumber(str.replaceAll(group, '').replace(decimal, '.'));
   }
-  return new BigNumber(numStr);
+  if (lastComma !== -1 && !usesComma && /^-?\d{1,3}(,\d{3})+$/.test(str)) {
+    // Dot locales format thousands as `1,000`.
+    return new BigNumber(str.replaceAll(',', ''));
+  }
+  return new BigNumber(str.replace(',', '.'));
 }
 
 export function localeFormatBigNumber(num: BigNumber | undefined, decimalPlaces?: number): string {

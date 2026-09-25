@@ -21,32 +21,48 @@ setNotificationHandler({
 
 const nextSetNotificationIdentifier = '1000';
 export class NotificationService {
+  // Each call is several native round trips, and set edits can fire them in quick succession. Unless
+  // they run one at a time, one call's cancel can land after another's schedule and drop the rest
+  // notification entirely.
+  private queue: Promise<void> = Promise.resolve();
+
   constructor(
     readonly getState: () => RootState,
     readonly dispatch: Dispatch,
   ) {}
 
-  async scheduleNextSetNotification(time: OffsetDateTime) {
-    await this.clearSetTimerNotification();
-
-    await requestPermissionsAsync();
-
-    await scheduleNotificationAsync({
-      content: {
-        title: 'Rest Over',
-        body: 'Start your next set!',
-        sound: true,
-      },
-      trigger: {
-        type: SchedulableTriggerInputTypes.DATE,
-        date: convert(time.toInstant()).toDate(),
-      },
-      identifier: nextSetNotificationIdentifier,
+  scheduleNextSetNotification(time: OffsetDateTime) {
+    return this.enqueue(async () => {
+      await this.clear();
+      await requestPermissionsAsync();
+      await scheduleNotificationAsync({
+        content: {
+          title: 'Rest Over',
+          body: 'Start your next set!',
+          sound: true,
+        },
+        trigger: {
+          type: SchedulableTriggerInputTypes.DATE,
+          date: convert(time.toInstant()).toDate(),
+        },
+        identifier: nextSetNotificationIdentifier,
+      });
     });
   }
 
-  async clearSetTimerNotification() {
+  clearSetTimerNotification() {
+    return this.enqueue(() => this.clear());
+  }
+
+  private async clear() {
     await cancelScheduledNotificationAsync(nextSetNotificationIdentifier);
     await dismissNotificationAsync(nextSetNotificationIdentifier);
+  }
+
+  private enqueue(op: () => Promise<void>): Promise<void> {
+    const result = this.queue.then(op);
+    // A failed call shouldn't wedge every later one.
+    this.queue = result.catch(() => {});
+    return result;
   }
 }
