@@ -1,0 +1,40 @@
+appId: com.limajuice.liftlog
+---
+# Readiness gate: gets from a cold launch to the Workout tab, clearing the first-run welcome wizard if
+# it is up. Run after every `verify.sh up`; it is safe to re-run on an already-onboarded install.
+- launchApp
+# First bundle of a fresh Metro can take well over a minute
+- extendedWaitUntil:
+    visible: 'Next|Workout|Continue'
+    timeout: 180000
+# A fresh install of the dev client opens its developer-menu intro sheet over the app once
+- runFlow:
+    when:
+      visible: 'This is the developer menu.*'
+    commands:
+      - tapOn: 'Continue'
+# ...and "Continue" leaves the full dev menu open on top of the app; back closes it
+- runFlow:
+    when:
+      visible: 'Toggle performance monitor'
+    commands:
+      - back
+- extendedWaitUntil:
+    visible: 'Next|Workout'
+    timeout: 30000
+- repeat:
+    while:
+      visible: '^Next$'
+    times: 5
+    commands:
+      - tapOn: '^Next$'
+- runFlow:
+    when:
+      visible: 'Get started'
+    commands:
+      - tapOn: 'Get started'
+# Matching is case-insensitive by default; `(?-i)` keeps this off the "Freeform Workout" plan cards.
+- extendedWaitUntil:
+    visible: '(?-i)Freeform workout'
+    timeout: 30000
+- takeScreenshot: ready
