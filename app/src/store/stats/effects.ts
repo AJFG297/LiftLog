@@ -2,7 +2,13 @@ import { setOverallViewTime, setStatsIsDirty } from './index';
 import { LocalDate } from '@js-joda/core';
 import { fetchOverallStats, setOverallStats } from './index';
 import { AddEffectFn } from '@/store/store';
-import { selectSessionsBy } from '@/store/stored-sessions';
+import {
+  deleteStoredSession,
+  putStoredSession,
+  selectSessionsBy,
+  updateStoredSession,
+  upsertStoredSessions,
+} from '@/store/stored-sessions';
 
 import { sleep } from '@/utils/sleep';
 import { RemoteData } from '@/models/remote';
@@ -42,6 +48,26 @@ export function applyStatsEffects(addEffect: AddEffectFn) {
       dispatch(setOverallStats(RemoteData.error(e)));
     }
   });
+
+  // Stats cover finished sessions only, so a set recorded in the workout in progress changes nothing and
+  // is skipped here; `sessionFinished` marks them stale when that workout ends.
+  addEffect(
+    [putStoredSession, updateStoredSession, upsertStoredSessions, deleteStoredSession],
+    async (action, { dispatch, stateAfterReduce }) => {
+      if (stateAfterReduce.stats.isDirty) {
+        return;
+      }
+      const sessionId = putStoredSession.match(action)
+        ? action.payload.id
+        : updateStoredSession.match(action)
+          ? action.payload.sessionId
+          : undefined;
+      if (sessionId !== undefined && sessionId === stateAfterReduce.storedSessions.activeSessionId) {
+        return;
+      }
+      dispatch(setStatsIsDirty(true));
+    },
+  );
 
   addEffect(setOverallViewTime, async (_, { dispatch }) => {
     dispatch(setStatsIsDirty(true));
