@@ -123,14 +123,6 @@ export class RecordedWeightedExercise {
     );
   }
 
-  getWarmupSet(index: number): PotentialSet {
-    const set = this.warmupSets[index];
-    if (!set) {
-      throw new IndexOutOfBoundsError(index, this.warmupSets);
-    }
-    return set;
-  }
-
   /** The slot at `position`, or undefined when there is none there. */
   slotAt(position: SetPosition): PotentialSet | undefined {
     return (position.kind === 'warmup' ? this.warmupSets : this.potentialSets)[position.index];
@@ -143,25 +135,6 @@ export class RecordedWeightedExercise {
   previousPerformanceIn(candidates: readonly RecordedWeightedExercise[]): RecordedWeightedExercise | undefined {
     const key = this.progressionKey();
     return candidates.find((x) => x.progressionKey() === key);
-  }
-
-  /**
-   * What the warm-up at `index` came to last time, matched by position within `previous`, for the
-   * faint hint on an unlogged warm-up. `weight` is left out when there's no load worth showing: a
-   * movement with no resistance, or plain bodyweight.
-   */
-  previousWarmupHint(
-    index: number,
-    previous: RecordedWeightedExercise | undefined,
-  ): { reps: number; weight: Weight | undefined } | undefined {
-    const slot = previous?.warmupSets[index];
-    if (!slot?.set) {
-      return undefined;
-    }
-    const showsWeight =
-      this.blueprint.resistance === 'external' ||
-      (this.blueprint.resistance === 'bodyweight' && !slot.weight.value.isZero());
-    return { reps: slot.set.repsCompleted, weight: showsWeight ? slot.weight : undefined };
   }
 
   /** The plan's percentage for the warm-up at `index`, when it is a share of the working weight. */
@@ -417,16 +390,14 @@ export class RecordedWeightedExercise {
     return this.lastLoggedSlot?.kind === 'warmup' ? { ...rest, maxRest: rest.minRest } : rest;
   }
 
-  /** The most recently logged slot, warm-ups included - it is what timing reads. */
-  get lastRecordedSet(): PotentialSet | undefined {
-    return this.lastLoggedSlot?.slot;
-  }
-
-  /** The earliest logged slot, warm-ups included. */
-  get firstRecordedSet(): PotentialSet | undefined {
+  /**
+   * The most recently logged working set. What measures the lift - a stat's date - reads this rather
+   * than {@link lastLoggedSlot}, so a warm-up done after the working sets never moves it.
+   */
+  get lastLoggedWorkingSet(): PotentialSet | undefined {
     let best: PotentialSet | undefined;
-    for (const { slot } of this.loggedSlots()) {
-      if (!best || slot.set!.completionDateTime.isBefore(best.set!.completionDateTime)) best = slot;
+    for (const slot of this.potentialSets) {
+      if (slot.set && (!best || slot.set.completionDateTime.isAfter(best.set!.completionDateTime))) best = slot;
     }
     return best;
   }
@@ -455,12 +426,19 @@ export class RecordedWeightedExercise {
     return this.latestTime && this.earliestTime ? Duration.between(this.earliestTime, this.latestTime) : undefined;
   }
 
+  /** When the last set was logged, warm-ups included: timing (rest, duration, Health) reads it. */
   get latestTime(): OffsetDateTime | undefined {
-    return this.lastRecordedSet?.set?.completionDateTime;
+    return this.lastLoggedSlot?.slot.set!.completionDateTime;
   }
 
+  /** When the first set was logged, warm-ups included. */
   get earliestTime(): OffsetDateTime | undefined {
-    return this.firstRecordedSet?.set?.completionDateTime;
+    let earliest: OffsetDateTime | undefined;
+    for (const { slot } of this.loggedSlots()) {
+      const time = slot.set!.completionDateTime;
+      if (!earliest || time.isBefore(earliest)) earliest = time;
+    }
+    return earliest;
   }
 
   /** Complete once every working set is logged; a skipped warm-up never holds an exercise open. */

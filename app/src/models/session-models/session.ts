@@ -1,7 +1,8 @@
 import {
   CardioExerciseBlueprint,
   ExerciseBlueprint,
-  plannedWarmupSetsEqual,
+  plannedWarmupSetEqual,
+  PlannedWarmupSet,
   repsTargetsEqual,
   SessionBlueprint,
   WeightedExerciseBlueprint,
@@ -328,24 +329,6 @@ export class Session {
     });
   }
 
-  /** See {@link withCycledExerciseReps}; the same tap, on a warm-up. */
-  withCycledWarmupReps(exerciseIndex: number, warmupIndex: number, time: OffsetDateTime): Session {
-    const weightedRecorded = this.recordedExercises[exerciseIndex];
-    if (!weightedRecorded) {
-      throw new IndexOutOfBoundsError(exerciseIndex, this.recordedExercises);
-    }
-    if (weightedRecorded.type !== 'RecordedWeightedExercise') {
-      return this;
-    }
-    return this.with({
-      date: this.isStarted ? this.date : time.toLocalDate(),
-      recordedExercises: this.recordedExercises.with(
-        exerciseIndex,
-        weightedRecorded.withCycledWarmupRepCount(warmupIndex, time),
-      ),
-    });
-  }
-
   withExercise(exerciseIndex: number, exercise: RecordedExercise): Session {
     return this.with({
       recordedExercises: this.recordedExercises.with(exerciseIndex, exercise),
@@ -402,6 +385,14 @@ export class Session {
 
   get isStarted(): boolean {
     return this.recordedExercises.some((x) => x.isStarted);
+  }
+
+  /**
+   * Whether anything that counts was logged. A session where only warm-ups got done is started, but
+   * it isn't a training day: the calendar, its intensity and the streak all ask this instead.
+   */
+  get hasLoggedWorkingSet(): boolean {
+    return this.recordedExercises.some((x) => x.hasLoggedWorkingSet);
   }
 
   get runningCardioSet():
@@ -582,25 +573,75 @@ export class Session {
 }
 
 /**
- * The warm-up slots after an in-workout edit to the plan. A warm-up the edit left alone keeps its
- * slot, logged reps and any session-only weight change included; one it added or changed gets a
- * fresh slot from the new plan, unless it was already logged.
+ * The warm-up slots after an in-workout edit to the plan. Each new warm-up is lined up with the one
+ * it was before the edit (see {@link alignWarmupPlans}), so removing an earlier warm-up doesn't hand
+ * its slot to the next one. A warm-up the edit left alone keeps its slot, logged reps and any
+ * session-only weight change included; a changed one keeps its slot only if it was already logged;
+ * an added one gets a fresh slot from the new plan.
  */
 function withWarmupsForEditedPlan(
   exercise: RecordedWeightedExercise,
   blueprintBefore: WeightedExerciseBlueprint,
   fallbackUnit: WeightUnit,
 ): RecordedWeightedExercise {
+  const planned = exercise.blueprint.warmupSets;
+  const before = alignWarmupPlans(blueprintBefore.warmupSets, planned);
   return exercise.with({
-    warmupSets: exercise.blueprint.warmupSets.map((planned, index) => {
-      const existing = exercise.warmupSets.at(index);
-      const plannedBefore = blueprintBefore.warmupSets.at(index);
-      if (existing && (existing.set || (plannedBefore && plannedWarmupSetsEqual([planned], [plannedBefore])))) {
-        return existing;
+    warmupSets: planned.map((warmup, index) => {
+      const beforeIndex = before[index];
+      if (beforeIndex !== undefined) {
+        const existing = exercise.warmupSets[beforeIndex];
+        const plannedBefore = blueprintBefore.warmupSets[beforeIndex];
+        if (existing && (existing.set || (plannedBefore && plannedWarmupSetEqual(warmup, plannedBefore)))) {
+          return existing;
+        }
       }
-      return exercise.warmupSlotFor(planned, fallbackUnit);
+      return exercise.warmupSlotFor(warmup, fallbackUnit);
     }),
   });
+}
+
+/**
+ * For each warm-up in `after`, the index it had in `before`, or undefined for one the edit added. The
+ * longest run of warm-ups left unchanged anchors the match; between two anchors, warm-ups pair up in
+ * order as edits of each other, and whatever is left over on either side was added or removed.
+ */
+function alignWarmupPlans(before: PlannedWarmupSet[], after: PlannedWarmupSet[]): (number | undefined)[] {
+  // lcs[i][j]: the longest common run of before[i..] and after[j..].
+  const lcs = Array.from({ length: before.length + 1 }, () => Array.from({ length: after.length + 1 }, () => 0));
+  for (let i = before.length - 1; i >= 0; i--) {
+    for (let j = after.length - 1; j >= 0; j--) {
+      lcs[i]![j] = plannedWarmupSetEqual(before[i]!, after[j]!)
+        ? lcs[i + 1]![j + 1]! + 1
+        : Math.max(lcs[i + 1]![j]!, lcs[i]![j + 1]!);
+    }
+  }
+  const anchors: [number, number][] = [];
+  for (let i = 0, j = 0; i < before.length && j < after.length; ) {
+    if (plannedWarmupSetEqual(before[i]!, after[j]!)) {
+      anchors.push([i++, j++]);
+    } else if (lcs[i + 1]![j]! >= lcs[i]![j + 1]!) {
+      i++;
+    } else {
+      j++;
+    }
+  }
+  anchors.push([before.length, after.length]);
+
+  const result = Array.from<number | undefined>({ length: after.length });
+  let i = 0;
+  let j = 0;
+  for (const [anchorBefore, anchorAfter] of anchors) {
+    for (; i < anchorBefore && j < anchorAfter; i++, j++) {
+      result[j] = i;
+    }
+    if (anchorAfter < after.length) {
+      result[anchorAfter] = anchorBefore;
+    }
+    i = anchorBefore + 1;
+    j = anchorAfter + 1;
+  }
+  return result;
 }
 
 export const EmptySession: Session = new Session(

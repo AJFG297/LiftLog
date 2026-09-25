@@ -72,6 +72,26 @@ describe('calculateStreak', () => {
     expect(stats.target).toBe(1);
   });
 
+  it('does not count a day where only warm-ups were logged', () => {
+    const trained = sessionOn(TODAY.minusDays(1), 'trained');
+    const [exercise] = trained.recordedExercises as RecordedWeightedExercise[];
+    const warmupsOnly = trained.with({
+      id: 'warmups',
+      date: TODAY,
+      recordedExercises: [
+        exercise!.with({
+          potentialSets: exercise!.potentialSets.map((ps) => ps.with({ set: undefined })),
+          warmupSets: exercise!.potentialSets,
+        }),
+      ],
+    });
+
+    const stats = calculateStreak([trained, warmupsOnly], MONDAY, TODAY);
+
+    expect(stats.currentWeekCount).toBe(1);
+    expect(stats.workoutsLast7Days).toBe(1);
+  });
+
   it('counts the run of completed weeks that met the target', () => {
     // Target is the lower median of [3,3,3,3] = 3; all four completed weeks met it.
     const stats = calculateStreak(sessionsForWeeks(TODAY, [3, 3, 3, 3, 0]), MONDAY, TODAY);

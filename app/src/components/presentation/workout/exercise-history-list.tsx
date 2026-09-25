@@ -1,6 +1,7 @@
 import EmptyInfo from '@/components/presentation/foundation/empty-info';
 import { SurfaceText } from '@/components/presentation/foundation/surface-text';
 import { PotentialSetDisplay } from '@/components/presentation/workout/weighted/potential-set-display';
+import { warmupTileFor } from '@/components/presentation/workout/weighted/warmup-tile';
 import { CardioValueTile } from '@/components/presentation/workout/cardio/cardio-value-tile';
 import { rounding, spacing, useAppTheme } from '@/hooks/useAppTheme';
 import { useFormatDate } from '@/hooks/useFormatDate';
@@ -71,7 +72,7 @@ function WeightedSets(props: { exercise: RecordedWeightedExercise }) {
           set={set}
           repsTarget={set.target}
           resistance={exercise.blueprint.resistance}
-          warmup={{ percent: exercise.warmupPercentAt(index), previous: undefined }}
+          warmup={warmupTileFor(exercise, index)}
         />
       ))}
       {exercise.potentialSets.map((set, index) => (

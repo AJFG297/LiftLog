@@ -504,6 +504,19 @@ describe('calculateStats', () => {
       expect(squat.repsStatistics.breakdown).toEqual({ 5: { numberOfSets: 3 } });
     });
 
+    it('dates a session by its last working set, not a warm-up logged after it', () => {
+      const session = sessionWithWarmup(20);
+      const [exercise] = session.recordedExercises as RecordedWeightedExercise[];
+      const lastWorking = exercise!.potentialSets.at(-1)!.set!.completionDateTime;
+      const late = session.with({
+        recordedExercises: [exercise!.withWarmupRepCount(0, 8, lastWorking.plusMinutes(10))],
+      });
+
+      const squat = calculateStats([late], 'kilograms', makeRange(date, date.plusDays(6))).weightedExerciseStats[0]!;
+
+      expect(squat.maxLiftedPerSessionStatistics.statistics.map((x) => x.dateTime)).toEqual([lastWorking]);
+    });
+
     it('gives an exercise with only warm-ups logged no stats of its own', () => {
       const skipped = sessionWithWarmup(60, 'Deadlift');
       const [exercise] = skipped.recordedExercises as RecordedWeightedExercise[];

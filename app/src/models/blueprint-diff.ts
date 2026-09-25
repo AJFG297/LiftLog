@@ -1219,7 +1219,9 @@ export function getChangeLabelKey(change: DiffChange): TranslatableString {
 }
 
 function stringifyWarmupSets(t: UseTranslateResult['t'], warmups: PlannedWarmupSet[]): string {
-  return warmups.length ? formatPlannedWarmupSets(warmups) : t('plan.diff.warmup_sets_none.body');
+  return warmups.length
+    ? formatPlannedWarmupSets(warmups, (percent) => t('workout.warmup_set.percent.label', { percent }))
+    : t('plan.diff.warmup_sets_none.body');
 }
 
 function stringifyProgression(t: UseTranslateResult['t'], progression: ProgressionRule[]): string {

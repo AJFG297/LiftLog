@@ -250,6 +250,11 @@ export class RecordedCardioExercise {
     return this.sets.some((x) => !!x.completionDateTime);
   }
 
+  /** Cardio has no warm-ups, so this is {@link isStarted}. See {@link RecordedWeightedExercise.hasLoggedWorkingSet}. */
+  get hasLoggedWorkingSet(): boolean {
+    return this.isStarted;
+  }
+
   get latestTime(): OffsetDateTime | undefined {
     return this.sets
       .map((x) => x.completionDateTime)

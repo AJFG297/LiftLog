@@ -909,7 +909,7 @@ describe('warm-up changes', () => {
     expect(getChangeDescription(t, change!)).toBe(
       `plan.diff.generic_two_value_change.body ${JSON.stringify({
         oldValue: 'plan.diff.warmup_sets_none.body',
-        newValue: '50% × 5, 20kg × 5',
+        newValue: `workout.warmup_set.percent.label ${JSON.stringify({ percent: 50 })} × 5, 20kg × 5`,
       })}`,
     );
     expect(getChangeLabelKey(change!)).toEqual({ key: 'plan.diff.warmup_sets.label' });

@@ -53,7 +53,7 @@ describe('warm-up slots', () => {
     const reps = [];
     for (let i = 0; i < 5; i++) {
       exercise = exercise.withCycledWarmupRepCount(1, tick());
-      reps.push(exercise.getWarmupSet(1).set?.repsCompleted);
+      reps.push(exercise.warmupSets[1]!.set?.repsCompleted);
     }
     expect(reps).toEqual([3, 2, 1, 0, undefined]);
     expect(exercise.potentialSets.every((s) => !s.set)).toBe(true);
@@ -61,8 +61,8 @@ describe('warm-up slots', () => {
 
   it('take exact reps, and clear back to unlogged', () => {
     const logged = withWarmups().withWarmupRepCount(0, 8, tick());
-    expect(logged.getWarmupSet(0).set?.repsCompleted).toBe(8);
-    expect(logged.withWarmupRepCount(0, undefined, tick()).getWarmupSet(0).set).toBeUndefined();
+    expect(logged.warmupSets[0]!.set?.repsCompleted).toBe(8);
+    expect(logged.withWarmupRepCount(0, undefined, tick()).warmupSets[0]!.set).toBeUndefined();
   });
 
   it('change weight for the session only, leaving the plan alone', () => {
@@ -181,13 +181,6 @@ describe('Session with warm-ups', () => {
     expect(session.restTimerEndTime).toEqual(start.plus(makeWeightedBlueprint().restBetweenSets.minRest));
   });
 
-  it('dates the session from the first warm-up tap', () => {
-    const at = tickAt(9, 0).plusDays(3);
-    const session = sessionWith(withWarmups()).withCycledWarmupReps(0, 0, at);
-    expect(session.date).toEqual(at.toLocalDate());
-    expect(session.isStarted).toBe(true);
-  });
-
   it('round-trips warm-ups through JSON', () => {
     const session = sessionWith(withWarmups().withWarmupRepCount(0, 5, tick()));
     expect(Session.fromJSON(JSON.parse(JSON.stringify(session.toJSON())) as SessionJSON).equals(session)).toBe(true);
@@ -197,7 +190,7 @@ describe('Session with warm-ups', () => {
     const session = sessionWith(withWarmups().withWarmupRepCount(0, 5, tickAt(10, 0)));
     const moved = session.withUpdatedDate(LocalDate.of(2025, 5, 1));
     const exercise = moved.recordedExercises[0] as RecordedWeightedExercise;
-    expect(exercise.getWarmupSet(0).set?.completionDateTime.toLocalDate()).toEqual(LocalDate.of(2025, 5, 1));
+    expect(exercise.warmupSets[0]!.set?.completionDateTime.toLocalDate()).toEqual(LocalDate.of(2025, 5, 1));
   });
 
   it('gives a warm-up added in the workout editor a slot from the current working weight', () => {
@@ -223,6 +216,37 @@ describe('Session with warm-ups', () => {
       false,
     );
     expect(weights((edited.recordedExercises[0] as RecordedWeightedExercise).warmupSets)).toEqual([40]);
+  });
+
+  /** The exercise's warm-ups after replacing the plan's with `warmupSets` in the workout editor. */
+  function editWarmups(exercise: RecordedWeightedExercise, warmupSets: PlannedWarmupSet[]) {
+    const edited = sessionWith(exercise).withEditedExercise(0, exercise.blueprint.with({ warmupSets }), false);
+    return (edited.recordedExercises[0] as RecordedWeightedExercise).warmupSets;
+  }
+
+  it('drops the logged slot of an earlier warm-up that is removed, keeping the next one its own', () => {
+    const warmups = editWarmups(withWarmups().withWarmupRepCount(0, 5, tick()), [percent(70, 3)]);
+    expect(weights(warmups)).toEqual([70]);
+    expect(warmups[0]!.set).toBeUndefined();
+  });
+
+  it('keeps a later logged warm-up when an earlier one is removed', () => {
+    const warmups = editWarmups(withWarmups().withWarmupRepCount(1, 2, tick()), [percent(70, 3)]);
+    expect(weights(warmups)).toEqual([70]);
+    expect(warmups[0]!.set?.repsCompleted).toBe(2);
+  });
+
+  it('keeps each slot with its warm-up when one is inserted in front', () => {
+    const exercise = withWarmups().withWarmupRepCount(0, 5, tick()).withWarmupWeight(1, new Weight(65, 'kilograms'));
+    const warmups = editWarmups(exercise, [absolute(20), percent(50, 5), percent(70, 3)]);
+    expect(weights(warmups)).toEqual([20, 50, 65]);
+    expect(warmups.map((w) => w.set?.repsCompleted)).toEqual([undefined, 5, undefined]);
+  });
+
+  it('keeps a logged warm-up whose plan was changed, and rebuilds an unlogged one', () => {
+    const warmups = editWarmups(withWarmups().withWarmupRepCount(0, 5, tick()), [percent(55, 5), percent(80, 3)]);
+    expect(weights(warmups)).toEqual([50, 80]);
+    expect(warmups[0]!.set?.repsCompleted).toBe(5);
   });
 
   it('fills a nil warm-up weight with the fallback unit', () => {

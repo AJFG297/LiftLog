@@ -37,7 +37,7 @@ function countDistinctDaysByWeek(sessions: Session[], firstDayOfWeek: DayOfWeek)
   const byWeek = new Map<string, Set<string>>();
 
   for (const session of sessions) {
-    if (!session.isStarted) {
+    if (!session.hasLoggedWorkingSet) {
       continue;
     }
     const key = weekStart(session.date, firstDayOfWeek).toString();
@@ -75,7 +75,7 @@ export function calculateStreak(sessions: Session[], firstDayOfWeek: DayOfWeek, 
 
   const workoutsLast7Days = new Set(
     sessions
-      .filter((x) => x.isStarted && !x.date.isAfter(today) && x.date.isAfter(today.minusDays(7)))
+      .filter((x) => x.hasLoggedWorkingSet && !x.date.isAfter(today) && x.date.isAfter(today.minusDays(7)))
       .map((x) => x.date.toString()),
   ).size;
 

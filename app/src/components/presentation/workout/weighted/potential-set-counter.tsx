@@ -11,7 +11,8 @@ import { T } from '@tolgee/react';
 import Holdable from '@/components/presentation/foundation/holdable';
 import { Weight } from '@/models/weight';
 import PotentialSetAdditionalActionsDialog from '@/components/presentation/workout/weighted/potential-sets-addition-actions-dialog';
-import { PotentialSetDisplay, WarmupTile } from '@/components/presentation/workout/weighted/potential-set-display';
+import { PotentialSetDisplay } from '@/components/presentation/workout/weighted/potential-set-display';
+import { WarmupTile } from '@/components/presentation/workout/weighted/warmup-tile';
 import { RpePickerDialog } from '@/components/presentation/workout/weighted/rpe-picker';
 import { Rpe } from '@/models/session-models/rpe';
 

@@ -7,6 +7,7 @@ import ExerciseSection from '@/components/presentation/workout/exercise-section'
 import { OffsetDateTime } from '@js-joda/core';
 import { Updater } from '@/utils/types';
 import { SetPosition } from '@/models/session-models/recorded-weighted-exercise';
+import { warmupTileFor } from '@/components/presentation/workout/weighted/warmup-tile';
 
 interface WeightedExerciseProps {
   recordedExercise: RecordedWeightedExercise;
@@ -80,10 +81,7 @@ export default function WeightedExercise(props: WeightedExerciseProps) {
             toStartNext={setToStartNext?.kind === 'warmup' && setToStartNext.index === index}
             resistance={recordedExercise.blueprint.resistance}
             weightIncrement={recordedExercise.blueprint.weightIncrement}
-            warmup={{
-              percent: recordedExercise.warmupPercentAt(index),
-              previous: recordedExercise.previousWarmupHint(index, previous),
-            }}
+            warmup={warmupTileFor(recordedExercise, index, previous)}
           />
         ))}
         {recordedExercise.potentialSets.map((set, index) => (

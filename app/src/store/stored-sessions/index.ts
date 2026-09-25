@@ -1,4 +1,4 @@
-import { RecordedExercise, RecordedWeightedExercise, Session } from '@/models/session-models';
+import { RecordedExercise, Session } from '@/models/session-models';
 import { MovementKey, ProgressionKey } from '@/models/blueprint-models';
 import { LocalDate, OffsetDateTime, YearMonth, ZoneId } from '@js-joda/core';
 import { createAction, createSelector, createSlice, PayloadAction, WritableDraft } from '@reduxjs/toolkit';
@@ -206,7 +206,7 @@ function updateDerivatives(state: WritableDraft<StoredSessionState>, session: Se
   }
   session.recordedExercises.forEach((exercise) => {
     // Warm-ups alone are no performance to carry on from, though they do give the exercise a time.
-    if (!exercise.latestTime || (exercise instanceof RecordedWeightedExercise && !exercise.hasLoggedWorkingSet)) {
+    if (!exercise.latestTime || !exercise.hasLoggedWorkingSet) {
       return;
     }
     const key = exercise.progressionKey();

@@ -2,24 +2,16 @@ import { PotentialSet } from '@/models/session-models';
 import { formatRepsTarget, Resistance, RepsTarget } from '@/models/blueprint-models';
 import { ReactNode } from 'react';
 import { Text, View } from 'react-native';
-import WeightFormat from '@/components/presentation/foundation/weight-format';
+import WeightFormat, { formatWeightText } from '@/components/presentation/foundation/weight-format';
 import { font, rounding, spacing, useAppTheme } from '@/hooks/useAppTheme';
 import TouchableRipple from '@/components/presentation/foundation/touchable-ripple';
 import Icon from '@/components/presentation/foundation/icon';
 import { formatRpe, Rpe } from '@/models/session-models/rpe';
-import { Weight } from '@/models/weight';
+import { WarmupTile } from '@/components/presentation/workout/weighted/warmup-tile';
 import { WarmupBadge } from '@/components/presentation/workout/warmup-badge';
 import { useTranslate } from '@tolgee/react';
 
 export type PotentialSetSize = 'default' | 'compact';
-
-/** What makes a tile a warm-up's: it is muted, W-badged, and never has an RPE row. */
-export interface WarmupTile {
-  /** The plan's percentage of the working weight, shown under the weight. Undefined for any other load. */
-  percent: number | undefined;
-  /** Last session's same-position warm-up, hinted faintly until this one is logged. */
-  previous: { reps: number; weight: Weight | undefined } | undefined;
-}
 
 interface PotentialSetDisplayProps {
   set: PotentialSet;
@@ -95,7 +87,11 @@ export function PotentialSetDisplay(props: PotentialSetDisplayProps) {
       (warmup.previous.weight
         ? t('workout.warmup_set.previous.label', {
             reps: warmup.previous.reps,
-            weight: formatHintWeight(warmup.previous.weight, props.resistance, t('exercise.short_bodyweight.label')),
+            weight: formatWeightText(
+              warmup.previous.weight,
+              props.resistance === 'bodyweight',
+              t('exercise.short_bodyweight.label'),
+            ),
           })
         : `${warmup.previous.reps}`)
     : props.previousRepCount?.toString();
@@ -186,15 +182,6 @@ export function PotentialSetDisplay(props: PotentialSetDisplayProps) {
       )}
     </View>
   );
-}
-
-/** A bodyweight hint shows the added load the way the weight row does, `BW +10kg`. */
-function formatHintWeight(weight: Weight, resistance: Resistance, bodyweightLabel: string): string {
-  if (resistance !== 'bodyweight') {
-    return weight.shortLocaleFormat();
-  }
-  const sign = weight.value.isGreaterThan(0) ? '+' : '';
-  return `${bodyweightLabel} ${sign}${weight.shortLocaleFormat()}`;
 }
 
 /** A row under the reps (weight, RPE). The last one rounds off the bottom of the tile. */

@@ -3,6 +3,7 @@ import { shortFormatWeightUnit, Weight } from '@/models/weight';
 import { localeFormatBigNumber } from '@/utils/locale-bignumber';
 import { useTranslate } from '@tolgee/react';
 import { Text, TextStyle } from 'react-native';
+import BigNumber from 'bignumber.js';
 
 interface WeightFormatProps {
   weight: Weight | undefined;
@@ -32,10 +33,9 @@ export default function WeightFormat(props: WeightFormatProps) {
     if (!value || value.isZero()) {
       return <Text style={style}>{label}</Text>;
     }
-    const sign = value.isGreaterThan(0) ? '+' : '';
     return (
       <Text style={style}>
-        {label} {sign}
+        {bodyweightPrefix(label, value)}
         {localeFormatBigNumber(value)} <Text style={{ fontSize: 12 }}>{shortFormatWeightUnit(props.weight?.unit)}</Text>
       </Text>
     );
@@ -47,4 +47,23 @@ export default function WeightFormat(props: WeightFormatProps) {
       {weightDisplay} <Text style={{ fontSize: 12 }}>{shortFormatWeightUnit(props.weight?.unit)}</Text>
     </Text>
   );
+}
+
+/**
+ * {@link WeightFormat} as one plain string, for text that can't nest it (a translated template):
+ * `60kg`, or on bodyweight `BW`, `BW +10kg`, `BW -20kg`.
+ */
+export function formatWeightText(weight: Weight, usesBodyweight: boolean, bodyweightLabel: string): string {
+  if (!usesBodyweight) {
+    return weight.shortLocaleFormat();
+  }
+  if (weight.value.isZero()) {
+    return bodyweightLabel;
+  }
+  return `${bodyweightPrefix(bodyweightLabel, weight.value)}${weight.shortLocaleFormat()}`;
+}
+
+/** `BW +` before added load; a negative (assisted) load carries its own minus sign. */
+function bodyweightPrefix(label: string, value: BigNumber): string {
+  return `${label} ${value.isGreaterThan(0) ? '+' : ''}`;
 }

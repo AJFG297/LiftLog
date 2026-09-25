@@ -46,6 +46,8 @@ export interface CurrentExerciseDetails {
   setIndex: number;
 }
 
+// The same union as the domain's SetKind, declared again because this file is the worker's wire
+// contract: its schema and the generated Kotlin are built from it alone.
 export type CurrentSetKind = 'warmup' | 'working';
 
 export interface CardioTimerInfo {

@@ -832,21 +832,32 @@ export function warmupLoadsEqual(a: WarmupLoad | undefined, b: WarmupLoad | unde
   return b.type === 'absolute' && a.weight.equals(b.weight);
 }
 
-export function plannedWarmupSetsEqual(a: PlannedWarmupSet[], b: PlannedWarmupSet[]): boolean {
-  return a.length === b.length && a.every((w, i) => w.reps === b[i]!.reps && warmupLoadsEqual(w.load, b[i]!.load));
+export function plannedWarmupSetEqual(a: PlannedWarmupSet, b: PlannedWarmupSet): boolean {
+  return a.reps === b.reps && warmupLoadsEqual(a.load, b.load);
 }
 
-/** `50% × 5`, `20kg × 5`, or just `5` for reps only. */
-export function formatPlannedWarmupSet(warmup: PlannedWarmupSet): string {
+export function plannedWarmupSetsEqual(a: PlannedWarmupSet[], b: PlannedWarmupSet[]): boolean {
+  return a.length === b.length && a.every((w, i) => plannedWarmupSetEqual(w, b[i]!));
+}
+
+/**
+ * `50% × 5`, `20kg × 5`, or just `5` for reps only. `formatPercent` renders a percentage load, so the
+ * caller can use the same translated label the workout tile does.
+ */
+export function formatPlannedWarmupSet(warmup: PlannedWarmupSet, formatPercent: (percent: number) => string): string {
   if (!warmup.load) {
     return `${warmup.reps}`;
   }
-  const load = warmup.load.type === 'percent' ? `${warmup.load.percent}%` : warmup.load.weight.shortLocaleFormat();
+  const load =
+    warmup.load.type === 'percent' ? formatPercent(warmup.load.percent) : warmup.load.weight.shortLocaleFormat();
   return `${load} × ${warmup.reps}`;
 }
 
-export function formatPlannedWarmupSets(warmups: PlannedWarmupSet[]): string {
-  return warmups.map(formatPlannedWarmupSet).join(', ');
+export function formatPlannedWarmupSets(
+  warmups: PlannedWarmupSet[],
+  formatPercent: (percent: number) => string,
+): string {
+  return warmups.map((warmup) => formatPlannedWarmupSet(warmup, formatPercent)).join(', ');
 }
 
 /**

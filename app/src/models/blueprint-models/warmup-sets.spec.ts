@@ -86,9 +86,10 @@ describe('planned warm-ups on a weighted blueprint', () => {
   });
 
   it('formats a warm-up the way the plan reads it', () => {
-    expect(formatPlannedWarmupSet(percent(50))).toBe('50% × 5');
-    expect(formatPlannedWarmupSet(absolute(20, 3))).toBe('20kg × 3');
-    expect(formatPlannedWarmupSet(repsOnly(8))).toBe('8');
+    const asPercent = (value: number) => `${value}%`;
+    expect(formatPlannedWarmupSet(percent(50), asPercent)).toBe('50% × 5');
+    expect(formatPlannedWarmupSet(absolute(20, 3), asPercent)).toBe('20kg × 3');
+    expect(formatPlannedWarmupSet(repsOnly(8), asPercent)).toBe('8');
   });
 });
 
