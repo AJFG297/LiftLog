@@ -1,16 +1,19 @@
 package expo.modules.workoutworker.utils
 
+import com.limajuice.liftlog.AbsoluteWarmupLoad
 import com.limajuice.liftlog.AllSetsScope
 import com.limajuice.liftlog.CardioExerciseBlueprint
 import com.limajuice.liftlog.CardioTarget
 import com.limajuice.liftlog.DistanceCardioTarget
 import com.limajuice.liftlog.FinishWorkoutCommand
 import com.limajuice.liftlog.LowestSetsScope
+import com.limajuice.liftlog.PercentWarmupLoad
 import com.limajuice.liftlog.SetScope
 import com.limajuice.liftlog.RecordedCardioExercise
 import com.limajuice.liftlog.RecordedExercise
 import com.limajuice.liftlog.RecordedWeightedExercise
 import com.limajuice.liftlog.TimeCardioTarget
+import com.limajuice.liftlog.WarmupLoad
 import com.limajuice.liftlog.WeightedExerciseBlueprint
 import com.limajuice.liftlog.WorkoutEndedEvent
 import com.limajuice.liftlog.WorkoutMessagePayload
@@ -67,6 +70,11 @@ object Json {
             PolymorphicJsonAdapterFactory.of(SetScope::class.java, "type")
                 .withSubtype(AllSetsScope::class.java, "allSets")
                 .withSubtype(LowestSetsScope::class.java, "lowestSets")
+        )
+        .add(
+            PolymorphicJsonAdapterFactory.of(WarmupLoad::class.java, "type")
+                .withSubtype(PercentWarmupLoad::class.java, "percent")
+                .withSubtype(AbsoluteWarmupLoad::class.java, "absolute")
         )
         .add(Instant::class.java, InstantAdapter())
         .add(BigDecimal::class.java, BigDecimalAdapter())

@@ -14,9 +14,11 @@ import com.limajuice.liftlog.Weight
 import com.limajuice.liftlog.WeightUnit
 import com.limajuice.liftlog.WorkoutMessage
 import com.limajuice.liftlog.WorkoutUpdatedEvent
+import expo.modules.workoutworker.utils.CurrentWeightedSet
 import expo.modules.workoutworker.utils.RepeatingTimerAction
 import expo.modules.workoutworker.utils.RestWindow
 import expo.modules.workoutworker.utils.WorkoutNotificationManager
+import expo.modules.workoutworker.utils.currentWeightedSetOf
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -287,35 +289,26 @@ class WorkoutUpdatedHandler(
     // a few characters: the upcoming reps for a weighted set, or the target for a cardio set.
     private fun getCurrentExerciseCriticalText(event: WorkoutUpdatedEvent): String {
         return when (val currentExercise = event.currentExerciseDetails?.exercise) {
-            is RecordedWeightedExercise -> targetFor(currentExercise, nextSetIndexOf(currentExercise))
+            is RecordedWeightedExercise -> currentWeightedSetOf(event.currentExerciseDetails)?.let(::targetFor) ?: ""
             is RecordedCardioExercise -> getCardioTarget(event)
             else -> ""
         }
     }
 
     private fun getCurrentExerciseMessage(translations: Translations, event: WorkoutUpdatedEvent): String {
-
-        val currentExercise =
-            event.currentExerciseDetails?.exercise
+        val currentExercise = event.currentExerciseDetails?.exercise
         val messageTemplate = translations.workoutPersistentNotificationCurrentExerciseMessage
 
-        // Deliberately null once every set is filled, so a finished exercise stops advertising a weight.
-        val weightedExercise = event.currentExerciseDetails?.exercise as? RecordedWeightedExercise?
-        val nextSet = weightedExercise?.potentialSets
-            ?.indexOfFirst { it.set == null }?.takeIf { it >= 0 }
-            ?.let { weightedExercise.potentialSets.getOrNull(it) }
+        return when (currentExercise) {
+            is RecordedWeightedExercise -> {
+                val current = currentWeightedSetOf(event.currentExerciseDetails) ?: return ""
+                messageTemplate.replace(
+                    "\$EXERCISE_DESCRIPTOR$",
+                    "${currentExercise.blueprint.name} - ${describeSet(translations, current)}"
+                )
+            }
 
-        return when {
-            event.currentExerciseDetails == null -> ""
-            currentExercise is RecordedWeightedExercise -> messageTemplate.replace(
-                "\$EXERCISE_DESCRIPTOR$", "${currentExercise.blueprint.name} - ${
-                    targetFor(currentExercise, nextSetIndexOf(currentExercise))
-                }${
-                    if (nextSet?.weight != null) "x${formatWeight(nextSet.weight)}" else ""
-                }"
-            )
-
-            currentExercise is RecordedCardioExercise-> messageTemplate.replace(
+            is RecordedCardioExercise -> messageTemplate.replace(
                 "\$EXERCISE_DESCRIPTOR$", "${currentExercise.blueprint.name} - ${getCardioTarget(event)}"
             )
 
@@ -323,20 +316,34 @@ class WorkoutUpdatedHandler(
         }
     }
 
+    // "5x60kg" for a working set; a warm-up is labelled as one ("Warm-up: 5 × 60kg"), and drops the
+    // weight when it has none - a reps-only warm-up, or one on an exercise with no resistance.
+    private fun describeSet(translations: Translations, current: CurrentWeightedSet): String {
+        val target = targetFor(current)
+        val weight = current.slot?.weight
+        if (!current.isWarmup) {
+            return "$target${if (weight != null) "x${formatWeight(weight)}" else ""}"
+        }
+        val set = if (weight != null && weight.value.signum() != 0) "$target × ${formatWeight(weight)}" else target
+        return translations.workoutPersistentNotificationWarmupSetMessage.replace("\$SET$", set)
+    }
+
     private fun formatRepsTarget(min: Long, max: Long): String {
         return if (min == max) "$max" else "$min-$max"
     }
 
-    // Mirrors WeightedExerciseBlueprint.repsTargetForSet on the JS side, including its fall back to
-    // the last target when the index runs past the planned list.
-    private fun targetFor(exercise: RecordedWeightedExercise, setIndex: Int): String {
-        val plannedSets = exercise.blueprint.plannedSets
+    // A warm-up's target lives on its slot. A working set's mirrors WeightedExerciseBlueprint.repsTargetForSet
+    // on the JS side, including its fall back to the last target when the index runs past the planned
+    // list; once every set is logged the index is -1, which reads the first set's target.
+    private fun targetFor(current: CurrentWeightedSet): String {
+        if (current.isWarmup) {
+            val reps = current.slot?.target?.reps ?: return ""
+            return formatRepsTarget(reps.min, reps.max)
+        }
+        val plannedSets = current.exercise.blueprint.plannedSets
+        val setIndex = current.index.coerceAtLeast(0)
         val target = (plannedSets.getOrNull(setIndex) ?: plannedSets.lastOrNull())?.reps ?: return ""
         return formatRepsTarget(target.min, target.max)
-    }
-
-    private fun nextSetIndexOf(exercise: RecordedWeightedExercise): Int {
-        return exercise.potentialSets.indexOfFirst { it.set == null }.takeIf { it >= 0 } ?: 0
     }
 
     private fun formatWeight(weight: Weight, truncateDecimals: Boolean = false): String {

@@ -38,7 +38,8 @@ export class HealthExportService implements HES {
     if (!this.canExport()) {
       return;
     }
-    if (!workout.isStarted || !workout.firstExercise || !workout.lastExercise) {
+    const { startTime, endTime } = workout;
+    if (!workout.isStarted || !startTime || !endTime) {
       return;
     }
 
@@ -52,8 +53,9 @@ export class HealthExportService implements HES {
       recordType: 'ExerciseSession',
       exerciseType: ExerciseType.WEIGHTLIFTING,
       segments: exerciseSegments,
-      startTime: workout.firstExercise.earliestTime!.toString(),
-      endTime: workout.lastExercise.latestTime!.toString(),
+      // Warm-ups included: they are part of the time spent training.
+      startTime: startTime.toString(),
+      endTime: endTime.toString(),
       title: workout.blueprint.name,
     };
     if (grantedPermissions.some((x) => x.recordType === 'ExerciseSession')) {
@@ -70,7 +72,7 @@ export class HealthExportService implements HES {
             clientRecordId: workout.id,
           },
           recordType: 'Weight',
-          time: workout.lastExercise.latestTime!.toString(),
+          time: endTime.toString(),
           weight: {
             unit: workout.bodyweight.unit,
             value: workout.bodyweight.value.toNumber(),

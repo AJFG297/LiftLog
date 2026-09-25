@@ -76,6 +76,9 @@ export class WorkoutWorker {
       workoutPersistentNotificationCurrentExerciseMessage: this.tolgee.t(
         'workout_persistent_notification.current_exercise.message' satisfies TranslationKey,
       ),
+      workoutPersistentNotificationWarmupSetMessage: this.tolgee.t(
+        'workout_persistent_notification.warmup_set.message' satisfies TranslationKey,
+      ),
       workoutPersistentNotificationMinRestOverMessage: this.tolgee.t(
         'workout_persistent_notification.min_rest_over.message' satisfies TranslationKey,
       ),

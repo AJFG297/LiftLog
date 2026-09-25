@@ -3,6 +3,7 @@ import {
   PlannedWarmupSet,
   ProgressionKey,
   RepsTarget,
+  Rest,
   WeightedExerciseBlueprint,
   roundWarmupWeight,
   warmupIncrementFor,
@@ -362,6 +363,15 @@ export class RecordedWeightedExercise {
   get lastSetMissedTarget(): boolean {
     const last = this.lastLoggedSlot;
     return last?.kind === 'working' && last.slot.set!.repsCompleted < this.repsTargetForSet(last.index).min;
+  }
+
+  /**
+   * The rest window owed after the latest logged set. A warm-up only earns the minimum rest - its
+   * maximum is pulled down to match - and never the failure rest, however short it fell.
+   */
+  get restAfterLastSet(): Rest {
+    const rest = this.blueprint.restBetweenSets;
+    return this.lastLoggedSlot?.kind === 'warmup' ? { ...rest, maxRest: rest.minRest } : rest;
   }
 
   /** The most recently logged slot, warm-ups included - it is what timing reads. */

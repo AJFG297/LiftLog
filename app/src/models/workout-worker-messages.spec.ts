@@ -58,6 +58,7 @@ const TRANSLATIONS: Translations = {
   workoutPersistentNotificationMinRestOverMessage: 'Min rest over',
   workoutPersistentNotificationMaxRestOverMessage: 'Max rest over',
   workoutPersistentNotificationCurrentExerciseMessage: 'Current exercise',
+  workoutPersistentNotificationWarmupSetMessage: 'Warm-up: $SET$',
   workoutPersistentNotificationCardioTargetReachedMessage: 'Target reached',
   workoutPersistentNotificationFinishedMessage: 'Finished',
   workoutPersistentNotificationInProgressMessage: 'Workout in progress',
@@ -182,12 +183,44 @@ describe('WorkoutMessage JSON schema validation', () => {
         cardioTimerInfo: undefined,
         currentExerciseDetails: {
           exercise: exercise.toJSON(),
+          setKind: 'working',
           setIndex: 0,
         },
         totalWeightLifted: new Weight(0, 'kilograms').toJSON(),
         workoutDuration: toDurationJSON(Duration.parse('PT5M30S')),
       };
       expect(validate('WorkoutUpdatedEvent', payload)).toBe(true);
+    });
+
+    it('validates a WorkoutUpdatedEvent whose current set is a warm-up', () => {
+      const session = makeSession();
+      const exercise = RecordedWeightedExercise.empty(
+        makeWeightedExercise().blueprint.with({ warmupSets: [{ load: { type: 'percent', percent: 50 }, reps: 5 }] }),
+        'kilograms',
+      );
+      const payload: WorkoutUpdatedEvent = {
+        type: 'WorkoutUpdatedEvent',
+        workout: session.toJSON(),
+        restTimerInfo: undefined,
+        cardioTimerInfo: undefined,
+        currentExerciseDetails: { exercise: exercise.toJSON(), setKind: 'warmup', setIndex: 0 },
+        totalWeightLifted: new Weight(0, 'kilograms').toJSON(),
+        workoutDuration: toDurationJSON(Duration.parse('PT1M')),
+      };
+      expect(validate('WorkoutUpdatedEvent', payload)).toBe(true);
+    });
+
+    it('rejects a current set of an unknown kind', () => {
+      const payload = {
+        type: 'WorkoutUpdatedEvent',
+        workout: makeSession().toJSON(),
+        restTimerInfo: undefined,
+        cardioTimerInfo: undefined,
+        currentExerciseDetails: { exercise: makeWeightedExercise().toJSON(), setKind: 'cooldown', setIndex: 0 },
+        totalWeightLifted: new Weight(0, 'kilograms').toJSON(),
+        workoutDuration: toDurationJSON(Duration.parse('PT1M')),
+      };
+      expect(validate('WorkoutUpdatedEvent', payload)).toBe(false);
     });
 
     it('validates a WorkoutUpdatedEvent with a cardio current exercise', () => {
@@ -200,6 +233,7 @@ describe('WorkoutMessage JSON schema validation', () => {
         cardioTimerInfo: undefined,
         currentExerciseDetails: {
           exercise: exercise.toJSON(),
+          setKind: 'working',
           setIndex: 0,
         },
         totalWeightLifted: new Weight(0, 'kilograms').toJSON(),
@@ -243,6 +277,7 @@ describe('WorkoutMessage JSON schema validation', () => {
         },
         currentExerciseDetails: {
           exercise: exercise.toJSON(),
+          setKind: 'working',
           setIndex: 0,
         },
         totalWeightLifted: new Weight(0, 'kilograms').toJSON(),
@@ -261,6 +296,7 @@ describe('WorkoutMessage JSON schema validation', () => {
         cardioTimerInfo: undefined,
         currentExerciseDetails: {
           exercise: exercise.toJSON(),
+          setKind: 'working',
           setIndex: exercise.currentSetIndex,
         },
         totalWeightLifted: exercise.totalWeightLifted.toJSON(),
@@ -325,6 +361,18 @@ describe('WorkoutMessage JSON schema validation', () => {
 
     it('validates a fully completed exercise', () => {
       expect(validate('RecordedWeightedExercise', makeWeightedExerciseWithSets().toJSON())).toBe(true);
+    });
+
+    it('validates an exercise with percent, absolute and reps-only warm-ups, one logged', () => {
+      const blueprint = makeWeightedExercise().blueprint.with({
+        warmupSets: [
+          { load: { type: 'percent', percent: 50 }, reps: 5 },
+          { load: { type: 'absolute', weight: new Weight(20, 'kilograms') }, reps: 3 },
+          { load: undefined, reps: 8 },
+        ],
+      });
+      const exercise = RecordedWeightedExercise.empty(blueprint, 'kilograms').withWarmupRepCount(0, 5, NOW);
+      expect(validate('RecordedWeightedExercise', exercise.toJSON())).toBe(true);
     });
   });
 

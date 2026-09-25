@@ -53,7 +53,8 @@ export class HealthExportService implements HES {
     if (!this.canExport()) {
       return;
     }
-    if (!workout.isStarted || !workout.firstExercise || !workout.lastExercise) {
+    const { startTime, endTime } = workout;
+    if (!workout.isStarted || !startTime || !endTime) {
       return;
     }
     const { canShareBodyweight, canShareWorkout } = await this.requestPermissionInternal();
@@ -64,8 +65,8 @@ export class HealthExportService implements HES {
         'HKQuantityTypeIdentifierBodyMass',
         toHealthKitUnit(workout.bodyweight.unit),
         workout.bodyweight.value.toNumber(),
-        convert(workout.lastExercise.latestTime!.toLocalDateTime()).toDate(),
-        convert(workout.lastExercise.latestTime!.toLocalDateTime()).toDate(),
+        convert(endTime.toLocalDateTime()).toDate(),
+        convert(endTime.toLocalDateTime()).toDate(),
         {
           // @ts-expect-error -- This was fine
           workoutId: workout.id,
@@ -81,8 +82,9 @@ export class HealthExportService implements HES {
       await saveWorkoutSample(
         WorkoutActivityType.functionalStrengthTraining,
         exerciseQuantities,
-        convert(workout.firstExercise.earliestTime!.toLocalDateTime()).toDate(),
-        convert(workout.lastExercise.latestTime!.toLocalDateTime()).toDate(),
+        // Warm-ups included: they are part of the time spent training.
+        convert(startTime.toLocalDateTime()).toDate(),
+        convert(endTime.toLocalDateTime()).toDate(),
         {
           energyBurned: calculateEnergyBurnedKcal(workout),
         },

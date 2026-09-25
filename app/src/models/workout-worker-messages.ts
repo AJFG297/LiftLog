@@ -38,11 +38,15 @@ export interface WorkoutUpdatedEvent {
 
 export interface CurrentExerciseDetails {
   exercise: RecordedExerciseJSON;
+  /** Which of the exercise's set lists `setIndex` points into. Cardio sets are always `working`. */
+  setKind: CurrentSetKind;
   /**
    * @asType integer
    */
   setIndex: number;
 }
+
+export type CurrentSetKind = 'warmup' | 'working';
 
 export interface CardioTimerInfo {
   currentDuration: DurationJSON;
@@ -78,6 +82,9 @@ export interface Translations {
   workoutPersistentNotificationMinRestOverMessage: string;
   workoutPersistentNotificationMaxRestOverMessage: string;
   workoutPersistentNotificationCurrentExerciseMessage: string;
+
+  // Labels a warm-up as the current set, e.g. "Warm-up: 5 × 60kg". $SET$ is the reps and weight.
+  workoutPersistentNotificationWarmupSetMessage: string;
 
   // Fired once when a cardio set reaches its target; the set keeps running afterwards.
   workoutPersistentNotificationCardioTargetReachedMessage: string;

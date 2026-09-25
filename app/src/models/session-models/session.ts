@@ -36,9 +36,25 @@ export class Session {
     readonly restTimer: RestTimer | undefined,
   ) {}
   get duration(): Duration | undefined {
-    return this.lastExercise?.latestTime && this.firstExercise?.earliestTime
-      ? Duration.between(this.firstExercise.earliestTime, this.lastExercise.latestTime)
-      : undefined;
+    const { startTime, endTime } = this;
+    return startTime && endTime ? Duration.between(startTime, endTime) : undefined;
+  }
+
+  /**
+   * When the first set of the workout was logged, warm-ups included. Taken across every exercise
+   * rather than from {@link firstExercise}, which is picked by its last set: in a superset, or with a
+   * warm-up done early, another exercise can hold the earliest set.
+   */
+  get startTime(): OffsetDateTime | undefined {
+    return this.recordedExercises.reduce<OffsetDateTime | undefined>((earliest, exercise) => {
+      const time = exercise.earliestTime;
+      return time && (!earliest || time.isBefore(earliest)) ? time : earliest;
+    }, undefined);
+  }
+
+  /** When the last set of the workout was logged, warm-ups included. */
+  get endTime(): OffsetDateTime | undefined {
+    return this.lastExercise?.latestTime;
   }
 
   static fromJSON(json: SessionJSON): Session {

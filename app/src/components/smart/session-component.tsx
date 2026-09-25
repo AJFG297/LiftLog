@@ -213,7 +213,7 @@ export default function SessionComponent(props: {
 
   // A weighted exercise rests per exercise; cardio rests per set, and may not rest at all.
   const restBetweenSets = match(lastExercise)
-    .with(P.instanceOf(RecordedWeightedExercise), (exercise) => exercise.blueprint.restBetweenSets)
+    .with(P.instanceOf(RecordedWeightedExercise), (exercise) => exercise.restAfterLastSet)
     .with(P.instanceOf(RecordedCardioExercise), (exercise) => exercise.lastCompletedSet?.blueprint.restBetweenSets)
     .otherwise(() => undefined);
 
