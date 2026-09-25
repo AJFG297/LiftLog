@@ -78,6 +78,10 @@ the wizard is how new users get the chance to enable it.
 
 ## Conventions
 
+- This fork talks **only to its own backend** and keeps **no compatibility with upstream LiftLog**
+  (feed/share/plan wire formats, upstream backups, `api.liftlog.online`). Don't add shims or keep old
+  shapes for upstream's sake; do keep this fork's own app versions compatible with each other. See
+  [ADR-0001](docs/adr/0001-own-backend-no-upstream-compatibility.md).
 - Use **named exports** for new files (`export function Foo`), not default exports - even though older
   files use defaults. Don't bulk-convert existing files.
 - react-native-paper is being **incrementally migrated to expo-ui** (SwiftUI on iOS / Jetpack Compose on
