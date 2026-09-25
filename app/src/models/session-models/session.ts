@@ -278,6 +278,17 @@ export class Session {
     });
   }
 
+  /** See {@link RecordedWeightedExercise.withoutUnloggedRpe}. Returns `this` when there is nothing to drop. */
+  withoutUnloggedRpe(): Session {
+    const recordedExercises = this.recordedExercises.map((re) =>
+      re.type === 'RecordedWeightedExercise' ? re.withoutUnloggedRpe() : re,
+    );
+    if (recordedExercises.every((re, index) => re === this.recordedExercises[index])) {
+      return this;
+    }
+    return this.with({ recordedExercises });
+  }
+
   // TODO we should update the rest timer time when we call this
   withCycledExerciseReps(exerciseIndex: number, setIndex: number, time: OffsetDateTime): Session {
     const weightedRecorded = this.recordedExercises[exerciseIndex];
@@ -320,7 +331,7 @@ export class Session {
 
   toJSON(): SessionJSON {
     return {
-      version: 7,
+      version: 8,
       blueprint: this.blueprint.toJSON(),
       bodyweight: this.bodyweight?.toJSON(),
       date: toLocalDateJSON(this.date),

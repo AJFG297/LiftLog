@@ -81,6 +81,24 @@ describe('formatExerciseSummary', () => {
     expect(formatExerciseSummary(exercise, filled)).toBe('2 × 12');
   });
 
+  it('adds the logged RPE after the reps, keeping differently rated sets apart', () => {
+    const exercise = exerciseOf([
+      { reps: 5, weight: 100 },
+      { reps: 5, weight: 100 },
+      { reps: 5, weight: 100 },
+    ]);
+    const rated = exercise.withRpe(0, 8).withRpe(1, 8).withRpe(2, 9);
+    expect(formatExerciseSummary(rated, filled)).toBe('2 × 5 (RPE 8), 5 (RPE 9) @ 100kg');
+  });
+
+  it('says nothing about an RPE on a set that was never logged', () => {
+    const exercise = exerciseOf([
+      { reps: 5, weight: 100 },
+      { reps: undefined, weight: 100 },
+    ]).withRpe(1, 8);
+    expect(formatExerciseSummary(exercise, filled)).toBe('5 @ 100kg');
+  });
+
   it('ignores sets that were never completed', () => {
     const exercise = exerciseOf([
       { reps: 12, weight: 60 },

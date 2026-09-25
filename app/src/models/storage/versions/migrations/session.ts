@@ -78,4 +78,9 @@ export const sessionMigrations = createMigrations<InitialSessionJSON>()
           },
     ),
   }))
+  // RPE is optional, so older sessions already fit the new shape.
+  .add((session) => ({
+    ...session,
+    version: 8,
+  }))
   .build<SessionJSON>();

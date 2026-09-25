@@ -9,6 +9,7 @@ import {
   toOffsetDateTimeJSON,
 } from '@/models/storage/versions/latest';
 import { Weight, WeightUnit } from '@/models/weight';
+import { isRpe, Rpe } from '@/models/session-models/rpe';
 import { IndexOutOfBoundsError } from '@/utils/index-out-of-bounds';
 import { Duration, OffsetDateTime } from '@js-joda/core';
 import { match } from 'ts-pattern';
@@ -95,8 +96,21 @@ export class RecordedWeightedExercise {
   withNothingCompleted(): RecordedWeightedExercise {
     return this.with({
       notes: undefined,
-      potentialSets: this.potentialSets.map((ps) => ps.with({ set: undefined })),
+      potentialSets: this.potentialSets.map((ps) => ps.with({ set: undefined, rpe: undefined })),
     });
+  }
+
+  /** Picking an RPE never logs the set: it can be chosen first and the set tapped afterwards. */
+  withRpe(setIndex: number, rpe: Rpe | undefined): RecordedWeightedExercise {
+    return this.withSet(setIndex, (s) => s.with({ rpe }));
+  }
+
+  /** An RPE only means something alongside reps, so a finished exercise drops it from unlogged sets. */
+  withoutUnloggedRpe(): RecordedWeightedExercise {
+    if (!this.potentialSets.some((s) => !s.set && s.rpe !== undefined)) {
+      return this;
+    }
+    return this.withAllSets((s) => (s.set ? s : s.with({ rpe: undefined })));
   }
 
   withCycledRepCount(setIndex: number, time: OffsetDateTime): RecordedWeightedExercise {
@@ -304,18 +318,38 @@ export class PotentialSet {
     readonly weight: Weight,
     /** The target this set is chasing, carried on the performance rather than re-read from the plan. */
     readonly target: RepsTarget = { min: 0, max: 0 },
+    /**
+     * How hard the set felt. On the slot rather than the {@link RecordedSet} so it can be picked before
+     * the set is logged, and so changing the reps (which rebuilds the recorded set) keeps it.
+     */
+    readonly rpe?: Rpe,
   ) {}
 
   /** Build a set from named fields; preferred over the constructor, which leads with the absent one. */
-  static of(init: { set?: RecordedSet | undefined; weight: Weight; target?: RepsTarget }): PotentialSet {
-    return new PotentialSet(init.set, init.weight, init.target);
+  static of(init: {
+    set?: RecordedSet | undefined;
+    weight: Weight;
+    target?: RepsTarget;
+    rpe?: Rpe | undefined;
+  }): PotentialSet {
+    return new PotentialSet(init.set, init.weight, init.target, init.rpe);
   }
 
   static fromJSON(json: PotentialSetJSON): PotentialSet {
-    return new PotentialSet(json.set ? RecordedSet.fromJSON(json.set) : undefined, Weight.fromJSON(json.weight), {
-      min: json.target.reps.min,
-      max: json.target.reps.max,
-    });
+    return new PotentialSet(
+      json.set ? RecordedSet.fromJSON(json.set) : undefined,
+      Weight.fromJSON(json.weight),
+      {
+        min: json.target.reps.min,
+        max: json.target.reps.max,
+      },
+      isRpe(json.rpe) ? json.rpe : undefined,
+    );
+  }
+
+  /** The RPE to show anywhere but the live workout: one left on a set that was never logged means nothing. */
+  get loggedRpe(): Rpe | undefined {
+    return this.set ? this.rpe : undefined;
   }
 
   equals(other: PotentialSet | undefined): boolean {
@@ -329,7 +363,8 @@ export class PotentialSet {
       (this.set?.equals(other.set) ?? other.set === undefined) &&
       this.weight.equals(other.weight) &&
       this.target.min === other.target.min &&
-      this.target.max === other.target.max
+      this.target.max === other.target.max &&
+      this.rpe === other.rpe
     );
   }
 
@@ -338,6 +373,7 @@ export class PotentialSet {
       'set' in other ? other.set : this.set,
       'weight' in other ? other.weight! : this.weight,
       other.target ?? this.target,
+      'rpe' in other ? other.rpe : this.rpe,
     );
   }
 
@@ -346,6 +382,7 @@ export class PotentialSet {
       target: { reps: { min: this.target.min, max: this.target.max } },
       set: this.set?.toJSON(),
       weight: this.weight.toJSON(),
+      rpe: this.rpe,
     };
   }
 }

@@ -13,6 +13,7 @@ import {
   setColorSchemeSeed,
   setFirstDayOfWeek,
   setLastSeenWhatsNewId,
+  setLogRpe,
   setPreferredLanguage,
   setRestNotifications,
   setShowFeed,
@@ -211,6 +212,19 @@ export function WelcomeWizard() {
             supportingText={t('rest.notifications.subtitle')}
             value={settings.restNotifications}
             onValueChange={(value) => dispatch(setRestNotifications(value))}
+          />
+        </SegmentedGroup>
+
+        <Text variant="titleMedium" style={styles.topSpacing}>
+          {t('onboarding.workout.title')}
+        </Text>
+        <SegmentedGroup>
+          <SegmentedListSwitch
+            label={t('workout.log_rpe.label')}
+            icon={'speed'}
+            supportingText={t('workout.log_rpe.subtitle')}
+            value={settings.logRpe}
+            onValueChange={(value) => dispatch(setLogRpe(value))}
           />
         </SegmentedGroup>
 

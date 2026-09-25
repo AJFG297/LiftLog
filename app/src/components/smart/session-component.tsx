@@ -58,6 +58,7 @@ export default function SessionComponent(props: {
   const { t } = useTranslate();
   const { push } = useRouter();
   const restTimersEnabled = useAppSelector((x) => x.settings.restTimersEnabled);
+  const logRpe = useAppSelector((x) => x.settings.logRpe);
   const dispatch = useDispatch();
   const isReadonly = !props.updateSession;
   const editableSessionId = isReadonly ? undefined : session.id;
@@ -152,6 +153,7 @@ export default function SessionComponent(props: {
           }
           onRemoveExercise={() => updateSession((s) => s.withRemovedExercise(index))}
           isReadonly={isReadonly}
+          rpeEnabled={logRpe}
           showPreviousButton={!!isActiveWorkout}
           previousRecordedExercises={recentlyCompletedExercises(item.movementKey()) as RecordedWeightedExercise[]}
         />

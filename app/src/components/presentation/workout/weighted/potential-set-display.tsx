@@ -6,6 +6,7 @@ import WeightFormat from '@/components/presentation/foundation/weight-format';
 import { font, rounding, spacing, useAppTheme } from '@/hooks/useAppTheme';
 import TouchableRipple from '@/components/presentation/foundation/touchable-ripple';
 import Icon from '@/components/presentation/foundation/icon';
+import { formatRpe, Rpe } from '@/models/session-models/rpe';
 
 export type PotentialSetSize = 'default' | 'compact';
 
@@ -15,10 +16,14 @@ interface PotentialSetDisplayProps {
   resistance: Resistance;
   previousRepCount?: number | undefined;
   size?: PotentialSetSize;
+  /** Renders the RPE row. A list shows it on every tile once any has one, so the tiles stay level. */
+  showRpe?: boolean;
+  rpe?: Rpe | undefined;
 
   /** Omit to render a static tile - a tile with no handler mounts no gesture detector at all. */
   onPressReps?: () => void;
   onPressWeight?: () => void;
+  onPressRpe?: () => void;
 }
 
 const metrics = {
@@ -53,6 +58,8 @@ export function PotentialSetDisplay(props: PotentialSetDisplayProps) {
   const repCountValue = props.set.set?.repsCompleted;
   const isFilled = repCountValue !== undefined;
   const showsWeight = props.resistance !== 'none';
+  const showsRpe = !!props.showRpe;
+  const hasFooter = showsWeight || showsRpe;
 
   return (
     <View
@@ -67,9 +74,9 @@ export function PotentialSetDisplay(props: PotentialSetDisplayProps) {
       <View
         style={{
           borderRadius: rounding.roundedRectangleRadius,
-          // The weight row closes the tile off when there is one.
-          borderBottomLeftRadius: showsWeight ? 0 : rounding.roundedRectangleRadius,
-          borderBottomRightRadius: showsWeight ? 0 : rounding.roundedRectangleRadius,
+          // The weight or RPE row closes the tile off when there is one.
+          borderBottomLeftRadius: hasFooter ? 0 : rounding.roundedRectangleRadius,
+          borderBottomRightRadius: hasFooter ? 0 : rounding.roundedRectangleRadius,
           overflow: 'hidden',
         }}
       >
@@ -109,8 +116,8 @@ export function PotentialSetDisplay(props: PotentialSetDisplayProps) {
             borderTopWidth: 1,
             borderColor: colors.outline,
             backgroundColor: colors.surfaceContainerHigh,
-            borderBottomLeftRadius: rounding.roundedRectangleRadius,
-            borderBottomRightRadius: rounding.roundedRectangleRadius,
+            borderBottomLeftRadius: showsRpe ? 0 : rounding.roundedRectangleRadius,
+            borderBottomRightRadius: showsRpe ? 0 : rounding.roundedRectangleRadius,
             overflow: 'hidden',
             padding: size.weightPadding,
             width: '100%',
@@ -127,6 +134,39 @@ export function PotentialSetDisplay(props: PotentialSetDisplayProps) {
           >
             <Text style={{ color: colors.onSurface, ...size.weightFont }}>
               <WeightFormat weight={props.set.weight} usesBodyweight={props.resistance === 'bodyweight'} />
+            </Text>
+          </Pressable>
+        </View>
+      )}
+      {showsRpe && (
+        <View
+          style={{
+            borderTopWidth: 1,
+            borderColor: colors.outline,
+            backgroundColor: colors.surfaceContainerHigh,
+            borderBottomLeftRadius: rounding.roundedRectangleRadius,
+            borderBottomRightRadius: rounding.roundedRectangleRadius,
+            overflow: 'hidden',
+            padding: size.weightPadding,
+            width: '100%',
+          }}
+        >
+          <Pressable
+            onPress={props.onPressRpe}
+            testID="repcount-rpe"
+            style={{
+              alignItems: 'center',
+              margin: -size.weightPadding,
+              padding: size.weightPadding,
+            }}
+          >
+            <Text
+              style={{
+                color: props.rpe === undefined ? colors.onSurfaceVariant : colors.onSurface,
+                ...size.weightFont,
+              }}
+            >
+              {props.rpe === undefined ? '@–' : formatRpe(props.rpe)}
             </Text>
           </Pressable>
         </View>

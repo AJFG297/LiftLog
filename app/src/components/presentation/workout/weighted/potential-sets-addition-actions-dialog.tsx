@@ -1,4 +1,6 @@
-import { useAppTheme } from '@/hooks/useAppTheme';
+import { spacing, useAppTheme } from '@/hooks/useAppTheme';
+import { RpeChips } from '@/components/presentation/workout/weighted/rpe-picker';
+import { Rpe } from '@/models/session-models/rpe';
 import { PotentialSet } from '@/models/session-models';
 import { T } from '@tolgee/react';
 import { useEffect, useState } from 'react';
@@ -13,6 +15,9 @@ interface PotentialSetAdditionalActionsDialogProps {
   set: PotentialSet;
   repTarget: number;
   updateRepCount: (reps: number | undefined) => void;
+  rpe: Rpe | undefined;
+  /** Omit to hide the RPE row (the Log RPE setting is off). */
+  updateRpe: ((rpe: Rpe | undefined) => void) | undefined;
   close: () => void;
 }
 
@@ -22,6 +27,8 @@ export default function PotentialSetAdditionalActionsDialog({
   set,
   updateRepCount,
   repTarget,
+  rpe,
+  updateRpe,
 }: PotentialSetAdditionalActionsDialogProps) {
   const { colors } = useAppTheme();
   const originalReps = set?.set?.repsCompleted;
@@ -85,6 +92,15 @@ export default function PotentialSetAdditionalActionsDialog({
                   }}
                 />
               </View>
+              {updateRpe && (
+                <View style={{ gap: spacing[2], marginTop: spacing[4] }}>
+                  <Text variant="labelLarge">
+                    <T keyName="workout.rpe.title" />
+                  </Text>
+                  {/* Unlike the rep buttons this doesn't close: RPE is set alongside the reps, not instead of them. */}
+                  <RpeChips value={rpe} onChange={updateRpe} />
+                </View>
+              )}
             </Dialog.Content>
             <Dialog.Actions>
               <Button onPress={close}>{<T keyName="generic.cancel.button" />}</Button>

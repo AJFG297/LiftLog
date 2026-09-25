@@ -52,6 +52,17 @@ export const whatsNewEntries: WhatsNewEntry[] = [
     },
     condition: (state) => state.backends.backends.length === 0,
   },
+  {
+    id: 4,
+    icon: 'speed',
+    titleKey: 'whats_new.log_rpe.title',
+    bodyKey: 'whats_new.log_rpe.body',
+    cta: {
+      labelKey: 'whats_new.log_rpe.cta',
+      route: '/settings/app-configuration',
+    },
+    condition: (state) => !state.settings.logRpe,
+  },
 ];
 
 export const latestWhatsNewId = whatsNewEntries.reduce((max, entry) => Math.max(max, entry.id), 0);

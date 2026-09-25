@@ -65,6 +65,8 @@ export function formatSessionVolume(session: Session): string | undefined {
 interface SetRun {
   label: string;
   weight: string;
+  /** Rendered after the reps as `(RPE 8)`: `@` already introduces the weight in a summary line. */
+  rpe?: string | undefined;
   count: number;
 }
 
@@ -80,6 +82,7 @@ function filledRuns(
       .map((potentialSet) => ({
         label: potentialSet.set!.repsCompleted.toString(),
         weight: weightOf(potentialSet.weight, showWeight, usesBodyweight, bodyweightLabel),
+        rpe: potentialSet.loggedRpe?.toString(),
       })),
   );
 }
@@ -155,12 +158,12 @@ function weightOf(weight: Weight, showWeight: boolean, usesBodyweight: boolean, 
   return !weight.value.isZero() ? weight.shortLocaleFormat() : '';
 }
 
-function runsOf(sets: { label: string; weight: string }[]): SetRun[] {
+function runsOf(sets: { label: string; weight: string; rpe?: string | undefined }[]): SetRun[] {
   const runs: SetRun[] = [];
 
   for (const set of sets) {
     const previous = runs.at(-1);
-    if (previous && previous.label === set.label && previous.weight === set.weight) {
+    if (previous && previous.label === set.label && previous.weight === set.weight && previous.rpe === set.rpe) {
       previous.count++;
     } else {
       runs.push({ ...set, count: 1 });
@@ -175,7 +178,8 @@ function formatRuns(runs: SetRun[]): string {
   const groups: { weight: string; parts: string[] }[] = [];
 
   for (const run of runs) {
-    const part = run.count > 1 ? `${run.count} × ${run.label}` : run.label;
+    const reps = run.count > 1 ? `${run.count} × ${run.label}` : run.label;
+    const part = run.rpe ? `${reps} (RPE ${run.rpe})` : reps;
     const previous = groups.at(-1);
 
     if (previous && previous.weight === run.weight) {

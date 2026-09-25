@@ -24,6 +24,8 @@ import {
 import { WeightJSON, WeightUnitJSON } from '@/models/storage/versions/libs/weight';
 import { programBlueprintMigrations, sessionBlueprintMigrations } from './blueprint';
 import { sessionMigrations } from './session';
+import { Session } from '@/models/session-models';
+import { makeRecordedExercise, makeSession, makeWeightedBlueprint } from '@/models/session-models/__test__/helpers';
 import { aiPlanMigrations } from './ai-plan';
 import {
   followedFeedUserMigrations,
@@ -241,10 +243,22 @@ describe('real migrations', () => {
     });
   });
 
+  describe('sessionMigrations: RPE (v7 → v8)', () => {
+    it('brings a v7 session up unchanged, with no RPE on any set', () => {
+      const blueprint = makeWeightedBlueprint();
+      const current = makeSession([blueprint]).withExercise(0, makeRecordedExercise(blueprint, [5, undefined]));
+      const v7 = { ...current.toJSON(), version: 7 } as never;
+      const result = sessionMigrations.migrate(v7);
+      expect(result.version).toBe(8);
+      expect(Session.fromJSON(result).equals(current)).toBe(true);
+      expect(JSON.stringify(result)).not.toContain('"rpe"');
+    });
+  });
+
   describe('sessionMigrations (started with an embedded blueprint, then moved away from it)', () => {
     it('strips the exercises off the stored blueprint', () => {
       const result = sessionMigrations.migrate(initialSession());
-      expect(result.version).toBe(7);
+      expect(result.version).toBe(8);
       expect(result.blueprint).toEqual({ name: 'Push Day', notes: 'session notes' });
       expect('exercises' in result.blueprint).toBe(false);
     });
@@ -310,7 +324,7 @@ describe('real migrations', () => {
     it('sessionUserEvent brings its embedded session to latest', () => {
       const result = sessionUserEventMigrations.migrate(initialSessionUserEvent());
       expect(result.version).toBe(3);
-      expect(result.session.version).toBe(7);
+      expect(result.session.version).toBe(8);
       expect(result.session.blueprint).toEqual({ name: 'Push Day', notes: 'session notes' });
     });
 
@@ -318,7 +332,7 @@ describe('real migrations', () => {
       const shared: InitialSharedSessionJSON = { type: 'SharedSession', session: initialSession() };
       const result = sharedSessionMigrations.migrate(shared);
       expect(result.version).toBe(3);
-      expect(result.session.version).toBe(7);
+      expect(result.session.version).toBe(8);
     });
 
     it('sharedProgramBlueprint brings its embedded program to latest', () => {
@@ -388,7 +402,7 @@ describe('real migrations', () => {
       const result = userEventMigrations.migrate(initialSessionUserEvent());
       expect(result.type).toBe('SessionUserEvent');
       if (result.type === 'SessionUserEvent') {
-        expect(result.session.version).toBe(7);
+        expect(result.session.version).toBe(8);
       }
     });
 
@@ -418,7 +432,7 @@ describe('real migrations', () => {
 
     it('migrates a session with no recorded exercises', () => {
       const result = sessionMigrations.migrate({ ...initialSession(), recordedExercises: [] });
-      expect(result.version).toBe(7);
+      expect(result.version).toBe(8);
       expect(result.recordedExercises).toEqual([]);
       expect(result.blueprint).toEqual({ name: 'Push Day', notes: 'session notes' });
     });

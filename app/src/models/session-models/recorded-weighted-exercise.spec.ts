@@ -13,6 +13,8 @@ import {
   tick,
 } from '@/models/session-models/__test__/helpers';
 import { IndexOutOfBoundsError } from '@/utils/index-out-of-bounds';
+import { RPE_VALUES } from '@/models/session-models/rpe';
+import fc from 'fast-check';
 
 describe('RecordedWeightedExercise.withWeight', () => {
   let exercise: RecordedWeightedExercise;
@@ -355,5 +357,101 @@ describe('RecordedWeightedExercise JSON', () => {
     expect(filled.equals(undefined)).toBe(false);
     expect(filled.equals(filled)).toBe(true);
     expect(filled.equals(empty)).toBe(false);
+  });
+});
+
+// ─── RPE ──────────────────────────────────────────────────────────────────────
+
+describe('RecordedWeightedExercise RPE', () => {
+  const unlogged = () => new RecordedWeightedExercise(makeWeightedBlueprint(), [emptyPotentialSet()], undefined);
+
+  it('picking an RPE on an unlogged set does not log it', () => {
+    const result = unlogged().withRpe(0, 8);
+    expect(result.getSet(0).set).toBeUndefined();
+    expect(result.getSet(0).rpe).toBe(8);
+  });
+
+  it('keeps an RPE picked before the set through logging it and cycling the reps', () => {
+    const rpe = fc.constantFrom(...RPE_VALUES);
+    fc.assert(
+      fc.property(rpe, fc.integer({ min: 1, max: 15 }), (value, taps) => {
+        let exercise = unlogged().withRpe(0, value);
+        for (let i = 0; i < taps; i++) {
+          exercise = exercise.withCycledRepCount(0, tick());
+        }
+        expect(exercise.getSet(0).rpe).toBe(value);
+      }),
+    );
+  });
+
+  it('keeps the RPE when exact reps are entered, and when the reps are cleared', () => {
+    const rated = unlogged().withRpe(0, 9.5);
+    const logged = rated.withRepCount(0, 7, tick());
+    expect(logged.getSet(0).rpe).toBe(9.5);
+    expect(logged.withRepCount(0, undefined, tick()).getSet(0).rpe).toBe(9.5);
+  });
+
+  it('only the explicit clear removes it', () => {
+    expect(unlogged().withRpe(0, 7).withRpe(0, undefined).getSet(0).rpe).toBeUndefined();
+  });
+
+  it('shows the RPE as logged only once the set is', () => {
+    const rated = unlogged().withRpe(0, 8);
+    expect(rated.getSet(0).loggedRpe).toBeUndefined();
+    expect(rated.withCycledRepCount(0, tick()).getSet(0).loggedRpe).toBe(8);
+  });
+
+  it('withoutUnloggedRpe drops the RPE from sets never logged and keeps it on logged ones', () => {
+    const exercise = new RecordedWeightedExercise(
+      makeWeightedBlueprint(),
+      [filledPotentialSet(10, tick()).with({ rpe: 8 }), emptyPotentialSet().with({ rpe: 9 })],
+      undefined,
+    );
+    const result = exercise.withoutUnloggedRpe();
+    expect(result.getSet(0).rpe).toBe(8);
+    expect(result.getSet(1).rpe).toBeUndefined();
+  });
+
+  it('withoutUnloggedRpe returns the same exercise when there is nothing to drop', () => {
+    const exercise = new RecordedWeightedExercise(
+      makeWeightedBlueprint(),
+      [filledPotentialSet(10, tick()).with({ rpe: 8 }), emptyPotentialSet()],
+      undefined,
+    );
+    expect(exercise.withoutUnloggedRpe()).toBe(exercise);
+  });
+
+  it('withNothingCompleted clears RPE along with the sets', () => {
+    const exercise = new RecordedWeightedExercise(
+      makeWeightedBlueprint(),
+      [filledPotentialSet(10, tick()).with({ rpe: 8 })],
+      undefined,
+    );
+    expect(exercise.withNothingCompleted().getSet(0).rpe).toBeUndefined();
+  });
+
+  it('round-trips RPE through JSON', () => {
+    const exercise = new RecordedWeightedExercise(
+      makeWeightedBlueprint(),
+      [filledPotentialSet(10, tick()).with({ rpe: 8.5 }), emptyPotentialSet()],
+      undefined,
+    );
+    const rebuilt = RecordedWeightedExercise.fromJSON(exercise.toJSON());
+    expect(rebuilt.equals(exercise)).toBe(true);
+    expect(rebuilt.getSet(0).rpe).toBe(8.5);
+    expect(rebuilt.getSet(1).rpe).toBeUndefined();
+  });
+
+  it('ignores an RPE outside the scale when reading JSON', () => {
+    const json = { ...emptyPotentialSet().toJSON(), rpe: 11 };
+    expect(PotentialSet.fromJSON(json).rpe).toBeUndefined();
+  });
+
+  it('treats a different RPE as a different set', () => {
+    expect(
+      emptyPotentialSet()
+        .with({ rpe: 8 })
+        .equals(emptyPotentialSet().with({ rpe: 9 })),
+    ).toBe(false);
   });
 });
