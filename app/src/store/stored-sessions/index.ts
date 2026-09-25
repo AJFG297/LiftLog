@@ -71,6 +71,7 @@ const storedSessionsSlice = createSlice({
     setStoredSessions(state, action: PayloadAction<Record<string, Session>>) {
       state.sessions = action.payload;
       state.latestExercises = {};
+      state.earliestSession = undefined;
       Object.values(action.payload).forEach((session) => {
         updateDerivatives(state, session);
       });
@@ -78,14 +79,12 @@ const storedSessionsSlice = createSlice({
 
     upsertStoredSessions(state, action: PayloadAction<Session[]>) {
       action.payload.forEach((session) => {
-        state.sessions[session.id] = session;
-        updateDerivatives(state, session);
+        storeSession(state, session);
       });
     },
 
     putStoredSession(state, action: PayloadAction<Session>) {
-      state.sessions[action.payload.id] = action.payload;
-      updateDerivatives(state, action.payload);
+      storeSession(state, action.payload);
     },
 
     /** Applies an edit to one session, addressed by id so it cannot land on the wrong one. */
@@ -100,9 +99,7 @@ const storedSessionsSlice = createSlice({
       if (!session) {
         return;
       }
-      const updated = action.payload.update(session);
-      state.sessions[action.payload.sessionId] = updated;
-      updateDerivatives(state, updated);
+      storeSession(state, action.payload.update(session));
     },
 
     setActiveSessionId(state, action: PayloadAction<string | undefined>) {
@@ -118,17 +115,10 @@ const storedSessionsSlice = createSlice({
 
       if (!deletedSession) return;
 
-      // Collect the exercise keys that were in the deleted session
-      const affectedKeys = new Set(deletedSession.recordedExercises.map((e) => e.progressionKey()));
-
-      // For each affected key, clear and recalculate from remaining sessions
-      affectedKeys.forEach((key) => {
-        delete state.latestExercises[key];
-      });
-
-      Object.values(state.sessions).forEach((session) => {
-        updateDerivatives(state, session as Session);
-      });
+      recomputeLatestExercises(state, new Set(deletedSession.recordedExercises.map((e) => e.progressionKey())));
+      if (state.earliestSession?.id === deletedSession.id) {
+        recomputeEarliestSession(state);
+      }
     },
     updateExercise(state, action: PayloadAction<{ id: string; exercise: ExerciseDescriptor }>) {
       state.savedExercises[action.payload.id] = action.payload.exercise;
@@ -199,6 +189,88 @@ const storedSessionsSlice = createSlice({
     ),
   },
 });
+
+/**
+ * Stores a session, new or replacing one, and keeps the derived caches right. `updateDerivatives` alone
+ * only ever moves them forward, which is wrong for an edit that moves an exercise earlier, drops it, or
+ * changes the earliest session's date.
+ */
+function storeSession(state: WritableDraft<StoredSessionState>, session: Session) {
+  const previous = state.sessions[session.id] as Session | undefined;
+  state.sessions[session.id] = session;
+  if (!previous) {
+    updateDerivatives(state, session);
+    return;
+  }
+
+  // Only keys whose cached latest came from the replaced session can go stale. Logging a set moves the
+  // latest time forward, so the common case swaps in the new exercise without scanning the history.
+  const staleKeys = new Set<ProgressionKey>();
+  for (const exercise of previous.recordedExercises) {
+    const key = exercise.progressionKey();
+    const cached = state.latestExercises[key] as RecordedExercise | undefined;
+    if (cached !== exercise) {
+      continue;
+    }
+    const replacement = latestWithKey(session, key);
+    if (replacement?.latestTime && cached.latestTime && !replacement.latestTime.isBefore(cached.latestTime)) {
+      state.latestExercises[key] = replacement;
+    } else {
+      staleKeys.add(key);
+    }
+  }
+  recomputeLatestExercises(state, staleKeys);
+
+  if (state.earliestSession?.id === session.id) {
+    if (session.date.isAfter(previous.date)) {
+      recomputeEarliestSession(state);
+    } else {
+      state.earliestSession = session;
+    }
+  }
+  updateDerivatives(state, session);
+}
+
+function latestWithKey(session: Session, key: ProgressionKey): RecordedExercise | undefined {
+  let latest: RecordedExercise | undefined;
+  for (const exercise of session.recordedExercises) {
+    if (!exercise.latestTime || exercise.progressionKey() !== key) {
+      continue;
+    }
+    if (!latest?.latestTime || latest.latestTime.isBefore(exercise.latestTime)) {
+      latest = exercise;
+    }
+  }
+  return latest;
+}
+
+function recomputeLatestExercises(state: WritableDraft<StoredSessionState>, keys: Set<ProgressionKey>) {
+  if (!keys.size) {
+    return;
+  }
+  keys.forEach((key) => delete state.latestExercises[key]);
+  for (const session of Object.values(state.sessions) as Session[]) {
+    for (const exercise of session.recordedExercises) {
+      const key = exercise.progressionKey();
+      if (!exercise.latestTime || !keys.has(key)) {
+        continue;
+      }
+      const latestExercise = state.latestExercises[key];
+      if (!latestExercise?.latestTime || latestExercise.latestTime.isBefore(exercise.latestTime)) {
+        state.latestExercises[key] = exercise;
+      }
+    }
+  }
+}
+
+function recomputeEarliestSession(state: WritableDraft<StoredSessionState>) {
+  state.earliestSession = undefined;
+  for (const session of Object.values(state.sessions) as Session[]) {
+    if (!state.earliestSession || state.earliestSession.date.isAfter(session.date)) {
+      state.earliestSession = session;
+    }
+  }
+}
 
 function updateDerivatives(state: WritableDraft<StoredSessionState>, session: Session) {
   if (!state.earliestSession || state.earliestSession.date.isAfter(session.date)) {
