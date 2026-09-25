@@ -132,7 +132,22 @@ Use `db.transaction(async (tx) => …)` when several tables must move together.
 Effects that touch the DB use a real in-memory SQLite rather than a mock - `openDatabaseAsync(':memory:')`,
 `drizzle(...)`, then `DatabaseMigrationService.migrate()` to build the schema. See
 `app/src/store/program/effects.spec.ts` for the pattern and `utils/__test__/add-effect-testbed` for
-wiring effects to a test store.
+wiring effects to a test store. The testbed doesn't run effects for actions dispatched from inside an
+effect; when a test depends on one effect triggering another (an ordering bug, say), use
+`utils/__test__/effect-store`, which runs them through the real listener middleware.
+
+History-derived behaviour is pinned by snapshots:
+
+- `store/stored-sessions/history-snapshots.spec.ts` runs every whole-history aggregate (latest exercise
+  per progression key, "last time", previous comparable session, month and range lists, streak, activity
+  calendar, personal records, stats, export order) over a 420-session fixture
+  (`utils/__test__/history-420.sessions.json.gz`). A change to that snapshot is a change in what users
+  see, so it has to be deliberate and called out in the PR.
+- `store/stored-sessions/startup-baseline.spec.ts` measures cold start (migrate, hydrate, first
+  aggregates) and retained heap over a synthetic history (`utils/__test__/synthetic-history.ts`,
+  5,000 sessions by default). It is skipped in the normal suite; run `npm run bench:startup` from `app/`
+  (`LIFTLOG_BENCH_SESSIONS` / `LIFTLOG_BENCH_RUNS` override the size and repeat count). The numbers are
+  only comparable with other runs on the same machine.
 
 ## Which one do I use?
 
@@ -172,8 +187,14 @@ Two things follow from that, and both matter when you touch this slice:
   another. It returns the last value it saw until focus comes back.
 - `putStoredSession` / `updateStoredSession` mean "this session changed" and only write the payload.
   `sessionFinished` means "the user is done with it" and is what queues the feed publish, exports to the
-  health aggregator, marks stats dirty and clears the active pointer. Keep completion work on the
-  latter, or it fires once per set.
+  health aggregator and clears the active pointer. Keep completion work on the latter, or it fires once
+  per set. Stats are the exception that listens to both: any write to a *finished* session (edit,
+  import, delete) marks them dirty, while sets recorded in the workout in progress don't, and
+  `sessionFinished` covers that workout once it ends.
+- The derived caches (`latestExercises`, `earliestSession`) are kept by `storeSession` in the slice.
+  Writes only move them forward, except when a write replaces the session a cached entry came from; then
+  that entry is recomputed, so an edit that moves an exercise earlier or removes it can't leave a stale
+  "latest" behind.
 
 The `active` column has a single writer, the `setActiveSessionId` effect, in a transaction with a unique
 partial index (`single_active_session`) enforcing at most one - the same shape the `program` table uses

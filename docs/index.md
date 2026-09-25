@@ -7,7 +7,8 @@ work to find the docs relevant to your area, and update it whenever you add, rem
 
 - [Storage.md](./Storage.md) - the two on-device storage layers: preferences (`PreferenceService`, one
   file per key) and user data (SQLite via Drizzle). Both are injected into Redux effects via `extra`.
-  Covers which to use, how to add to each, and the startup hydration order.
+  Covers which to use, how to add to each, the startup hydration order, and the history snapshots and
+  startup benchmark that guard it.
 - [Migrations.md](./Migrations.md) - the `createMigrations()` chain in `app/src/models/storage/versions/`
   that brings previously-persisted JSON up to the shape the app expects. Read alongside `Storage.md`.
 - [WorkoutWorker.md](./WorkoutWorker.md) - the platform-specific, message-driven execution environment
