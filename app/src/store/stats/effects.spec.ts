@@ -2,11 +2,13 @@ import { describe, expect, it } from 'vitest';
 import { combineReducers } from '@reduxjs/toolkit';
 import { LocalDate } from '@js-joda/core';
 import { applyStatsEffects } from '@/store/stats/effects';
-import { statsReducer } from '@/store/stats';
+import { fetchOverallStats, statsReducer } from '@/store/stats';
+import { settingsReducer } from '@/store/settings';
 import {
   deleteStoredSession,
   putStoredSession,
   setActiveSessionId,
+  setIsHydrated,
   storedSessionsReducer,
   updateStoredSession,
   upsertStoredSessions,
@@ -14,7 +16,11 @@ import {
 import { createAddEffectTestBed } from '@/utils/__test__/add-effect-testbed';
 import { EmptySession, Session } from '@/models/session-models';
 
-const reducer = combineReducers({ stats: statsReducer, storedSessions: storedSessionsReducer });
+const reducer = combineReducers({
+  settings: settingsReducer,
+  stats: statsReducer,
+  storedSessions: storedSessionsReducer,
+});
 
 function setup(stored: Session[], activeSessionId?: string) {
   const testBed = createAddEffectTestBed({ reducer });
@@ -72,5 +78,20 @@ describe('stats staleness', () => {
     await testBed.dispatchHandled(updateStoredSession({ sessionId: active.id, update: (s) => s.with({}) }));
 
     expect(testBed.getState().stats.isDirty).toBe(false);
+  });
+
+  it('an edit while stats are being calculated leaves them stale for the next fetch', async () => {
+    const testBed = setup([finished]);
+    testBed.dispatch(setIsHydrated(true));
+    testBed.setState({ stats: { ...testBed.getState().stats, isDirty: true } });
+
+    const fetching = testBed.dispatchHandled(fetchOverallStats());
+    await testBed.dispatchHandled(
+      updateStoredSession({ sessionId: finished.id, update: (s) => s.withUpdatedDate(LocalDate.parse('2026-03-01')) }),
+    );
+    await fetching;
+
+    expect(testBed.getState().stats.overallView.isSuccess()).toBe(true);
+    expect(testBed.getState().stats.isDirty).toBe(true);
   });
 });

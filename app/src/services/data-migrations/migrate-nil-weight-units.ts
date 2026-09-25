@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import { dataMigrationsSchema, sessionsSchema } from '@/db/schema';
 import { RecordedExerciseJSON, SessionJSON } from '@/models/storage/versions/latest';
 import { PreferenceService } from '../preference-service';
+import { WeightUnit } from '@/models/weight';
 import { sessionMigrations } from '@/models/storage/versions/migrations/session';
 
 export const migrateNilWeightUnitsDataMigration = 'MIGRATE_NIL_WEIGHT_UNITS';
@@ -24,7 +25,10 @@ export async function migrateNilWeightUnits(db: ExpoSQLiteDatabase, preferenceSe
 }
 
 /** Gives unit-less weights the user's unit. Returns the same object when there were none. */
-export function coalesceNilWeights(session: SessionJSON, preferredUnit: 'kilograms' | 'pounds'): SessionJSON {
+export function coalesceNilWeights(session: SessionJSON, preferredUnit: WeightUnit): SessionJSON {
+  if (preferredUnit === 'nil') {
+    return session;
+  }
   let hasNilWeight = false;
   const recordedExercises = session.recordedExercises.map((ex): RecordedExerciseJSON => {
     if (ex.type !== 'RecordedWeightedExercise') {

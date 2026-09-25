@@ -3,7 +3,14 @@ import { Logger } from '@/services/logger';
 import { showSnackbar } from '@/store/app';
 import { AddEffectFn } from '@/store/store';
 import { upsertSavedPlans } from '@/store/program';
-import { beginFeedImport, importBackupData, importData, importDataProto, importDataSql } from '@/store/settings';
+import {
+  beginFeedImport,
+  importBackupData,
+  importData,
+  importDataProto,
+  importDataSql,
+  selectPreferredWeightUnit,
+} from '@/store/settings';
 import { upsertExercises, upsertStoredSessions } from '@/store/stored-sessions';
 import { streamToUint8Array, writeInChunks } from '@/utils/stream';
 import { sleep } from '@/utils/sleep';
@@ -83,9 +90,8 @@ export function addImportBackupEffects(addEffect: AddEffectFn) {
 
   addEffect(importBackupData, async ({ payload }, { dispatch, getState }) => {
     const { programs, exercises, feed, successMessage } = payload;
-    // Old backups can hold weights with no unit. Settle them before anything is stored: re-running the
-    // nil-weight data migration afterwards raced the upsert's write, so a slow write kept its nil units.
-    const preferredUnit = getState().settings.useImperialUnits ? 'pounds' : 'kilograms';
+    // Old backups can hold weights with no unit; give them the user's unit before anything is stored.
+    const preferredUnit = selectPreferredWeightUnit(getState());
     const workouts = payload.workouts.map((session) => {
       const json = session.toJSON();
       const coalesced = coalesceNilWeights(json, preferredUnit);

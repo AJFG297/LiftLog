@@ -17,19 +17,24 @@ import { calculateStats } from '@/store/stats/calculate-stats';
 
 export function applyStatsEffects(addEffect: AddEffectFn) {
   addEffect(fetchOverallStats, async (_, { getState, dispatch }) => {
-    const state = getState();
+    const before = getState();
 
-    if (state.stats.overallView.isLoading() || !state.stats.isDirty || !state.storedSessions.isHydrated) {
+    if (before.stats.overallView.isLoading() || !before.stats.isDirty || !before.storedSessions.isHydrated) {
       return;
     }
 
     dispatch(setOverallStats(RemoteData.loading()));
+    // Cleared before calculating rather than after, so a write that lands meanwhile marks the stats stale
+    // again instead of being overwritten by a result that doesn't include it.
+    dispatch(setStatsIsDirty(false));
     await sleep(200);
+    const state = getState();
     try {
       let timeframe = state.stats.overallViewTime;
       if (timeframe === 'all-time') {
         if (!state.storedSessions.earliestSession) {
           dispatch(setOverallStats(RemoteData.error('No sessions')));
+          dispatch(setStatsIsDirty(true));
           return;
         }
         timeframe = {
@@ -43,9 +48,9 @@ export function applyStatsEffects(addEffect: AddEffectFn) {
         timeframe,
       );
       dispatch(setOverallStats(RemoteData.success(stats)));
-      dispatch(setStatsIsDirty(false));
     } catch (e) {
       dispatch(setOverallStats(RemoteData.error(e)));
+      dispatch(setStatsIsDirty(true));
     }
   });
 
