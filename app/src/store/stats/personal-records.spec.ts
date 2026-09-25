@@ -29,6 +29,11 @@ function session(id: string, date: LocalDate, exercises: RecordedWeightedExercis
 const kg = (n: number) => new Weight(n, 'kilograms');
 const day = (n: number) => LocalDate.of(2026, 7, n);
 
+function withWarmup(exercise: RecordedWeightedExercise, weight: Weight, reps: number) {
+  const time = OffsetDateTime.parse('2026-01-01T09:55:00Z');
+  return exercise.with({ warmupSets: [filledPotentialSet(reps, time, weight)] });
+}
+
 describe('findPersonalRecords', () => {
   it('does not award a record on the first sighting of an exercise', () => {
     // Otherwise a user with a single event in your feed gets a badge on everything they do.
@@ -141,5 +146,35 @@ describe('findPersonalRecords for exercises that track no load', () => {
     const records = findPersonalRecords([build('s1', day(1), 20), build('s2', day(8), 30)]);
 
     expect([...records.values()].flat()).toEqual([]);
+  });
+
+  it('never awards a record for a warm-up heavier than the working sets', () => {
+    const records = findPersonalRecords([
+      session('s1', day(1), [exercise('Squat', kg(100), 5)]),
+      session('s2', day(8), [withWarmup(exercise('Squat', kg(100), 5), kg(150), 5)]),
+    ]);
+
+    expect(records.size).toBe(0);
+  });
+
+  it('judges a record on the working sets alone, however light the warm-up', () => {
+    const records = findPersonalRecords([
+      session('s1', day(1), [withWarmup(exercise('Squat', kg(100), 5), kg(150), 5)]),
+      session('s2', day(8), [withWarmup(exercise('Squat', kg(110), 5), kg(20), 5)]),
+    ]);
+
+    // A 150 kg warm-up in s1 would otherwise have set a best that 110 kg never beats.
+    expect(records.get('s2')?.[0]?.exerciseName).toBe('Squat');
+  });
+
+  it('leaves an exercise with only warm-ups logged out of the running best', () => {
+    const warmupsOnly = withWarmup(exercise('Squat', kg(100), 5), kg(150), 5).withNothingCompleted();
+    const records = findPersonalRecords([
+      session('s1', day(1), [warmupsOnly.withWarmupRepCount(0, 5, OffsetDateTime.parse('2026-01-01T09:55:00Z'))]),
+      session('s2', day(8), [exercise('Squat', kg(110), 5)]),
+    ]);
+
+    // s2 is the first real sighting, so it is no record.
+    expect(records.size).toBe(0);
   });
 });

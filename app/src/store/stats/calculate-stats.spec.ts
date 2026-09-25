@@ -473,4 +473,53 @@ describe('calculateStats', () => {
       expect(result.averageSessionLength.toMinutes()).toBe(44);
     });
   });
+
+  describe('calculateStats - warm-ups', () => {
+    const date = LocalDate.of(2024, 5, 1);
+
+    /** 3 × 5 at 100 kg, behind one logged warm-up at `warmupKg`. */
+    function sessionWithWarmup(warmupKg: number, name = 'Squat') {
+      const blueprint = makeBlueprint(name, 3, 5);
+      const baseTime = makeOffset(date);
+      const exercise = makeCompletedExercise(blueprint, 100, 5, baseTime).with({
+        warmupSets: [filledPotentialSet(8, baseTime.minusSeconds(120), new Weight(warmupKg, 'kilograms'))],
+      });
+      return new Session('id', makeSessionBlueprint('Legs', [blueprint]), [exercise], date, undefined, undefined);
+    }
+
+    it.each([
+      ['lighter', 20],
+      ['heavier', 200],
+    ])('leaves a warm-up %s than the working sets out of every figure', (_, warmupKg) => {
+      const result = calculateStats([sessionWithWarmup(warmupKg)], 'kilograms', makeRange(date, date.plusDays(6)));
+      const squat = result.weightedExerciseStats[0]!;
+
+      expect(result.setsPerWeek).toBeCloseTo(3, 5);
+      expect(result.heaviestLift?.weight.value.toNumber()).toBe(100);
+      expect(result.maxWeightLiftedInAWorkout?.value.toNumber()).toBe(1500);
+      expect(squat.maxLiftedPerSessionStatistics.maxValue.value.toNumber()).toBe(100);
+      expect(squat.max1RMPerSessionStatistics.maxValue.value.toNumber()).toBeCloseTo(100 * (1 + 5 / 30), 2);
+      expect(squat.totalVolumeStatistics.maxValue.value.toNumber()).toBe(1500);
+      expect(squat.series.reps.maxValue).toBe(5);
+      expect(squat.repsStatistics.breakdown).toEqual({ 5: { numberOfSets: 3 } });
+    });
+
+    it('gives an exercise with only warm-ups logged no stats of its own', () => {
+      const skipped = sessionWithWarmup(60, 'Deadlift');
+      const [exercise] = skipped.recordedExercises as RecordedWeightedExercise[];
+      const warmupsOnly = skipped.with({
+        recordedExercises: [
+          exercise!.with({ potentialSets: exercise!.potentialSets.map((ps) => ps.with({ set: undefined })) }),
+        ],
+      });
+
+      const result = calculateStats(
+        [sessionWithWarmup(20), warmupsOnly],
+        'kilograms',
+        makeRange(date, date.plusDays(6)),
+      );
+
+      expect(result.weightedExerciseStats.map((s) => s.exerciseName)).toEqual(['Squat']);
+    });
+  });
 });

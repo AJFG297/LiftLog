@@ -196,6 +196,36 @@ describe('storedSessions reducer', () => {
     expect(latest.potentialSets[0]!.weight.value.toNumber()).toBe(100);
   });
 
+  // Carry-over reads latestExercises, so a session where only the warm-ups got logged must not
+  // stand in for the last real performance.
+  it('an exercise with only warm-ups logged never becomes the one carried over', () => {
+    const completed = createSessionWithCompletionTime(
+      LocalDate.of(2026, 4, 3),
+      OffsetDateTime.of(2026, 4, 3, 10, 0, 0, 0, ZoneOffset.UTC),
+      'Squat',
+    );
+    const warmupsOnlyTemplate = createAbandonedSession(LocalDate.of(2026, 4, 10), 'Squat');
+    const exercise = warmupsOnlyTemplate.recordedExercises[0] as RecordedWeightedExercise;
+    const warmupsOnly = warmupsOnlyTemplate.with({
+      recordedExercises: [
+        exercise.with({
+          warmupSets: [
+            filledPotentialSet(
+              5,
+              OffsetDateTime.of(2026, 4, 10, 10, 0, 0, 0, ZoneOffset.UTC),
+              new Weight(50, 'kilograms'),
+            ),
+          ],
+        }),
+      ],
+    });
+
+    const state = reduce(putStoredSession(completed), putStoredSession(warmupsOnly));
+
+    const latest = Object.values(state.latestExercises)[0] as RecordedWeightedExercise;
+    expect(latest).toBe(completed.recordedExercises[0]);
+  });
+
   it('updateStoredSession edits the addressed session and leaves the others alone', () => {
     const target = createSessionWithCompletionTime(
       LocalDate.of(2026, 4, 10),

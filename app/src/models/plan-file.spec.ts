@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { ProgramBlueprint } from '@/models/blueprint-models';
+import { ProgramBlueprint, WeightedExerciseBlueprint } from '@/models/blueprint-models';
+import { RecordedWeightedExercise } from '@/models/session-models';
 import { parseProgramBlueprintFile, serializeProgramBlueprint } from '@/models/plan-file';
 import type { ProgramBlueprintJSON } from '@/models/storage/versions/latest/blueprint';
 import type { ProgramBlueprintJSON as InitialProgramBlueprintJSON } from '@/models/storage/versions/initial';
@@ -77,6 +78,59 @@ describe('plan-file', () => {
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.blueprint.toJSON()).toEqual(withWarmups);
+    }
+  });
+
+  // A plan written in pounds keeps its unit on import, so a kilo lifter's session converts the
+  // weight rather than reading 45 lb as 45 kg.
+  it('converts and rounds an imported absolute warm-up into the session unit', () => {
+    const [session] = validBlueprint.sessions;
+    const [exercise] = session!.exercises;
+    const inPounds: ProgramBlueprintJSON = {
+      ...validBlueprint,
+      sessions: [
+        {
+          ...session!,
+          exercises: [
+            {
+              ...(exercise as Extract<typeof exercise, { type: 'WeightedExerciseBlueprint' }>),
+              warmupSets: [
+                { load: { type: 'absolute', weight: { unit: 'pounds', value: '45' as BigNumberJSON } }, reps: 5 },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+
+    const result = parseProgramBlueprintFile(encode(inPounds));
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      const imported = result.blueprint.sessions[0]!.exercises[0]!;
+      if (!(imported instanceof WeightedExerciseBlueprint)) throw new Error('expected a weighted exercise');
+      expect(imported.warmupSets[0]!.load).toMatchObject({ type: 'absolute', weight: { unit: 'pounds' } });
+      // 45 lb is 20.4 kg, which rounds to the exercise's 2.5 increment.
+      const [warmup] = RecordedWeightedExercise.empty(imported, 'kilograms').warmupSets;
+      expect(warmup!.weight.toJSON()).toEqual({ unit: 'kilograms', value: '20' });
+    }
+  });
+
+  it('gives a plan file written before warm-ups existed none', () => {
+    const { warmupSets: _warmupSets, ...exercise } = validBlueprint.sessions[0]!.exercises[0] as Extract<
+      ProgramBlueprintJSON['sessions'][number]['exercises'][number],
+      { type: 'WeightedExerciseBlueprint' }
+    >;
+    const beforeWarmups = {
+      ...validBlueprint,
+      sessions: [{ ...validBlueprint.sessions[0]!, version: 6, exercises: [exercise] }],
+    };
+
+    const result = parseProgramBlueprintFile(encode(beforeWarmups));
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.blueprint.toJSON()).toEqual(validBlueprint);
     }
   });
 

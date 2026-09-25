@@ -17,7 +17,11 @@ numbers in.
 - **Weight always carries over.**
 - **Reps you completed last time normally do not.** The target comes back from the plan each session.
 - A workout you opened but never logged a set in is ignored, so an abandoned session cannot become the
-  number you are stuck chasing.
+  number you are stuck chasing. Logging only the warm-ups counts as not logging a set.
+- **Warm-up sets never affect carry over or the rules.** They are not part of the match, so adding or
+  removing one keeps your progress. They are rebuilt from the plan each session rather than carried,
+  and the rules ignore them: a skipped or short warm-up never fails a session, and a light one is never
+  picked as the "lowest set".
 
 **Reps carry over too when reps are what you are progressing on** - either the exercise's Resistance is
 set to None (there is nothing else to advance on), or you have given it a rule that increases reps. In

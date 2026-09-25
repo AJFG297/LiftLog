@@ -332,6 +332,15 @@ export class RecordedWeightedExercise {
     return this.potentialSets.some((x) => x.set !== undefined) || this.warmupSets.some((x) => x.set !== undefined);
   }
 
+  /**
+   * Whether a working set is logged. Anything that measures the lift - stats, records, the
+   * performance the next session carries on from - asks this rather than {@link isStarted}, so a
+   * session where only the warm-ups got done counts for nothing.
+   */
+  get hasLoggedWorkingSet(): boolean {
+    return this.potentialSets.some((x) => x.set !== undefined);
+  }
+
   get hasLoggedRpe(): boolean {
     return this.potentialSets.some((x) => x.loggedRpe !== undefined);
   }

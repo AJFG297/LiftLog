@@ -2,19 +2,23 @@
 
 exports[`export-plaintext-effects > addExportPlaintextEffects - CSV > CSV output includes header row and one row per completed set 1`] = `
 [
-  "SessionId,Timestamp,Exercise,Weight,WeightUnit,Reps,TargetReps,Notes,RPE
+  "SessionId,Timestamp,Exercise,Weight,WeightUnit,Reps,TargetReps,Notes,RPE,SetType
 ",
-  "124,2024-01-15T10:00Z,Bench Press,100,kg,10,10,,
+  "124,2024-01-15T09:58Z,Bench Press,50,kg,5,5,,,warmup
 ",
-  "124,2024-01-15T10:01Z,Bench Press,100,kg,10,10,,
+  "124,2024-01-15T09:59Z,Bench Press,70,kg,3,3,,,warmup
 ",
-  "124,2024-01-15T10:02Z,Bench Press,100,kg,10,10,,
+  "124,2024-01-15T10:00Z,Bench Press,100,kg,10,10,,,working
 ",
-  "124,2024-01-15T10:00Z,Squat,140,kg,8,8,,
+  "124,2024-01-15T10:01Z,Bench Press,100,kg,10,10,,,working
 ",
-  "124,2024-01-15T10:01Z,Squat,140,kg,8,8,,
+  "124,2024-01-15T10:02Z,Bench Press,100,kg,10,10,,,working
 ",
-  "124,2024-01-15T10:02Z,Squat,140,kg,8,8,,",
+  "124,2024-01-15T10:00Z,Squat,140,kg,8,8,,,working
+",
+  "124,2024-01-15T10:01Z,Squat,140,kg,8,8,,,working
+",
+  "124,2024-01-15T10:02Z,Squat,140,kg,8,8,,,working",
 ]
 `;
 

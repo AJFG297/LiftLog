@@ -45,6 +45,31 @@ describe('sessionVolume with bodyweight exercises', () => {
   });
 });
 
+describe('sessionVolume with warm-ups', () => {
+  const time = OffsetDateTime.parse('2025-01-01T10:00:00Z');
+  const kg = (n: number) => new Weight(n, 'kilograms');
+
+  it.each([
+    ['lighter', 20],
+    ['heavier', 200],
+  ])('leaves out a logged warm-up %s than the working sets', (_, warmupKg) => {
+    const blueprint = makeWeightedBlueprint({ name: 'Squat' });
+    const exercise = new RecordedWeightedExercise(blueprint, [filledPotentialSet(10, time, kg(100))], undefined, [
+      filledPotentialSet(5, time.minusMinutes(2), kg(warmupKg)),
+    ]);
+    const session = new Session(
+      'id',
+      new SessionBlueprint('Test', [blueprint], ''),
+      [exercise],
+      LocalDate.of(2025, 1, 1),
+      undefined,
+      undefined,
+    );
+
+    expect(sessionVolume(session)).toBe(1000);
+  });
+});
+
 describe('volumeScaleOf', () => {
   it('uses the 10th and 90th percentile, so one huge day does not wash out the rest', () => {
     const volumes = [100, 100, 100, 100, 100, 100, 100, 100, 100, 100_000];
