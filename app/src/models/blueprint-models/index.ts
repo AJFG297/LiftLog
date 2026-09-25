@@ -808,6 +808,20 @@ export function nextWarmupSet(resistance: Resistance, existing: PlannedWarmupSet
   return { load: undefined, reps };
 }
 
+/**
+ * The warm-up with its load planned as `type` instead, keeping its reps. A percentage starts at 50%. A
+ * fixed weight starts empty: nothing in the plan says what a sensible one is, so it is entered next.
+ */
+export function withWarmupLoadType(warmup: PlannedWarmupSet, type: WarmupLoadType): PlannedWarmupSet {
+  if (warmup.load?.type === type || (type === 'absolute' && !warmup.load)) {
+    return warmup;
+  }
+  return {
+    load: type === 'percent' ? { type: 'percent', percent: 50 } : undefined,
+    reps: warmup.reps,
+  };
+}
+
 export function warmupLoadsEqual(a: WarmupLoad | undefined, b: WarmupLoad | undefined): boolean {
   if (!a || !b) {
     return a === b;

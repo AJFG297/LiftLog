@@ -11,6 +11,7 @@ import {
   roundWarmupWeight,
   warmupIncrementFor,
   warmupLoadTypesFor,
+  withWarmupLoadType,
 } from '@/models/blueprint-models';
 import { makeWeightedBlueprint } from '@/models/session-models/__test__/helpers';
 import { Weight } from '@/models/weight';
@@ -102,6 +103,22 @@ describe('nextWarmupSet', () => {
     const first = nextWarmupSet(resistance, []);
     expect(first).toEqual(repsOnly(5));
     expect(nextWarmupSet(resistance, [first])).toEqual(repsOnly(3));
+  });
+});
+
+describe('withWarmupLoadType', () => {
+  it('starts a percentage at 50%, keeping the reps', () => {
+    expect(withWarmupLoadType(absolute(20, 3), 'percent')).toEqual(percent(50, 3));
+    expect(withWarmupLoadType(repsOnly(3), 'percent')).toEqual(percent(50, 3));
+  });
+
+  it('starts a fixed weight empty, keeping the reps', () => {
+    expect(withWarmupLoadType(percent(70, 3), 'absolute')).toEqual(repsOnly(3));
+  });
+
+  it('leaves a warm-up already planned that way alone', () => {
+    expect(withWarmupLoadType(percent(70, 3), 'percent')).toEqual(percent(70, 3));
+    expect(withWarmupLoadType(absolute(20, 3), 'absolute')).toEqual(absolute(20, 3));
   });
 });
 
