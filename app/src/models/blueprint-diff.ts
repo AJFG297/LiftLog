@@ -10,8 +10,11 @@ import {
   ProgressionRule,
   progressionEquals,
   formatPlannedSets,
+  formatPlannedWarmupSets,
   PlannedSet,
+  PlannedWarmupSet,
   plannedSetsEqual,
+  plannedWarmupSetsEqual,
   Rest,
   SessionBlueprint,
   WeightedExerciseBlueprint,
@@ -103,6 +106,16 @@ interface ExercisePlannedSetsChange extends BaseChange {
   exerciseIndex: number;
   oldValue: PlannedSet[];
   newValue: PlannedSet[];
+}
+
+/** Warm-ups are compared in full, loads included - the planned-set change only looks at reps. */
+interface ExerciseWarmupSetsChange extends BaseChange {
+  kind: 'exerciseWarmupSets';
+  type: 'modified';
+  exerciseName: string;
+  exerciseIndex: number;
+  oldValue: PlannedWarmupSet[];
+  newValue: PlannedWarmupSet[];
 }
 
 interface ExerciseProgressionChange extends BaseChange {
@@ -227,6 +240,7 @@ interface ExerciseTypeChange extends BaseChange {
 type ExerciseFieldChange =
   | ExerciseNameChange
   | ExercisePlannedSetsChange
+  | ExerciseWarmupSetsChange
   | ExerciseProgressionChange
   | ExerciseRestChange
   | ExerciseSupersetChange
@@ -435,6 +449,18 @@ function diffWeightedExercises(
       exerciseIndex,
       oldValue: oldEx.plannedSets,
       newValue: newEx.plannedSets,
+    });
+  }
+
+  if (!plannedWarmupSetsEqual(oldEx.warmupSets, newEx.warmupSets)) {
+    changes.push({
+      id: generateChangeId(),
+      kind: 'exerciseWarmupSets',
+      type: 'modified',
+      exerciseName,
+      exerciseIndex,
+      oldValue: oldEx.warmupSets,
+      newValue: newEx.warmupSets,
     });
   }
 
@@ -908,6 +934,9 @@ export function applySessionBlueprintDiff(original: SessionBlueprint, diff: Sess
         .with({ kind: 'exercisePlannedSets' }, (c) =>
           exercise instanceof WeightedExerciseBlueprint ? exercise.with({ plannedSets: c.newValue }) : exercise,
         )
+        .with({ kind: 'exerciseWarmupSets' }, (c) =>
+          exercise instanceof WeightedExerciseBlueprint ? exercise.with({ warmupSets: c.newValue }) : exercise,
+        )
         .with({ kind: 'progression' }, (c) =>
           exercise instanceof WeightedExerciseBlueprint ? exercise.with({ progression: c.newValue }) : exercise,
         )
@@ -1072,6 +1101,12 @@ export function getChangeDescription(t: UseTranslateResult['t'], change: DiffCha
         newValue: formatPlannedSets(c.newValue),
       }),
     )
+    .with({ kind: 'exerciseWarmupSets' }, (c) =>
+      t('plan.diff.generic_two_value_change.body', {
+        oldValue: stringifyWarmupSets(t, c.oldValue),
+        newValue: stringifyWarmupSets(t, c.newValue),
+      }),
+    )
     .with({ kind: 'progression' }, (c) =>
       t('plan.diff.generic_two_value_change.body', {
         oldValue: stringifyProgression(t, c.oldValue),
@@ -1138,6 +1173,9 @@ export function getChangeLabelKey(change: DiffChange): TranslatableString {
     .with({ kind: 'exercisePlannedSets' }, () => ({
       key: 'plan.diff.sets.label',
     }))
+    .with({ kind: 'exerciseWarmupSets' }, () => ({
+      key: 'plan.diff.warmup_sets.label',
+    }))
     .with({ kind: 'progression' }, () => ({
       key: 'plan.diff.progressive_overload.label',
     }))
@@ -1178,6 +1216,10 @@ export function getChangeLabelKey(change: DiffChange): TranslatableString {
       params: { setNumber: c.setIndex + 1 },
     }))
     .exhaustive();
+}
+
+function stringifyWarmupSets(t: UseTranslateResult['t'], warmups: PlannedWarmupSet[]): string {
+  return warmups.length ? formatPlannedWarmupSets(warmups) : t('plan.diff.warmup_sets_none.body');
 }
 
 function stringifyProgression(t: UseTranslateResult['t'], progression: ProgressionRule[]): string {

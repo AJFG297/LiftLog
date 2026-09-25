@@ -1,0 +1,17 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "load": {
+      "$ref": "./WarmupLoad.json",
+      "description": "Absent for an exercise with no resistance, where a warm-up is reps only. A bodyweight exercise only takes an absolute (added) weight."
+    },
+    "reps": {
+      "type": "integer"
+    }
+  },
+  "required": [
+    "reps"
+  ],
+  "description": "What the plan asks for on one warm-up set."
+}

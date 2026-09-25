@@ -9,7 +9,7 @@ import type {
 import type { WeightJSON } from '@/models/storage/versions/libs/weight';
 
 export interface SessionJSON {
-  version: 8;
+  version: 9;
   id: string;
   blueprint: { name: string; notes: string };
   recordedExercises: RecordedExerciseJSON[];
@@ -46,7 +46,10 @@ export interface RecordedCardioExerciseJSON {
 export interface RecordedWeightedExerciseJSON {
   type: 'RecordedWeightedExercise';
   blueprint: WeightedExerciseBlueprintJSON;
+  /** Working sets only; warm-ups live in `warmupSets`. */
   potentialSets: PotentialSetJSON[];
+  /** One slot per planned warm-up, rebuilt from the plan every session. Never carries an RPE. */
+  warmupSets: PotentialSetJSON[];
   notes?: string | undefined;
 }
 

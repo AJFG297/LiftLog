@@ -13,7 +13,15 @@
       "type": "array",
       "items": {
         "$ref": "./PotentialSet.json"
-      }
+      },
+      "description": "Working sets only; warm-ups live in `warmupSets`."
+    },
+    "warmupSets": {
+      "type": "array",
+      "items": {
+        "$ref": "./PotentialSet.json"
+      },
+      "description": "One slot per planned warm-up, rebuilt from the plan every session. Never carries an RPE."
     },
     "notes": {
       "type": "string"
@@ -22,6 +30,7 @@
   "required": [
     "type",
     "blueprint",
-    "potentialSets"
+    "potentialSets",
+    "warmupSets"
   ]
 }

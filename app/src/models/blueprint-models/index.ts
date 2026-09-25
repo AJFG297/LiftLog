@@ -11,6 +11,8 @@ import {
   ProgressionRuleJSON,
   RestJSON,
   SessionBlueprintJSON,
+  PlannedWarmupSetJSON,
+  WarmupLoadJSON,
   WeightedExerciseBlueprintJSON,
   fromBigNumberJSON,
   fromDurationJSON,
@@ -20,6 +22,7 @@ import {
   toLocalDateJSON,
 } from '../storage/versions/latest';
 import { RecordedWeightedExercise } from '@/models/session-models';
+import { Weight, WeightUnit } from '@/models/weight';
 
 export class ProgramBlueprint {
   constructor(
@@ -139,7 +142,7 @@ export class SessionBlueprint {
 
   toJSON(): SessionBlueprintJSON {
     return {
-      version: 6,
+      version: 7,
       name: this.name,
       exercises: this.exercises.map((exercise) => exercise.toJSON()),
       notes: this.notes,
@@ -752,6 +755,130 @@ export function plannedSetsEqual(a: PlannedSet[], b: PlannedSet[]): boolean {
 }
 
 /**
+ * How a warm-up's load is planned: a share of the session's heaviest working set (`percent` is out of
+ * 100), or a fixed weight such as an empty bar. The fixed weight carries its own unit, unlike a
+ * progression step, because it is a real load rather than a plate increment.
+ */
+export type WarmupLoad = { type: 'percent'; percent: number } | { type: 'absolute'; weight: Weight };
+
+export type WarmupLoadType = WarmupLoad['type'];
+
+/**
+ * What the plan asks for on one warm-up set. Warm-ups never count toward anything - progression,
+ * records, stats - which is why they sit in their own list rather than among the planned sets.
+ */
+export interface PlannedWarmupSet {
+  /** Undefined for reps only: always on an exercise with no resistance, or no added weight otherwise. */
+  load: WarmupLoad | undefined;
+  reps: number;
+}
+
+/**
+ * The load types a warm-up may take on each resistance: a percentage of added weight on a bodyweight
+ * movement would be a percentage of the wrong thing, and an exercise with no resistance has no load.
+ */
+export function warmupLoadTypesFor(resistance: Resistance): readonly WarmupLoadType[] {
+  return match(resistance)
+    .returnType<readonly WarmupLoadType[]>()
+    .with('external', () => ['percent', 'absolute'])
+    .with('bodyweight', () => ['absolute'])
+    .with('none', () => [])
+    .exhaustive();
+}
+
+/** The warm-up as the resistance allows it, dropping a load it cannot take. */
+export function warmupSetFor(resistance: Resistance, warmup: PlannedWarmupSet): PlannedWarmupSet {
+  if (!warmup.load || warmupLoadTypesFor(resistance).includes(warmup.load.type)) {
+    return warmup;
+  }
+  return { load: undefined, reps: warmup.reps };
+}
+
+/**
+ * What "Add warm-up" offers next: a light ramp of 50% × 5 and then 70% × 3 where a percentage is
+ * allowed, otherwise the same reps with no added weight.
+ */
+export function nextWarmupSet(resistance: Resistance, existing: PlannedWarmupSet[]): PlannedWarmupSet {
+  const first = existing.length === 0;
+  const reps = first ? 5 : 3;
+  const allowed = warmupLoadTypesFor(resistance);
+  if (allowed.includes('percent')) {
+    return { load: { type: 'percent', percent: first ? 50 : 70 }, reps };
+  }
+  return { load: undefined, reps };
+}
+
+export function warmupLoadsEqual(a: WarmupLoad | undefined, b: WarmupLoad | undefined): boolean {
+  if (!a || !b) {
+    return a === b;
+  }
+  if (a.type === 'percent') {
+    return b.type === 'percent' && a.percent === b.percent;
+  }
+  return b.type === 'absolute' && a.weight.equals(b.weight);
+}
+
+export function plannedWarmupSetsEqual(a: PlannedWarmupSet[], b: PlannedWarmupSet[]): boolean {
+  return a.length === b.length && a.every((w, i) => w.reps === b[i]!.reps && warmupLoadsEqual(w.load, b[i]!.load));
+}
+
+/** `50% × 5`, `20kg × 5`, or just `5` for reps only. */
+export function formatPlannedWarmupSet(warmup: PlannedWarmupSet): string {
+  if (!warmup.load) {
+    return `${warmup.reps}`;
+  }
+  const load = warmup.load.type === 'percent' ? `${warmup.load.percent}%` : warmup.load.weight.shortLocaleFormat();
+  return `${load} × ${warmup.reps}`;
+}
+
+export function formatPlannedWarmupSets(warmups: PlannedWarmupSet[]): string {
+  return warmups.map(formatPlannedWarmupSet).join(', ');
+}
+
+/**
+ * The step a warm-up's weight is rounded to in `unit`: the exercise's load step, or a pair of the
+ * smallest plates in that unit when it has none.
+ */
+export function warmupIncrementFor(exercise: WeightedExerciseBlueprint, unit: WeightUnit): BigNumber {
+  const step = exercise.progression.find((rule) => rule.axis === 'load')?.step;
+  if (step && step.isGreaterThan(0)) {
+    return step;
+  }
+  return new BigNumber(unit === 'pounds' ? 5 : 2.5);
+}
+
+/** `weight` at the nearest multiple of `increment`, and never below zero. */
+export function roundWarmupWeight(weight: Weight, increment: BigNumber): Weight {
+  const rounded = increment.isGreaterThan(0)
+    ? weight.value.dividedBy(increment).integerValue(BigNumber.ROUND_HALF_UP).multipliedBy(increment)
+    : weight.value;
+  return new Weight(BigNumber.max(rounded, 0), weight.unit);
+}
+
+function warmupLoadFromJSON(json: WarmupLoadJSON | undefined): WarmupLoad | undefined {
+  if (!json) {
+    return undefined;
+  }
+  return json.type === 'percent'
+    ? { type: 'percent', percent: json.percent }
+    : { type: 'absolute', weight: Weight.fromJSON(json.weight) };
+}
+
+function warmupLoadToJSON(load: WarmupLoad): WarmupLoadJSON {
+  return load.type === 'percent'
+    ? { type: 'percent', percent: load.percent }
+    : { type: 'absolute', weight: load.weight.toJSON() };
+}
+
+function plannedWarmupSetFromJSON(json: PlannedWarmupSetJSON): PlannedWarmupSet {
+  return { load: warmupLoadFromJSON(json.load), reps: json.reps };
+}
+
+function plannedWarmupSetToJSON(warmup: PlannedWarmupSet): PlannedWarmupSetJSON {
+  return { ...(warmup.load ? { load: warmupLoadToJSON(warmup.load) } : {}), reps: warmup.reps };
+}
+
+/**
  * Every field of a weighted blueprint, each optional and each named. See
  * {@link WeightedExerciseBlueprint.of}.
  */
@@ -764,6 +891,7 @@ export interface WeightedExerciseBlueprintInit {
   notes?: string;
   link?: string;
   resistance?: Resistance;
+  warmupSets?: PlannedWarmupSet[];
   /** Authoring shorthand for `plannedSets`, projected through {@link plannedSetsOf}. */
   sets?: number;
   repsConfig?: RepsConfig;
@@ -771,6 +899,12 @@ export interface WeightedExerciseBlueprintInit {
 
 export class WeightedExerciseBlueprint {
   readonly type = 'WeightedExerciseBlueprint';
+
+  /**
+   * Planned warm-ups, in the order they are done. Always fits {@link resistance}: a load the
+   * resistance cannot take is dropped on the way in (see {@link warmupLoadTypesFor}).
+   */
+  readonly warmupSets: PlannedWarmupSet[];
 
   constructor(
     readonly name: string,
@@ -781,9 +915,12 @@ export class WeightedExerciseBlueprint {
     readonly notes: string,
     readonly link: string,
     readonly resistance: Resistance = 'external',
-  ) {}
+    warmupSets: PlannedWarmupSet[] = [],
+  ) {
+    this.warmupSets = warmupSets.map((w) => warmupSetFor(resistance, w));
+  }
 
-  /** Build a blueprint from named fields; preferred over the constructor's eight positional arguments. */
+  /** Build a blueprint from named fields; preferred over the constructor's positional arguments. */
   static of(init: WeightedExerciseBlueprintInit = {}): WeightedExerciseBlueprint {
     return new WeightedExerciseBlueprint(
       init.name ?? '',
@@ -794,6 +931,7 @@ export class WeightedExerciseBlueprint {
       init.notes ?? '',
       init.link ?? '',
       init.resistance ?? 'external',
+      init.warmupSets ?? [],
     );
   }
 
@@ -811,6 +949,7 @@ export class WeightedExerciseBlueprint {
       json.notes,
       json.link,
       json.resistance,
+      json.warmupSets.map(plannedWarmupSetFromJSON),
     );
   }
 
@@ -837,7 +976,10 @@ export class WeightedExerciseBlueprint {
     return this.resistance === 'none' || this.progression.some((rule) => rule.axis === 'reps');
   }
 
-  /** See {@link ProgressionKey} and {@link repsAreProgressed}. */
+  /**
+   * See {@link ProgressionKey} and {@link repsAreProgressed}. Warm-ups stay out of it, so planning
+   * them never strands a lineage's carry-over.
+   */
   progressionKey(): ProgressionKey {
     const base = `${this.name}_${this.type}_${this.plannedSets.length}`;
     return (this.repsAreProgressed ? base : `${base}_${plannedSetsKey(this.plannedSets)}`) as ProgressionKey;
@@ -883,7 +1025,8 @@ export class WeightedExerciseBlueprint {
       this.supersetWithNext === other.supersetWithNext &&
       this.notes === other.notes &&
       this.link === other.link &&
-      this.resistance === other.resistance
+      this.resistance === other.resistance &&
+      plannedWarmupSetsEqual(this.warmupSets, other.warmupSets)
     );
   }
 
@@ -898,6 +1041,7 @@ export class WeightedExerciseBlueprint {
       notes: this.notes,
       link: this.link,
       resistance: this.resistance,
+      warmupSets: this.warmupSets.map(plannedWarmupSetToJSON),
     };
   }
 
@@ -914,6 +1058,7 @@ export class WeightedExerciseBlueprint {
       other.notes ?? this.notes,
       other.link ?? this.link,
       other.resistance ?? this.resistance,
+      other.warmupSets ?? this.warmupSets,
     );
   }
 }

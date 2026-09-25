@@ -380,6 +380,8 @@
   "plan.diff.session_notes.body": "Session notes changed",
   "plan.diff.session_notes.label": "Session notes",
   "plan.diff.sets.label": "Sets",
+  "plan.diff.warmup_sets.label": "Warm-up sets",
+  "plan.diff.warmup_sets_none.body": "None",
   "plan.diff.superset.label": "Superset",
   "plan.diff.target.label": "Target",
   "plan.diff.track_distance.label": "Distance",

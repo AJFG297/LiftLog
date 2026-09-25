@@ -40,6 +40,13 @@
     "resistance": {
       "$ref": "./Resistance.json",
       "description": "Where this movement's load comes from: the whole stored weight (`external`), what is added on top of the lifter (`bodyweight`), or nothing at all (`none`, e.g. crunches)."
+    },
+    "warmupSets": {
+      "type": "array",
+      "items": {
+        "$ref": "./PlannedWarmupSet.json"
+      },
+      "description": "Sets done before the working sets that never count toward progression, records or stats. Kept apart from `plannedSets` so everything reading working sets leaves them out without a filter."
     }
   },
   "required": [
@@ -51,6 +58,7 @@
     "notes",
     "link",
     "progression",
-    "resistance"
+    "resistance",
+    "warmupSets"
   ]
 }

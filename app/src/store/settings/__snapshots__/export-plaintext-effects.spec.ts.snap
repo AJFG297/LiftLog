@@ -71,6 +71,7 @@ exports[`export-plaintext-effects > addExportPlaintextEffects - JSON > JSON outp
           },
           "supersetWithNext": false,
           "type": "WeightedExerciseBlueprint",
+          "warmupSets": [],
         },
         "potentialSets": [
           {
@@ -123,6 +124,7 @@ exports[`export-plaintext-effects > addExportPlaintextEffects - JSON > JSON outp
           },
         ],
         "type": "RecordedWeightedExercise",
+        "warmupSets": [],
       },
     ],
   },
@@ -177,6 +179,7 @@ exports[`export-plaintext-effects > addExportPlaintextEffects - JSON > JSON outp
           },
           "supersetWithNext": false,
           "type": "WeightedExerciseBlueprint",
+          "warmupSets": [],
         },
         "potentialSets": [
           {
@@ -229,6 +232,7 @@ exports[`export-plaintext-effects > addExportPlaintextEffects - JSON > JSON outp
           },
         ],
         "type": "RecordedWeightedExercise",
+        "warmupSets": [],
       },
     ],
   },

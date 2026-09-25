@@ -27,7 +27,7 @@
       "properties": {
         "version": {
           "type": "number",
-          "const": 6
+          "const": 7
         },
         "name": {
           "type": "string"
@@ -100,6 +100,13 @@
         "resistance": {
           "$ref": "#/definitions/Resistance",
           "description": "Where this movement's load comes from: the whole stored weight (`external`), what is added on top of the lifter (`bodyweight`), or nothing at all (`none`, e.g. crunches)."
+        },
+        "warmupSets": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/PlannedWarmupSet"
+          },
+          "description": "Sets done before the working sets that never count toward progression, records or stats. Kept apart from `plannedSets` so everything reading working sets leaves them out without a filter."
         }
       },
       "required": [
@@ -111,7 +118,8 @@
         "notes",
         "link",
         "progression",
-        "resistance"
+        "resistance",
+        "warmupSets"
       ]
     },
     "PlannedSet": {
@@ -244,6 +252,80 @@
     "Resistance": {
       "type": "string",
       "enum": ["none", "external", "bodyweight"]
+    },
+    "PlannedWarmupSet": {
+      "type": "object",
+      "properties": {
+        "load": {
+          "$ref": "#/definitions/WarmupLoad",
+          "description": "Absent for an exercise with no resistance, where a warm-up is reps only. A bodyweight exercise only takes an absolute (added) weight."
+        },
+        "reps": {
+          "type": "integer"
+        }
+      },
+      "required": ["reps"],
+      "description": "What the plan asks for on one warm-up set."
+    },
+    "WarmupLoad": {
+      "type": "object",
+      "discriminator": {
+        "propertyName": "type"
+      },
+      "required": ["type"],
+      "oneOf": [
+        {
+          "$ref": "#/definitions/PercentWarmupLoad"
+        },
+        {
+          "$ref": "#/definitions/AbsoluteWarmupLoad"
+        }
+      ]
+    },
+    "PercentWarmupLoad": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "percent"
+        },
+        "percent": {
+          "type": "number",
+          "description": "Out of 100, so `50` is half the working weight."
+        }
+      },
+      "required": ["type", "percent"],
+      "description": "A share of the session's heaviest working set, rounded to the exercise's weight increment."
+    },
+    "AbsoluteWarmupLoad": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "absolute"
+        },
+        "weight": {
+          "$ref": "#/definitions/Weight"
+        }
+      },
+      "required": ["type", "weight"],
+      "description": "A fixed weight, such as an empty bar. The one place a blueprint carries a unit: it is a real load, not a plate increment, so it is converted into whatever unit the session is in."
+    },
+    "Weight": {
+      "type": "object",
+      "properties": {
+        "unit": {
+          "$ref": "#/definitions/WeightUnit"
+        },
+        "value": {
+          "$ref": "#/definitions/BigNumber"
+        }
+      },
+      "required": ["unit", "value"]
+    },
+    "WeightUnit": {
+      "type": "string",
+      "enum": ["kilograms", "pounds", "nil"]
     },
     "CardioExerciseBlueprint": {
       "type": "object",

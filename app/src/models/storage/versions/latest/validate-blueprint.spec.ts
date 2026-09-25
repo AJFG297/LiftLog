@@ -9,7 +9,7 @@ const validBlueprint: ProgramBlueprintJSON = {
   lastEdited: '2024-01-01' as LocalDateJSON,
   sessions: [
     {
-      version: 6,
+      version: 7,
       name: 'Day 1',
       notes: '',
       exercises: [
@@ -29,6 +29,7 @@ const validBlueprint: ProgramBlueprintJSON = {
             { axis: 'load', step: '2.5' as BigNumberJSON, scope: { type: 'allSets' }, trigger: 'allSetsMetTarget' },
           ],
           resistance: 'external',
+          warmupSets: [],
         },
       ],
     },

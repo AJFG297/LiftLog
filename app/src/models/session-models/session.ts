@@ -1,6 +1,7 @@
 import {
   CardioExerciseBlueprint,
   ExerciseBlueprint,
+  plannedWarmupSetsEqual,
   repsTargetsEqual,
   SessionBlueprint,
   WeightedExerciseBlueprint,
@@ -45,7 +46,7 @@ export class Session {
       json.id,
       SessionBlueprint.fromJSON({
         ...json.blueprint,
-        version: 6,
+        version: 7,
         exercises: json.recordedExercises.map((x) => x.blueprint),
       }),
       json.recordedExercises.map(fromRecordedExerciseJSON),
@@ -58,15 +59,7 @@ export class Session {
   static getEmptySession(blueprint: SessionBlueprint, defaultWeightUnit: WeightUnit): Session {
     function getNextExercise(e: ExerciseBlueprint) {
       return match(e)
-        .with(
-          P.instanceOf(WeightedExerciseBlueprint),
-          (we) =>
-            new RecordedWeightedExercise(
-              we,
-              we.plannedSets.map((s) => new PotentialSet(undefined, new Weight(0, defaultWeightUnit), s.reps)),
-              undefined,
-            ),
-        )
+        .with(P.instanceOf(WeightedExerciseBlueprint), (we) => RecordedWeightedExercise.empty(we, defaultWeightUnit))
         .with(P.instanceOf(CardioExerciseBlueprint), (ce) => RecordedCardioExercise.empty(ce))
         .exhaustive();
     }
@@ -81,17 +74,16 @@ export class Session {
   }
 
   withNoNilWeights(fallbackWeightUnit: WeightUnit): Session | undefined {
+    const withoutNilWeight = (ps: PotentialSet) =>
+      ps.with({
+        weight: ps.weight.with({ unit: ps.weight.unit === 'nil' ? fallbackWeightUnit : ps.weight.unit }),
+      });
     return this.with({
       recordedExercises: this.recordedExercises.map((re) =>
         re instanceof RecordedWeightedExercise
           ? re.with({
-              potentialSets: re.potentialSets.map((ps) =>
-                ps.with({
-                  weight: ps.weight.with({
-                    unit: ps.weight.unit === 'nil' ? fallbackWeightUnit : ps.weight.unit,
-                  }),
-                }),
-              ),
+              potentialSets: re.potentialSets.map(withoutNilWeight),
+              warmupSets: re.warmupSets.map(withoutNilWeight),
             })
           : re,
       ),
@@ -169,6 +161,14 @@ export class Session {
             }),
           }),
         );
+        session = session.withExercise(
+          exerciseIndex,
+          withWarmupsForEditedPlan(
+            session.recordedExercises[exerciseIndex] as RecordedWeightedExercise,
+            weightedExistingExercise.blueprint,
+            useImperialUnits ? 'pounds' : 'kilograms',
+          ),
+        );
       }
 
       const cardioExistingExercise =
@@ -215,7 +215,7 @@ export class Session {
     const allCompletionDates = this.recordedExercises
       .flatMap((re) =>
         re.type === 'RecordedWeightedExercise'
-          ? re.potentialSets.map((ps) => ps.set?.completionDateTime?.toLocalDate())
+          ? [...re.warmupSets, ...re.potentialSets].map((ps) => ps.set?.completionDateTime?.toLocalDate())
           : re.sets.map((s) => s.completionDateTime?.toLocalDate()),
       )
       .filter((d): d is LocalDate => d !== undefined);
@@ -236,7 +236,7 @@ export class Session {
     // Update all sets' completionDateTime
     const newExercises = this.recordedExercises.map((re) => {
       if (re.type === 'RecordedWeightedExercise') {
-        return re.withAllSets((ps) => {
+        const moved = (ps: PotentialSet) => {
           if (ps.set && ps.set.completionDateTime) {
             const setDate = ps.set.completionDateTime.toLocalDate();
             return ps.with({
@@ -249,7 +249,8 @@ export class Session {
             });
           }
           return ps;
-        });
+        };
+        return re.withAllSets(moved).withAllWarmupSets(moved);
       } else {
         return re.withAllSets((set) => {
           if (set && set.completionDateTime) {
@@ -311,6 +312,24 @@ export class Session {
     });
   }
 
+  /** See {@link withCycledExerciseReps}; the same tap, on a warm-up. */
+  withCycledWarmupReps(exerciseIndex: number, warmupIndex: number, time: OffsetDateTime): Session {
+    const weightedRecorded = this.recordedExercises[exerciseIndex];
+    if (!weightedRecorded) {
+      throw new IndexOutOfBoundsError(exerciseIndex, this.recordedExercises);
+    }
+    if (weightedRecorded.type !== 'RecordedWeightedExercise') {
+      return this;
+    }
+    return this.with({
+      date: this.isStarted ? this.date : time.toLocalDate(),
+      recordedExercises: this.recordedExercises.with(
+        exerciseIndex,
+        weightedRecorded.withCycledWarmupRepCount(warmupIndex, time),
+      ),
+    });
+  }
+
   withExercise(exerciseIndex: number, exercise: RecordedExercise): Session {
     return this.with({
       recordedExercises: this.recordedExercises.with(exerciseIndex, exercise),
@@ -331,7 +350,7 @@ export class Session {
 
   toJSON(): SessionJSON {
     return {
-      version: 8,
+      version: 9,
       blueprint: this.blueprint.toJSON(),
       bodyweight: this.bodyweight?.toJSON(),
       date: toLocalDateJSON(this.date),
@@ -510,13 +529,7 @@ export class Session {
     const exercise = this.lastExercise;
     if (this.nextExercise && exercise && exercise.latestTime && exercise instanceof RecordedWeightedExercise) {
       const { minRest, failureRest } = exercise.blueprint.restBetweenSets;
-
-      const lastSet = exercise.lastRecordedSet;
-      const targetMin = lastSet?.set
-        ? exercise.repsTargetForSet(exercise.potentialSets.indexOf(lastSet)).min
-        : undefined;
-      const rest =
-        targetMin === undefined ? Duration.ZERO : lastSet!.set!.repsCompleted >= targetMin ? minRest : failureRest;
+      const rest = exercise.lastSetMissedTarget ? failureRest : minRest;
 
       if (rest.equals(Duration.ZERO)) {
         return undefined;
@@ -550,6 +563,28 @@ export class Session {
   get isFreeform(): boolean {
     return this.blueprint.name === 'Freeform Workout';
   }
+}
+
+/**
+ * The warm-up slots after an in-workout edit to the plan. A warm-up the edit left alone keeps its
+ * slot, logged reps and any session-only weight change included; one it added or changed gets a
+ * fresh slot from the new plan, unless it was already logged.
+ */
+function withWarmupsForEditedPlan(
+  exercise: RecordedWeightedExercise,
+  blueprintBefore: WeightedExerciseBlueprint,
+  fallbackUnit: WeightUnit,
+): RecordedWeightedExercise {
+  return exercise.with({
+    warmupSets: exercise.blueprint.warmupSets.map((planned, index) => {
+      const existing = exercise.warmupSets.at(index);
+      const plannedBefore = blueprintBefore.warmupSets.at(index);
+      if (existing && (existing.set || (plannedBefore && plannedWarmupSetsEqual([planned], [plannedBefore])))) {
+        return existing;
+      }
+      return exercise.warmupSlotFor(planned, fallbackUnit);
+    }),
+  });
 }
 
 export const EmptySession: Session = new Session(

@@ -161,7 +161,7 @@ describe('real migrations', () => {
     it('migrates a weighted exercise from v1 to latest: repsPerSet → plannedSets, weightIncrease → a load rule', () => {
       const result = sessionBlueprintMigrations.migrate(initialSessionBlueprint());
       const weighted = result.exercises[0]!;
-      expect(result.version).toBe(6);
+      expect(result.version).toBe(7);
       expect(weighted).toMatchObject({
         type: 'WeightedExerciseBlueprint',
         plannedSets: [{ reps: { min: 5, max: 5 } }, { reps: { min: 5, max: 5 } }, { reps: { min: 5, max: 5 } }],
@@ -196,7 +196,7 @@ describe('real migrations', () => {
       const result = programBlueprintMigrations.migrate(initialProgramBlueprint());
       expect(result.version).toBe(3);
       expect(result.name).toBe('PPL');
-      expect(result.sessions.every((s) => s.version === 6)).toBe(true);
+      expect(result.sessions.every((s) => s.version === 7)).toBe(true);
     });
 
     it('accepts embedded session blueprints at mixed versions and brings them all to latest', () => {
@@ -211,7 +211,7 @@ describe('real migrations', () => {
       });
 
       expect(result.sessions).toHaveLength(3);
-      expect(result.sessions.every((s) => s.version === 6)).toBe(true);
+      expect(result.sessions.every((s) => s.version === 7)).toBe(true);
       // every embedded session ends up identical to migrating it directly, regardless of the version it came in at
       const expected = sessionBlueprintMigrations.migrate(initialSessionBlueprint());
       for (const session of result.sessions) {
@@ -223,7 +223,7 @@ describe('real migrations', () => {
       // the wrapper stamps its own legacy pseudo-version; the child carries its own
       const result = programBlueprintMigrations.migrate(initialProgramBlueprint());
       expect(result.version).toBe(3);
-      expect(result.sessions[0]!.version).toBe(6);
+      expect(result.sessions[0]!.version).toBe(7);
     });
 
     it('is idempotent', () => {
@@ -249,16 +249,73 @@ describe('real migrations', () => {
       const current = makeSession([blueprint]).withExercise(0, makeRecordedExercise(blueprint, [5, undefined]));
       const v7 = { ...current.toJSON(), version: 7 } as never;
       const result = sessionMigrations.migrate(v7);
-      expect(result.version).toBe(8);
+      expect(result.version).toBe(9);
       expect(Session.fromJSON(result).equals(current)).toBe(true);
       expect(JSON.stringify(result)).not.toContain('"rpe"');
+    });
+  });
+
+  describe('warm-ups (blueprint v6 → v7, session v8 → v9)', () => {
+    it('gives every weighted blueprint an empty warm-up plan and leaves cardio alone', () => {
+      const result = sessionBlueprintMigrations.migrate(initialSessionBlueprint());
+      expect(result.exercises[0]).toMatchObject({ type: 'WeightedExerciseBlueprint', warmupSets: [] });
+      expect(result.exercises[1]).not.toHaveProperty('warmupSets');
+    });
+
+    it('brings a v8 session up with no warm-up slots, its working sets untouched', () => {
+      const blueprint = makeWeightedBlueprint();
+      const current = makeSession([blueprint]).withExercise(0, makeRecordedExercise(blueprint, [5, 10, undefined]));
+      const json = current.toJSON();
+      const v8 = {
+        ...json,
+        version: 8,
+        recordedExercises: json.recordedExercises.map((ex) => {
+          if (ex.type !== 'RecordedWeightedExercise') {
+            return ex;
+          }
+          const { warmupSets: _slots, ...recorded } = ex;
+          const { warmupSets: _planned, ...exerciseBlueprint } = ex.blueprint;
+          return { ...recorded, blueprint: exerciseBlueprint };
+        }),
+      } as never;
+
+      const result = sessionMigrations.migrate(v8);
+
+      expect(result.version).toBe(9);
+      const recorded = result.recordedExercises[0];
+      expect(recorded).toMatchObject({ warmupSets: [], blueprint: { warmupSets: [] } });
+      expect(Session.fromJSON(result).equals(current)).toBe(true);
+    });
+
+    it('gives an initial session an empty warm-up plan and no slots', () => {
+      const recorded = sessionMigrations.migrate(initialSession()).recordedExercises[0];
+      expect(recorded).toMatchObject({ warmupSets: [], blueprint: { warmupSets: [] } });
+    });
+
+    it('keeps warm-ups a session already has', () => {
+      const blueprint = makeWeightedBlueprint({ warmupSets: [{ load: { type: 'percent', percent: 50 }, reps: 5 }] });
+      const session = makeSession([blueprint]);
+      expect(sessionMigrations.migrate(session.toJSON())).toEqual(session.toJSON());
+    });
+
+    it('reaches warm-ups on a program blueprint through its sessions', () => {
+      const result = programBlueprintMigrations.migrate(initialProgramBlueprint());
+      expect(result.sessions[0]!.exercises[0]).toMatchObject({ warmupSets: [] });
+    });
+
+    it('reaches warm-ups on feed payloads through the sessions and plans they embed', () => {
+      const event = sessionUserEventMigrations.migrate(initialSessionUserEvent());
+      expect(event.session.recordedExercises[0]).toMatchObject({ warmupSets: [], blueprint: { warmupSets: [] } });
+
+      const followed = followedFeedUserMigrations.migrate(initialFollowedFeedUser(initialProgramBlueprint()));
+      expect(followed.currentPlan?.sessions[0]!.exercises[0]).toMatchObject({ warmupSets: [] });
     });
   });
 
   describe('sessionMigrations (started with an embedded blueprint, then moved away from it)', () => {
     it('strips the exercises off the stored blueprint', () => {
       const result = sessionMigrations.migrate(initialSession());
-      expect(result.version).toBe(8);
+      expect(result.version).toBe(9);
       expect(result.blueprint).toEqual({ name: 'Push Day', notes: 'session notes' });
       expect('exercises' in result.blueprint).toBe(false);
     });
@@ -316,7 +373,7 @@ describe('real migrations', () => {
       expect(result.name).toBe('Strength');
       expect(result.description).toBe('get strong');
       expect(result.blueprint.version).toBe(3);
-      expect(result.blueprint.sessions.every((s) => s.version === 6)).toBe(true);
+      expect(result.blueprint.sessions.every((s) => s.version === 7)).toBe(true);
     });
   });
 
@@ -324,7 +381,7 @@ describe('real migrations', () => {
     it('sessionUserEvent brings its embedded session to latest', () => {
       const result = sessionUserEventMigrations.migrate(initialSessionUserEvent());
       expect(result.version).toBe(3);
-      expect(result.session.version).toBe(8);
+      expect(result.session.version).toBe(9);
       expect(result.session.blueprint).toEqual({ name: 'Push Day', notes: 'session notes' });
     });
 
@@ -332,7 +389,7 @@ describe('real migrations', () => {
       const shared: InitialSharedSessionJSON = { type: 'SharedSession', session: initialSession() };
       const result = sharedSessionMigrations.migrate(shared);
       expect(result.version).toBe(3);
-      expect(result.session.version).toBe(8);
+      expect(result.session.version).toBe(9);
     });
 
     it('sharedProgramBlueprint brings its embedded program to latest', () => {
@@ -343,14 +400,14 @@ describe('real migrations', () => {
       const result = sharedProgramBlueprintMigrations.migrate(shared);
       expect(result.version).toBe(3);
       expect(result.programBlueprint.version).toBe(3);
-      expect(result.programBlueprint.sessions.every((s) => s.version === 6)).toBe(true);
+      expect(result.programBlueprint.sessions.every((s) => s.version === 7)).toBe(true);
     });
 
     it('followedFeedUser brings its currentPlan to latest', () => {
       const result = followedFeedUserMigrations.migrate(initialFollowedFeedUser(initialProgramBlueprint()));
       expect(result.version).toBe(3);
       expect(result.currentPlan?.version).toBe(3);
-      expect(result.currentPlan?.sessions.every((s) => s.version === 6)).toBe(true);
+      expect(result.currentPlan?.sessions.every((s) => s.version === 7)).toBe(true);
     });
 
     it('followedFeedUser leaves an absent currentPlan absent', () => {
@@ -383,7 +440,7 @@ describe('real migrations', () => {
 
   describe('untrusted / future-version data', () => {
     it('rejects a session from a newer app version', () => {
-      expect(() => sessionMigrations.migrate({ ...initialSession(), version: 9 } as never)).toThrow();
+      expect(() => sessionMigrations.migrate({ ...initialSession(), version: 10 } as never)).toThrow();
     });
 
     it('rejects a feed event whose own version is from the future', () => {
@@ -392,7 +449,7 @@ describe('real migrations', () => {
 
     it('rejects a feed event whose embedded session is from the future', () => {
       const event = initialSessionUserEvent();
-      const poisoned = { ...event, session: { ...event.session, version: 9 } };
+      const poisoned = { ...event, session: { ...event.session, version: 10 } };
       expect(() => sessionUserEventMigrations.migrate(poisoned as never)).toThrow();
     });
   });
@@ -402,7 +459,7 @@ describe('real migrations', () => {
       const result = userEventMigrations.migrate(initialSessionUserEvent());
       expect(result.type).toBe('SessionUserEvent');
       if (result.type === 'SessionUserEvent') {
-        expect(result.session.version).toBe(8);
+        expect(result.session.version).toBe(9);
       }
     });
 
@@ -432,7 +489,7 @@ describe('real migrations', () => {
 
     it('migrates a session with no recorded exercises', () => {
       const result = sessionMigrations.migrate({ ...initialSession(), recordedExercises: [] });
-      expect(result.version).toBe(8);
+      expect(result.version).toBe(9);
       expect(result.recordedExercises).toEqual([]);
       expect(result.blueprint).toEqual({ name: 'Push Day', notes: 'session notes' });
     });

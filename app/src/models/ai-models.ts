@@ -156,6 +156,8 @@ function fillWeightedExercise(partial: DeepPartial<WeightedExerciseBlueprintJSON
     link: partial.link ?? emptyWeightedExercise.link,
     progression: fillProgression(partial.progression),
     resistance: partial.resistance ?? emptyWeightedExercise.resistance,
+    // The planner does not plan warm-ups yet.
+    warmupSets: [],
   };
 }
 
@@ -211,7 +213,7 @@ function fillExercise(partial: DeepPartial<ExerciseBlueprintJSON> = {}): Exercis
 
 function fillSession(partial: DeepPartial<SessionBlueprintJSON> = {}): SessionBlueprintJSON {
   return {
-    version: 6,
+    version: 7,
     name: partial.name ?? emptySessionBlueprint.name,
     exercises: (partial.exercises ?? []).map(fillExercise),
     notes: partial.notes ?? emptySessionBlueprint.notes,

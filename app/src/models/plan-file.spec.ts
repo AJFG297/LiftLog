@@ -13,7 +13,7 @@ const validBlueprint: ProgramBlueprintJSON = {
   lastEdited: '2024-01-01' as LocalDateJSON,
   sessions: [
     {
-      version: 6,
+      version: 7,
       name: 'Day 1',
       notes: '',
       exercises: [
@@ -33,6 +33,7 @@ const validBlueprint: ProgramBlueprintJSON = {
             { axis: 'load', step: '2.5' as BigNumberJSON, scope: { type: 'allSets' }, trigger: 'allSetsMetTarget' },
           ],
           resistance: 'external',
+          warmupSets: [],
         },
       ],
     },
@@ -48,6 +49,34 @@ describe('plan-file', () => {
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.blueprint.toJSON()).toEqual(validBlueprint);
+    }
+  });
+
+  it('round-trips warm-ups, loads and units included', () => {
+    const [session] = validBlueprint.sessions;
+    const [exercise] = session!.exercises;
+    const withWarmups: ProgramBlueprintJSON = {
+      ...validBlueprint,
+      sessions: [
+        {
+          ...session!,
+          exercises: [
+            {
+              ...(exercise as Extract<typeof exercise, { type: 'WeightedExerciseBlueprint' }>),
+              warmupSets: [
+                { load: { type: 'absolute', weight: { unit: 'pounds', value: '45' as BigNumberJSON } }, reps: 5 },
+                { load: { type: 'percent', percent: 50 }, reps: 5 },
+                { load: { type: 'percent', percent: 70 }, reps: 3 },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+    const result = parseProgramBlueprintFile(serializeProgramBlueprint(ProgramBlueprint.fromJSON(withWarmups)));
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.blueprint.toJSON()).toEqual(withWarmups);
     }
   });
 
