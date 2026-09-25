@@ -1,6 +1,6 @@
 import Button from '@/components/presentation/foundation/button';
 import { IntegerEditor } from '@/components/presentation/foundation/editors/integer-editor';
-import WeightDisplay from '@/components/presentation/foundation/editors/weight-display';
+import { DecimalEditor } from '@/components/presentation/foundation/editors/decimal-editor';
 import IconButton from '@/components/presentation/foundation/icon-button';
 import { SurfaceText } from '@/components/presentation/foundation/surface-text';
 import { WarmupBadge } from '@/components/presentation/workout/warmup-badge';
@@ -9,13 +9,13 @@ import { usePreferredWeightUnit } from '@/hooks/usePreferredWeightUnit';
 import {
   nextWarmupSet,
   PlannedWarmupSet,
-  warmupIncrementFor,
   warmupLoadTypesFor,
   WeightedExerciseBlueprint,
   withWarmupLoadType,
 } from '@/models/blueprint-models';
-import { shortFormatWeightUnit } from '@/models/weight';
+import { shortFormatWeightUnit, Weight } from '@/models/weight';
 import { useTranslate } from '@tolgee/react';
+import BigNumber from 'bignumber.js';
 import { View } from 'react-native';
 import { Text, TextInput } from 'react-native-paper';
 
@@ -83,6 +83,7 @@ function WarmupSetRow({
   // A warm-up with no load reads as an empty fixed weight wherever a weight is allowed at all.
   const loadType = warmup.load?.type ?? 'absolute';
   const absoluteWeight = warmup.load?.type === 'absolute' ? warmup.load.weight : undefined;
+  const weightUnit = absoluteWeight?.unit ?? preferredUnit;
 
   return (
     <View testID={`exercise-warmup-${index}`} style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[2] }}>
@@ -95,9 +96,7 @@ function WarmupSetRow({
           accessibilityLabel={t('exercise.warmup_sets.load_type.button')}
           icon={() => (
             <Text>
-              {loadType === 'percent'
-                ? t('exercise.warmup_sets.percent.label')
-                : shortFormatWeightUnit(absoluteWeight?.unit ?? preferredUnit)}
+              {loadType === 'percent' ? t('exercise.warmup_sets.percent.label') : shortFormatWeightUnit(weightUnit)}
             </Text>
           )}
           onPress={() => onChange(withWarmupLoadType(warmup, loadType === 'percent' ? 'absolute' : 'percent'))}
@@ -105,7 +104,7 @@ function WarmupSetRow({
       )}
 
       {loadTypes.length > 0 && (
-        <View style={{ flex: 1 }}>
+        <View style={{ flex: 3 }}>
           {warmup.load?.type === 'percent' ? (
             <IntegerEditor
               mode="outlined"
@@ -119,20 +118,28 @@ function WarmupSetRow({
               right={<TextInput.Affix text={t('exercise.warmup_sets.percent.label')} />}
             />
           ) : (
-            <WeightDisplay
-              allowNull
-              weight={absoluteWeight}
-              increment={warmupIncrementFor(exercise, absoluteWeight?.unit ?? preferredUnit)}
+            <DecimalEditor
+              mode="outlined"
+              dense
+              testID="warmup-weight"
               label={t('exercise.warmup_sets.weight.label')}
-              updateWeight={(weight) =>
-                onChange({ ...warmup, load: weight ? { type: 'absolute', weight } : undefined })
+              value={absoluteWeight?.value ?? BigNumber(0)}
+              onChange={(value) =>
+                onChange({
+                  ...warmup,
+                  // Zero is no load, which is what a bodyweight warm-up with nothing added is stored as.
+                  load: value.isGreaterThan(0)
+                    ? { type: 'absolute', weight: new Weight(value, weightUnit) }
+                    : undefined,
+                })
               }
+              right={<TextInput.Affix text={shortFormatWeightUnit(weightUnit)} />}
             />
           )}
         </View>
       )}
 
-      <View style={{ flex: 1 }}>
+      <View style={{ flex: 2 }}>
         <IntegerEditor
           mode="outlined"
           dense

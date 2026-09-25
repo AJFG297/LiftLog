@@ -154,18 +154,21 @@ export function PotentialSetDisplay(props: PotentialSetDisplayProps) {
           padding={size.footerPadding}
           isLast={!showsRpe}
         >
-          <Text style={{ ...size.footerFont }}>
-            <WeightFormat
-              weight={props.set.weight}
-              usesBodyweight={props.resistance === 'bodyweight'}
-              color={warmup ? 'onSurfaceVariant' : 'onSurface'}
-            />
-          </Text>
-          {warmup?.percent !== undefined && (
-            <Text style={{ color: colors.onSurfaceVariant, ...font['text-2xs'] }}>
-              {t('workout.warmup_set.percent.label', { percent: warmup.percent })}
+          {/* One child: the row's ripple takes exactly one, and an absent label still counts as one. */}
+          <View style={{ alignItems: 'center' }}>
+            <Text style={{ ...size.footerFont }}>
+              <WeightFormat
+                weight={props.set.weight}
+                usesBodyweight={props.resistance === 'bodyweight'}
+                color={warmup ? 'onSurfaceVariant' : 'onSurface'}
+              />
             </Text>
-          )}
+            {warmup?.percent !== undefined && (
+              <Text style={{ color: colors.onSurfaceVariant, ...font['text-2xs'] }}>
+                {t('workout.warmup_set.percent.label', { percent: warmup.percent })}
+              </Text>
+            )}
+          </View>
         </FooterRow>
       )}
       {showsRpe && (
