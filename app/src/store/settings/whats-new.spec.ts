@@ -36,6 +36,12 @@ describe('whats-new selectors', () => {
     expect(selectUnseenWhatsNew(state)).toEqual(whatsNewEntries.filter((e) => e.id === latestWhatsNewId));
   });
 
+  it('stops announcing RPE logging once it is turned on', () => {
+    const isRpeEntry = (e: { titleKey: string }) => e.titleKey === 'whats_new.log_rpe.title';
+    expect(selectUnseenWhatsNew(stateWith({ lastSeenWhatsNewId: 0, logRpe: false })).some(isRpeEntry)).toBe(true);
+    expect(selectUnseenWhatsNew(stateWith({ lastSeenWhatsNewId: 0, logRpe: true })).some(isRpeEntry)).toBe(false);
+  });
+
   it('hides an entry whose condition is not met', () => {
     const enabled = stateWith({ lastSeenWhatsNewId: 0, exportToHealthAggregator: true });
     const disabled = stateWith({ lastSeenWhatsNewId: 0, exportToHealthAggregator: false });

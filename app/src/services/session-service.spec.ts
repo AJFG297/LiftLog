@@ -161,6 +161,13 @@ describe('SessionService rep targets', () => {
     expect((await upcoming(blueprint, lastWeek)).potentialSets.every((s) => s.set === undefined)).toBe(true);
   });
 
+  it('does not carry last session’s RPE into the next one', async () => {
+    const blueprint = makeWeightedBlueprint({ sets: 2 });
+    const lastWeek = makeRecordedExercise(blueprint, [10, 10]).withRpe(0, 8).withRpe(1, 9);
+
+    expect((await upcoming(blueprint, lastWeek)).potentialSets.map((s) => s.rpe)).toEqual([undefined, undefined]);
+  });
+
   it('carries a target a reps rule won, even on an exercise that also carries load', async () => {
     const blueprint = makeWeightedBlueprint({
       sets: 2,

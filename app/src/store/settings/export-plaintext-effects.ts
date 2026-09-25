@@ -31,6 +31,8 @@ export function addExportPlaintextEffects(addEffect: AddEffectFn) {
 
 async function exportToJson(sessions: Enumerable.IEnumerable<Session>): Promise<Uint8Array> {
   const exportedSets = sessions
+    // The workout in progress is exported too, and may still hold an RPE picked ahead of an unlogged set.
+    .select((x) => x.withoutUnloggedRpe())
     .select((x) => ({
       // oxlint-disable-next-line typescript/no-misused-spread
       ...x,
@@ -59,6 +61,8 @@ class ExportedSetCsvRow {
     public Reps: number,
     public TargetReps: number,
     public Notes: string,
+    // Last, so tools reading the file by column position keep working.
+    public RPE: number | '',
   ) {}
   static fromModel(session: Session, exercise: RecordedExercise): ExportedSetCsvRow[] {
     // TODO: What do we do about cardio?
@@ -80,6 +84,7 @@ class ExportedSetCsvRow {
             set.set!.repsCompleted,
             exercise.repsTargetForSet(index).max,
             exercise.notes ?? '',
+            set.loggedRpe ?? '',
           ),
       );
   }

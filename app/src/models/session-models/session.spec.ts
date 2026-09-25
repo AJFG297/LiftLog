@@ -484,6 +484,18 @@ describe('Session.withEditedExercise', () => {
   });
 
   describe('same type: weighted → weighted', () => {
+    it('keeps the RPE on logged sets and on unlogged sets whose target the edit moves', () => {
+      const bp = makeWeightedBlueprint({ sets: 2 });
+      const exercise = makeRecordedExercise(bp, [10, undefined]).withRpe(0, 8).withRpe(1, 9);
+      const session = makeSession([bp]).withExercise(0, exercise);
+
+      const edited = bp.with({ repsConfig: { type: 'fixed', reps: 12 } });
+      const updated = session.withEditedExercise(0, edited, false).recordedExercises[0] as RecordedWeightedExercise;
+
+      expect(updated.getSet(1).target).toEqual({ min: 12, max: 12 });
+      expect(updated.potentialSets.map((s) => s.rpe)).toEqual([8, 9]);
+    });
+
     it('updates the blueprint without touching existing set data', () => {
       const bp = makeWeightedBlueprint({ name: 'Squat' });
       const t = tick();

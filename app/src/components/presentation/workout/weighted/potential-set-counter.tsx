@@ -12,6 +12,8 @@ import Holdable from '@/components/presentation/foundation/holdable';
 import { Weight } from '@/models/weight';
 import PotentialSetAdditionalActionsDialog from '@/components/presentation/workout/weighted/potential-sets-addition-actions-dialog';
 import { PotentialSetDisplay } from '@/components/presentation/workout/weighted/potential-set-display';
+import { RpePickerDialog } from '@/components/presentation/workout/weighted/rpe-picker';
+import { Rpe } from '@/models/session-models/rpe';
 
 interface PotentialSetCounterProps {
   set: PotentialSet;
@@ -25,11 +27,18 @@ interface PotentialSetCounterProps {
   onTap: () => void;
   onUpdateWeight: (weight: Weight, applyTo: WeightAppliesTo) => void;
   onUpdateReps: (reps: number | undefined) => void;
+
+  showRpe: boolean;
+  rpe: Rpe | undefined;
+  /** `undefined` when RPE can't be edited here: the row still shows, it just isn't tappable. */
+  onUpdateRpe: ((rpe: Rpe | undefined) => void) | undefined;
 }
 
 export default function PotentialSetCounter(props: PotentialSetCounterProps) {
   const [isWeightDialogOpen, setIsWeightDialogOpen] = useState(false);
   const [isRepsDialogOpen, setIsRepsDialogOpen] = useState(false);
+  const [isRpeDialogOpen, setIsRpeDialogOpen] = useState(false);
+  const onUpdateRpe = props.onUpdateRpe;
   const maxReps = props.repsTarget.max;
 
   useEffect(() => {
@@ -47,6 +56,9 @@ export default function PotentialSetCounter(props: PotentialSetCounterProps) {
           repsTarget={props.repsTarget}
           resistance={props.resistance}
           previousRepCount={props.previousRepCount}
+          showRpe={props.showRpe}
+          rpe={props.rpe}
+          onPressRpe={onUpdateRpe && !props.isReadonly ? () => setIsRpeDialogOpen(true) : undefined}
           onPressReps={props.isReadonly ? undefined : props.onTap}
           onPressWeight={
             props.isReadonly
@@ -107,8 +119,18 @@ export default function PotentialSetCounter(props: PotentialSetCounterProps) {
         repTarget={maxReps}
         set={props.set}
         updateRepCount={(reps) => props.onUpdateReps(reps)}
+        rpe={props.rpe}
+        updateRpe={onUpdateRpe}
         close={() => setIsRepsDialogOpen(false)}
       />
+      {onUpdateRpe && (
+        <RpePickerDialog
+          open={isRpeDialogOpen}
+          value={props.rpe}
+          onChange={onUpdateRpe}
+          close={() => setIsRpeDialogOpen(false)}
+        />
+      )}
     </Holdable>
   );
 }

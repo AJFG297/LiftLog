@@ -6,6 +6,7 @@ import WeightFormat from '@/components/presentation/foundation/weight-format';
 import { font, rounding, spacing, useAppTheme } from '@/hooks/useAppTheme';
 import TouchableRipple from '@/components/presentation/foundation/touchable-ripple';
 import Icon from '@/components/presentation/foundation/icon';
+import { formatRpe, Rpe } from '@/models/session-models/rpe';
 
 export type PotentialSetSize = 'default' | 'compact';
 
@@ -15,10 +16,14 @@ interface PotentialSetDisplayProps {
   resistance: Resistance;
   previousRepCount?: number | undefined;
   size?: PotentialSetSize;
+  /** Renders the RPE row. A list shows it on every tile once any has one, so the tiles stay level. */
+  showRpe?: boolean;
+  rpe?: Rpe | undefined;
 
   /** Omit to render a static tile - a tile with no handler mounts no gesture detector at all. */
   onPressReps?: () => void;
   onPressWeight?: () => void;
+  onPressRpe?: () => void;
 }
 
 const metrics = {
@@ -28,8 +33,8 @@ const metrics = {
     maxWidth: undefined,
     repsFont: font['text-xl'],
     targetFont: font['text-sm'],
-    weightFont: font['text-sm'],
-    weightPadding: spacing[2],
+    footerFont: font['text-sm'],
+    footerPadding: spacing[2],
   },
   compact: {
     repsHeight: spacing[9],
@@ -37,8 +42,8 @@ const metrics = {
     maxWidth: spacing[16],
     repsFont: font['text-lg'],
     targetFont: font['text-xs'],
-    weightFont: font['text-xs'],
-    weightPadding: spacing[1],
+    footerFont: font['text-xs'],
+    footerPadding: spacing[1],
   },
 } as const;
 
@@ -53,6 +58,8 @@ export function PotentialSetDisplay(props: PotentialSetDisplayProps) {
   const repCountValue = props.set.set?.repsCompleted;
   const isFilled = repCountValue !== undefined;
   const showsWeight = props.resistance !== 'none';
+  const showsRpe = !!props.showRpe;
+  const hasFooter = showsWeight || showsRpe;
 
   return (
     <View
@@ -67,9 +74,9 @@ export function PotentialSetDisplay(props: PotentialSetDisplayProps) {
       <View
         style={{
           borderRadius: rounding.roundedRectangleRadius,
-          // The weight row closes the tile off when there is one.
-          borderBottomLeftRadius: showsWeight ? 0 : rounding.roundedRectangleRadius,
-          borderBottomRightRadius: showsWeight ? 0 : rounding.roundedRectangleRadius,
+          // The weight or RPE row closes the tile off when there is one.
+          borderBottomLeftRadius: hasFooter ? 0 : rounding.roundedRectangleRadius,
+          borderBottomRightRadius: hasFooter ? 0 : rounding.roundedRectangleRadius,
           overflow: 'hidden',
         }}
       >
@@ -104,33 +111,68 @@ export function PotentialSetDisplay(props: PotentialSetDisplayProps) {
         </Pressable>
       </View>
       {showsWeight && (
-        <View
-          style={{
-            borderTopWidth: 1,
-            borderColor: colors.outline,
-            backgroundColor: colors.surfaceContainerHigh,
-            borderBottomLeftRadius: rounding.roundedRectangleRadius,
-            borderBottomRightRadius: rounding.roundedRectangleRadius,
-            overflow: 'hidden',
-            padding: size.weightPadding,
-            width: '100%',
-          }}
+        <FooterRow
+          onPress={props.onPressWeight}
+          testID="repcount-weight"
+          padding={size.footerPadding}
+          isLast={!showsRpe}
         >
-          <Pressable
-            onPress={props.onPressWeight}
-            testID="repcount-weight"
+          <Text style={{ color: colors.onSurface, ...size.footerFont }}>
+            <WeightFormat weight={props.set.weight} usesBodyweight={props.resistance === 'bodyweight'} />
+          </Text>
+        </FooterRow>
+      )}
+      {showsRpe && (
+        <FooterRow onPress={props.onPressRpe} testID="repcount-rpe" padding={size.footerPadding} isLast>
+          <Text
             style={{
-              alignItems: 'center',
-              margin: -size.weightPadding,
-              padding: size.weightPadding,
+              color: props.rpe === undefined ? colors.onSurfaceVariant : colors.onSurface,
+              ...size.footerFont,
             }}
           >
-            <Text style={{ color: colors.onSurface, ...size.weightFont }}>
-              <WeightFormat weight={props.set.weight} usesBodyweight={props.resistance === 'bodyweight'} />
-            </Text>
-          </Pressable>
-        </View>
+            {props.rpe === undefined ? '@–' : formatRpe(props.rpe)}
+          </Text>
+        </FooterRow>
       )}
+    </View>
+  );
+}
+
+/** A row under the reps (weight, RPE). The last one rounds off the bottom of the tile. */
+function FooterRow(props: {
+  onPress: (() => void) | undefined;
+  testID: string;
+  padding: number;
+  isLast: boolean;
+  children: ReactNode;
+}) {
+  const { colors } = useAppTheme();
+  const bottomRadius = props.isLast ? rounding.roundedRectangleRadius : 0;
+  return (
+    <View
+      style={{
+        borderTopWidth: 1,
+        borderColor: colors.outline,
+        backgroundColor: colors.surfaceContainerHigh,
+        borderBottomLeftRadius: bottomRadius,
+        borderBottomRightRadius: bottomRadius,
+        overflow: 'hidden',
+        padding: props.padding,
+        width: '100%',
+      }}
+    >
+      <Pressable
+        onPress={props.onPress}
+        testID={props.testID}
+        style={{
+          alignItems: 'center',
+          // Stretch the touch target over the row's padding.
+          margin: -props.padding,
+          padding: props.padding,
+        }}
+      >
+        {props.children}
+      </Pressable>
     </View>
   );
 }

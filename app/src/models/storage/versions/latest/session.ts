@@ -9,7 +9,7 @@ import type {
 import type { WeightJSON } from '@/models/storage/versions/libs/weight';
 
 export interface SessionJSON {
-  version: 7;
+  version: 8;
   id: string;
   blueprint: { name: string; notes: string };
   recordedExercises: RecordedExerciseJSON[];
@@ -55,6 +55,11 @@ export interface PotentialSetJSON {
   target: PlannedSetJSON;
   set?: RecordedSetJSON | undefined;
   weight: WeightJSON;
+  /**
+   * How hard the set felt, 6-10 in half steps. Lives on the slot rather than the recorded set so it can
+   * be picked before the set is logged.
+   */
+  rpe?: number | undefined;
 }
 
 export interface RecordedSetJSON {

@@ -394,6 +394,9 @@ function DummySet(props: { set: PotentialSet; resistance: Resistance; repsTarget
       onUpdateWeight={() => {}}
       previousRepCount={undefined}
       set={props.set}
+      showRpe={false}
+      rpe={undefined}
+      onUpdateRpe={undefined}
       toStartNext={false}
       weightIncrement={BigNumber(0)}
     />

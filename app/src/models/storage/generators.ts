@@ -21,6 +21,7 @@ import {
 import { Duration, LocalDate, OffsetDateTime, LocalTime, ZoneOffset } from '@js-joda/core';
 import BigNumber from 'bignumber.js';
 import fc from 'fast-check';
+import { RPE_VALUES } from '@/models/session-models/rpe';
 
 function optional<T>(gen: fc.Arbitrary<T>): fc.Arbitrary<T | undefined> {
   return fc.option(gen, { nil: undefined });
@@ -148,6 +149,7 @@ const PotentialSetGenerator = fc
       nil: undefined,
     }),
     weight: WeightGenerator,
+    rpe: fc.option(fc.constantFrom(...RPE_VALUES), { nil: undefined }),
   })
   .map(PotentialSet.of);
 

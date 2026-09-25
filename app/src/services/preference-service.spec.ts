@@ -58,6 +58,7 @@ const booleanPrefs: BoolPref[] = [
   { key: 'keepScreenAwakeDuringWorkout', default: true },
   { key: 'exportToHealthAggregator', default: false },
   { key: 'showPostWorkoutSummary', default: false },
+  { key: 'logRpe', default: false },
   { key: 'trueBlackDarkTheme', default: false },
 ];
 
