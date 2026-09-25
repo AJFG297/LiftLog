@@ -371,14 +371,18 @@ describe('RecordedWeightedExercise RPE', () => {
     expect(result.getSet(0).rpe).toBe(8);
   });
 
-  it('keeps an RPE picked before the set through logging it and cycling the reps', () => {
+  it('keeps an RPE picked before the set through any mix of cycling, exact reps and clearing', () => {
     const rpe = fc.constantFrom(...RPE_VALUES);
+    const repOperation = fc.oneof(
+      fc.constant((exercise: RecordedWeightedExercise) => exercise.withCycledRepCount(0, tick())),
+      fc
+        .integer({ min: 0, max: 30 })
+        .map((reps) => (exercise: RecordedWeightedExercise) => exercise.withRepCount(0, reps, tick())),
+      fc.constant((exercise: RecordedWeightedExercise) => exercise.withRepCount(0, undefined, tick())),
+    );
     fc.assert(
-      fc.property(rpe, fc.integer({ min: 1, max: 15 }), (value, taps) => {
-        let exercise = unlogged().withRpe(0, value);
-        for (let i = 0; i < taps; i++) {
-          exercise = exercise.withCycledRepCount(0, tick());
-        }
+      fc.property(rpe, fc.array(repOperation, { minLength: 1, maxLength: 15 }), (value, operations) => {
+        const exercise = operations.reduce((current, operation) => operation(current), unlogged().withRpe(0, value));
         expect(exercise.getSet(0).rpe).toBe(value);
       }),
     );

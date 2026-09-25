@@ -16,7 +16,7 @@ interface PotentialSetAdditionalActionsDialogProps {
   repTarget: number;
   updateRepCount: (reps: number | undefined) => void;
   rpe: Rpe | undefined;
-  /** Omit to hide the RPE row (the Log RPE setting is off). */
+  /** `undefined` hides the RPE row (the Log RPE setting is off). */
   updateRpe: ((rpe: Rpe | undefined) => void) | undefined;
   close: () => void;
 }
@@ -95,7 +95,7 @@ export default function PotentialSetAdditionalActionsDialog({
               {updateRpe && (
                 <View style={{ gap: spacing[2], marginTop: spacing[4] }}>
                   <Text variant="labelLarge">
-                    <T keyName="workout.rpe.title" />
+                    <T keyName="workout.rpe.label" />
                   </Text>
                   {/* Unlike the rep buttons this doesn't close: RPE is set alongside the reps, not instead of them. */}
                   <RpeChips value={rpe} onChange={updateRpe} />

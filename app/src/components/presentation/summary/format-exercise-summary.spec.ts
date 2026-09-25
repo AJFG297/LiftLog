@@ -49,7 +49,7 @@ describe('formatExerciseSummary', () => {
       { reps: 12, weight: 60 },
     ]);
 
-    expect(formatExerciseSummary(exercise, filled)).toBe('3 × 12 @ 60kg');
+    expect(formatExerciseSummary(exercise, filled)).toBe('3 × 12 60kg');
   });
 
   it('keeps a pyramid apart, because the variation is the point of it', () => {
@@ -59,17 +59,17 @@ describe('formatExerciseSummary', () => {
       { reps: 8, weight: 80 },
     ]);
 
-    expect(formatExerciseSummary(exercise, filled)).toBe('12 @ 60kg · 10 @ 70kg · 8 @ 80kg');
+    expect(formatExerciseSummary(exercise, filled)).toBe('12 60kg · 10 70kg · 8 80kg');
   });
 
-  it('names the weight once for a run of sets at that weight', () => {
+  it('names the weight on every run, so a bare weight is never ambiguous', () => {
     const exercise = exerciseOf([
       { reps: 12, weight: 60 },
       { reps: 12, weight: 60 },
       { reps: 10, weight: 60 },
     ]);
 
-    expect(formatExerciseSummary(exercise, filled)).toBe('2 × 12, 10 @ 60kg');
+    expect(formatExerciseSummary(exercise, filled)).toBe('2 × 12 60kg · 10 60kg');
   });
 
   it('says nothing about weight rather than claiming zero', () => {
@@ -81,14 +81,24 @@ describe('formatExerciseSummary', () => {
     expect(formatExerciseSummary(exercise, filled)).toBe('2 × 12');
   });
 
-  it('adds the logged RPE after the reps, keeping differently rated sets apart', () => {
+  it('adds the logged RPE after the weight, keeping differently rated sets apart', () => {
     const exercise = exerciseOf([
       { reps: 5, weight: 100 },
       { reps: 5, weight: 100 },
       { reps: 5, weight: 100 },
     ]);
     const rated = exercise.withRpe(0, 8).withRpe(1, 8).withRpe(2, 9);
-    expect(formatExerciseSummary(rated, filled)).toBe('2 × 5 (RPE 8), 5 (RPE 9) @ 100kg');
+    expect(formatExerciseSummary(rated, filled)).toBe('2 × 5 100kg @8 · 5 100kg @9');
+  });
+
+  it('writes a uniformly rated exercise as one run', () => {
+    const exercise = exerciseOf([
+      { reps: 5, weight: 100 },
+      { reps: 5, weight: 100 },
+      { reps: 5, weight: 100 },
+    ]);
+    const rated = exercise.withRpe(0, 8).withRpe(1, 8).withRpe(2, 8);
+    expect(formatExerciseSummary(rated, filled)).toBe('3 × 5 100kg @8');
   });
 
   it('says nothing about an RPE on a set that was never logged', () => {
@@ -96,7 +106,7 @@ describe('formatExerciseSummary', () => {
       { reps: 5, weight: 100 },
       { reps: undefined, weight: 100 },
     ]).withRpe(1, 8);
-    expect(formatExerciseSummary(exercise, filled)).toBe('5 @ 100kg');
+    expect(formatExerciseSummary(exercise, filled)).toBe('5 100kg');
   });
 
   it('ignores sets that were never completed', () => {
@@ -105,7 +115,7 @@ describe('formatExerciseSummary', () => {
       { reps: undefined, weight: 60 },
     ]);
 
-    expect(formatExerciseSummary(exercise, filled)).toBe('12 @ 60kg');
+    expect(formatExerciseSummary(exercise, filled)).toBe('12 60kg');
   });
 
   it('states a plan as its shape, taking reps from the targets rather than what was recorded', () => {
@@ -115,7 +125,7 @@ describe('formatExerciseSummary', () => {
     ]);
 
     expect(formatExerciseSummary(exercise, { isFilled: false, bodyweightLabel: 'BW', showWeight: true })).toBe(
-      '2 × 10 @ 60kg',
+      '2 × 10 60kg',
     );
   });
 
@@ -154,7 +164,7 @@ describe('formatExerciseSummary', () => {
     ]);
 
     expect(formatExerciseSummary(exercise, { isFilled: false, bodyweightLabel: 'BW', showWeight: true })).toBe(
-      '3 × 10 @ 15kg–20kg',
+      '3 × 10 15kg–20kg',
     );
   });
 
@@ -166,7 +176,7 @@ describe('formatExerciseSummary', () => {
     ]);
 
     expect(formatExerciseSummary(exercise, { isFilled: false, bodyweightLabel: 'BW', showWeight: true })).toBe(
-      '3 × 10 @ 15lbs–20kg',
+      '3 × 10 15lbs–20kg',
     );
   });
 });
@@ -195,19 +205,19 @@ describe('formatExerciseSummary for bodyweight exercises', () => {
       { reps: 12, weight: 0 },
     ]);
 
-    expect(formatExerciseSummary(exercise, filled)).toBe('2 × 12 @ BW');
+    expect(formatExerciseSummary(exercise, filled)).toBe('2 × 12 BW');
   });
 
   it('shows added weight with a plus sign', () => {
     const exercise = bodyweightExerciseOf([{ reps: 8, weight: 10 }]);
 
-    expect(formatExerciseSummary(exercise, filled)).toBe('8 @ BW +10kg');
+    expect(formatExerciseSummary(exercise, filled)).toBe('8 BW +10kg');
   });
 
   it('shows assistance as a negative added weight', () => {
     const exercise = bodyweightExerciseOf([{ reps: 8, weight: -20 }]);
 
-    expect(formatExerciseSummary(exercise, filled)).toBe('8 @ BW -20kg');
+    expect(formatExerciseSummary(exercise, filled)).toBe('8 BW -20kg');
   });
 });
 

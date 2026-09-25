@@ -705,6 +705,7 @@
   "workout.log_rpe.label": "Log RPE",
   "workout.log_rpe.subtitle": "Rate how hard each set felt (RPE 6-10) during a workout",
   "workout.rpe.title": "RPE",
+  "workout.rpe.label": "RPE",
   "workout.rpe.clear.button": "Clear RPE",
   "whats_new.log_rpe.title": "Log RPE on your sets",
   "whats_new.log_rpe.body": "You can now rate how hard each set felt, from RPE 6 to 10. Turn it on and an RPE chip appears on every working set - pick it before or after you log the set.",
