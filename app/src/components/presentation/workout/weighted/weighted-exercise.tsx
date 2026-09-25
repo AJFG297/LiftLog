@@ -6,6 +6,7 @@ import { View } from 'react-native';
 import ExerciseSection from '@/components/presentation/workout/exercise-section';
 import { OffsetDateTime } from '@js-joda/core';
 import { Updater } from '@/utils/types';
+import { SetPosition } from '@/models/session-models/recorded-weighted-exercise';
 
 interface WeightedExerciseProps {
   recordedExercise: RecordedWeightedExercise;
@@ -28,7 +29,17 @@ export default function WeightedExercise(props: WeightedExerciseProps) {
   const { recordedExercise } = props;
   useState(false);
 
-  const setToStartNext = recordedExercise.potentialSets.findIndex((x) => !x.set);
+  const setToStartNext = props.toStartNext && !props.isReadonly ? recordedExercise.currentSet : undefined;
+  const previous = recordedExercise.previousPerformanceIn(props.previousRecordedExercises);
+  // Only a tap that fills or clears a set moves the rest timer; stepping the reps down keeps it.
+  const tap = (position: SetPosition, update: Updater<RecordedWeightedExercise>) => {
+    const wasLogged = !!recordedExercise.slotAt(position)?.set;
+    const isLogged = !!update(recordedExercise).slotAt(position)?.set;
+    updateExercise(update);
+    if (!wasLogged || !isLogged) {
+      resetSetTimer();
+    }
+  };
   const canEditRpe = props.rpeEnabled && !props.isReadonly;
   // A read-only view shows only what was logged; the live workout also shows an RPE picked ahead of the set.
   const rpeFor = (index: number) =>
@@ -47,26 +58,44 @@ export default function WeightedExercise(props: WeightedExerciseProps) {
       onRemoveExercise={props.onRemoveExercise}
     >
       <View style={{ flexDirection: 'row', gap: spacing[2], flexWrap: 'wrap' }}>
+        {recordedExercise.warmupSets.map((set, index) => (
+          <PotentialSetCounter
+            isReadonly={props.isReadonly}
+            key={`warmup-${index}`}
+            repsTarget={set.target}
+            onTap={() => {
+              const time = timeProvider();
+              tap({ kind: 'warmup', index }, (ex) => ex.withCycledWarmupRepCount(index, time));
+            }}
+            previousRepCount={undefined}
+            onUpdateReps={(reps) => {
+              updateExercise((ex) => ex.withWarmupRepCount(index, reps, timeProvider()));
+              resetSetTimer();
+            }}
+            onUpdateWeight={(w) => updateExercise((ex) => ex.withWarmupWeight(index, w))}
+            set={set}
+            showRpe={false}
+            rpe={undefined}
+            onUpdateRpe={undefined}
+            toStartNext={setToStartNext?.kind === 'warmup' && setToStartNext.index === index}
+            resistance={recordedExercise.blueprint.resistance}
+            weightIncrement={recordedExercise.blueprint.weightIncrement}
+            warmup={{
+              percent: recordedExercise.warmupPercentAt(index),
+              previous: recordedExercise.previousWarmupHint(index, previous),
+            }}
+          />
+        ))}
         {recordedExercise.potentialSets.map((set, index) => (
           <PotentialSetCounter
             isReadonly={props.isReadonly}
             key={index}
             repsTarget={recordedExercise.repsTargetForSet(index)}
             onTap={() => {
-              const previousSet = set.set;
-              const newSet = recordedExercise.withCycledRepCount(index, timeProvider()).getSet(index).set;
-              updateExercise((ex) => ex.withCycledRepCount(index, timeProvider()));
-              // We only want to reset the timer when switching between unfilled and filled
-              // Otherwise, keep the same time
-              if (!previousSet || !newSet) {
-                resetSetTimer();
-              }
+              const time = timeProvider();
+              tap({ kind: 'working', index }, (ex) => ex.withCycledRepCount(index, time));
             }}
-            previousRepCount={
-              props.previousRecordedExercises
-                .filter((x) => x.progressionKey() === props.recordedExercise.progressionKey())
-                .at(0)?.potentialSets[index]?.set?.repsCompleted
-            }
+            previousRepCount={previous?.potentialSets[index]?.set?.repsCompleted}
             onUpdateReps={(reps) => {
               updateExercise((ex) => ex.withRepCount(index, reps, timeProvider()));
               resetSetTimer();
@@ -76,7 +105,7 @@ export default function WeightedExercise(props: WeightedExerciseProps) {
             showRpe={showRpe}
             rpe={rpeFor(index)}
             onUpdateRpe={canEditRpe ? (rpe) => updateExercise((ex) => ex.withRpe(index, rpe)) : undefined}
-            toStartNext={props.toStartNext && setToStartNext === index && !props.isReadonly}
+            toStartNext={setToStartNext?.kind === 'working' && setToStartNext.index === index}
             resistance={recordedExercise.blueprint.resistance}
             weightIncrement={recordedExercise.blueprint.weightIncrement}
           />

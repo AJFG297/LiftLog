@@ -136,6 +136,40 @@ export class RecordedWeightedExercise {
     return (position.kind === 'warmup' ? this.warmupSets : this.potentialSets)[position.index];
   }
 
+  /**
+   * The earlier performance this one is compared against: the most recent of `candidates` (newest
+   * first) with the same progression key, so a changed set scheme never borrows mismatched numbers.
+   */
+  previousPerformanceIn(candidates: readonly RecordedWeightedExercise[]): RecordedWeightedExercise | undefined {
+    const key = this.progressionKey();
+    return candidates.find((x) => x.progressionKey() === key);
+  }
+
+  /**
+   * What the warm-up at `index` came to last time, matched by position within `previous`, for the
+   * faint hint on an unlogged warm-up. `weight` is left out when there's no load worth showing: a
+   * movement with no resistance, or plain bodyweight.
+   */
+  previousWarmupHint(
+    index: number,
+    previous: RecordedWeightedExercise | undefined,
+  ): { reps: number; weight: Weight | undefined } | undefined {
+    const slot = previous?.warmupSets[index];
+    if (!slot?.set) {
+      return undefined;
+    }
+    const showsWeight =
+      this.blueprint.resistance === 'external' ||
+      (this.blueprint.resistance === 'bodyweight' && !slot.weight.value.isZero());
+    return { reps: slot.set.repsCompleted, weight: showsWeight ? slot.weight : undefined };
+  }
+
+  /** The plan's percentage for the warm-up at `index`, when it is a share of the working weight. */
+  warmupPercentAt(index: number): number | undefined {
+    const load = this.blueprint.warmupSets[index]?.load;
+    return load?.type === 'percent' ? load.percent : undefined;
+  }
+
   getSet(index: number): PotentialSet {
     const set = this.potentialSets[index];
     if (!set) {

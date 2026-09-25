@@ -64,6 +64,16 @@ function WeightedSets(props: { exercise: RecordedWeightedExercise }) {
   const { exercise } = props;
   return (
     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing[1] }}>
+      {exercise.warmupSets.map((set, index) => (
+        <PotentialSetDisplay
+          key={`warmup-${index}`}
+          size="compact"
+          set={set}
+          repsTarget={set.target}
+          resistance={exercise.blueprint.resistance}
+          warmup={{ percent: exercise.warmupPercentAt(index), previous: undefined }}
+        />
+      ))}
       {exercise.potentialSets.map((set, index) => (
         <PotentialSetDisplay
           key={index}
