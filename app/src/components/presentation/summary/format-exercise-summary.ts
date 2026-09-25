@@ -5,12 +5,14 @@ import { formatDistance } from '@/utils/distance';
 import { formatCardioTarget } from '@/utils/format-cardio-target';
 import { formatTimeSpan } from '@/utils/format-time-span';
 import { localeFormatBigNumber } from '@/utils/locale-bignumber';
+import { formatRpe, Rpe } from '@/models/session-models/rpe';
 
 /**
  * A text rendering of an exercise, for surfaces that summarise a session rather than let you work through it.
  * Sets that repeat collapse into a multiplier -- three identical sets are one fact, not three -- but sets that
  * differ are kept apart, because a pyramid is the interesting thing about a pyramid. A weightless exercise says
- * nothing about weight rather than claiming "0 kg".
+ * nothing about weight rather than claiming "0 kg". A set reads `3 × 5 100kg @8`: `@` is kept for RPE, so the
+ * weight goes unmarked.
  */
 export function formatExerciseSummary(
   exercise: RecordedExercise,
@@ -65,8 +67,7 @@ export function formatSessionVolume(session: Session): string | undefined {
 interface SetRun {
   label: string;
   weight: string;
-  /** Rendered after the reps as `(RPE 8)`: `@` already introduces the weight in a summary line. */
-  rpe?: string | undefined;
+  rpe?: Rpe | undefined;
   count: number;
 }
 
@@ -82,7 +83,7 @@ function filledRuns(
       .map((potentialSet) => ({
         label: potentialSet.set!.repsCompleted.toString(),
         weight: weightOf(potentialSet.weight, showWeight, usesBodyweight, bodyweightLabel),
-        rpe: potentialSet.loggedRpe?.toString(),
+        rpe: potentialSet.loggedRpe,
       })),
   );
 }
@@ -125,7 +126,7 @@ function formatPlanned(
     const suffix = heaviest.equals(lightest)
       ? bodyweightWeightLabel(heaviest, bodyweightLabel)
       : `${bodyweightLabel} ${signedWeight(lightest)}–${signedWeight(heaviest)}`;
-    return `${shape} @ ${suffix}`;
+    return `${shape} ${suffix}`;
   }
 
   const weights = sets.map((set) => set.weight).filter((weight) => !weight.value.isZero());
@@ -138,8 +139,8 @@ function formatPlanned(
 
   // The unit belongs to the range, not to each end of it.
   return heaviest.equals(lightest)
-    ? `${shape} @ ${heaviest.shortLocaleFormat()}`
-    : `${shape} @ ${lightest.shortLocaleFormat()}–${heaviest.shortLocaleFormat()}`;
+    ? `${shape} ${heaviest.shortLocaleFormat()}`
+    : `${shape} ${lightest.shortLocaleFormat()}–${heaviest.shortLocaleFormat()}`;
 }
 
 /** A signed weight for a bodyweight range end: `+10kg`, `-20kg`. */
@@ -158,7 +159,7 @@ function weightOf(weight: Weight, showWeight: boolean, usesBodyweight: boolean, 
   return !weight.value.isZero() ? weight.shortLocaleFormat() : '';
 }
 
-function runsOf(sets: { label: string; weight: string; rpe?: string | undefined }[]): SetRun[] {
+function runsOf(sets: Omit<SetRun, 'count'>[]): SetRun[] {
   const runs: SetRun[] = [];
 
   for (const set of sets) {
@@ -173,24 +174,17 @@ function runsOf(sets: { label: string; weight: string; rpe?: string | undefined 
   return runs;
 }
 
-/** Consecutive runs at one weight share a single "@ weight", so the unit is not repeated down the line. */
+/**
+ * Each run names its own weight: with no marker between reps and weight, `2 × 12, 10 60kg` would not say
+ * whether the 12s were at 60kg too.
+ */
 function formatRuns(runs: SetRun[]): string {
-  const groups: { weight: string; parts: string[] }[] = [];
-
-  for (const run of runs) {
-    const reps = run.count > 1 ? `${run.count} × ${run.label}` : run.label;
-    const part = run.rpe ? `${reps} (RPE ${run.rpe})` : reps;
-    const previous = groups.at(-1);
-
-    if (previous && previous.weight === run.weight) {
-      previous.parts.push(part);
-    } else {
-      groups.push({ weight: run.weight, parts: [part] });
-    }
-  }
-
-  return groups
-    .map((group) => (group.weight ? `${group.parts.join(', ')} @ ${group.weight}` : group.parts.join(', ')))
+  return runs
+    .map((run) =>
+      [run.count > 1 ? `${run.count} × ${run.label}` : run.label, run.weight, run.rpe && formatRpe(run.rpe)]
+        .filter((part) => !!part)
+        .join(' '),
+    )
     .join(' · ');
 }
 

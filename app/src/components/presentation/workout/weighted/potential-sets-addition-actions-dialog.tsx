@@ -16,7 +16,7 @@ interface PotentialSetAdditionalActionsDialogProps {
   repTarget: number;
   updateRepCount: (reps: number | undefined) => void;
   rpe: Rpe | undefined;
-  /** Omit to hide the RPE row (the Log RPE setting is off). */
+  /** `undefined` hides the RPE row (the Log RPE setting is off). */
   updateRpe: ((rpe: Rpe | undefined) => void) | undefined;
   close: () => void;
 }

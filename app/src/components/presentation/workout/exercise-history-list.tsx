@@ -62,7 +62,6 @@ function ExerciseHistoryEntry(props: { exercise: RecordedExercise }) {
 
 function WeightedSets(props: { exercise: RecordedWeightedExercise }) {
   const { exercise } = props;
-  const showRpe = exercise.potentialSets.some((set) => set.loggedRpe !== undefined);
   return (
     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing[1] }}>
       {exercise.potentialSets.map((set, index) => (
@@ -72,7 +71,7 @@ function WeightedSets(props: { exercise: RecordedWeightedExercise }) {
           set={set}
           repsTarget={exercise.repsTargetForSet(index)}
           resistance={exercise.blueprint.resistance}
-          showRpe={showRpe}
+          showRpe={exercise.hasLoggedRpe}
           rpe={set.loggedRpe}
         />
       ))}

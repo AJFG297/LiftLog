@@ -30,7 +30,7 @@ interface PotentialSetCounterProps {
 
   showRpe: boolean;
   rpe: Rpe | undefined;
-  /** Omit when RPE can't be edited here: the row still shows, it just isn't tappable. */
+  /** `undefined` when RPE can't be edited here: the row still shows, it just isn't tappable. */
   onUpdateRpe: ((rpe: Rpe | undefined) => void) | undefined;
 }
 
