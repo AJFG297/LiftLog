@@ -393,3 +393,6 @@ tests/LiftLog.Tests.Api/appsettings.Development.json
 temp/
 
 CLAUDE.local.md
+
+# verify-liftlog skill: run evidence and live-instance state
+.verify-runs/
