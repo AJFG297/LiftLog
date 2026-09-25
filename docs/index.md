@@ -40,6 +40,18 @@ work to find the docs relevant to your area, and update it whenever you add, rem
   remote backup to different ones, custom headers for API keys and forward auth, and why moving the
   feed destroys the account. Read alongside `SelfHosting.md`.
 
+## Decisions
+
+- [adr/0001-own-backend-no-upstream-compatibility.md](./adr/0001-own-backend-no-upstream-compatibility.md)
+  - the fork talks only to its own backend and keeps no compatibility with upstream LiftLog (wire
+  formats, backups, hosted service); what that frees up and what still must stay compatible.
+
+## Plans
+
+- [plans/relational-storage.md](./plans/relational-storage.md) - draft plan (assumes no existing users,
+  own backend only) to replace session JSON blobs with relational tables and put stable exercise IDs on
+  blueprints: key decisions, target schema, phases, and the formats that must keep working.
+
 ## Generated
 
 - [schemas/](./schemas) - JSON schemas generated from the app's models: `ai-plan/`,
