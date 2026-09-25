@@ -700,5 +700,14 @@
   "exercise.mechanic.isolation": "Isolation",
   "exercise.progression.rule.never_runs.label": "never runs",
   "exercise.progression.blocks_later.load.body": "A weight rule has no limit, so it never stops and the rules after it never take over. Move it to the end.",
-  "exercise.progression.blocks_later.reps.body": "Without a limit this rule never stops, so the rules after it never take over. Set a limit, or move this rule to the end."
+  "exercise.progression.blocks_later.reps.body": "Without a limit this rule never stops, so the rules after it never take over. Set a limit, or move this rule to the end.",
+  "onboarding.workout.title": "Workout",
+  "workout.log_rpe.label": "Log RPE",
+  "workout.log_rpe.subtitle": "Rate how hard each set felt (RPE 6-10) during a workout",
+  "workout.rpe.title": "RPE",
+  "workout.rpe.label": "RPE",
+  "workout.rpe.clear.button": "Clear RPE",
+  "whats_new.log_rpe.title": "Log RPE on your sets",
+  "whats_new.log_rpe.body": "You can now rate how hard each set felt, from RPE 6 to 10. Turn it on and an RPE chip appears on every working set - pick it before or after you log the set.",
+  "whats_new.log_rpe.cta": "Turn on RPE"
 }

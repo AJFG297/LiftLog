@@ -12,6 +12,8 @@ interface WeightedExerciseProps {
   previousRecordedExercises: RecordedWeightedExercise[];
   toStartNext: boolean;
   isReadonly: boolean;
+  /** The Log RPE setting. Off still shows RPE already logged, it just stops offering to enter it. */
+  rpeEnabled: boolean;
   showPreviousButton: boolean;
 
   timeProvider: () => OffsetDateTime;
@@ -27,6 +29,11 @@ export default function WeightedExercise(props: WeightedExerciseProps) {
   useState(false);
 
   const setToStartNext = recordedExercise.potentialSets.findIndex((x) => !x.set);
+  const canEditRpe = props.rpeEnabled && !props.isReadonly;
+  // A read-only view shows only what was logged; the live workout also shows an RPE picked ahead of the set.
+  const rpeFor = (index: number) =>
+    props.isReadonly ? recordedExercise.getSet(index).loggedRpe : recordedExercise.getSet(index).rpe;
+  const showRpe = canEditRpe || recordedExercise.potentialSets.some((_, index) => rpeFor(index) !== undefined);
 
   return (
     <ExerciseSection
@@ -66,6 +73,9 @@ export default function WeightedExercise(props: WeightedExerciseProps) {
             }}
             onUpdateWeight={(w, applyTo) => updateExercise((ex) => ex.withWeight(index, w, applyTo))}
             set={set}
+            showRpe={showRpe}
+            rpe={rpeFor(index)}
+            onUpdateRpe={canEditRpe ? (rpe) => updateExercise((ex) => ex.withRpe(index, rpe)) : undefined}
             toStartNext={props.toStartNext && setToStartNext === index && !props.isReadonly}
             resistance={recordedExercise.blueprint.resistance}
             weightIncrement={recordedExercise.blueprint.weightIncrement}

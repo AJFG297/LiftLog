@@ -11,6 +11,10 @@
     },
     "weight": {
       "$ref": "./Weight.json"
+    },
+    "rpe": {
+      "type": "number",
+      "description": "How hard the set felt, 6-10 in half steps. Lives on the slot rather than the recorded set so it can be picked before the set is logged."
     }
   },
   "required": [

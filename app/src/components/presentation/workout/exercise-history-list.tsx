@@ -71,6 +71,8 @@ function WeightedSets(props: { exercise: RecordedWeightedExercise }) {
           set={set}
           repsTarget={exercise.repsTargetForSet(index)}
           resistance={exercise.blueprint.resistance}
+          showRpe={exercise.hasLoggedRpe}
+          rpe={set.loggedRpe}
         />
       ))}
     </View>

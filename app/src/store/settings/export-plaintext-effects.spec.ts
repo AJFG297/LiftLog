@@ -207,6 +207,34 @@ describe('export-plaintext-effects', () => {
       expect(csv).toContain('slow eccentric');
     });
 
+    it('puts the logged RPE in a trailing column, blank when none was logged', async () => {
+      const fileExportService = makeFileExportService();
+      const bp = makeBenchBlueprint('Curl', 2, 12);
+      const exercise = new RecordedWeightedExercise(
+        bp,
+        [
+          filledPotentialSet(12, t, new Weight(20, 'kilograms')).with({ rpe: 8.5 }),
+          filledPotentialSet(12, t, new Weight(20, 'kilograms')),
+        ],
+        undefined,
+      );
+      const testBed = createAddEffectTestBed({
+        services: {
+          progressRepository: makeProgressRepository([makeSession([exercise])]),
+          fileExportService,
+        },
+      });
+      addExportPlaintextEffects(testBed.addEffect);
+
+      await testBed.dispatchHandled(exportPlainText({ format: 'CSV' }));
+
+      const [, bytes] = fileExportService.exportBytes.mock.calls[0]!;
+      const [header, rated, unrated] = new TextDecoder().decode(bytes).trim().split('\n');
+      expect(header!.trim().split(',').at(-1)).toBe('RPE');
+      expect(rated!.trim().split(',').at(-1)).toBe('8.5');
+      expect(unrated!.trim().split(',').at(-1)).toBe('');
+    });
+
     it('exports rows across multiple sessions', async () => {
       const fileExportService = makeFileExportService();
       const sessions = [
@@ -234,6 +262,34 @@ describe('export-plaintext-effects', () => {
   // ─── JSON export ──────────────────────────────────────────────────────────────
 
   describe('addExportPlaintextEffects - JSON', () => {
+    it('leaves out an RPE picked for a set that was never logged', async () => {
+      const fileExportService = makeFileExportService();
+      const bp = makeBenchBlueprint('Curl', 2, 12);
+      const exercise = new RecordedWeightedExercise(
+        bp,
+        [
+          filledPotentialSet(12, t, new Weight(20, 'kilograms')).with({ rpe: 8 }),
+          filledPotentialSet(12, t, new Weight(20, 'kilograms')).with({ set: undefined, rpe: 9 }),
+        ],
+        undefined,
+      );
+      const testBed = createAddEffectTestBed({
+        services: {
+          progressRepository: makeProgressRepository([makeSession([exercise])]),
+          fileExportService,
+        },
+      });
+      addExportPlaintextEffects(testBed.addEffect);
+
+      await testBed.dispatchHandled(exportPlainText({ format: 'JSON' }));
+
+      const [, bytes] = fileExportService.exportBytes.mock.calls[0]!;
+      const [session] = JSON.parse(new TextDecoder().decode(bytes)) as {
+        recordedExercises: { potentialSets: { rpe?: number }[] }[];
+      }[];
+      expect(session!.recordedExercises[0]!.potentialSets.map((s) => s.rpe)).toEqual([8, undefined]);
+    });
+
     it('calls exportBytes with a .json filename and application/json content type', async () => {
       const fileExportService = makeFileExportService();
       const testBed = createAddEffectTestBed({

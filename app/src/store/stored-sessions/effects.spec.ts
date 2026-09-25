@@ -14,12 +14,20 @@ import {
   setStoredSessions,
   upsertExercises,
   upsertStoredSessions,
+  updateStoredSession,
 } from '@/store/stored-sessions';
 import { addUnpublishedSessionId } from '@/store/feed';
 import { setStatsIsDirty } from '@/store/stats';
 import { createAddEffectTestBed } from '@/utils/__test__/add-effect-testbed';
 import { exercisesSchema, sessionsSchema } from '@/db/schema';
-import { Session } from '@/models/session-models';
+import { RecordedWeightedExercise, Session } from '@/models/session-models';
+import {
+  emptyPotentialSet,
+  filledPotentialSet,
+  makeSession,
+  makeWeightedBlueprint,
+  tick,
+} from '@/models/session-models/__test__/helpers';
 import { toJsonString } from '@/models/storage/versions/latest';
 import type { RootState } from '@/store/store';
 
@@ -180,6 +188,41 @@ describe('stored-sessions effects', () => {
       expect(testBed.getDispatchedAction(addUnpublishedSessionId).payload).toBe(session.id);
       expect(testBed.getDispatchedAction(setStatsIsDirty).payload).toBe(true);
       expect(testBed.getDispatchedAction(setActiveSessionId).payload).toBeUndefined();
+    });
+
+    it('drops an RPE left on a set that was never logged, keeping logged ones', async () => {
+      const blueprint = makeWeightedBlueprint();
+      const exercise = new RecordedWeightedExercise(
+        blueprint,
+        [filledPotentialSet(10, tick()).with({ rpe: 8 }), emptyPotentialSet().with({ rpe: 9 })],
+        undefined,
+      );
+      const session = makeSession([blueprint]).withExercise(0, exercise);
+      const testBed = bed({
+        state: {
+          storedSessions: { sessions: { [session.id]: session }, activeSessionId: session.id },
+        } as Partial<RootState>,
+      });
+
+      await testBed.dispatchHandled(sessionFinished(session.id));
+
+      const { sessionId, update } = testBed.getDispatchedAction(updateStoredSession).payload;
+      expect(sessionId).toBe(session.id);
+      const cleaned = update(session).recordedExercises[0] as RecordedWeightedExercise;
+      expect(cleaned.potentialSets.map((s) => s.rpe)).toEqual([8, undefined]);
+    });
+
+    it('leaves a session with no stray RPE untouched', async () => {
+      const session = Session.freeformSession(LocalDate.of(2026, 4, 10), undefined);
+      const testBed = bed({
+        state: {
+          storedSessions: { sessions: { [session.id]: session }, activeSessionId: session.id },
+        } as Partial<RootState>,
+      });
+
+      await testBed.dispatchHandled(sessionFinished(session.id));
+
+      testBed.expectNotDispatched(updateStoredSession);
     });
 
     it('leaves the active pointer alone when finishing some other session', async () => {

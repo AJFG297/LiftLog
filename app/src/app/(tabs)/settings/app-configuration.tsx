@@ -7,6 +7,7 @@ import {
   setShowBodyweight,
   setShowFeed,
   setShowPostWorkoutSummary,
+  setLogRpe,
   setThemeMode,
   setTrueBlackDarkTheme,
   setWelcomeWizardCompleted,
@@ -47,6 +48,14 @@ export default function AppConfigurationPage() {
           supportingText={t('workout.show_post_workout_summary.subtitle')}
           value={settings.showPostWorkoutSummary}
           onValueChange={(value) => dispatch(setShowPostWorkoutSummary(value))}
+        />
+        <SegmentedListSwitch
+          testID="setLogRpe"
+          label={t('workout.log_rpe.label')}
+          icon={'speed'}
+          supportingText={t('workout.log_rpe.subtitle')}
+          value={settings.logRpe}
+          onValueChange={(value) => dispatch(setLogRpe(value))}
         />
         <SegmentedListSwitch
           label={t('workout.notes_expanded_by_default.label')}
