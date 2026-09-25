@@ -95,7 +95,7 @@ export default function PotentialSetAdditionalActionsDialog({
               {updateRpe && (
                 <View style={{ gap: spacing[2], marginTop: spacing[4] }}>
                   <Text variant="labelLarge">
-                    <T keyName="workout.rpe.title" />
+                    <T keyName="workout.rpe.label" />
                   </Text>
                   {/* Unlike the rep buttons this doesn't close: RPE is set alongside the reps, not instead of them. */}
                   <RpeChips value={rpe} onChange={updateRpe} />
