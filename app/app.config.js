@@ -6,6 +6,8 @@
 // the config through a plain `expo config` child process, so there is no reliable "EAS is asking" signal;
 // instead the expressions are kept only on GitHub Actions and replaced with the values they fall back to
 // everywhere else.
+// Config files are plain Node, outside the app's TypeScript project, so `process` is untyped here.
+// oxlint-disable-next-line typescript/no-unsafe-member-access
 const keepNativeVersionExpressions = process.env.GITHUB_ACTIONS === 'true';
 
 /** @param {{ config: import('expo/config').ExpoConfig }} context */
