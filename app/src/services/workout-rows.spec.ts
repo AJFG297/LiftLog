@@ -23,6 +23,7 @@ function shuffled(rows: WorkoutRows): WorkoutRows {
     ...rows,
     exercises: rows.exercises.toReversed(),
     weightedSets: rows.weightedSets.toReversed(),
+    warmupSets: rows.warmupSets.toReversed(),
     cardioSets: rows.cardioSets.toReversed(),
   };
 }
@@ -67,6 +68,32 @@ describe('workout rows', () => {
     expect(restored.potentialSets[0]!.set).toBeUndefined();
     expect(restored.potentialSets[0]!.rpe).toBe(8.5);
     expect(restored.notes).toBe('felt heavy');
+  });
+
+  it('keeps warm-ups in their own rows, out of the working sets and their aggregates', () => {
+    const blueprint = makeWeightedBlueprint({ sets: 1 });
+    const exercise = new RecordedWeightedExercise(
+      blueprint,
+      [filledPotentialSet(5, OffsetDateTime.parse('2025-04-05T10:10:00Z'), new Weight(100, 'kilograms'))],
+      undefined,
+      [
+        filledPotentialSet(5, OffsetDateTime.parse('2025-04-05T10:00:00Z'), new Weight(200, 'kilograms')),
+        emptyPotentialSet(new Weight('42.5', 'kilograms'), { min: 3, max: 3 }),
+      ],
+    );
+    const session = makeSession([blueprint]).withExercise(0, exercise);
+
+    const rows = toWorkoutRows(session);
+    const restored = fromWorkoutRows(shuffled(rows)).recordedExercises[0] as RecordedWeightedExercise;
+
+    expect(rows.weightedSets).toHaveLength(1);
+    expect(rows.warmupSets).toMatchObject([
+      { position: 0, reps: 5, weightValue: '200' },
+      { position: 1, reps: null, completedAt: null, weightValue: '42.5', targetRepsMin: 3 },
+    ]);
+    // A heavier warm-up still leaves the workout's volume at the working sets' 5 × 100 kg.
+    expect(rows.workout.volumeKg).toBe(500);
+    expect(restored.equals(exercise)).toBe(true);
   });
 
   describe('query columns', () => {

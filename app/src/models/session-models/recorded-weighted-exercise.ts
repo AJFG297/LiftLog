@@ -1,4 +1,13 @@
-import { MovementKey, ProgressionKey, RepsTarget, WeightedExerciseBlueprint } from '@/models/blueprint-models';
+import {
+  MovementKey,
+  PlannedWarmupSet,
+  ProgressionKey,
+  RepsTarget,
+  Rest,
+  WeightedExerciseBlueprint,
+  roundWarmupWeight,
+  warmupIncrementFor,
+} from '@/models/blueprint-models';
 import { RecordedExercise } from '@/models/session-models/recorded-exercise';
 
 import {
@@ -12,16 +21,39 @@ import { Weight, WeightUnit } from '@/models/weight';
 import { isRpe, Rpe } from '@/models/session-models/rpe';
 import { IndexOutOfBoundsError } from '@/utils/index-out-of-bounds';
 import { Duration, OffsetDateTime } from '@js-joda/core';
+import BigNumber from 'bignumber.js';
 import { match } from 'ts-pattern';
 
 export type WeightAppliesTo = 'thisSet' | 'uncompletedSets' | 'allSets';
+
+/** Which of an exercise's two set lists a slot lives in. */
+export type SetKind = 'warmup' | 'working';
+
+/** A slot's place in the exercise: its list, and its index within that list. */
+export interface SetPosition {
+  kind: SetKind;
+  index: number;
+}
+
+/** A logged slot and where it sits. */
+export type LoggedSlot = SetPosition & { slot: PotentialSet };
+
 export class RecordedWeightedExercise {
   readonly type = 'RecordedWeightedExercise';
 
   constructor(
     readonly blueprint: WeightedExerciseBlueprint,
+    /**
+     * Working sets only. Everything that counts - the success check, progression, records, volume,
+     * stats - reads this list, which is what keeps warm-ups out of all of it without a filter.
+     */
     readonly potentialSets: PotentialSet[],
     readonly notes: string | undefined,
+    /**
+     * One slot per planned warm-up, done before the working sets. Rebuilt from the plan at session
+     * start rather than carried over (see {@link withWarmupsFromPlan}), and never given an RPE.
+     */
+    readonly warmupSets: PotentialSet[] = [],
   ) {}
 
   static fromJSON(json: RecordedWeightedExerciseJSON): RecordedWeightedExercise {
@@ -29,6 +61,7 @@ export class RecordedWeightedExercise {
       WeightedExerciseBlueprint.fromJSON(json.blueprint),
       json.potentialSets.map((x) => PotentialSet.fromJSON(x)),
       json.notes,
+      json.warmupSets.map((x) => PotentialSet.fromJSON(x)),
     );
   }
 
@@ -52,7 +85,69 @@ export class RecordedWeightedExercise {
       b,
       b.plannedSets.map((s) => new PotentialSet(undefined, new Weight(0, unit), s.reps)),
       undefined,
+    ).withWarmupsFromPlan(unit);
+  }
+
+  /**
+   * The warm-up slots rebuilt from the blueprint's plan, against the working sets as they stand -
+   * so call it after progression has moved them. Nothing is carried from an earlier session.
+   *
+   * `fallbackUnit` is the unit used when no working set has one (a fresh exercise at a `nil` weight).
+   */
+  withWarmupsFromPlan(fallbackUnit: WeightUnit): RecordedWeightedExercise {
+    return this.with({
+      warmupSets: this.blueprint.warmupSets.map((warmup) => this.warmupSlotFor(warmup, fallbackUnit)),
+    });
+  }
+
+  /**
+   * A fresh slot for one planned warm-up: a percentage of the heaviest working set, or an absolute
+   * weight converted into the session's unit, either way rounded to the exercise's increment.
+   */
+  warmupSlotFor(warmup: PlannedWarmupSet, fallbackUnit: WeightUnit): PotentialSet {
+    const heaviest = this.heaviestWorkingWeight;
+    const unit = heaviest && heaviest.unit !== 'nil' ? heaviest.unit : fallbackUnit;
+    const target = { min: warmup.reps, max: warmup.reps };
+    const load = this.tracksResistance ? warmup.load : undefined;
+    if (!load) {
+      return new PotentialSet(undefined, new Weight(0, unit), target);
+    }
+    const raw =
+      load.type === 'percent'
+        ? (heaviest ?? new Weight(0, unit)).convertTo(unit).multipliedBy(new BigNumber(load.percent).dividedBy(100))
+        : load.weight.convertTo(unit);
+    return new PotentialSet(undefined, roundWarmupWeight(raw, warmupIncrementFor(this.blueprint, unit)), target);
+  }
+
+  private get heaviestWorkingWeight(): Weight | undefined {
+    return this.potentialSets.reduce<Weight | undefined>(
+      (max, set) => (!max || set.weight.isGreaterThan(max) ? set.weight : max),
+      undefined,
     );
+  }
+
+  /** The slot at `position`, or undefined when there is none there. */
+  slotAt(position: SetPosition): PotentialSet | undefined {
+    return this.listFor(position.kind)[position.index];
+  }
+
+  private listFor(kind: SetKind): PotentialSet[] {
+    return kind === 'warmup' ? this.warmupSets : this.potentialSets;
+  }
+
+  /**
+   * The earlier performance this one is compared against: the most recent of `candidates` (newest
+   * first) with the same progression key, so a changed set scheme never borrows mismatched numbers.
+   */
+  previousPerformanceIn(candidates: readonly RecordedWeightedExercise[]): RecordedWeightedExercise | undefined {
+    const key = this.progressionKey();
+    return candidates.find((x) => x.progressionKey() === key);
+  }
+
+  /** The plan's percentage for the warm-up at `index`, when it is a share of the working weight. */
+  warmupPercentAt(index: number): number | undefined {
+    const load = this.blueprint.warmupSets[index]?.load;
+    return load?.type === 'percent' ? load.percent : undefined;
   }
 
   getSet(index: number): PotentialSet {
@@ -81,7 +176,9 @@ export class RecordedWeightedExercise {
       this.potentialSets.every((set, index) => {
         const otherSet = other.potentialSets[index];
         return set.equals(otherSet);
-      })
+      }) &&
+      this.warmupSets.length === other.warmupSets.length &&
+      this.warmupSets.every((set, index) => set.equals(other.warmupSets[index]))
     );
   }
 
@@ -90,6 +187,7 @@ export class RecordedWeightedExercise {
       'blueprint' in other ? (other.blueprint ?? this.blueprint) : this.blueprint,
       'potentialSets' in other ? (other.potentialSets ?? this.potentialSets) : this.potentialSets,
       'notes' in other ? other.notes : this.notes,
+      'warmupSets' in other ? (other.warmupSets ?? this.warmupSets) : this.warmupSets,
     );
   }
 
@@ -97,6 +195,7 @@ export class RecordedWeightedExercise {
     return this.with({
       notes: undefined,
       potentialSets: this.potentialSets.map((ps) => ps.with({ set: undefined, rpe: undefined })),
+      warmupSets: this.warmupSets.map((ps) => ps.with({ set: undefined, rpe: undefined })),
     });
   }
 
@@ -114,19 +213,33 @@ export class RecordedWeightedExercise {
   }
 
   withCycledRepCount(setIndex: number, time: OffsetDateTime): RecordedWeightedExercise {
-    return this.withSet(setIndex, (s) =>
-      s.with({
-        set: match(s.set)
-          .returnType<RecordedSet | undefined>()
-          .with(undefined, () => new RecordedSet(this.repsTargetForSet(setIndex).max, time))
-          .with({ repsCompleted: 0 }, () => undefined)
-          .otherwise((x) =>
-            x.with({
-              repsCompleted: x.repsCompleted - 1,
-            }),
-          ),
-      }),
+    return this.withSet(setIndex, (s) => s.with({ set: cycledSet(s.set, this.repsTargetForSet(setIndex).max, time) }));
+  }
+
+  /** The tap on a warm-up: the same cycle as a working set, from its own target down to cleared. */
+  withCycledWarmupRepCount(warmupIndex: number, time: OffsetDateTime): RecordedWeightedExercise {
+    return this.withSlot({ kind: 'warmup', index: warmupIndex }, (s) =>
+      s.with({ set: cycledSet(s.set, s.target.max, time) }),
     );
+  }
+
+  /** Exact reps for a warm-up, or `undefined` to clear it. */
+  withWarmupRepCount(warmupIndex: number, reps: number | undefined, time: OffsetDateTime): RecordedWeightedExercise {
+    return this.withSlot({ kind: 'warmup', index: warmupIndex }, (s) =>
+      s.with({ set: reps === undefined ? undefined : new RecordedSet(reps, time) }),
+    );
+  }
+
+  /**
+   * A warm-up's weight for this session only. The plan is left alone, so the edit never reaches the
+   * save-to-plan prompt, and the next session rebuilds the warm-up from the plan.
+   */
+  withWarmupWeight(warmupIndex: number, weight: Weight): RecordedWeightedExercise {
+    return this.withSlot({ kind: 'warmup', index: warmupIndex }, (s) => s.with({ weight }));
+  }
+
+  withAllWarmupSets(reducer: (s: PotentialSet) => PotentialSet): RecordedWeightedExercise {
+    return this.with({ warmupSets: this.warmupSets.map(reducer) });
   }
 
   withRepCount(setIndex: number, reps: number | undefined, time: OffsetDateTime): RecordedWeightedExercise {
@@ -138,13 +251,17 @@ export class RecordedWeightedExercise {
   }
 
   withSet(setIndex: number, reducer: (s: PotentialSet) => PotentialSet) {
-    const existingSet = this.potentialSets[setIndex];
+    return this.withSlot({ kind: 'working', index: setIndex }, reducer);
+  }
+
+  private withSlot({ kind, index }: SetPosition, reducer: (s: PotentialSet) => PotentialSet): RecordedWeightedExercise {
+    const list = this.listFor(kind);
+    const existingSet = list[index];
     if (!existingSet) {
-      throw new IndexOutOfBoundsError(setIndex, this.potentialSets);
+      throw new IndexOutOfBoundsError(index, list);
     }
-    return this.with({
-      potentialSets: this.potentialSets.with(setIndex, reducer(existingSet)),
-    });
+    const updated = list.with(index, reducer(existingSet));
+    return this.with(kind === 'warmup' ? { warmupSets: updated } : { potentialSets: updated });
   }
 
   withAllSets(reducer: (s: PotentialSet) => PotentialSet) {
@@ -158,7 +275,28 @@ export class RecordedWeightedExercise {
       .with('thisSet', () => this.withSet(setIndex, (s) => s.with({ weight })))
       .with('uncompletedSets', () => this.withAllSets((s) => s.with({ weight: s.set ? s.weight : weight })))
       .with('allSets', () => this.withAllSets((s) => s.with({ weight })))
-      .exhaustive();
+      .exhaustive()
+      .withPercentWarmupsFollowing(this, weight.unit);
+  }
+
+  /**
+   * Unlogged percentage warm-ups follow the working weight as it changes during the workout - on an
+   * exercise's first session it starts at zero, so they would otherwise stay at zero. A warm-up whose
+   * weight no longer matches what the plan made of `before` was given one of its own, and keeps it.
+   */
+  private withPercentWarmupsFollowing(before: RecordedWeightedExercise, fallbackUnit: WeightUnit) {
+    return this.with({
+      warmupSets: this.warmupSets.map((slot, index) => {
+        const planned = this.blueprint.warmupSets[index];
+        if (slot.set || planned?.load?.type !== 'percent') {
+          return slot;
+        }
+        if (!slot.weight.equals(before.warmupSlotFor(planned, fallbackUnit).weight)) {
+          return slot;
+        }
+        return slot.with({ weight: this.warmupSlotFor(planned, fallbackUnit).weight });
+      }),
+    });
   }
 
   toJSON(): RecordedWeightedExerciseJSON {
@@ -166,6 +304,7 @@ export class RecordedWeightedExercise {
       type: 'RecordedWeightedExercise',
       blueprint: this.blueprint.toJSON(),
       potentialSets: this.potentialSets.map((x) => x.toJSON()),
+      warmupSets: this.warmupSets.map((x) => x.toJSON()),
       notes: this.notes,
     };
   }
@@ -188,14 +327,7 @@ export class RecordedWeightedExercise {
   }
 
   get maxWeight(): Weight {
-    return (
-      this.potentialSets.reduce(
-        (max, set) => {
-          return !max || set.weight.isGreaterThan(max) ? set.weight : max;
-        },
-        undefined as Weight | undefined,
-      ) ?? new Weight(0, 'kilograms')
-    );
+    return this.heaviestWorkingWeight ?? new Weight(0, 'kilograms');
   }
 
   maxWeightWith(bodyweight: Weight | undefined): Weight {
@@ -221,48 +353,111 @@ export class RecordedWeightedExercise {
     );
   }
 
+  /**
+   * Started once a working set is logged. A warm-up alone doesn't count, so everything that measures
+   * the lift - stats, records, history, the performance the next session carries on from - gets that
+   * for free. Timing asks {@link hasLoggedAnySet} instead.
+   */
   get isStarted() {
     return this.potentialSets.some((x) => x.set !== undefined);
+  }
+
+  /** Whether any set is logged, a warm-up included: the workout is under way, and rest is owed. */
+  get hasLoggedAnySet(): boolean {
+    return this.isStarted || this.warmupSets.some((x) => x.set !== undefined);
   }
 
   get hasLoggedRpe(): boolean {
     return this.potentialSets.some((x) => x.loggedRpe !== undefined);
   }
 
-  get lastRecordedSet(): PotentialSet | undefined {
-    let best: PotentialSet | undefined;
-    for (const ps of this.potentialSets) {
-      if (!ps.set) continue;
-      if (!best || ps.set.completionDateTime.isAfter(best.set!.completionDateTime)) best = ps;
-    }
-    return best;
+  /** The most recently logged slot across warm-ups and working sets. */
+  get lastLoggedSlot(): LoggedSlot | undefined {
+    return this.loggedSlotWhere(isAfter);
   }
 
-  get firstRecordedSet(): PotentialSet | undefined {
-    let best: PotentialSet | undefined;
-    for (const ps of this.potentialSets) {
-      if (!ps.set) continue;
-      if (!best || ps.set.completionDateTime.isBefore(best.set!.completionDateTime)) best = ps;
+  /** The logged slot, across both lists, that beats every other by `beats`. A warm-up wins a tie. */
+  private loggedSlotWhere(beats: (a: PotentialSet, b: PotentialSet) => boolean): LoggedSlot | undefined {
+    const warmupIndex = loggedIndexWhere(this.warmupSets, beats);
+    const workingIndex = loggedIndexWhere(this.potentialSets, beats);
+    const warmup = this.warmupSets[warmupIndex];
+    const working = this.potentialSets[workingIndex];
+    if (working && (!warmup || beats(working, warmup))) {
+      return { kind: 'working', index: workingIndex, slot: working };
     }
-    return best;
+    return warmup && { kind: 'warmup', index: warmupIndex, slot: warmup };
   }
 
+  /**
+   * Whether the latest logged set fell short of its target, which earns the longer failure rest. A
+   * warm-up never does: short warm-ups are not failures.
+   */
+  get lastSetMissedTarget(): boolean {
+    const last = this.lastLoggedSlot;
+    return last?.kind === 'working' && last.slot.set!.repsCompleted < this.repsTargetForSet(last.index).min;
+  }
+
+  /**
+   * The rest window owed after the latest logged set. A warm-up only earns the minimum rest - its
+   * maximum is pulled down to match - and never the failure rest, however short it fell.
+   */
+  get restAfterLastSet(): Rest {
+    const rest = this.blueprint.restBetweenSets;
+    return this.lastLoggedSlot?.kind === 'warmup' ? { ...rest, maxRest: rest.minRest } : rest;
+  }
+
+  /** The most recently logged working set; a warm-up done after the working sets never moves it. */
+  get lastLoggedWorkingSet(): PotentialSet | undefined {
+    return this.potentialSets[loggedIndexWhere(this.potentialSets, isAfter)];
+  }
+
+  /** The first unlogged working set, ignoring warm-ups. See {@link currentSet} for the full order. */
   get currentSetIndex() {
     return this.potentialSets.findIndex((x) => !x.set);
   }
 
+  /**
+   * The set to do next. Warm-ups come first, but only until the working sets begin: once one is
+   * logged, a skipped warm-up is left behind rather than asked for again. Undefined once every
+   * working set is logged.
+   */
+  get currentSet(): SetPosition | undefined {
+    const workingStarted = this.potentialSets.some((x) => x.set);
+    const warmupIndex = workingStarted ? -1 : this.warmupSets.findIndex((x) => !x.set);
+    if (warmupIndex >= 0) {
+      return { kind: 'warmup', index: warmupIndex };
+    }
+    const workingIndex = this.currentSetIndex;
+    return workingIndex >= 0 ? { kind: 'working', index: workingIndex } : undefined;
+  }
+
+  /** From the first set to the last, warm-ups included. */
   get duration(): Duration | undefined {
-    return this.latestTime && this.earliestTime ? Duration.between(this.earliestTime, this.latestTime) : undefined;
+    const { firstActivityTime, lastActivityTime } = this;
+    return firstActivityTime && lastActivityTime ? Duration.between(firstActivityTime, lastActivityTime) : undefined;
   }
 
+  /** When the last working set was logged: what orders performances for history and carry-over. */
   get latestTime(): OffsetDateTime | undefined {
-    return this.lastRecordedSet?.set?.completionDateTime;
+    return this.lastLoggedWorkingSet?.set!.completionDateTime;
   }
 
+  /** When the first working set was logged. */
   get earliestTime(): OffsetDateTime | undefined {
-    return this.firstRecordedSet?.set?.completionDateTime;
+    return this.potentialSets[loggedIndexWhere(this.potentialSets, isBefore)]?.set!.completionDateTime;
   }
 
+  /** When the last set was logged, warm-ups included: timing (rest, duration, Health) reads it. */
+  get lastActivityTime(): OffsetDateTime | undefined {
+    return this.lastLoggedSlot?.slot.set!.completionDateTime;
+  }
+
+  /** When the first set was logged, warm-ups included. */
+  get firstActivityTime(): OffsetDateTime | undefined {
+    return this.loggedSlotWhere(isBefore)?.slot.set!.completionDateTime;
+  }
+
+  /** Complete once every working set is logged; a skipped warm-up never holds an exercise open. */
   get isComplete(): boolean {
     return !this.potentialSets.some((x) => x.set === undefined);
   }
@@ -273,6 +468,36 @@ export class RecordedWeightedExercise {
   get isSuccessForProgressiveOverload(): boolean {
     return this.potentialSets.every((x, index) => x.set && x.set.repsCompleted >= this.repsTargetForSet(index).max);
   }
+}
+
+/**
+ * The index of the logged slot that beats every other logged slot by `beats`, or -1 when none is
+ * logged. A plain loop: the time getters run over the whole history on load and for stats.
+ */
+function loggedIndexWhere(slots: PotentialSet[], beats: (a: PotentialSet, b: PotentialSet) => boolean): number {
+  let best = -1;
+  for (let index = 0; index < slots.length; index++) {
+    if (slots[index]!.set && (best < 0 || beats(slots[index]!, slots[best]!))) {
+      best = index;
+    }
+  }
+  return best;
+}
+
+function isAfter(a: PotentialSet, b: PotentialSet): boolean {
+  return a.set!.completionDateTime.isAfter(b.set!.completionDateTime);
+}
+
+function isBefore(a: PotentialSet, b: PotentialSet): boolean {
+  return a.set!.completionDateTime.isBefore(b.set!.completionDateTime);
+}
+
+function cycledSet(set: RecordedSet | undefined, targetMax: number, time: OffsetDateTime): RecordedSet | undefined {
+  return match(set)
+    .returnType<RecordedSet | undefined>()
+    .with(undefined, () => new RecordedSet(targetMax, time))
+    .with({ repsCompleted: 0 }, () => undefined)
+    .otherwise((x) => x.with({ repsCompleted: x.repsCompleted - 1 }));
 }
 
 export class RecordedSet {

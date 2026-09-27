@@ -108,9 +108,12 @@ export class SessionService {
           ),
         );
       const newExercise = new RecordedWeightedExercise(e, potentialSets, undefined);
-      return weightedLastExercise?.isSuccessForProgressiveOverload
+      const progressed = weightedLastExercise?.isSuccessForProgressiveOverload
         ? applyProgression(e.progression, newExercise)
         : newExercise;
+      // Built from the plan rather than carried, and only now, so a percentage follows today's
+      // progressed working weight.
+      return progressed.withWarmupsFromPlan($this.getDefaultWeightUnit());
     }
     return new Session(
       uuid(),

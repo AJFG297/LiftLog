@@ -126,3 +126,19 @@ export function shortFormatWeightUnit(unit: WeightUnit | undefined): string {
     .with(undefined, () => '')
     .exhaustive();
 }
+
+/**
+ * The added/assisted load against a bodyweight movement, given the load already formatted: `BW` for
+ * none, `BW +10kg` for added. A negative (assisted) load carries its own minus sign: `BW -20kg`.
+ */
+export function bodyweightLoadText(weight: Weight, bodyweightLabel: string, formattedLoad: string): string {
+  if (weight.value.isZero()) {
+    return bodyweightLabel;
+  }
+  return `${bodyweightPrefix(bodyweightLabel, weight.value)}${formattedLoad}`;
+}
+
+/** `BW +` before added load; a negative (assisted) load carries its own minus sign. */
+export function bodyweightPrefix(label: string, value: BigNumber): string {
+  return `${label} ${value.isGreaterThan(0) ? '+' : ''}`;
+}

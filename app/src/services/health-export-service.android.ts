@@ -38,13 +38,14 @@ export class HealthExportService implements HES {
     if (!this.canExport()) {
       return;
     }
-    if (!workout.isStarted || !workout.firstExercise || !workout.lastExercise) {
+    const { startTime, endTime } = workout;
+    if (!workout.hasLoggedAnySet || !startTime || !endTime) {
       return;
     }
 
     const grantedPermissions = await this.requestPermissionInternal();
 
-    const exerciseSegments = workout.recordedExercises.filter((x) => x.isStarted).map(toExerciseSegment);
+    const exerciseSegments = workout.recordedExercises.filter((x) => x.hasLoggedAnySet).map(toExerciseSegment);
     const exerciseSessionRecord: ExerciseSessionRecord = {
       metadata: {
         clientRecordId: workout.id,
@@ -52,8 +53,9 @@ export class HealthExportService implements HES {
       recordType: 'ExerciseSession',
       exerciseType: ExerciseType.WEIGHTLIFTING,
       segments: exerciseSegments,
-      startTime: workout.firstExercise.earliestTime!.toString(),
-      endTime: workout.lastExercise.latestTime!.toString(),
+      // Warm-ups included: they are part of the time spent training.
+      startTime: startTime.toString(),
+      endTime: endTime.toString(),
       title: workout.blueprint.name,
     };
     if (grantedPermissions.some((x) => x.recordType === 'ExerciseSession')) {
@@ -70,7 +72,7 @@ export class HealthExportService implements HES {
             clientRecordId: workout.id,
           },
           recordType: 'Weight',
-          time: workout.lastExercise.latestTime!.toString(),
+          time: endTime.toString(),
           weight: {
             unit: workout.bodyweight.unit,
             value: workout.bodyweight.value.toNumber(),
@@ -104,8 +106,8 @@ function toExerciseSegment(exercise: RecordedExercise): ExerciseSegment {
 function toWeightedExerciseSegment(exercise: RecordedWeightedExercise): ExerciseSegment {
   return {
     segmentType: ExerciseSegmentType.WEIGHTLIFTING,
-    startTime: exercise.earliestTime!.toString(),
-    endTime: exercise.latestTime!.toString(),
+    startTime: exercise.firstActivityTime!.toString(),
+    endTime: exercise.lastActivityTime!.toString(),
     repetitions: exercise.potentialSets.reduce((a, b) => a + (b.set?.repsCompleted ?? 0), 0),
   };
 }
@@ -113,8 +115,8 @@ function toWeightedExerciseSegment(exercise: RecordedWeightedExercise): Exercise
 function toCardioExerciseSegment(exercise: RecordedCardioExercise): ExerciseSegment {
   return {
     segmentType: ExerciseSegmentType.OTHER_WORKOUT,
-    startTime: exercise.earliestTime!.toString(),
-    endTime: exercise.latestTime!.toString(),
+    startTime: exercise.firstActivityTime!.toString(),
+    endTime: exercise.lastActivityTime!.toString(),
     repetitions: exercise.sets.reduce((a, b) => a + (b.completionDateTime ? 1 : 0), 0),
   };
 }

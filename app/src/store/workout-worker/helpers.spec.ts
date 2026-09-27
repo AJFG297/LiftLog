@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { LocalDate } from '@js-joda/core';
-import { SessionBlueprint } from '@/models/blueprint-models';
+import { Instant, LocalDate } from '@js-joda/core';
+import { PlannedWarmupSet, Rest, SessionBlueprint } from '@/models/blueprint-models';
+import { Weight } from '@/models/weight';
 import { Session } from '@/models/session-models/session';
 import { RestTimer } from '@/models/session-models/rest-timer';
 import { RecordedCardioExercise } from '@/models/session-models/recorded-cardio-exercise';
@@ -14,8 +15,14 @@ import {
   makeWeightedBlueprint,
   tick,
 } from '@/models/session-models/__test__/helpers';
-import { getCardioTimerInfo, getCurrentExerciseDetails, getTimerInfo } from '@/store/workout-worker/helpers';
+import {
+  getCardioTimerInfo,
+  getCurrentExerciseDetails,
+  getTimerInfo,
+  workoutUpdatedEvent,
+} from '@/store/workout-worker/helpers';
 import { uuid } from '@/utils/uuid';
+import type { RecordedWeightedExerciseJSON } from '@/models/storage/versions/latest';
 
 describe('getCardioTimerInfo', () => {
   it('returns undefined when no cardio set has a running timer', () => {
@@ -133,5 +140,96 @@ describe('getTimerInfo', () => {
 
     const failure = getTimerInfo(sessionWithPyramidRestTimer(7))!;
     expect(failure.partiallyEndAt).toEqual(failure.endAt);
+  });
+});
+
+describe('warm-ups in the workout worker', () => {
+  const warmup = (percent: number, reps: number): PlannedWarmupSet => ({ load: { type: 'percent', percent }, reps });
+  const rest = Rest.short;
+
+  /** 50% × 5 and 70% × 3 in front of 2 × 10 at 100 kg, with `warmupReps` / `workingReps` logged in order. */
+  function sessionWith(
+    warmupReps: (number | undefined)[],
+    workingReps: (number | undefined)[] = [undefined, undefined],
+  ) {
+    const bp = makeWeightedBlueprint({ sets: 2, restBetweenSets: rest, warmupSets: [warmup(50, 5), warmup(70, 3)] });
+    let exercise = makeRecordedExercise(bp, [undefined, undefined], new Weight(100, 'kilograms')).withWarmupsFromPlan(
+      'kilograms',
+    );
+    // Logged in the order a lifter would: the warm-ups, then the working sets.
+    for (const [index, reps] of warmupReps.entries()) {
+      if (reps !== undefined) {
+        exercise = exercise.withWarmupRepCount(index, reps, tick());
+      }
+    }
+    for (const [index, reps] of workingReps.entries()) {
+      if (reps !== undefined) {
+        exercise = exercise.withRepCount(index, reps, tick());
+      }
+    }
+    return new Session(
+      uuid(),
+      new SessionBlueprint('Test', [bp], ''),
+      [exercise],
+      LocalDate.of(2025, 4, 5),
+      undefined,
+      new RestTimer(tick()),
+    );
+  }
+
+  const seconds = (from: string, to: string) => Instant.parse(to).epochSecond() - Instant.parse(from).epochSecond();
+
+  it('makes the first unlogged warm-up the current set', () => {
+    expect(getCurrentExerciseDetails(sessionWith([]))).toMatchObject({ setKind: 'warmup', setIndex: 0 });
+    expect(getCurrentExerciseDetails(sessionWith([5]))).toMatchObject({ setKind: 'warmup', setIndex: 1 });
+  });
+
+  it('moves to the working sets once the warm-ups are logged', () => {
+    expect(getCurrentExerciseDetails(sessionWith([5, 3]))).toMatchObject({ setKind: 'working', setIndex: 0 });
+  });
+
+  it('leaves a skipped warm-up behind once a working set is logged', () => {
+    expect(getCurrentExerciseDetails(sessionWith([], [10, undefined]))).toMatchObject({
+      setKind: 'working',
+      setIndex: 1,
+    });
+  });
+
+  it('sends the warm-up slot the notification labels, weight included', () => {
+    const details = getCurrentExerciseDetails(sessionWith([5]))!;
+    const exercise = details.exercise as RecordedWeightedExerciseJSON;
+    const slot = exercise.warmupSets[details.setIndex]!;
+    expect(slot.target.reps).toEqual({ min: 3, max: 3 });
+    expect(slot.weight).toEqual(new Weight(70, 'kilograms').toJSON());
+  });
+
+  it('rests only the minimum after a warm-up', () => {
+    const info = getTimerInfo(sessionWith([5]))!;
+    expect(seconds(info.startedAt, info.partiallyEndAt)).toBe(rest.minRest.seconds());
+    expect(seconds(info.startedAt, info.endAt)).toBe(rest.minRest.seconds());
+  });
+
+  it('never gives the failure rest after a short warm-up', () => {
+    const info = getTimerInfo(sessionWith([1]))!;
+    expect(seconds(info.startedAt, info.endAt)).toBe(rest.minRest.seconds());
+  });
+
+  it('still gives the failure rest after a short working set that follows the warm-ups', () => {
+    const info = getTimerInfo(sessionWith([5, 3], [3, undefined]))!;
+    expect(seconds(info.startedAt, info.partiallyEndAt)).toBe(rest.failureRest.seconds());
+    expect(seconds(info.startedAt, info.endAt)).toBe(rest.failureRest.seconds());
+  });
+
+  it('gives the full rest window after a successful working set', () => {
+    const info = getTimerInfo(sessionWith([5, 3], [10, undefined]))!;
+    expect(seconds(info.startedAt, info.partiallyEndAt)).toBe(rest.minRest.seconds());
+    expect(seconds(info.startedAt, info.endAt)).toBe(rest.maxRest.seconds());
+  });
+
+  it('carries warm-ups in the workout sent to the worker, outside its volume', () => {
+    const event = workoutUpdatedEvent(sessionWith([5, 3], [10, undefined]), true);
+    const exercise = event.workout.recordedExercises[0] as RecordedWeightedExerciseJSON;
+    expect(exercise.warmupSets.map((s) => s.set?.repsCompleted)).toEqual([5, 3]);
+    expect(event.totalWeightLifted).toEqual(new Weight(1000, 'kilograms').toJSON());
   });
 });

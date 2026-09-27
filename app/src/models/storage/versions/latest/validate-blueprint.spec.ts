@@ -9,7 +9,7 @@ const validBlueprint: ProgramBlueprintJSON = {
   lastEdited: '2024-01-01' as LocalDateJSON,
   sessions: [
     {
-      version: 6,
+      version: 7,
       name: 'Day 1',
       notes: '',
       exercises: [
@@ -29,6 +29,7 @@ const validBlueprint: ProgramBlueprintJSON = {
             { axis: 'load', step: '2.5' as BigNumberJSON, scope: { type: 'allSets' }, trigger: 'allSetsMetTarget' },
           ],
           resistance: 'external',
+          warmupSets: [],
         },
       ],
     },
@@ -55,5 +56,48 @@ describe('validateLatestProgramBlueprint', () => {
       sessions: [{ ...validBlueprint.sessions[0]!, exercises: [{ type: 'NotARealExercise' }] }],
     };
     expect(validateLatestProgramBlueprint(bad).ok).toBe(false);
+  });
+
+  describe('warm-up sets', () => {
+    const withWarmups = (warmupSets: unknown[]) => ({
+      ...validBlueprint,
+      sessions: [
+        {
+          ...validBlueprint.sessions[0]!,
+          exercises: [{ ...validBlueprint.sessions[0]!.exercises[0]!, warmupSets }],
+        },
+      ],
+    });
+
+    it('accepts percent, absolute and reps-only warm-ups', () => {
+      const result = validateLatestProgramBlueprint(
+        withWarmups([
+          { load: { type: 'absolute', weight: { unit: 'kilograms', value: '20' } }, reps: 5 },
+          { load: { type: 'percent', percent: 50 }, reps: 5 },
+          { reps: 8 },
+        ]),
+      );
+      expect(result.ok).toBe(true);
+    });
+
+    it('rejects a weighted exercise without a warmupSets list', () => {
+      const { warmupSets: _warmupSets, ...exercise } = validBlueprint.sessions[0]!.exercises[0] as Extract<
+        ProgramBlueprintJSON['sessions'][number]['exercises'][number],
+        { type: 'WeightedExerciseBlueprint' }
+      >;
+      const bad = { ...validBlueprint, sessions: [{ ...validBlueprint.sessions[0]!, exercises: [exercise] }] };
+      expect(validateLatestProgramBlueprint(bad).ok).toBe(false);
+    });
+
+    it.each([
+      ['a load with an unknown type', { load: { type: 'bar' }, reps: 5 }],
+      ['a percent load without its percent', { load: { type: 'percent' }, reps: 5 }],
+      ['an absolute load without a unit', { load: { type: 'absolute', weight: { value: '20' } }, reps: 5 }],
+      ['a weight written as a number', { load: { type: 'absolute', weight: { unit: 'pounds', value: 45 } }, reps: 5 }],
+      ['fractional reps', { load: { type: 'percent', percent: 50 }, reps: 2.5 }],
+      ['no reps', { load: { type: 'percent', percent: 50 } }],
+    ])('rejects %s', (_, warmup) => {
+      expect(validateLatestProgramBlueprint(withWarmups([warmup])).ok).toBe(false);
+    });
   });
 });

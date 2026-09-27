@@ -4,7 +4,7 @@
   "lastEdited": "2026-07-12",
   "sessions": [
     {
-      "version": 6,
+      "version": 7,
       "name": "Push",
       "notes": "Chest, shoulders and triceps. Leave one or two reps in reserve on the first working set.",
       "exercises": [
@@ -25,6 +25,11 @@
           "notes": "Squeeze the bar and keep your shoulder blades retracted.",
           "link": "",
           "resistance": "external",
+          "warmupSets": [
+            { "load": { "type": "absolute", "weight": { "unit": "kilograms", "value": "20" } }, "reps": 8 },
+            { "load": { "type": "percent", "percent": 50 }, "reps": 5 },
+            { "load": { "type": "percent", "percent": 70 }, "reps": 3 }
+          ],
           "progression": [
             {
               "axis": "load",
@@ -51,6 +56,7 @@
           "notes": "",
           "link": "",
           "resistance": "external",
+          "warmupSets": [],
           "progression": [
             {
               "axis": "load",
@@ -77,6 +83,7 @@
           "notes": "Superset with the triceps pushdown that follows.",
           "link": "",
           "resistance": "external",
+          "warmupSets": [],
           "progression": [
             {
               "axis": "load",
@@ -103,6 +110,7 @@
           "notes": "",
           "link": "",
           "resistance": "external",
+          "warmupSets": [],
           "progression": [
             {
               "axis": "load",
@@ -115,7 +123,7 @@
       ]
     },
     {
-      "version": 6,
+      "version": 7,
       "name": "Pull",
       "notes": "Back and biceps.",
       "exercises": [
@@ -132,6 +140,7 @@
           "notes": "One heavy top set. Reset between reps.",
           "link": "",
           "resistance": "external",
+          "warmupSets": [],
           "progression": [
             {
               "axis": "load",
@@ -158,6 +167,7 @@
           "notes": "Climb to eight reps on every set, then start adding weight in the belt and drop back to six.",
           "link": "",
           "resistance": "bodyweight",
+          "warmupSets": [],
           "progression": [
             {
               "axis": "reps",
@@ -192,6 +202,7 @@
           "notes": "",
           "link": "",
           "resistance": "external",
+          "warmupSets": [],
           "progression": [
             {
               "axis": "load",
@@ -218,6 +229,7 @@
           "notes": "",
           "link": "",
           "resistance": "external",
+          "warmupSets": [],
           "progression": [
             {
               "axis": "load",
@@ -230,7 +242,7 @@
       ]
     },
     {
-      "version": 6,
+      "version": 7,
       "name": "Legs",
       "notes": "",
       "exercises": [
@@ -251,6 +263,7 @@
           "notes": "Depth before weight.",
           "link": "",
           "resistance": "external",
+          "warmupSets": [],
           "progression": [
             {
               "axis": "load",
@@ -277,6 +290,7 @@
           "notes": "",
           "link": "",
           "resistance": "external",
+          "warmupSets": [],
           "progression": [
             {
               "axis": "load",
@@ -304,6 +318,7 @@
           "notes": "",
           "link": "",
           "resistance": "external",
+          "warmupSets": [],
           "progression": [
             {
               "axis": "load",

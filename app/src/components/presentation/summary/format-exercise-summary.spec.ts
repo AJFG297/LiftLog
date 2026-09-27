@@ -257,3 +257,40 @@ describe('formatExerciseSummary for exercises that track no load', () => {
     );
   });
 });
+
+describe('summaries describe working sets only', () => {
+  const planned = { isFilled: false, bodyweightLabel: 'BW', showWeight: true };
+
+  /** Three working sets at 60 kg behind a warm-up at `warmupKg`, logged or not. */
+  function withWarmup(warmupKg: number, logged: boolean) {
+    const working = logged ? 10 : undefined;
+    return exerciseOf([
+      { reps: working, weight: 60 },
+      { reps: working, weight: 60 },
+      { reps: working, weight: 60 },
+    ]).with({
+      warmupSets: [
+        PotentialSet.of({
+          set: logged ? RecordedSet.of({ repsCompleted: 5, completionDateTime: tick() }) : undefined,
+          weight: new Weight(warmupKg, 'kilograms'),
+          target: { min: 5, max: 5 },
+        }),
+      ],
+    });
+  }
+
+  it.each([
+    ['lighter', 20],
+    ['heavier', 200],
+  ])('leaves a logged warm-up %s than the working sets out of the line', (_, warmupKg) => {
+    expect(formatExerciseSummary(withWarmup(warmupKg, true), filled)).toBe('3 × 10 60kg');
+  });
+
+  it('leaves planned warm-ups out of the plan’s shape and weight', () => {
+    expect(formatExerciseSummary(withWarmup(20, false), planned)).toBe('3 × 10 60kg');
+  });
+
+  it('leaves warm-ups out of the session volume', () => {
+    expect(formatSessionVolume(sessionOf(withWarmup(200, true)))).toBe('1,800kg');
+  });
+});

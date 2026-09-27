@@ -1,11 +1,18 @@
 import { ExpoSQLiteDatabase } from 'drizzle-orm/expo-sqlite';
 import { eq, getTableColumns, inArray, sql } from 'drizzle-orm';
 import { SQLiteColumn, SQLiteTable } from 'drizzle-orm/sqlite-core';
-import { cardioSetsSchema, weightedSetsSchema, workoutExercisesSchema, workoutsSchema } from '@/db/schema';
+import {
+  cardioSetsSchema,
+  warmupSetsSchema,
+  weightedSetsSchema,
+  workoutExercisesSchema,
+  workoutsSchema,
+} from '@/db/schema';
 import { Transaction, writeAtomically } from '@/db/helpers';
 import { Session } from '@/models/session-models';
 import {
   CardioSetRow,
+  WarmupSetRow,
   WeightedSetRow,
   WorkoutExerciseRow,
   WorkoutRows,
@@ -31,14 +38,16 @@ export class WorkoutRepository {
 
   /** Every stored workout, and which one (if any) is in progress. */
   async loadAll(): Promise<{ workouts: Session[]; activeWorkoutId: string | undefined }> {
-    const [workouts, exercises, weightedSets, cardioSets] = await Promise.all([
+    const [workouts, exercises, weightedSets, warmupSets, cardioSets] = await Promise.all([
       this.db.select(readColumns.workout).from(workoutsSchema),
       this.db.select(readColumns.exercise).from(workoutExercisesSchema),
       this.db.select(readColumns.weightedSet).from(weightedSetsSchema),
+      this.db.select(readColumns.warmupSet).from(warmupSetsSchema),
       this.db.select(readColumns.cardioSet).from(cardioSetsSchema),
     ]);
     const exercisesByWorkout = groupByWorkout(exercises);
     const weightedSetsByWorkout = groupByWorkout(weightedSets);
+    const warmupSetsByWorkout = groupByWorkout(warmupSets);
     const cardioSetsByWorkout = groupByWorkout(cardioSets);
     return {
       workouts: workouts.map(({ active: _, ...workout }) =>
@@ -46,6 +55,7 @@ export class WorkoutRepository {
           workout,
           exercises: exercisesByWorkout.get(workout.id) ?? [],
           weightedSets: weightedSetsByWorkout.get(workout.id) ?? [],
+          warmupSets: warmupSetsByWorkout.get(workout.id) ?? [],
           cardioSets: cardioSetsByWorkout.get(workout.id) ?? [],
         }),
       ),
@@ -122,6 +132,11 @@ function writeContent(tx: Transaction, rows: WorkoutRows[], { activate }: { acti
     ),
     ...insertAll(
       tx,
+      warmupSetsSchema,
+      rows.flatMap((x): WarmupSetRow[] => x.warmupSets),
+    ),
+    ...insertAll(
+      tx,
       cardioSetsSchema,
       rows.flatMap((x): CardioSetRow[] => x.cardioSets),
     ),
@@ -131,6 +146,7 @@ function writeContent(tx: Transaction, rows: WorkoutRows[], { activate }: { acti
 function deleteChildren(tx: Transaction, workoutIds: string[]): Statement[] {
   return chunkedValues(workoutIds, MAX_PARAMETERS).flatMap((ids) => [
     tx.delete(weightedSetsSchema).where(inArray(weightedSetsSchema.workoutId, ids)),
+    tx.delete(warmupSetsSchema).where(inArray(warmupSetsSchema.workoutId, ids)),
     tx.delete(cardioSetsSchema).where(inArray(cardioSetsSchema.workoutId, ids)),
     tx.delete(workoutExercisesSchema).where(inArray(workoutExercisesSchema.workoutId, ids)),
   ]);

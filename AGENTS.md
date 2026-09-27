@@ -50,7 +50,8 @@ Regenerate with `npm run json-schema`; don't hand-edit.
   jsdom, `@testing-library/react`, and fast-check for property tests.
 - **Typecheck:** `npm run typecheck` (`tsgo --noEmit`, the native-preview compiler - not plain `tsc`).
 - **Lint:** `npm run lint` (`oxlint && eslint .`). The oxc toolchain (oxlint/oxfmt) is primary; ESLint
-  runs only the react-compiler rule.
+  runs only the react-compiler rule and a ban on `toSorted`/`toSpliced`/`toReversed` in app code,
+  which the Hermes runtime lacks (typecheck and the Node-based tests don't catch it).
 - **Format:** `npm run format` (`oxfmt --write .`) / `npm run format:check`.
 - **E2E:** `npm run e2e` (Maestro; flows live in `app/.maestro/`).
 

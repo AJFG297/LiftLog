@@ -12,6 +12,7 @@ import Holdable from '@/components/presentation/foundation/holdable';
 import { Weight } from '@/models/weight';
 import PotentialSetAdditionalActionsDialog from '@/components/presentation/workout/weighted/potential-sets-addition-actions-dialog';
 import { PotentialSetDisplay } from '@/components/presentation/workout/weighted/potential-set-display';
+import { WarmupTile } from '@/components/presentation/workout/weighted/warmup-tile';
 import { RpePickerDialog } from '@/components/presentation/workout/weighted/rpe-picker';
 import { Rpe } from '@/models/session-models/rpe';
 
@@ -32,6 +33,12 @@ interface PotentialSetCounterProps {
   rpe: Rpe | undefined;
   /** `undefined` when RPE can't be edited here: the row still shows, it just isn't tappable. */
   onUpdateRpe: ((rpe: Rpe | undefined) => void) | undefined;
+
+  /**
+   * Set for a warm-up. Its weight edit only ever touches this set in this session, so the dialog offers
+   * no "apply to" choice and `onUpdateWeight` always gets `'thisSet'`.
+   */
+  warmup?: WarmupTile | undefined;
 }
 
 export default function PotentialSetCounter(props: PotentialSetCounterProps) {
@@ -58,6 +65,7 @@ export default function PotentialSetCounter(props: PotentialSetCounterProps) {
           previousRepCount={props.previousRepCount}
           showRpe={props.showRpe}
           rpe={props.rpe}
+          warmup={props.warmup}
           onPressRpe={onUpdateRpe && !props.isReadonly ? () => setIsRpeDialogOpen(true) : undefined}
           onPressReps={props.isReadonly ? undefined : props.onTap}
           onPressWeight={
@@ -71,46 +79,52 @@ export default function PotentialSetCounter(props: PotentialSetCounterProps) {
         />
         <WeightDialog
           open={isWeightDialogOpen}
-          allowNegative
+          allowNegative={!props.warmup}
           increment={props.weightIncrement}
           weight={props.set.weight}
           onClose={() => setIsWeightDialogOpen(false)}
-          updateWeight={(w) => props.onUpdateWeight(w, applyTo)}
+          updateWeight={(w) => props.onUpdateWeight(w, props.warmup ? 'thisSet' : applyTo)}
         >
-          <View style={{ gap: spacing[2] }}>
-            <PaperText variant="labelLarge">
-              <T keyName="weight.apply_to.label" />
+          {props.warmup ? (
+            <PaperText variant="bodyMedium">
+              <T keyName="workout.warmup_set.weight_session_only.body" />
             </PaperText>
-            <View
-              style={{
-                flexDirection: 'row',
-                flexWrap: 'wrap',
-                gap: spacing[1],
-              }}
-            >
-              <Chip
-                selected={applyTo === 'thisSet'}
-                testID="repcount-apply-weight-to-this-set"
-                onPress={() => setApplyTo('thisSet')}
+          ) : (
+            <View style={{ gap: spacing[2] }}>
+              <PaperText variant="labelLarge">
+                <T keyName="weight.apply_to.label" />
+              </PaperText>
+              <View
+                style={{
+                  flexDirection: 'row',
+                  flexWrap: 'wrap',
+                  gap: spacing[1],
+                }}
               >
-                <T keyName="exercise.this_set.label" />
-              </Chip>
-              <Chip
-                selected={applyTo === 'uncompletedSets'}
-                testID="repcount-apply-weight-to-uncompleted-sets"
-                onPress={() => setApplyTo('uncompletedSets')}
-              >
-                <T keyName="exercise.uncompleted_sets.label" />
-              </Chip>
-              <Chip
-                selected={applyTo === 'allSets'}
-                testID="repcount-apply-weight-to-all-sets"
-                onPress={() => setApplyTo('allSets')}
-              >
-                <T keyName="exercise.all_sets.label" />
-              </Chip>
+                <Chip
+                  selected={applyTo === 'thisSet'}
+                  testID="repcount-apply-weight-to-this-set"
+                  onPress={() => setApplyTo('thisSet')}
+                >
+                  <T keyName="exercise.this_set.label" />
+                </Chip>
+                <Chip
+                  selected={applyTo === 'uncompletedSets'}
+                  testID="repcount-apply-weight-to-uncompleted-sets"
+                  onPress={() => setApplyTo('uncompletedSets')}
+                >
+                  <T keyName="exercise.uncompleted_sets.label" />
+                </Chip>
+                <Chip
+                  selected={applyTo === 'allSets'}
+                  testID="repcount-apply-weight-to-all-sets"
+                  onPress={() => setApplyTo('allSets')}
+                >
+                  <T keyName="exercise.all_sets.label" />
+                </Chip>
+              </View>
             </View>
-          </View>
+          )}
         </WeightDialog>
       </FocusRing>
 

@@ -1,10 +1,16 @@
-import { cardioSetsSchema, weightedSetsSchema, workoutExercisesSchema, workoutsSchema } from '@/db/schema';
+import {
+  cardioSetsSchema,
+  warmupSetsSchema,
+  weightedSetsSchema,
+  workoutExercisesSchema,
+  workoutsSchema,
+} from '@/db/schema';
 import { RecordedCardioExercise, RecordedWeightedExercise, Session } from '@/models/session-models';
 import {
+  PotentialSetJSON,
   RecordedCardioExerciseJSON,
   RecordedCardioExerciseSetJSON,
   RecordedExerciseJSON,
-  RecordedWeightedExerciseJSON,
   SessionBlueprintJSON,
   SessionJSON,
 } from '@/models/storage/versions/latest';
@@ -18,6 +24,7 @@ import { getTableColumns, Table } from 'drizzle-orm';
 export type WorkoutRow = Omit<typeof workoutsSchema.$inferSelect, 'active'>;
 export type WorkoutExerciseRow = typeof workoutExercisesSchema.$inferSelect;
 export type WeightedSetRow = typeof weightedSetsSchema.$inferSelect;
+export type WarmupSetRow = typeof warmupSetsSchema.$inferSelect;
 export type CardioSetRow = typeof cardioSetsSchema.$inferSelect;
 
 /** Everything one workout is stored as. Child rows carry the workout id, so they can be written and deleted by it. */
@@ -25,6 +32,7 @@ export interface WorkoutRows {
   workout: WorkoutRow;
   exercises: WorkoutExerciseRow[];
   weightedSets: WeightedSetRow[];
+  warmupSets: WarmupSetRow[];
   cardioSets: CardioSetRow[];
 }
 
@@ -36,6 +44,7 @@ export const readColumns = {
   workout: omitColumns(workoutsSchema, ['referenceTimeMs', 'volumeKg']),
   exercise: omitColumns(workoutExercisesSchema, ['kind', 'movementKey', 'progressionKey', 'latestTimeMs']),
   weightedSet: omitColumns(weightedSetsSchema, ['weightKg', 'effectiveWeightKg', 'completedAtMs']),
+  warmupSet: getTableColumns(warmupSetsSchema),
   cardioSet: omitColumns(cardioSetsSchema, ['completedAtMs']),
 };
 
@@ -44,6 +53,7 @@ export interface StoredWorkoutRows {
   workout: Omit<WorkoutRow, 'referenceTimeMs' | 'volumeKg'>;
   exercises: Omit<WorkoutExerciseRow, 'kind' | 'movementKey' | 'progressionKey' | 'latestTimeMs'>[];
   weightedSets: Omit<WeightedSetRow, 'weightKg' | 'effectiveWeightKg' | 'completedAtMs'>[];
+  warmupSets: WarmupSetRow[];
   cardioSets: Omit<CardioSetRow, 'completedAtMs'>[];
 }
 
@@ -63,6 +73,7 @@ export function toWorkoutRows(session: Session): WorkoutRows {
   const workoutId = session.id;
   const exercises: WorkoutExerciseRow[] = [];
   const weightedSets: WeightedSetRow[] = [];
+  const warmupSets: WarmupSetRow[] = [];
   const cardioSets: CardioSetRow[] = [];
 
   session.recordedExercises.forEach((exercise, exercisePosition) => {
@@ -82,23 +93,18 @@ export function toWorkoutRows(session: Session): WorkoutRows {
       exercise.potentialSets.forEach((potentialSet, position) => {
         const setJson = exerciseJson.potentialSets[position]!;
         weightedSets.push({
-          workoutId,
-          exercisePosition,
-          position,
-          targetRepsMin: setJson.target.reps.min,
-          targetRepsMax: setJson.target.reps.max,
-          weightValue: setJson.weight.value,
-          weightUnit: setJson.weight.unit,
+          ...slotRow(workoutId, exercisePosition, position, setJson),
           weightKg: potentialSet.weight.convertTo('kilograms').value.toNumber(),
           effectiveWeightKg: exercise
             .effectiveWeight(potentialSet, session.bodyweight)
             .convertTo('kilograms')
             .value.toNumber(),
           rpe: setJson.rpe ?? null,
-          reps: setJson.set?.repsCompleted ?? null,
-          completedAt: setJson.set?.completionDateTime ?? null,
           completedAtMs: epochMs(potentialSet.set?.completionDateTime),
         });
+      });
+      exerciseJson.warmupSets.forEach((setJson, position) => {
+        warmupSets.push(slotRow(workoutId, exercisePosition, position, setJson));
       });
     } else if (exercise instanceof RecordedCardioExercise && exerciseJson.type === 'RecordedCardioExercise') {
       exercise.sets.forEach((set, position) => {
@@ -137,6 +143,7 @@ export function toWorkoutRows(session: Session): WorkoutRows {
     },
     exercises,
     weightedSets,
+    warmupSets,
     cardioSets,
   };
 }
@@ -144,8 +151,9 @@ export function toWorkoutRows(session: Session): WorkoutRows {
 /** Rebuilds the session {@link toWorkoutRows} was given. Child rows may arrive in any order. */
 export function fromWorkoutRows(rows: StoredWorkoutRows): Session {
   const { workout } = rows;
-  const exercises = rows.exercises.toSorted(byPosition);
+  const exercises = [...rows.exercises].sort(byPosition);
   const weightedSets = groupByExercise(rows.weightedSets);
+  const warmupSets = groupByExercise(rows.warmupSets);
   const cardioSets = groupByExercise(rows.cardioSets);
 
   const blueprint = sessionBlueprintMigrations.migrate({
@@ -156,7 +164,7 @@ export function fromWorkoutRows(rows: StoredWorkoutRows): Session {
   } as AnyVersionSessionBlueprintJSON);
 
   const json: SessionJSON = {
-    version: 8,
+    version: 9,
     id: workout.id,
     blueprint: { name: workout.name, notes: workout.notes },
     date: workout.date,
@@ -169,6 +177,7 @@ export function fromWorkoutRows(rows: StoredWorkoutRows): Session {
         exercise,
         blueprint.exercises[index]!,
         weightedSets.get(exercise.position) ?? [],
+        warmupSets.get(exercise.position) ?? [],
         cardioSets.get(exercise.position) ?? [],
       ),
     ),
@@ -180,6 +189,7 @@ function toRecordedExerciseJSON(
   exercise: StoredWorkoutRows['exercises'][number],
   blueprint: SessionBlueprintJSON['exercises'][number],
   weightedSets: StoredWorkoutRows['weightedSets'],
+  warmupSets: StoredWorkoutRows['warmupSets'],
   cardioSets: StoredWorkoutRows['cardioSets'],
 ): RecordedExerciseJSON {
   const notes = exercise.notes ?? undefined;
@@ -188,15 +198,8 @@ function toRecordedExerciseJSON(
       type: 'RecordedWeightedExercise',
       blueprint,
       notes,
-      potentialSets: weightedSets.map((set): RecordedWeightedExerciseJSON['potentialSets'][number] => ({
-        target: { reps: { min: set.targetRepsMin, max: set.targetRepsMax } },
-        weight: { value: set.weightValue, unit: set.weightUnit },
-        rpe: set.rpe ?? undefined,
-        set:
-          set.reps !== null && set.completedAt !== null
-            ? { repsCompleted: set.reps, completionDateTime: set.completedAt }
-            : undefined,
-      })),
+      potentialSets: weightedSets.map((set) => ({ ...slotFromRow(set), rpe: set.rpe ?? undefined })),
+      warmupSets: warmupSets.map(slotFromRow),
     };
   }
   return {
@@ -230,6 +233,37 @@ function toRecordedExerciseJSON(
  */
 export function samePersistedContent(a: Session, b: Session): boolean {
   return a === b || JSON.stringify(a.toJSON()) === JSON.stringify(b.toJSON());
+}
+
+/** The columns a working set and a warm-up both store: everything but the query columns and the RPE. */
+function slotRow(
+  workoutId: string,
+  exercisePosition: number,
+  position: number,
+  setJson: PotentialSetJSON,
+): WarmupSetRow {
+  return {
+    workoutId,
+    exercisePosition,
+    position,
+    targetRepsMin: setJson.target.reps.min,
+    targetRepsMax: setJson.target.reps.max,
+    weightValue: setJson.weight.value,
+    weightUnit: setJson.weight.unit,
+    reps: setJson.set?.repsCompleted ?? null,
+    completedAt: setJson.set?.completionDateTime ?? null,
+  };
+}
+
+function slotFromRow(row: Omit<WarmupSetRow, 'workoutId' | 'exercisePosition' | 'position'>): PotentialSetJSON {
+  return {
+    target: { reps: { min: row.targetRepsMin, max: row.targetRepsMax } },
+    weight: { value: row.weightValue, unit: row.weightUnit },
+    set:
+      row.reps !== null && row.completedAt !== null
+        ? { repsCompleted: row.reps, completionDateTime: row.completedAt }
+        : undefined,
+  };
 }
 
 function epochMs(time: OffsetDateTime | undefined): number | null {

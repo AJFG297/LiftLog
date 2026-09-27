@@ -876,12 +876,11 @@ describe('Session derived values', () => {
     expect(incomplete.isComplete).toBe(false);
   });
 
-  it('firstExercise and lastExercise track the earliest and latest recorded exercise', () => {
+  it('lastExercise tracks the latest recorded exercise', () => {
     const first = tickAt(10, 0);
     const last = tickAt(11, 0);
     const session = twoExercisesStartedAt(first, last);
 
-    expect(session.firstExercise?.blueprint.name).toBe('Squat');
     expect(session.lastExercise?.blueprint.name).toBe('Bench');
     expect(session.latestWeightedExercise?.blueprint.name).toBe('Bench');
   });

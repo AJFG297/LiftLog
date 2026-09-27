@@ -650,7 +650,7 @@ exports[`history aggregates over the 420-session fixture > ordered sessions for 
 exports[`history aggregates over the 420-session fixture > overall stats, all-time and last 90 days 1`] = `
 {
   "allTime": {
-    "averageSessionLength": "PT3H49M27.176841726S",
+    "averageSessionLength": "PT3H49M28.559287769S",
     "bodyweightStats": {
       "currentValue": "100kilograms",
       "maxValue": "100kilograms",

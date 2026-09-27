@@ -172,8 +172,8 @@ export function calculateStats(
         exerciseStats.repsStatistics.breakdown[set.set.repsCompleted]!.numberOfSets += 1;
       }
 
-      // We'll use the last set for this
-      const lastSet = ex.lastRecordedSet!;
+      // Dated by the last working set, so a warm-up logged afterwards doesn't move it.
+      const lastSet = ex.lastLoggedWorkingSet!;
       if (exerciseStats.latestTime.isBefore(lastSet.set!.completionDateTime)) {
         exerciseStats.latestTime = lastSet.set!.completionDateTime;
         // How the exercise is programmed now, not how it was the first time it was logged.

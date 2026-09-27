@@ -1,6 +1,8 @@
 import {
   CardioExerciseBlueprint,
   ExerciseBlueprint,
+  plannedWarmupSetEqual,
+  PlannedWarmupSet,
   repsTargetsEqual,
   SessionBlueprint,
   WeightedExerciseBlueprint,
@@ -35,9 +37,25 @@ export class Session {
     readonly restTimer: RestTimer | undefined,
   ) {}
   get duration(): Duration | undefined {
-    return this.lastExercise?.latestTime && this.firstExercise?.earliestTime
-      ? Duration.between(this.firstExercise.earliestTime, this.lastExercise.latestTime)
-      : undefined;
+    const { startTime, endTime } = this;
+    return startTime && endTime ? Duration.between(startTime, endTime) : undefined;
+  }
+
+  /**
+   * When the first set of the workout was logged, warm-ups included. Taken across every exercise's
+   * earliest set: in a superset, or with a warm-up done early, the exercise that finished first need
+   * not hold it.
+   */
+  get startTime(): OffsetDateTime | undefined {
+    return this.recordedExercises.reduce<OffsetDateTime | undefined>((earliest, exercise) => {
+      const time = exercise.firstActivityTime;
+      return time && (!earliest || time.isBefore(earliest)) ? time : earliest;
+    }, undefined);
+  }
+
+  /** When the last set of the workout was logged, warm-ups included. */
+  get endTime(): OffsetDateTime | undefined {
+    return this.lastExercise?.lastActivityTime;
   }
 
   static fromJSON(json: SessionJSON): Session {
@@ -45,7 +63,7 @@ export class Session {
       json.id,
       SessionBlueprint.fromJSON({
         ...json.blueprint,
-        version: 6,
+        version: 7,
         exercises: json.recordedExercises.map((x) => x.blueprint),
       }),
       json.recordedExercises.map(fromRecordedExerciseJSON),
@@ -58,15 +76,7 @@ export class Session {
   static getEmptySession(blueprint: SessionBlueprint, defaultWeightUnit: WeightUnit): Session {
     function getNextExercise(e: ExerciseBlueprint) {
       return match(e)
-        .with(
-          P.instanceOf(WeightedExerciseBlueprint),
-          (we) =>
-            new RecordedWeightedExercise(
-              we,
-              we.plannedSets.map((s) => new PotentialSet(undefined, new Weight(0, defaultWeightUnit), s.reps)),
-              undefined,
-            ),
-        )
+        .with(P.instanceOf(WeightedExerciseBlueprint), (we) => RecordedWeightedExercise.empty(we, defaultWeightUnit))
         .with(P.instanceOf(CardioExerciseBlueprint), (ce) => RecordedCardioExercise.empty(ce))
         .exhaustive();
     }
@@ -151,6 +161,14 @@ export class Session {
             }),
           }),
         );
+        session = session.withExercise(
+          exerciseIndex,
+          withWarmupsForEditedPlan(
+            session.recordedExercises[exerciseIndex] as RecordedWeightedExercise,
+            weightedExistingExercise.blueprint,
+            useImperialUnits ? 'pounds' : 'kilograms',
+          ),
+        );
       }
 
       const cardioExistingExercise =
@@ -197,7 +215,7 @@ export class Session {
     const allCompletionDates = this.recordedExercises
       .flatMap((re) =>
         re.type === 'RecordedWeightedExercise'
-          ? re.potentialSets.map((ps) => ps.set?.completionDateTime?.toLocalDate())
+          ? [...re.warmupSets, ...re.potentialSets].map((ps) => ps.set?.completionDateTime?.toLocalDate())
           : re.sets.map((s) => s.completionDateTime?.toLocalDate()),
       )
       .filter((d): d is LocalDate => d !== undefined);
@@ -218,7 +236,7 @@ export class Session {
     // Update all sets' completionDateTime
     const newExercises = this.recordedExercises.map((re) => {
       if (re.type === 'RecordedWeightedExercise') {
-        return re.withAllSets((ps) => {
+        const moved = (ps: PotentialSet) => {
           if (ps.set && ps.set.completionDateTime) {
             const setDate = ps.set.completionDateTime.toLocalDate();
             return ps.with({
@@ -231,7 +249,8 @@ export class Session {
             });
           }
           return ps;
-        });
+        };
+        return re.withAllSets(moved).withAllWarmupSets(moved);
       } else {
         return re.withAllSets((set) => {
           if (set && set.completionDateTime) {
@@ -281,7 +300,7 @@ export class Session {
       return this;
     }
     let newDate = this.date;
-    if (!this.isStarted) {
+    if (!this.hasLoggedAnySet) {
       newDate = time.toLocalDate();
     }
     return this.with({
@@ -304,16 +323,16 @@ export class Session {
 
   withRemovedExercise(exerciseIndex: number): Session {
     return this.with({
-      recordedExercises: this.recordedExercises.toSpliced(exerciseIndex, 1),
+      recordedExercises: this.recordedExercises.filter((_, index) => index !== exerciseIndex),
       blueprint: this.blueprint.with({
-        exercises: this.blueprint.exercises.toSpliced(exerciseIndex, 1),
+        exercises: this.blueprint.exercises.filter((_, index) => index !== exerciseIndex),
       }),
     });
   }
 
   toJSON(): SessionJSON {
     return {
-      version: 8,
+      version: 9,
       blueprint: this.blueprint.toJSON(),
       bodyweight: this.bodyweight?.toJSON(),
       date: toLocalDateJSON(this.date),
@@ -347,8 +366,17 @@ export class Session {
     return this.recordedExercises.every((x) => x.isComplete);
   }
 
+  /**
+   * Whether anything that counts was logged. A session where only warm-ups got done isn't a training
+   * day, so the calendar, its intensity and the streak leave it out.
+   */
   get isStarted(): boolean {
     return this.recordedExercises.some((x) => x.isStarted);
+  }
+
+  /** Whether any set is logged, a warm-up included: the workout is under way. */
+  get hasLoggedAnySet(): boolean {
+    return this.recordedExercises.some((x) => x.hasLoggedAnySet);
   }
 
   get runningCardioSet():
@@ -418,8 +446,8 @@ export class Session {
     }
     const latestExerciseIndex = Enumerable.from(recordedExercises)
       .select(indexed)
-      .where((x) => x.item.isStarted)
-      .orderByDescending(({ item }) => item.latestTime, TemporalComparer)
+      .where((x) => x.item.hasLoggedAnySet)
+      .orderByDescending(({ item }) => item.lastActivityTime, TemporalComparer)
       .select((x) => x.index)
       .firstOrDefault(-1);
 
@@ -473,7 +501,7 @@ export class Session {
 
     for (const recordedExercise of recordedExercises) {
       if (!recordedExercise.isComplete) {
-        const latestTime = recordedExercise.latestTime;
+        const latestTime = recordedExercise.lastActivityTime;
         const epochSecond = latestTime?.toEpochSecond() ?? Number.MIN_VALUE;
 
         if (epochSecond > maxEpochSecond || !result) {
@@ -490,15 +518,9 @@ export class Session {
       return undefined;
     }
     const exercise = this.lastExercise;
-    if (this.nextExercise && exercise && exercise.latestTime && exercise instanceof RecordedWeightedExercise) {
+    if (this.nextExercise && exercise && exercise.lastActivityTime && exercise instanceof RecordedWeightedExercise) {
       const { minRest, failureRest } = exercise.blueprint.restBetweenSets;
-
-      const lastSet = exercise.lastRecordedSet;
-      const targetMin = lastSet?.set
-        ? exercise.repsTargetForSet(exercise.potentialSets.indexOf(lastSet)).min
-        : undefined;
-      const rest =
-        targetMin === undefined ? Duration.ZERO : lastSet!.set!.repsCompleted >= targetMin ? minRest : failureRest;
+      const rest = exercise.lastSetMissedTarget ? failureRest : minRest;
 
       if (rest.equals(Duration.ZERO)) {
         return undefined;
@@ -507,11 +529,12 @@ export class Session {
     }
   }
 
+  /** The exercise with the latest set, warm-ups included: the one rest and the workout's end follow. */
   get lastExercise(): RecordedExercise | undefined {
     return Enumerable.from(this.recordedExercises)
-      .where((x) => x.isStarted)
+      .where((x) => x.hasLoggedAnySet)
       .defaultIfEmpty(undefined)
-      .maxBy((x) => x.latestTime?.toInstant().toEpochMilli());
+      .maxBy((x) => x.lastActivityTime?.toInstant().toEpochMilli());
   }
 
   get latestWeightedExercise(): RecordedWeightedExercise | undefined {
@@ -522,16 +545,81 @@ export class Session {
       .maxBy((x) => x.latestTime?.toInstant().toEpochMilli());
   }
 
-  get firstExercise(): RecordedExercise | undefined {
-    return Enumerable.from(this.recordedExercises)
-      .where((x) => x.isStarted)
-      .defaultIfEmpty(undefined)
-      .minBy((x) => x.latestTime?.toInstant().toEpochMilli());
-  }
-
   get isFreeform(): boolean {
     return this.blueprint.name === 'Freeform Workout';
   }
+}
+
+/**
+ * The warm-up slots after an in-workout edit to the plan. Each new warm-up is lined up with the one
+ * it was before the edit (see {@link alignWarmupPlans}), so removing an earlier warm-up doesn't hand
+ * its slot to the next one. A warm-up the edit left alone keeps its slot, logged reps and any
+ * session-only weight change included; a changed one keeps its slot only if it was already logged;
+ * an added one gets a fresh slot from the new plan.
+ */
+function withWarmupsForEditedPlan(
+  exercise: RecordedWeightedExercise,
+  blueprintBefore: WeightedExerciseBlueprint,
+  fallbackUnit: WeightUnit,
+): RecordedWeightedExercise {
+  const planned = exercise.blueprint.warmupSets;
+  const before = alignWarmupPlans(blueprintBefore.warmupSets, planned);
+  return exercise.with({
+    warmupSets: planned.map((warmup, index) => {
+      const beforeIndex = before[index];
+      if (beforeIndex !== undefined) {
+        const existing = exercise.warmupSets[beforeIndex];
+        const plannedBefore = blueprintBefore.warmupSets[beforeIndex];
+        if (existing && (existing.set || (plannedBefore && plannedWarmupSetEqual(warmup, plannedBefore)))) {
+          return existing;
+        }
+      }
+      return exercise.warmupSlotFor(warmup, fallbackUnit);
+    }),
+  });
+}
+
+/**
+ * For each warm-up in `after`, the index it had in `before`, or undefined for one the edit added. The
+ * longest run of warm-ups left unchanged anchors the match; between two anchors, warm-ups pair up in
+ * order as edits of each other, and whatever is left over on either side was added or removed.
+ */
+function alignWarmupPlans(before: PlannedWarmupSet[], after: PlannedWarmupSet[]): (number | undefined)[] {
+  // lcs[i][j]: the longest common run of before[i..] and after[j..].
+  const lcs = Array.from({ length: before.length + 1 }, () => Array.from({ length: after.length + 1 }, () => 0));
+  for (let i = before.length - 1; i >= 0; i--) {
+    for (let j = after.length - 1; j >= 0; j--) {
+      lcs[i]![j] = plannedWarmupSetEqual(before[i]!, after[j]!)
+        ? lcs[i + 1]![j + 1]! + 1
+        : Math.max(lcs[i + 1]![j]!, lcs[i]![j + 1]!);
+    }
+  }
+  const anchors: [number, number][] = [];
+  for (let i = 0, j = 0; i < before.length && j < after.length; ) {
+    if (plannedWarmupSetEqual(before[i]!, after[j]!)) {
+      anchors.push([i++, j++]);
+    } else if (lcs[i + 1]![j]! >= lcs[i]![j + 1]!) {
+      i++;
+    } else {
+      j++;
+    }
+  }
+  anchors.push([before.length, after.length]);
+
+  const result = Array.from<number | undefined>({ length: after.length });
+  let i = 0;
+  let j = 0;
+  for (const [anchorBefore, anchorAfter] of anchors) {
+    for (; i < anchorBefore && j < anchorAfter; i++, j++) {
+      result[j] = i;
+    }
+    if (anchorAfter < after.length) {
+      result[anchorAfter] = anchorBefore;
+    }
+    i = anchorBefore + 1;
+    j = anchorAfter + 1;
+  }
+  return result;
 }
 
 export const EmptySession: Session = new Session(

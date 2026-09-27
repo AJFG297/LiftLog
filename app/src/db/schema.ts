@@ -121,6 +121,33 @@ export const weightedSetsSchema = sqliteTable(
   ],
 );
 
+/**
+ * One warm-up slot of a weighted exercise, kept apart from `weighted_set` the way the model keeps
+ * warm-ups apart from working sets: every aggregate over `weighted_set` leaves them out without a
+ * filter. Warm-ups are never summed or ranked, so there are no query columns and no RPE.
+ */
+export const warmupSetsSchema = sqliteTable(
+  'warmup_set',
+  {
+    workoutId: text('workout_id').notNull(),
+    exercisePosition: integer('exercise_position').notNull(),
+    position: integer().notNull(),
+    targetRepsMin: integer('target_reps_min').notNull(),
+    targetRepsMax: integer('target_reps_max').notNull(),
+    weightValue: text('weight_value').$type<BigNumberJSON>().notNull(),
+    weightUnit: text('weight_unit').$type<WeightUnitJSON>().notNull(),
+    reps: integer(),
+    completedAt: text('completed_at').$type<OffsetDateTimeJSON>(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.workoutId, table.exercisePosition, table.position] }),
+    foreignKey({
+      columns: [table.workoutId, table.exercisePosition],
+      foreignColumns: [workoutExercisesSchema.workoutId, workoutExercisesSchema.position],
+    }).onDelete('cascade'),
+  ],
+);
+
 export const cardioSetsSchema = sqliteTable(
   'cardio_set',
   {

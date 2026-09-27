@@ -2,11 +2,14 @@ import { PotentialSet } from '@/models/session-models';
 import { formatRepsTarget, Resistance, RepsTarget } from '@/models/blueprint-models';
 import { ReactNode } from 'react';
 import { Text, View } from 'react-native';
-import WeightFormat from '@/components/presentation/foundation/weight-format';
+import WeightFormat, { formatWeightText } from '@/components/presentation/foundation/weight-format';
 import { font, rounding, spacing, useAppTheme } from '@/hooks/useAppTheme';
 import TouchableRipple from '@/components/presentation/foundation/touchable-ripple';
 import Icon from '@/components/presentation/foundation/icon';
 import { formatRpe, Rpe } from '@/models/session-models/rpe';
+import { WarmupTile } from '@/components/presentation/workout/weighted/warmup-tile';
+import { WarmupBadge } from '@/components/presentation/workout/warmup-badge';
+import { useTranslate } from '@tolgee/react';
 
 export type PotentialSetSize = 'default' | 'compact';
 
@@ -19,6 +22,7 @@ interface PotentialSetDisplayProps {
   /** Renders the RPE row. A list shows it on every tile once any has one, so the tiles stay level. */
   showRpe?: boolean;
   rpe?: Rpe | undefined;
+  warmup?: WarmupTile | undefined;
 
   /** Omit to render a static tile - a tile with no handler mounts no gesture detector at all. */
   onPressReps?: () => void;
@@ -54,12 +58,36 @@ const metrics = {
  */
 export function PotentialSetDisplay(props: PotentialSetDisplayProps) {
   const { colors } = useAppTheme();
+  const { t } = useTranslate();
   const size = metrics[props.size ?? 'default'];
   const repCountValue = props.set.set?.repsCompleted;
   const isFilled = repCountValue !== undefined;
+  const { warmup } = props;
   const showsWeight = props.resistance !== 'none';
-  const showsRpe = !!props.showRpe;
+  const showsRpe = !!props.showRpe && !warmup;
   const hasFooter = showsWeight || showsRpe;
+  // Warm-ups take the quieter container tones so the working sets keep the eye.
+  const [repsBackground, repsColor] = warmup
+    ? isFilled
+      ? [colors.primaryContainer, colors.onPrimaryContainer]
+      : [colors.surfaceContainerHighest, colors.onSurfaceVariant]
+    : isFilled
+      ? [colors.primary, colors.onPrimary]
+      : [colors.secondaryContainer, colors.onSecondaryContainer];
+  const hintColor = repsColor + '99';
+  const previousHint = warmup
+    ? warmup.previous &&
+      (warmup.previous.weight
+        ? t('workout.warmup_set.previous.label', {
+            reps: warmup.previous.reps,
+            weight: formatWeightText(
+              warmup.previous.weight,
+              props.resistance === 'bodyweight',
+              t('exercise.short_bodyweight.label'),
+            ),
+          })
+        : `${warmup.previous.reps}`)
+    : props.previousRepCount?.toString();
 
   return (
     <View
@@ -82,44 +110,73 @@ export function PotentialSetDisplay(props: PotentialSetDisplayProps) {
       >
         <Pressable
           onPress={props.onPressReps}
-          testID="repcount"
+          testID={warmup ? 'warmup-repcount' : 'repcount'}
           style={{
             flexShrink: 0,
             height: size.repsHeight,
             alignItems: 'center',
             justifyContent: 'center',
-            backgroundColor: isFilled ? colors.primary : colors.secondaryContainer,
+            backgroundColor: repsBackground,
           }}
         >
           <View style={{ alignItems: 'center' }}>
             <Text
               style={{
-                color: isFilled ? colors.onPrimary : colors.onSecondaryContainer,
+                color: repsColor,
                 ...size.repsFont,
               }}
             >
               <Text style={{ fontWeight: 'bold' }}>{repCountValue ?? '-'}</Text>
               <Text style={{ ...size.targetFont, verticalAlign: 'top' }}>/{formatRepsTarget(props.repsTarget)}</Text>
             </Text>
-            {!isFilled && props.previousRepCount !== undefined && (
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[0.5] }}>
-                <Icon source={'history'} size={12} color={colors.onSecondaryContainer + '99'} />
-                <Text style={{ color: colors.onSecondaryContainer + '99' }}>{props.previousRepCount}</Text>
+            {!isFilled && previousHint !== undefined && (
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: spacing[0.5],
+                  maxWidth: '100%',
+                  paddingHorizontal: spacing[1],
+                }}
+              >
+                <Icon source={'history'} size={12} color={hintColor} />
+                {/* A warm-up's reps × weight can outgrow a narrow tile: shrink it rather than clip it. */}
+                <Text
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  style={{ flexShrink: 1, color: hintColor, ...(warmup ? font['text-xs'] : undefined) }}
+                >
+                  {previousHint}
+                </Text>
               </View>
             )}
           </View>
         </Pressable>
+        {/* Over the reps rather than inside them: a ripple takes exactly one child. */}
+        {warmup && <WarmupBadge size="small" style={{ position: 'absolute', top: spacing[0.5], left: spacing[0.5] }} />}
       </View>
       {showsWeight && (
         <FooterRow
           onPress={props.onPressWeight}
-          testID="repcount-weight"
+          testID={warmup ? 'warmup-repcount-weight' : 'repcount-weight'}
           padding={size.footerPadding}
           isLast={!showsRpe}
         >
-          <Text style={{ color: colors.onSurface, ...size.footerFont }}>
-            <WeightFormat weight={props.set.weight} usesBodyweight={props.resistance === 'bodyweight'} />
-          </Text>
+          {/* One child: the row's ripple takes exactly one, and an absent label still counts as one. */}
+          <View style={{ alignItems: 'center' }}>
+            <Text style={{ ...size.footerFont }}>
+              <WeightFormat
+                weight={props.set.weight}
+                usesBodyweight={props.resistance === 'bodyweight'}
+                color={warmup ? 'onSurfaceVariant' : 'onSurface'}
+              />
+            </Text>
+            {warmup?.percent !== undefined && (
+              <Text style={{ color: colors.onSurfaceVariant, ...font['text-2xs'] }}>
+                {t('workout.warmup_set.percent.label', { percent: warmup.percent })}
+              </Text>
+            )}
+          </View>
         </FooterRow>
       )}
       {showsRpe && (

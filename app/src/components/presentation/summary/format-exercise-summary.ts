@@ -1,6 +1,6 @@
 import { formatRepsTarget, uniformTarget } from '@/models/blueprint-models';
 import { RecordedExercise, RecordedWeightedExercise, Session } from '@/models/session-models';
-import { Weight } from '@/models/weight';
+import { bodyweightLoadText, Weight } from '@/models/weight';
 import { formatDistance } from '@/utils/distance';
 import { formatCardioTarget } from '@/utils/format-cardio-target';
 import { formatTimeSpan } from '@/utils/format-time-span';
@@ -88,13 +88,9 @@ function filledRuns(
   );
 }
 
-/** The added/assisted load shown against a bodyweight movement: `BW`, `BW +10kg`, `BW -20kg`. */
+/** See {@link bodyweightLoadText}: `BW`, `BW +10kg`, `BW -20kg`. */
 function bodyweightWeightLabel(weight: Weight, bodyweightLabel: string): string {
-  if (weight.value.isZero()) {
-    return bodyweightLabel;
-  }
-  const sign = weight.value.isGreaterThan(0) ? '+' : '';
-  return `${bodyweightLabel} ${sign}${weight.shortLocaleFormat()}`;
+  return bodyweightLoadText(weight, bodyweightLabel, weight.shortLocaleFormat());
 }
 
 /**

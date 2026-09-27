@@ -8,6 +8,7 @@ import { SegmentedListSwitch } from '@/components/presentation/foundation/segmen
 import { RestEditorDialog } from '@/components/presentation/workout-editor/rest-editor-dialog';
 import { ProgressionRulesEditor } from '@/components/presentation/workout-editor/progressive-overload';
 import { SharedFieldsEditor } from '@/components/presentation/workout-editor/shared-fields-editor';
+import { WarmupSetsEditor } from '@/components/presentation/workout-editor/warmup-sets-editor';
 import { spacing, useAppTheme } from '@/hooks/useAppTheme';
 import {
   ExerciseBlueprint,
@@ -72,6 +73,8 @@ export function WeightedExerciseEditor({
 
   return (
     <View style={{ gap: spacing[2] }}>
+      <WarmupSetsEditor exercise={exercise} updateWarmupSets={(warmupSets) => updateExercise({ warmupSets })} />
+
       <SegmentedPicker
         value={mode}
         options={[

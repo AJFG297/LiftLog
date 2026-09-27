@@ -79,6 +79,17 @@ function createAbandonedSession(sessionDate: LocalDate, name: string) {
   });
 }
 
+/** Like `createAbandonedSession`, but with a warm-up logged at `warmupTime`: no working set was done. */
+function createWarmupsOnlySession(sessionDate: LocalDate, warmupTime: OffsetDateTime, name: string) {
+  const template = createAbandonedSession(sessionDate, name);
+  const exercise = template.recordedExercises[0] as RecordedWeightedExercise;
+  return template.with({
+    recordedExercises: [
+      exercise.with({ warmupSets: [filledPotentialSet(5, warmupTime, new Weight(50, 'kilograms'))] }),
+    ],
+  });
+}
+
 describe('stored sessions sorting', () => {
   it('sorts sessions in a month by the actual completion time, not only the date', () => {
     const sameDay = LocalDate.of(2026, 4, 10);
@@ -195,6 +206,54 @@ describe('storedSessions reducer', () => {
 
     const latest = Object.values(state.latestExercises)[0] as RecordedWeightedExercise;
     expect(latest.potentialSets[0]!.weight.value.toNumber()).toBe(100);
+  });
+
+  // Carry-over reads latestExercises, so a session where only the warm-ups got logged must not
+  // stand in for the last real performance.
+  it('an exercise with only warm-ups logged never becomes the one carried over', () => {
+    const completed = createSessionWithCompletionTime(
+      LocalDate.of(2026, 4, 3),
+      OffsetDateTime.of(2026, 4, 3, 10, 0, 0, 0, ZoneOffset.UTC),
+      'Squat',
+    );
+    const warmupsOnly = createWarmupsOnlySession(
+      LocalDate.of(2026, 4, 10),
+      OffsetDateTime.of(2026, 4, 10, 10, 0, 0, 0, ZoneOffset.UTC),
+      'Squat',
+    );
+
+    const state = reduce(putStoredSession(completed), putStoredSession(warmupsOnly));
+
+    const latest = Object.values(state.latestExercises)[0] as RecordedWeightedExercise;
+    expect(latest).toBe(completed.recordedExercises[0]);
+  });
+
+  it('nor when latestExercises is recomputed after a delete', () => {
+    const at = (day: number) => OffsetDateTime.of(2026, 4, day, 10, 0, 0, 0, ZoneOffset.UTC);
+    const oldest = createSessionWithCompletionTime(LocalDate.of(2026, 3, 27), at(1).minusDays(5), 'Squat');
+    const completed = createSessionWithCompletionTime(LocalDate.of(2026, 4, 3), at(3), 'Squat');
+    const warmupsOnly = createWarmupsOnlySession(LocalDate.of(2026, 4, 10), at(10), 'Squat');
+
+    const state = reduce(upsertStoredSessions([oldest, completed, warmupsOnly]), deleteStoredSession(oldest.id));
+
+    expect(Object.values(state.latestExercises)[0]).toBe(completed.recordedExercises[0]);
+  });
+
+  it('nor when the carried-over exercise is edited down to only its warm-ups', () => {
+    const at = (day: number) => OffsetDateTime.of(2026, 4, day, 10, 0, 0, 0, ZoneOffset.UTC);
+    const earlier = createSessionWithCompletionTime(LocalDate.of(2026, 4, 3), at(3), 'Squat');
+    const latest = createSessionWithCompletionTime(LocalDate.of(2026, 4, 10), at(10), 'Squat');
+    const clearedToWarmups = createWarmupsOnlySession(LocalDate.of(2026, 4, 10), at(10), 'Squat');
+
+    const state = reduce(
+      upsertStoredSessions([earlier, latest]),
+      updateStoredSession({
+        sessionId: latest.id,
+        update: (s) => s.with({ recordedExercises: clearedToWarmups.recordedExercises }),
+      }),
+    );
+
+    expect(Object.values(state.latestExercises)[0]).toBe(earlier.recordedExercises[0]);
   });
 
   it('updateStoredSession edits the addressed session and leaves the others alone', () => {
@@ -523,6 +582,21 @@ describe('storedSessions selectors', () => {
     const blueprint = session.recordedExercises[0]!.blueprint as WeightedExerciseBlueprint;
 
     expect(lookup(blueprint.movementKey())).toHaveLength(1);
+  });
+
+  it('selectRecentlyCompletedExercises skips an exercise with only warm-ups logged', () => {
+    const completed = squat(LocalDate.of(2026, 4, 1), OffsetDateTime.of(2026, 4, 1, 10, 0, 0, 0, ZoneOffset.UTC));
+    const warmupsOnly = createWarmupsOnlySession(
+      LocalDate.of(2026, 4, 8),
+      OffsetDateTime.of(2026, 4, 8, 10, 0, 0, 0, ZoneOffset.UTC),
+      'Squat',
+    );
+    const state = { storedSessions: reduce(upsertStoredSessions([completed, warmupsOnly])) };
+    const blueprint = completed.recordedExercises[0]!.blueprint as WeightedExerciseBlueprint;
+
+    const previous = selectRecentlyCompletedExercises(state, undefined)(blueprint.movementKey());
+
+    expect(previous).toEqual([completed.recordedExercises[0]]);
   });
 
   it('selectRecentlyCompletedExercises omits the workout in progress, which is not its own previous', () => {

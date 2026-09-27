@@ -4,7 +4,7 @@
   "lastEdited": "2026-07-12",
   "sessions": [
     {
-      "version": 6,
+      "version": 7,
       "name": "Run - Intervals",
       "notes": "Alternate the jog and walk intervals. Stop early if you cannot hold a conversation.",
       "exercises": [
@@ -89,7 +89,7 @@
       ]
     },
     {
-      "version": 6,
+      "version": 7,
       "name": "Run - Distance",
       "notes": "",
       "exercises": [
@@ -116,7 +116,7 @@
       ]
     },
     {
-      "version": 6,
+      "version": 7,
       "name": "Cross Training",
       "notes": "A low impact day between runs.",
       "exercises": [
@@ -154,6 +154,7 @@
           "notes": "No added weight - this is here to keep the legs honest.",
           "link": "",
           "resistance": "none",
+          "warmupSets": [],
           "progression": [
             {
               "axis": "reps",

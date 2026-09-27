@@ -82,9 +82,9 @@ shape - a text `id` primary key plus a `payload` JSON column typed with the mode
 union:
 
 ```ts
-export const exercisesSchema = sqliteTable('exercise', {
+export const exercisesSchema = sqliteTable("exercise", {
   id: text().primaryKey(),
-  payload: text('payload', { mode: 'json' }).$type<AnyVersionExerciseDescriptorJSON>().notNull(),
+  payload: text("payload", { mode: "json" }).$type<AnyVersionExerciseDescriptorJSON>().notNull(),
 });
 ```
 
@@ -132,18 +132,24 @@ migrations) and are known debt, not a pattern to copy.
 
 ### Workouts
 
-A workout is stored across four tables (`db/schema.ts`), not as one payload:
+A workout is stored across five tables (`db/schema.ts`), not as one payload:
 
-| Table              | One row per                            | Key                                             |
-| ------------------ | -------------------------------------- | ----------------------------------------------- |
-| `workout`          | workout (history and the one running)  | `id`, the session id                            |
-| `workout_exercise` | recorded exercise, in order            | `(workout_id, position)`                        |
-| `weighted_set`     | slot of a weighted exercise, in order  | `(workout_id, exercise_position, position)`     |
-| `cardio_set`       | set of a cardio exercise, in order     | `(workout_id, exercise_position, position)`     |
+| Table              | One row per                           | Key                                         |
+| ------------------ | ------------------------------------- | ------------------------------------------- |
+| `workout`          | workout (history and the one running) | `id`, the session id                        |
+| `workout_exercise` | recorded exercise, in order           | `(workout_id, position)`                    |
+| `weighted_set`     | slot of a weighted exercise, in order | `(workout_id, exercise_position, position)` |
+| `warmup_set`       | warm-up slot of a weighted exercise   | `(workout_id, exercise_position, position)` |
+| `cardio_set`       | set of a cardio exercise, in order    | `(workout_id, exercise_position, position)` |
 
 - **Exact values** are stored as `toJSON()` writes them: decimal weights as text with their unit, times as
   ISO text with their offset. An unlogged slot has `reps` and `completed_at` null but keeps its weight,
   target and RPE.
+- **Warm-ups** get their own table rather than a flag on `weighted_set`, as the model keeps them in their
+  own list: every aggregate over `weighted_set` leaves them out with no filter. They have no RPE and no
+  query columns, since nothing sums or ranks them. `workout_exercise.latest_time_ms` is the last working
+  set too, so an exercise with only warm-ups logged never ranks as a performance; `workout.reference_time_ms`
+  is the last set of any kind, as it orders workouts by when they happened.
 - **The exercise blueprint** stays a JSON column on `workout_exercise`, and `workout.blueprint_version`
   records the `SessionBlueprintJSON` version it was written at. It is migrated on read by
   `sessionBlueprintMigrations`. A cardio set's own blueprint copy is JSON too; no chain step has ever
@@ -228,7 +234,7 @@ other way round; `stored-sessions/effects.ts` asserts this explicitly.
 
 ## Sessions, and the one in progress
 
-`storedSessions.sessions` holds every session the user owns - their history *and* the workout in
+`storedSessions.sessions` holds every session the user owns - their history _and_ the workout in
 progress - keyed by id, with `activeSessionId` pointing at the live one. Screens address a session by
 id (`updateStoredSession({ sessionId, update })`, mirroring `updateProgram`), so two screens editing
 different sessions cannot collide.
@@ -240,7 +246,7 @@ Two things follow from that, and both matter when you touch this slice:
   subscribe to them stay mounted while you edit - the History tab sits behind the workout screen, and
   the History list sits behind `/history/edit`. Three things keep an edit off that path, and all three
   matter:
-  - `selectSessions` returns only *finished* sessions, so the workout in progress cannot move it.
+  - `selectSessions` returns only _finished_ sessions, so the workout in progress cannot move it.
   - `selectRecentlyCompletedExercises(state, sessionId)` additionally drops the session being viewed,
     which is both what "previous" means and what makes editing a history session cheap.
   - Both memoize with `resultEqualityCheck: shallowEqual`. The underlying map changes identity on every
@@ -249,6 +255,7 @@ Two things follow from that, and both matter when you touch this slice:
 
   Use `selectSession(state, id)` to look up a session by id, active or not, and `selectActiveSession`
   for the live workout.
+
 - `useAppSelectorWhenFocused` (`store/index.ts`) does not run its selector at all while the screen is
   offscreen - it is the tool for an expensive selector on a screen that stays mounted underneath
   another. It returns the last value it saw until focus comes back.
@@ -256,7 +263,7 @@ Two things follow from that, and both matter when you touch this slice:
   update that changes only what isn't stored (the rest timer, a running cardio timer) writes nothing.
   `sessionFinished` means "the user is done with it" and is what queues the feed publish, exports to the
   health aggregator and clears the active pointer. Keep completion work on the latter, or it fires once
-  per set. Stats are the exception that listens to both: any write to a *finished* session (edit,
+  per set. Stats are the exception that listens to both: any write to a _finished_ session (edit,
   import, delete) marks them dirty, while sets recorded in the workout in progress don't, and
   `sessionFinished` covers that workout once it ends.
 - The derived caches (`latestExercises`, `earliestSession`) are kept by `storeSession` in the slice.

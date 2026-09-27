@@ -5,12 +5,17 @@
     "exercise": {
       "$ref": "./RecordedExercise.json"
     },
+    "setKind": {
+      "$ref": "./CurrentSetKind.json",
+      "description": "Which of the exercise's set lists `setIndex` points into. Cardio sets are always `working`."
+    },
     "setIndex": {
       "type": "integer"
     }
   },
   "required": [
     "exercise",
+    "setKind",
     "setIndex"
   ]
 }

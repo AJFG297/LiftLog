@@ -6,8 +6,8 @@ A `.liftlogplan` file is a single JSON object. `ProgramBlueprint.json` in this d
 
 Read these first. They are the reason most generated plans fail to import.
 
-1. **Assume every field is required.** Only three are optional - `ceiling` and `onCeiling` on a progression rule, and `restBetweenSets` on a cardio set. Everything else must be present, including `notes` and `link` when empty - use `""`.
-2. **`"version": 3`** goes on the root object, and **`"version": 6`** on every session. These are not the plan's own version number; they are the format's, and they differ from each other.
+1. **Assume every field is required.** Only four are optional - `ceiling` and `onCeiling` on a progression rule, `restBetweenSets` on a cardio set, and `load` on a warm-up set. Everything else must be present, including `notes` and `link` when empty - use `""`.
+2. **`"version": 3`** goes on the root object, and **`"version": 7`** on every session. These are not the plan's own version number; they are the format's, and they differ from each other.
 3. **Weights and steps are strings, not numbers.** `"step": "2.5"`, never `"step": 2.5`. Rep counts (`min`, `max`) are the exception: those are plain integers.
 4. **Rests and times are ISO-8601 durations.** `"PT3M"` is three minutes, `"PT90S"` is ninety seconds, `"PT1M30S"` also works. A bare `"90"` or `90` is invalid.
 5. **A weighted exercise has no set count.** One entry in `plannedSets` _is_ one set, so three sets of five means three identical entries. Cardio exercises use `sets`, an array, one entry per interval.
@@ -35,7 +35,7 @@ Read these first. They are the reason most generated plans fail to import.
 
 ```json
 {
-  "version": 6,
+  "version": 7,
   "name": "Push",
   "notes": "Chest, shoulders and triceps.",
   "exercises": [ ... ]
@@ -44,7 +44,7 @@ Read these first. They are the reason most generated plans fail to import.
 
 | Field       | Type   | Notes                                              |
 | ----------- | ------ | -------------------------------------------------- |
-| `version`   | number | Always `6`. Not `3` - a session versions on its own. |
+| `version`   | number | Always `7`. Not `3` - a session versions on its own. |
 | `name`      | string | e.g. `"Push"`, `"Upper A"`, `"Leg Day"`.           |
 | `notes`     | string | `""` if there's nothing to say.                    |
 | `exercises` | array  | Weighted and cardio exercises can be mixed freely. |
@@ -72,7 +72,8 @@ Read these first. They are the reason most generated plans fail to import.
       "scope": { "type": "allSets" },
       "trigger": "allSetsMetTarget"
     }
-  ]
+  ],
+  "warmupSets": []
 }
 ```
 
@@ -87,6 +88,7 @@ Read these first. They are the reason most generated plans fail to import.
 | `link`             | string  | A URL explaining the movement. **Leave as `""` unless the user gave you a specific link** - do not invent or guess URLs. |
 | `resistance`       | string  | Where the load comes from. See below.                                                                                   |
 | `progression`      | array   | Automatic progression rules, possibly empty. See below.                                                                 |
+| `warmupSets`       | array   | Warm-up sets done before the working sets, possibly empty. See below.                                                   |
 
 ### Planned sets
 
@@ -114,6 +116,28 @@ Sets do not have to match each other - this is how you write a ramp or a back-of
 
 A rep range only counts as a success at the **top** of the range, so `8-12` with a weight rule is
 double progression: the weight goes up once every set hits 12.
+
+### Warm-up sets
+
+`warmupSets` are done before the working sets and never count: they don't affect progression, records
+or stats, and adding or removing one keeps the lifter's progress. Use `[]` unless the user asks for
+warm-ups, or the plan is for heavy compound lifts where a ramp is normal. Each entry has fixed `reps`
+(a plain integer) and a `load`:
+
+```json
+"warmupSets": [
+  { "load": { "type": "absolute", "weight": { "unit": "kilograms", "value": "20" } }, "reps": 8 },
+  { "load": { "type": "percent", "percent": 50 }, "reps": 5 },
+  { "load": { "type": "percent", "percent": 70 }, "reps": 3 }
+]
+```
+
+- `{ "type": "percent", "percent": 50 }` is a share of the session's heaviest working set, out of 100.
+  The app rounds it to the exercise's load step. Only for `"external"` resistance.
+- `{ "type": "absolute", "weight": { "unit": "kilograms", "value": "20" } }` is a fixed weight, such as
+  an empty bar. This is the one weight in a plan that carries a unit (`"kilograms"` or `"pounds"`), and
+  the app converts it to the lifter's unit. For `"bodyweight"` resistance, it is the added weight.
+- Leave `load` out for `"none"` resistance, where a warm-up is reps only.
 
 ### Resistance
 

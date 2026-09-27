@@ -1,6 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import { LocalDate } from '@js-joda/core';
-import { ProgramBlueprint, SessionBlueprint } from '@/models/blueprint-models';
+import {
+  nextWarmupSet,
+  ProgramBlueprint,
+  SessionBlueprint,
+  WeightedExerciseBlueprint,
+} from '@/models/blueprint-models';
 import { makeSession, makeWeightedBlueprint } from '@/models/session-models/__test__/helpers';
 import { getPlanDiff } from '@/store/program/helpers';
 
@@ -46,5 +51,22 @@ describe('getPlanDiff', () => {
 
     expect(getPlanDiff(programWith([original.blueprint]), edited, 'plan-id')?.programId).toBe('plan-id');
     expect(getPlanDiff(programWith([]), edited, 'plan-id')?.programId).toBe('plan-id');
+  });
+
+  it('offers warm-ups added and removed in the in-workout exercise editor', () => {
+    const squat = makeWeightedBlueprint({ name: 'Squat', warmupSets: [nextWarmupSet('external', [])] });
+    const original = makeSession([squat]);
+    const program = programWith([original.blueprint]);
+    const edit = (warmupSets: WeightedExerciseBlueprint['warmupSets']) =>
+      original.withEditedExercise(0, squat.with({ warmupSets }), false);
+    const warmupChange = (session: typeof original) => {
+      const result = getPlanDiff(program, session, 'plan-id');
+      return result?.diff.modifiedExercises.flatMap((e) => e.changes).find((c) => c.kind === 'exerciseWarmupSets');
+    };
+
+    const added = [...squat.warmupSets, nextWarmupSet('external', squat.warmupSets)];
+    expect(warmupChange(edit(added))).toMatchObject({ oldValue: squat.warmupSets, newValue: added });
+    expect(warmupChange(edit([]))).toMatchObject({ oldValue: squat.warmupSets, newValue: [] });
+    expect(getPlanDiff(program, edit(squat.warmupSets), 'plan-id')).toBeUndefined();
   });
 });

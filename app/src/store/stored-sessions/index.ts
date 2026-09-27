@@ -429,6 +429,7 @@ export const storedSessionsReducer = storedSessionsSlice.reducer;
 
 export function getSessionReferenceTime(session: Session): OffsetDateTime {
   return (
-    session.lastExercise?.latestTime ?? session.date.atStartOfDay().atZone(ZoneId.systemDefault()).toOffsetDateTime()
+    session.lastExercise?.lastActivityTime ??
+    session.date.atStartOfDay().atZone(ZoneId.systemDefault()).toOffsetDateTime()
   );
 }

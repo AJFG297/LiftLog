@@ -18,7 +18,7 @@ import { createAddEffectTestBed } from '@/utils/__test__/add-effect-testbed';
 import { addExportPlaintextEffects } from '@/store/settings/export-plaintext-effects';
 import { FileExportService } from '@/services/file-export-service';
 import { fromJsonBytes } from '@/services/encryption-service';
-import { SessionJSON } from '@/models/storage/versions/latest';
+import { RecordedWeightedExerciseJSON, SessionJSON } from '@/models/storage/versions/latest';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -36,6 +36,20 @@ function makeWeightedExercise(name = 'Bench Press', sets = 3, weightKg = 100, re
     new Weight(weightKg, 'kilograms'),
     (i) => t.plusSeconds(i * 60),
   );
+}
+
+function withLoggedWarmups(
+  exercise: RecordedWeightedExercise,
+  warmups: { reps: number; weightKg: number }[],
+): RecordedWeightedExercise {
+  return exercise.with({
+    warmupSets: warmups.map(({ reps, weightKg }, i) =>
+      filledPotentialSet(reps, t.minusMinutes(warmups.length - i), new Weight(weightKg, 'kilograms'), {
+        min: reps,
+        max: reps,
+      }),
+    ),
+  });
 }
 
 function makeCardioExercise(name = 'Treadmill') {
@@ -90,9 +104,12 @@ describe('export-plaintext-effects', () => {
 
     it('CSV output includes header row and one row per completed set', async () => {
       const fileExportService = makeFileExportService();
-      // 2 exercises × 3 sets each = 6 data rows
+      // 2 logged warm-ups + 2 exercises × 3 sets each = 8 data rows
       const session = makeSession([
-        makeWeightedExercise('Bench Press', 3, 100, 10),
+        withLoggedWarmups(makeWeightedExercise('Bench Press', 3, 100, 10), [
+          { reps: 5, weightKg: 50 },
+          { reps: 3, weightKg: 70 },
+        ]),
         makeWeightedExercise('Squat', 3, 140, 8),
       ]).with({ id: '124' });
       const testBed = createAddEffectTestBed({
@@ -108,8 +125,8 @@ describe('export-plaintext-effects', () => {
       const [, bytes] = fileExportService.exportBytes.mock.calls[0]!;
       const csv = new TextDecoder().decode(bytes);
       const lines = csv.trim().split('\n');
-      // 1 header + 6 data rows
-      expect(lines).toHaveLength(7);
+      // 1 header + 8 data rows
+      expect(lines).toHaveLength(9);
       expect(lines).toMatchSnapshot();
     });
 
@@ -207,7 +224,7 @@ describe('export-plaintext-effects', () => {
       expect(csv).toContain('slow eccentric');
     });
 
-    it('puts the logged RPE in a trailing column, blank when none was logged', async () => {
+    it('puts the logged RPE in the column before SetType, blank when none was logged', async () => {
       const fileExportService = makeFileExportService();
       const bp = makeBenchBlueprint('Curl', 2, 12);
       const exercise = new RecordedWeightedExercise(
@@ -230,9 +247,42 @@ describe('export-plaintext-effects', () => {
 
       const [, bytes] = fileExportService.exportBytes.mock.calls[0]!;
       const [header, rated, unrated] = new TextDecoder().decode(bytes).trim().split('\n');
-      expect(header!.trim().split(',').at(-1)).toBe('RPE');
-      expect(rated!.trim().split(',').at(-1)).toBe('8.5');
-      expect(unrated!.trim().split(',').at(-1)).toBe('');
+      expect(header!.trim().split(',').at(-2)).toBe('RPE');
+      expect(rated!.trim().split(',').at(-2)).toBe('8.5');
+      expect(unrated!.trim().split(',').at(-2)).toBe('');
+    });
+
+    it('exports logged warm-ups before the working sets, marked by a trailing SetType column', async () => {
+      const fileExportService = makeFileExportService();
+      const exercise = makeWeightedExercise('Bench Press', 2, 100, 10).with({
+        warmupSets: [
+          filledPotentialSet(5, t.minusMinutes(2), new Weight(50, 'kilograms'), { min: 5, max: 5 }),
+          // An unlogged warm-up is skipped, like an unlogged working set.
+          emptyPotentialSet(70, { min: 3, max: 3 }),
+        ],
+      });
+      const testBed = createAddEffectTestBed({
+        services: {
+          progressRepository: makeProgressRepository([makeSession([exercise])]),
+          fileExportService,
+        },
+      });
+      addExportPlaintextEffects(testBed.addEffect);
+
+      await testBed.dispatchHandled(exportPlainText({ format: 'CSV' }));
+
+      const [, bytes] = fileExportService.exportBytes.mock.calls[0]!;
+      const [header, ...rows] = new TextDecoder()
+        .decode(bytes)
+        .trim()
+        .split('\n')
+        .map((line) => line.trim().split(','));
+      expect(header!.slice(-2)).toEqual(['RPE', 'SetType']);
+      const column = (name: string) => rows.map((row) => row[header!.indexOf(name)]);
+      expect(column('SetType')).toEqual(['warmup', 'working', 'working']);
+      expect(column('Weight')).toEqual(['50', '100', '100']);
+      expect(column('Reps')).toEqual(['5', '10', '10']);
+      expect(column('TargetReps')).toEqual(['5', '10', '10']);
     });
 
     it('exports rows across multiple sessions', async () => {
@@ -288,6 +338,28 @@ describe('export-plaintext-effects', () => {
         recordedExercises: { potentialSets: { rpe?: number }[] }[];
       }[];
       expect(session!.recordedExercises[0]!.potentialSets.map((s) => s.rpe)).toEqual([8, undefined]);
+    });
+
+    it('carries warm-ups apart from the working sets', async () => {
+      const fileExportService = makeFileExportService();
+      const exercise = withLoggedWarmups(makeWeightedExercise('Bench Press', 1, 100, 10), [{ reps: 5, weightKg: 50 }]);
+      const testBed = createAddEffectTestBed({
+        services: {
+          progressRepository: makeProgressRepository([makeSession([exercise])]),
+          fileExportService,
+        },
+      });
+      addExportPlaintextEffects(testBed.addEffect);
+
+      await testBed.dispatchHandled(exportPlainText({ format: 'JSON' }));
+
+      const [, bytes] = fileExportService.exportBytes.mock.calls[0]!;
+      const [session] = fromJsonBytes<SessionJSON[]>(bytes);
+      const recorded = session!.recordedExercises[0] as RecordedWeightedExerciseJSON;
+      expect(recorded.warmupSets).toMatchObject([
+        { weight: { value: '50', unit: 'kilograms' }, set: { repsCompleted: 5 } },
+      ]);
+      expect(recorded.potentialSets).toHaveLength(1);
     });
 
     it('calls exportBytes with a .json filename and application/json content type', async () => {

@@ -8,6 +8,7 @@ vi.mock('expo-localization', () => ({
 import {
   CardioExerciseBlueprint,
   CardioExerciseSetBlueprint,
+  PlannedWarmupSet,
   ProgressionRule,
   Rest,
   SessionBlueprint,
@@ -22,6 +23,7 @@ import {
 } from './blueprint-diff';
 import { UseTranslateResult } from '@tolgee/react';
 import { makeWeightedBlueprint } from '@/models/session-models/__test__/helpers';
+import { Weight } from '@/models/weight';
 
 describe('diffSessionBlueprints', () => {
   const createWeightedExercise = (name: string, sets = 3, reps = 10): WeightedExerciseBlueprint =>
@@ -863,5 +865,53 @@ describe('change label and description mapping', () => {
       const description = getChangeDescription(t, change) as unknown as { key: string };
       expect(description.key).toBeTruthy();
     }
+  });
+});
+
+describe('warm-up changes', () => {
+  const t = ((key: string, params?: object) =>
+    params ? `${key} ${JSON.stringify(params)}` : key) as unknown as UseTranslateResult['t'];
+  const squat = (warmupSets: PlannedWarmupSet[]) => makeWeightedBlueprint({ name: 'Squat', warmupSets });
+  const half: PlannedWarmupSet = { load: { type: 'percent', percent: 50 }, reps: 5 };
+  const bar: PlannedWarmupSet = { load: { type: 'absolute', weight: new Weight(20, 'kilograms') }, reps: 5 };
+
+  function warmupChanges(before: PlannedWarmupSet[], after: PlannedWarmupSet[]) {
+    const diff = diffSessionBlueprints(
+      new SessionBlueprint('Day', [squat(before)], ''),
+      new SessionBlueprint('Day', [squat(after)], ''),
+    );
+    return { diff, changes: diff.modifiedExercises.flatMap((m) => m.changes) };
+  }
+
+  it('offers a warm-up added in the workout', () => {
+    const { changes } = warmupChanges([], [half]);
+    expect(changes).toEqual([expect.objectContaining({ kind: 'exerciseWarmupSets', oldValue: [], newValue: [half] })]);
+  });
+
+  it('offers a change of load, which the planned-set comparison would miss', () => {
+    const { changes } = warmupChanges([half], [bar]);
+    expect(changes.map((c) => c.kind)).toEqual(['exerciseWarmupSets']);
+  });
+
+  it('reports nothing when the warm-ups are the same', () => {
+    expect(warmupChanges([half, bar], [half, bar]).changes).toEqual([]);
+  });
+
+  it('applies the new warm-ups to the plan', () => {
+    const original = new SessionBlueprint('Day', [squat([])], '');
+    const { diff } = warmupChanges([], [bar, half]);
+    const applied = applySessionBlueprintDiff(original, diff).exercises[0] as WeightedExerciseBlueprint;
+    expect(applied.warmupSets).toEqual([bar, half]);
+  });
+
+  it('describes and labels the change', () => {
+    const [change] = warmupChanges([], [half, bar]).changes;
+    expect(getChangeDescription(t, change!)).toBe(
+      `plan.diff.generic_two_value_change.body ${JSON.stringify({
+        oldValue: 'plan.diff.warmup_sets_none.body',
+        newValue: `workout.warmup_set.percent.label ${JSON.stringify({ percent: 50 })} × 5, 20kg × 5`,
+      })}`,
+    );
+    expect(getChangeLabelKey(change!)).toEqual({ key: 'plan.diff.warmup_sets.label' });
   });
 });

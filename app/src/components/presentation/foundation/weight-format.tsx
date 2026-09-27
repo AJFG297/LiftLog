@@ -1,5 +1,5 @@
 import { ColorChoice, font, FontChoice, useAppTheme } from '@/hooks/useAppTheme';
-import { shortFormatWeightUnit, Weight } from '@/models/weight';
+import { bodyweightLoadText, bodyweightPrefix, shortFormatWeightUnit, Weight } from '@/models/weight';
 import { localeFormatBigNumber } from '@/utils/locale-bignumber';
 import { useTranslate } from '@tolgee/react';
 import { Text, TextStyle } from 'react-native';
@@ -32,10 +32,9 @@ export default function WeightFormat(props: WeightFormatProps) {
     if (!value || value.isZero()) {
       return <Text style={style}>{label}</Text>;
     }
-    const sign = value.isGreaterThan(0) ? '+' : '';
     return (
       <Text style={style}>
-        {label} {sign}
+        {bodyweightPrefix(label, value)}
         {localeFormatBigNumber(value)} <Text style={{ fontSize: 12 }}>{shortFormatWeightUnit(props.weight?.unit)}</Text>
       </Text>
     );
@@ -47,4 +46,14 @@ export default function WeightFormat(props: WeightFormatProps) {
       {weightDisplay} <Text style={{ fontSize: 12 }}>{shortFormatWeightUnit(props.weight?.unit)}</Text>
     </Text>
   );
+}
+
+/**
+ * {@link WeightFormat} as one plain string, for text that can't nest it (a translated template):
+ * `60 kg`, or on bodyweight `BW`, `BW +10 kg`, `BW -20 kg`.
+ */
+export function formatWeightText(weight: Weight, usesBodyweight: boolean, bodyweightLabel: string): string {
+  // Spaced like WeightFormat, which this sits beside on a set tile.
+  const text = `${localeFormatBigNumber(weight.value)} ${shortFormatWeightUnit(weight.unit)}`;
+  return usesBodyweight ? bodyweightLoadText(weight, bodyweightLabel, text) : text;
 }

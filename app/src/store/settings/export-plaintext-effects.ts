@@ -1,4 +1,5 @@
-import { RecordedCardioExercise, RecordedExercise, Session } from '@/models/session-models';
+import { PotentialSet, RecordedCardioExercise, RecordedExercise, Session } from '@/models/session-models';
+import type { SetKind } from '@/models/session-models/recorded-weighted-exercise';
 import { AddEffectFn } from '@/store/store';
 import { exportPlainText } from '@/store/settings';
 import Enumerable from 'linq';
@@ -61,31 +62,35 @@ class ExportedSetCsvRow {
     public Reps: number,
     public TargetReps: number,
     public Notes: string,
-    // Last, so tools reading the file by column position keep working.
+    // RPE and SetType stay last, so tools reading the file by column position keep working.
     public RPE: number | '',
+    public SetType: SetKind,
   ) {}
   static fromModel(session: Session, exercise: RecordedExercise): ExportedSetCsvRow[] {
     // TODO: What do we do about cardio?
     if (exercise instanceof RecordedCardioExercise) {
       return [];
     }
-    return exercise.potentialSets
+    const row = (set: PotentialSet, targetReps: number, setType: SetKind) =>
+      new ExportedSetCsvRow(
+        session.id,
+        set.set!.completionDateTime.toString(),
+        exercise.blueprint.name,
+        // An exercise with no load has no weight to report.
+        exercise.tracksResistance ? set.weight.value : '',
+        exercise.tracksResistance ? shortFormatWeightUnit(set.weight.unit) : '',
+        set.set!.repsCompleted,
+        targetReps,
+        exercise.notes ?? '',
+        set.loggedRpe ?? '',
+        setType,
+      );
+    // Warm-ups come first, in the order they are done.
+    const warmups = exercise.warmupSets.filter((set) => set.set).map((set) => row(set, set.target.max, 'warmup'));
+    const working = exercise.potentialSets
       .map((set, index) => ({ set, index }))
       .filter((x) => x.set.set)
-      .map(
-        ({ set, index }) =>
-          new ExportedSetCsvRow(
-            session.id,
-            set.set!.completionDateTime.toString(),
-            exercise.blueprint.name,
-            // An exercise with no load has no weight to report.
-            exercise.tracksResistance ? set.weight.value : '',
-            exercise.tracksResistance ? shortFormatWeightUnit(set.weight.unit) : '',
-            set.set!.repsCompleted,
-            exercise.repsTargetForSet(index).max,
-            exercise.notes ?? '',
-            set.loggedRpe ?? '',
-          ),
-      );
+      .map(({ set, index }) => row(set, exercise.repsTargetForSet(index).max, 'working'));
+    return [...warmups, ...working];
   }
 }

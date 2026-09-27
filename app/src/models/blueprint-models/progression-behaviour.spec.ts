@@ -202,3 +202,51 @@ describe('weightIncrement', () => {
     expect(weightIncrementOf(config)).toBe(increment);
   });
 });
+
+/** Warm-ups sit in their own list, so no rule should ever see them - however they compare. */
+describe('progression ignores warm-ups', () => {
+  function withWarmup(exercise: RecordedWeightedExercise, warmupKg: number, reps = 5) {
+    return exercise.with({ warmupSets: [filledPotentialSet(reps, tick(), new Weight(warmupKg, 'kilograms'))] });
+  }
+
+  it.each([
+    ['lighter', 20],
+    ['heavier', 200],
+  ])('lowestSet picks among the working sets, never a warm-up %s than them', (_, warmupKg) => {
+    const applied = apply({ kind: 'lowestSet', amount: 5, pick: 'first' }, withWarmup(exerciseWith(mixed), warmupKg));
+
+    expect(weightsOf(applied)).toEqual([65, 80, 60, 70, 60]);
+    expect(applied.warmupSets.map((s) => s.weight.value.toNumber())).toEqual([warmupKg]);
+  });
+
+  it('lowestSet/middle measures the middle across the working sets alone', () => {
+    const applied = apply({ kind: 'lowestSet', amount: 5, pick: 'middle' }, withWarmup(exerciseWith([60, 80, 60]), 20));
+
+    expect(weightsOf(applied)).toEqual([65, 80, 60]);
+  });
+
+  it('allEvenly moves the working sets and leaves the warm-ups alone', () => {
+    const applied = apply({ kind: 'allEvenly', amount: 5 }, withWarmup(exerciseWith([60, 70]), 20));
+
+    expect(weightsOf(applied)).toEqual([65, 75]);
+    expect(applied.warmupSets.map((s) => s.weight.value.toNumber())).toEqual([20]);
+  });
+
+  it.each([
+    ['lighter', 20],
+    ['heavier', 200],
+  ])('a failed warm-up %s than the working sets never fails the success check', (_, warmupKg) => {
+    // One rep of a five-rep warm-up, in front of working sets that all met their target.
+    expect(withWarmup(exerciseWith([60, 70], true), warmupKg, 1).isSuccessForProgressiveOverload).toBe(true);
+  });
+
+  it('a warm-up that met its target never rescues failed working sets', () => {
+    const failed = new RecordedWeightedExercise(
+      exerciseWith([60]).blueprint,
+      [filledPotentialSet(3, tick(), new Weight(60, 'kilograms'))],
+      undefined,
+    );
+
+    expect(withWarmup(failed, 20).isSuccessForProgressiveOverload).toBe(false);
+  });
+});

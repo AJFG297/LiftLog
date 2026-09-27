@@ -1,4 +1,5 @@
 import type { LocalDateJSON, DurationJSON, BigNumberJSON } from '@/models/storage/versions/libs';
+import type { WeightJSON } from '@/models/storage/versions/libs/weight';
 
 export interface ProgramBlueprintJSON {
   version: 3;
@@ -11,7 +12,7 @@ export interface ProgramBlueprintJSON {
 }
 
 export interface SessionBlueprintJSON {
-  version: 6;
+  version: 7;
   name: string;
   exercises: ExerciseBlueprintJSON[];
   notes: string;
@@ -88,6 +89,45 @@ export interface WeightedExerciseBlueprintJSON {
    * top of the lifter (`bodyweight`), or nothing at all (`none`, e.g. crunches).
    */
   resistance: ResistanceJSON;
+  /**
+   * Sets done before the working sets that never count toward progression, records or stats. Kept
+   * apart from `plannedSets` so everything reading working sets leaves them out without a filter.
+   */
+  warmupSets: PlannedWarmupSetJSON[];
+}
+
+/** What the plan asks for on one warm-up set. */
+export interface PlannedWarmupSetJSON {
+  /**
+   * Absent for an exercise with no resistance, where a warm-up is reps only. A bodyweight exercise
+   * only takes an absolute (added) weight.
+   */
+  load?: WarmupLoadJSON | undefined;
+  /**
+   * @asType integer
+   */
+  reps: number;
+}
+
+/**
+ * @discriminator type
+ */
+export type WarmupLoadJSON = PercentWarmupLoadJSON | AbsoluteWarmupLoadJSON;
+
+/** A share of the session's heaviest working set, rounded to the exercise's weight increment. */
+export interface PercentWarmupLoadJSON {
+  type: 'percent';
+  /** Out of 100, so `50` is half the working weight. */
+  percent: number;
+}
+
+/**
+ * A fixed weight, such as an empty bar. The one place a blueprint carries a unit: it is a real load,
+ * not a plate increment, so it is converted into whatever unit the session is in.
+ */
+export interface AbsoluteWarmupLoadJSON {
+  type: 'absolute';
+  weight: WeightJSON;
 }
 
 export type ResistanceJSON = 'none' | 'external' | 'bodyweight';

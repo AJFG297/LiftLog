@@ -91,7 +91,7 @@ export default function SessionComponent(props: {
       const before = s.cardioSetAt(exerciseIndex, setIndex);
       const updated = s.withCardioSet(exerciseIndex, setIndex, update, now);
       return updated.cardioSetAt(exerciseIndex, setIndex)?.earnsRest(before)
-        ? withRestTimerAt(updated, updated.lastExercise?.latestTime)
+        ? withRestTimerAt(updated, updated.lastExercise?.lastActivityTime)
         : updated;
     });
   };
@@ -139,10 +139,10 @@ export default function SessionComponent(props: {
           timeProvider={() =>
             isActiveWorkout
               ? OffsetDateTime.now()
-              : (session.lastExercise?.latestTime ??
+              : (session.lastExercise?.lastActivityTime ??
                 session.date.atTime(LocalTime.now()).atZone(ZoneId.systemDefault()).toOffsetDateTime())
           }
-          resetSetTimer={() => updateSession((s) => withRestTimerAt(s, s.lastExercise?.latestTime))}
+          resetSetTimer={() => updateSession((s) => withRestTimerAt(s, s.lastExercise?.lastActivityTime))}
           recordedExercise={item}
           toStartNext={session.nextExercise === item}
           updateExercise={(update) =>
@@ -209,22 +209,17 @@ export default function SessionComponent(props: {
   ) : null;
 
   const lastExercise = session.lastExercise;
-  const lastRecordedSet = lastExercise instanceof RecordedWeightedExercise ? lastExercise?.lastRecordedSet : undefined;
   const nextExercise = session.nextExercise;
 
   // A weighted exercise rests per exercise; cardio rests per set, and may not rest at all.
   const restBetweenSets = match(lastExercise)
-    .with(P.instanceOf(RecordedWeightedExercise), (exercise) => exercise.blueprint.restBetweenSets)
+    .with(P.instanceOf(RecordedWeightedExercise), (exercise) => exercise.restAfterLastSet)
     .with(P.instanceOf(RecordedCardioExercise), (exercise) => exercise.lastCompletedSet?.blueprint.restBetweenSets)
     .otherwise(() => undefined);
 
   const showRestTimer = restTimersEnabled && isActiveWorkout && nextExercise && restBetweenSets && session.restTimer;
   // Only a weighted set can be failed - cardio has no rep count to fall short of.
-  const lastSetFailed =
-    lastRecordedSet?.set &&
-    lastExercise instanceof RecordedWeightedExercise &&
-    lastRecordedSet.set.repsCompleted <
-      lastExercise.repsTargetForSet(lastExercise.potentialSets.indexOf(lastRecordedSet)).min;
+  const lastSetFailed = lastExercise instanceof RecordedWeightedExercise && lastExercise.lastSetMissedTarget;
   const restTimer = showRestTimer ? (
     <RestTimer
       rest={restBetweenSets}

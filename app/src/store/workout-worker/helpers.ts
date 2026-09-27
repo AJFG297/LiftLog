@@ -33,12 +33,18 @@ export function getCardioTimerInfo(session: Session): CardioTimerInfo | undefine
 }
 
 export function getCurrentExerciseDetails(session: Session): CurrentExerciseDetails | undefined {
-  return session.nextExercise
-    ? {
-        exercise: session.nextExercise.toJSON(),
-        setIndex: session.nextExercise.currentSetIndex,
-      }
-    : undefined;
+  const next = session.nextExercise;
+  if (!next) {
+    return undefined;
+  }
+  // A weighted exercise's next set may be a warm-up, which the worker labels as one. Once every
+  // working set is logged there is no current set, and the index stays at -1 as it always has.
+  const current = next instanceof RecordedWeightedExercise ? next.currentSet : undefined;
+  return {
+    exercise: next.toJSON(),
+    setKind: current?.kind ?? 'working',
+    setIndex: current?.index ?? next.currentSetIndex,
+  };
 }
 
 export function getTimerInfo(session: Session): RestTimerInfo | undefined {
@@ -69,15 +75,12 @@ function getRestWindow(lastExercise: RecordedExercise) {
     return undefined;
   }
 
-  const { minRest, maxRest, failureRest } = lastExercise.blueprint.restBetweenSets;
-
-  const lastSet = lastExercise.lastRecordedSet;
-  if (!lastSet?.set) {
+  if (!lastExercise.hasLoggedAnySet) {
     return { partialRest: Duration.ZERO, fullRest: Duration.ZERO };
   }
 
-  const targetMin = lastExercise.repsTargetForSet(lastExercise.potentialSets.indexOf(lastSet)).min;
-  return lastSet.set.repsCompleted >= targetMin
-    ? { partialRest: minRest, fullRest: maxRest }
-    : { partialRest: failureRest, fullRest: failureRest };
+  const { minRest, maxRest, failureRest } = lastExercise.restAfterLastSet;
+  return lastExercise.lastSetMissedTarget
+    ? { partialRest: failureRest, fullRest: failureRest }
+    : { partialRest: minRest, fullRest: maxRest };
 }

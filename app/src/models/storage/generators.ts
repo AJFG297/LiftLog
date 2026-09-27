@@ -8,6 +8,7 @@ import {
   Distance,
   DistanceUnits,
   CardioExerciseSetBlueprint,
+  PlannedWarmupSet,
 } from '@/models/blueprint-models';
 import { Weight } from '@/models/weight';
 import {
@@ -65,6 +66,15 @@ const OffsetDateTimeGenerator = fc
 
 const RestGenerator = fc.constantFrom(Rest.short, Rest.medium, Rest.long);
 
+const PlannedWarmupSetGenerator: fc.Arbitrary<PlannedWarmupSet> = fc.record({
+  load: fc.oneof(
+    fc.constant(undefined),
+    fc.record({ type: fc.constant('percent' as const), percent: fc.integer({ min: 0, max: 100 }) }),
+    fc.record({ type: fc.constant('absolute' as const), weight: WeightGenerator }),
+  ),
+  reps: fc.integer({ min: 1, max: 20 }),
+});
+
 const WeightedExerciseBlueprintGenerator = fc
   .record({
     type: fc.constant('WeightedExerciseBlueprint'),
@@ -76,6 +86,7 @@ const WeightedExerciseBlueprintGenerator = fc
     supersetWithNext: fc.boolean(),
     notes: fc.string(),
     link: fc.webUrl(),
+    warmupSets: fc.array(PlannedWarmupSetGenerator, { maxLength: 4 }),
   })
   .map((x) => WeightedExerciseBlueprint.empty().with(x));
 
@@ -199,9 +210,14 @@ const RecordedWeightedExerciseGenerator = fc
   .record({
     blueprint: WeightedExerciseBlueprintGenerator,
     potentialSets: fc.array(PotentialSetGenerator, { maxLength: 10 }),
+    // Warm-ups never carry an RPE: nothing sets one, and the workout tables don't store one.
+    warmupSets: fc.array(
+      PotentialSetGenerator.map((set) => set.with({ rpe: undefined })),
+      { maxLength: 4 },
+    ),
     notes: optional(fc.string()),
   })
-  .map((x) => new RecordedWeightedExercise(x.blueprint, x.potentialSets, x.notes));
+  .map((x) => new RecordedWeightedExercise(x.blueprint, x.potentialSets, x.notes, x.warmupSets));
 
 export const SessionGenerator = fc
   .tuple(
