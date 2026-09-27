@@ -211,12 +211,14 @@ export class RecordedWeightedExercise {
 
   /** The tap on a warm-up: the same cycle as a working set, from its own target down to cleared. */
   withCycledWarmupRepCount(warmupIndex: number, time: OffsetDateTime): RecordedWeightedExercise {
-    return this.withWarmupSet(warmupIndex, (s) => s.with({ set: cycledSet(s.set, s.target.max, time) }));
+    return this.withSlot({ kind: 'warmup', index: warmupIndex }, (s) =>
+      s.with({ set: cycledSet(s.set, s.target.max, time) }),
+    );
   }
 
   /** Exact reps for a warm-up, or `undefined` to clear it. */
   withWarmupRepCount(warmupIndex: number, reps: number | undefined, time: OffsetDateTime): RecordedWeightedExercise {
-    return this.withWarmupSet(warmupIndex, (s) =>
+    return this.withSlot({ kind: 'warmup', index: warmupIndex }, (s) =>
       s.with({ set: reps === undefined ? undefined : new RecordedSet(reps, time) }),
     );
   }
@@ -226,15 +228,7 @@ export class RecordedWeightedExercise {
    * save-to-plan prompt, and the next session rebuilds the warm-up from the plan.
    */
   withWarmupWeight(warmupIndex: number, weight: Weight): RecordedWeightedExercise {
-    return this.withWarmupSet(warmupIndex, (s) => s.with({ weight }));
-  }
-
-  withWarmupSet(warmupIndex: number, reducer: (s: PotentialSet) => PotentialSet): RecordedWeightedExercise {
-    const existingSet = this.warmupSets[warmupIndex];
-    if (!existingSet) {
-      throw new IndexOutOfBoundsError(warmupIndex, this.warmupSets);
-    }
-    return this.with({ warmupSets: this.warmupSets.with(warmupIndex, reducer(existingSet)) });
+    return this.withSlot({ kind: 'warmup', index: warmupIndex }, (s) => s.with({ weight }));
   }
 
   withAllWarmupSets(reducer: (s: PotentialSet) => PotentialSet): RecordedWeightedExercise {
@@ -250,13 +244,17 @@ export class RecordedWeightedExercise {
   }
 
   withSet(setIndex: number, reducer: (s: PotentialSet) => PotentialSet) {
-    const existingSet = this.potentialSets[setIndex];
+    return this.withSlot({ kind: 'working', index: setIndex }, reducer);
+  }
+
+  private withSlot({ kind, index }: SetPosition, reducer: (s: PotentialSet) => PotentialSet): RecordedWeightedExercise {
+    const list = kind === 'warmup' ? this.warmupSets : this.potentialSets;
+    const existingSet = list[index];
     if (!existingSet) {
-      throw new IndexOutOfBoundsError(setIndex, this.potentialSets);
+      throw new IndexOutOfBoundsError(index, list);
     }
-    return this.with({
-      potentialSets: this.potentialSets.with(setIndex, reducer(existingSet)),
-    });
+    const updated = list.with(index, reducer(existingSet));
+    return this.with(kind === 'warmup' ? { warmupSets: updated } : { potentialSets: updated });
   }
 
   withAllSets(reducer: (s: PotentialSet) => PotentialSet) {
@@ -322,14 +320,7 @@ export class RecordedWeightedExercise {
   }
 
   get maxWeight(): Weight {
-    return (
-      this.potentialSets.reduce(
-        (max, set) => {
-          return !max || set.weight.isGreaterThan(max) ? set.weight : max;
-        },
-        undefined as Weight | undefined,
-      ) ?? new Weight(0, 'kilograms')
-    );
+    return this.heaviestWorkingWeight ?? new Weight(0, 'kilograms');
   }
 
   maxWeightWith(bodyweight: Weight | undefined): Weight {
@@ -375,22 +366,14 @@ export class RecordedWeightedExercise {
 
   /** The most recently logged slot across warm-ups and working sets, and where it sits. */
   get lastLoggedSlot(): (SetPosition & { slot: PotentialSet }) | undefined {
-    let best: (SetPosition & { slot: PotentialSet }) | undefined;
-    for (const candidate of this.loggedSlots()) {
-      if (!best || candidate.slot.set!.completionDateTime.isAfter(best.slot.set!.completionDateTime)) {
-        best = candidate;
-      }
+    const warmupIndex = loggedIndexWhere(this.warmupSets, isAfter);
+    const workingIndex = loggedIndexWhere(this.potentialSets, isAfter);
+    const warmup = this.warmupSets[warmupIndex];
+    const working = this.potentialSets[workingIndex];
+    if (working && (!warmup || isAfter(working, warmup))) {
+      return { kind: 'working', index: workingIndex, slot: working };
     }
-    return best;
-  }
-
-  private *loggedSlots(): Generator<SetPosition & { slot: PotentialSet }> {
-    for (const [index, slot] of this.warmupSets.entries()) {
-      if (slot.set) yield { kind: 'warmup', index, slot };
-    }
-    for (const [index, slot] of this.potentialSets.entries()) {
-      if (slot.set) yield { kind: 'working', index, slot };
-    }
+    return warmup && { kind: 'warmup', index: warmupIndex, slot: warmup };
   }
 
   /**
@@ -416,11 +399,7 @@ export class RecordedWeightedExercise {
    * than {@link lastLoggedSlot}, so a warm-up done after the working sets never moves it.
    */
   get lastLoggedWorkingSet(): PotentialSet | undefined {
-    let best: PotentialSet | undefined;
-    for (const slot of this.potentialSets) {
-      if (slot.set && (!best || slot.set.completionDateTime.isAfter(best.set!.completionDateTime))) best = slot;
-    }
-    return best;
+    return this.potentialSets[loggedIndexWhere(this.potentialSets, isAfter)];
   }
 
   /** The first unlogged working set, ignoring warm-ups. See {@link currentSet} for the full order. */
@@ -454,12 +433,10 @@ export class RecordedWeightedExercise {
 
   /** When the first set was logged, warm-ups included. */
   get earliestTime(): OffsetDateTime | undefined {
-    let earliest: OffsetDateTime | undefined;
-    for (const { slot } of this.loggedSlots()) {
-      const time = slot.set!.completionDateTime;
-      if (!earliest || time.isBefore(earliest)) earliest = time;
-    }
-    return earliest;
+    const warmup = this.warmupSets[loggedIndexWhere(this.warmupSets, isBefore)];
+    const working = this.potentialSets[loggedIndexWhere(this.potentialSets, isBefore)];
+    const earliest = working && (!warmup || isBefore(working, warmup)) ? working : warmup;
+    return earliest?.set!.completionDateTime;
   }
 
   /** Complete once every working set is logged; a skipped warm-up never holds an exercise open. */
@@ -473,6 +450,28 @@ export class RecordedWeightedExercise {
   get isSuccessForProgressiveOverload(): boolean {
     return this.potentialSets.every((x, index) => x.set && x.set.repsCompleted >= this.repsTargetForSet(index).max);
   }
+}
+
+/**
+ * The index of the logged slot that beats every other logged slot by `beats`, or -1 when none is
+ * logged. A plain loop: the time getters run over the whole history on load and for stats.
+ */
+function loggedIndexWhere(slots: PotentialSet[], beats: (a: PotentialSet, b: PotentialSet) => boolean): number {
+  let best = -1;
+  for (let index = 0; index < slots.length; index++) {
+    if (slots[index]!.set && (best < 0 || beats(slots[index]!, slots[best]!))) {
+      best = index;
+    }
+  }
+  return best;
+}
+
+function isAfter(a: PotentialSet, b: PotentialSet): boolean {
+  return a.set!.completionDateTime.isAfter(b.set!.completionDateTime);
+}
+
+function isBefore(a: PotentialSet, b: PotentialSet): boolean {
+  return a.set!.completionDateTime.isBefore(b.set!.completionDateTime);
 }
 
 function cycledSet(set: RecordedSet | undefined, targetMax: number, time: OffsetDateTime): RecordedSet | undefined {

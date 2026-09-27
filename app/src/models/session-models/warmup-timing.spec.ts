@@ -45,12 +45,11 @@ describe('session timing with warm-ups (what Health records)', () => {
   });
 
   it('starts at a warm-up done early for an exercise that finished later', () => {
-    // Bench's warm-up came first, but Squat finished first - so Squat is the session's first exercise.
+    // Bench's warm-up came first, though Squat's only set was logged before Bench finished.
     const session = sessionOf(
       exercise('Squat', undefined, tickAt(10, 5)),
       exercise('Bench', tickAt(9, 55), tickAt(10, 20)),
     );
-    expect(session.firstExercise?.blueprint.name).toBe('Squat');
     expect(session.startTime).toEqual(tickAt(9, 55));
     expect(session.duration).toEqual(Duration.ofMinutes(25));
   });

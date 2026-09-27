@@ -75,7 +75,7 @@ function getRestWindow(lastExercise: RecordedExercise) {
     return undefined;
   }
 
-  if (!lastExercise.lastLoggedSlot) {
+  if (!lastExercise.isStarted) {
     return { partialRest: Duration.ZERO, fullRest: Duration.ZERO };
   }
 

@@ -787,7 +787,7 @@ export function warmupLoadTypesFor(resistance: Resistance): readonly WarmupLoadT
 }
 
 /** The warm-up as the resistance allows it, dropping a load it cannot take. */
-export function warmupSetFor(resistance: Resistance, warmup: PlannedWarmupSet): PlannedWarmupSet {
+function warmupSetFor(resistance: Resistance, warmup: PlannedWarmupSet): PlannedWarmupSet {
   if (!warmup.load || warmupLoadTypesFor(resistance).includes(warmup.load.type)) {
     return warmup;
   }
@@ -822,7 +822,7 @@ export function withWarmupLoadType(warmup: PlannedWarmupSet, type: WarmupLoadTyp
   };
 }
 
-export function warmupLoadsEqual(a: WarmupLoad | undefined, b: WarmupLoad | undefined): boolean {
+function warmupLoadsEqual(a: WarmupLoad | undefined, b: WarmupLoad | undefined): boolean {
   if (!a || !b) {
     return a === b;
   }

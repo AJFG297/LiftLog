@@ -1,9 +1,8 @@
 import { ColorChoice, font, FontChoice, useAppTheme } from '@/hooks/useAppTheme';
-import { shortFormatWeightUnit, Weight } from '@/models/weight';
+import { bodyweightLoadText, bodyweightPrefix, shortFormatWeightUnit, Weight } from '@/models/weight';
 import { localeFormatBigNumber } from '@/utils/locale-bignumber';
 import { useTranslate } from '@tolgee/react';
 import { Text, TextStyle } from 'react-native';
-import BigNumber from 'bignumber.js';
 
 interface WeightFormatProps {
   weight: Weight | undefined;
@@ -56,16 +55,5 @@ export default function WeightFormat(props: WeightFormatProps) {
 export function formatWeightText(weight: Weight, usesBodyweight: boolean, bodyweightLabel: string): string {
   // Spaced like WeightFormat, which this sits beside on a set tile.
   const text = `${localeFormatBigNumber(weight.value)} ${shortFormatWeightUnit(weight.unit)}`;
-  if (!usesBodyweight) {
-    return text;
-  }
-  if (weight.value.isZero()) {
-    return bodyweightLabel;
-  }
-  return `${bodyweightPrefix(bodyweightLabel, weight.value)}${text}`;
-}
-
-/** `BW +` before added load; a negative (assisted) load carries its own minus sign. */
-function bodyweightPrefix(label: string, value: BigNumber): string {
-  return `${label} ${value.isGreaterThan(0) ? '+' : ''}`;
+  return usesBodyweight ? bodyweightLoadText(weight, bodyweightLabel, text) : text;
 }

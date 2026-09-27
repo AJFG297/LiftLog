@@ -42,9 +42,9 @@ export class Session {
   }
 
   /**
-   * When the first set of the workout was logged, warm-ups included. Taken across every exercise
-   * rather than from {@link firstExercise}, which is picked by its last set: in a superset, or with a
-   * warm-up done early, another exercise can hold the earliest set.
+   * When the first set of the workout was logged, warm-ups included. Taken across every exercise's
+   * earliest set: in a superset, or with a warm-up done early, the exercise that finished first need
+   * not hold it.
    */
   get startTime(): OffsetDateTime | undefined {
     return this.recordedExercises.reduce<OffsetDateTime | undefined>((earliest, exercise) => {
@@ -323,7 +323,6 @@ export class Session {
 
   withRemovedExercise(exerciseIndex: number): Session {
     return this.with({
-      // `filter`, not `toSpliced`: the app's Hermes runtime lacks the ES2023 copying array methods.
       recordedExercises: this.recordedExercises.filter((_, index) => index !== exerciseIndex),
       blueprint: this.blueprint.with({
         exercises: this.blueprint.exercises.filter((_, index) => index !== exerciseIndex),
@@ -542,13 +541,6 @@ export class Session {
       .where((x) => x instanceof RecordedWeightedExercise)
       .defaultIfEmpty(undefined)
       .maxBy((x) => x.latestTime?.toInstant().toEpochMilli());
-  }
-
-  get firstExercise(): RecordedExercise | undefined {
-    return Enumerable.from(this.recordedExercises)
-      .where((x) => x.isStarted)
-      .defaultIfEmpty(undefined)
-      .minBy((x) => x.latestTime?.toInstant().toEpochMilli());
   }
 
   get isFreeform(): boolean {

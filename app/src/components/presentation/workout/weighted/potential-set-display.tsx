@@ -67,20 +67,13 @@ export function PotentialSetDisplay(props: PotentialSetDisplayProps) {
   const showsRpe = !!props.showRpe && !warmup;
   const hasFooter = showsWeight || showsRpe;
   // Warm-ups take the quieter container tones so the working sets keep the eye.
-  const repsBackground = warmup
+  const [repsBackground, repsColor] = warmup
     ? isFilled
-      ? colors.primaryContainer
-      : colors.surfaceContainerHighest
+      ? [colors.primaryContainer, colors.onPrimaryContainer]
+      : [colors.surfaceContainerHighest, colors.onSurfaceVariant]
     : isFilled
-      ? colors.primary
-      : colors.secondaryContainer;
-  const repsColor = warmup
-    ? isFilled
-      ? colors.onPrimaryContainer
-      : colors.onSurfaceVariant
-    : isFilled
-      ? colors.onPrimary
-      : colors.onSecondaryContainer;
+      ? [colors.primary, colors.onPrimary]
+      : [colors.secondaryContainer, colors.onSecondaryContainer];
   const hintColor = repsColor + '99';
   const previousHint = warmup
     ? warmup.previous &&

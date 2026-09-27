@@ -11,7 +11,7 @@ export interface WarmupTile {
 }
 
 /** `weight` is left out when there's no load worth showing. */
-export interface WarmupHint {
+interface WarmupHint {
   reps: number;
   weight: Weight | undefined;
 }
