@@ -19,7 +19,11 @@ import {
 import { addUnpublishedSessionId } from '@/store/feed';
 import { setStatsIsDirty } from '@/store/stats';
 import { createAddEffectTestBed } from '@/utils/__test__/add-effect-testbed';
-import { exercisesSchema, sessionsSchema } from '@/db/schema';
+import { exercisesSchema, workoutsSchema } from '@/db/schema';
+import { WorkoutRepository } from '@/services/workout-repository';
+import { RestTimer } from '@/models/session-models/rest-timer';
+import { createEffectStore } from '@/utils/__test__/effect-store';
+import { setIsHydrated as setSettingsIsHydrated } from '@/store/settings';
 import { RecordedWeightedExercise, Session } from '@/models/session-models';
 import {
   emptyPotentialSet,
@@ -28,7 +32,6 @@ import {
   makeWeightedBlueprint,
   tick,
 } from '@/models/session-models/__test__/helpers';
-import { toJsonString } from '@/models/storage/versions/latest';
 import type { RootState } from '@/store/store';
 
 async function createTestDb(): Promise<ExpoSQLiteDatabase> {
@@ -79,6 +82,7 @@ describe('stored-sessions effects', () => {
       } as Partial<RootState>,
       services: {
         db,
+        workoutRepository: new WorkoutRepository(db),
         logger,
         keyValueStore: options.keyValueStore ?? makeKvStore(),
         healthExportService: { canExport: () => false },
@@ -95,7 +99,7 @@ describe('stored-sessions effects', () => {
 
       await testBed.dispatchHandled(putStoredSession(session));
 
-      const [row] = await db.select().from(sessionsSchema).where(eq(sessionsSchema.id, session.id));
+      const [row] = await db.select().from(workoutsSchema).where(eq(workoutsSchema.id, session.id));
       expect(row).toBeDefined();
       expect(row!.active).toBe(false);
     });
@@ -109,7 +113,7 @@ describe('stored-sessions effects', () => {
       await testBed.dispatchHandled(setActiveSessionId(first.id));
       await testBed.dispatchHandled(setActiveSessionId(second.id));
 
-      const active = (await db.select().from(sessionsSchema)).filter((x) => x.active);
+      const active = (await db.select().from(workoutsSchema)).filter((x) => x.active);
       expect(active.map((x) => x.id)).toEqual([second.id]);
     });
 
@@ -119,7 +123,7 @@ describe('stored-sessions effects', () => {
 
       await testBed.dispatchHandled(setActiveSessionId(session.id));
 
-      const [row] = await db.select().from(sessionsSchema).where(eq(sessionsSchema.id, session.id));
+      const [row] = await db.select().from(workoutsSchema).where(eq(workoutsSchema.id, session.id));
       expect(row?.active).toBe(true);
     });
 
@@ -130,7 +134,7 @@ describe('stored-sessions effects', () => {
 
       await testBed.dispatchHandled(setActiveSessionId(undefined));
 
-      expect((await db.select().from(sessionsSchema)).filter((x) => x.active)).toHaveLength(0);
+      expect((await db.select().from(workoutsSchema)).filter((x) => x.active)).toHaveLength(0);
     });
 
     it('restored backups land inactive', async () => {
@@ -139,7 +143,7 @@ describe('stored-sessions effects', () => {
 
       await testBed.dispatchHandled(upsertStoredSessions([restored]));
 
-      const [row] = await db.select().from(sessionsSchema).where(eq(sessionsSchema.id, restored.id));
+      const [row] = await db.select().from(workoutsSchema).where(eq(workoutsSchema.id, restored.id));
       expect(row?.active).toBe(false);
     });
 
@@ -150,7 +154,7 @@ describe('stored-sessions effects', () => {
 
       await testBed.dispatchHandled(upsertStoredSessions([active]));
 
-      const [row] = await db.select().from(sessionsSchema).where(eq(sessionsSchema.id, active.id));
+      const [row] = await db.select().from(workoutsSchema).where(eq(workoutsSchema.id, active.id));
       expect(row?.active).toBe(true);
     });
   });
@@ -252,6 +256,7 @@ describe('stored-sessions effects', () => {
         } as Partial<RootState>,
         services: {
           db,
+          workoutRepository: new WorkoutRepository(db),
           logger,
           keyValueStore: makeKvStore(),
           healthExportService: { canExport: () => true, exportWorkout },
@@ -268,54 +273,69 @@ describe('stored-sessions effects', () => {
     });
   });
 
-  describe('migrating off CurrentSessionStateV1', () => {
-    it('lifts a v3 in-progress workout into the table and marks it active', async () => {
-      const session = Session.freeformSession(LocalDate.of(2026, 4, 10), undefined);
-      const keyValueStore = makeKvStore({
-        'CurrentSessionStateV1-Version': '3',
-        CurrentSessionStateV1: toJsonString(session.toJSON()),
-      });
-      const testBed = bed({ keyValueStore });
-
-      await testBed.dispatchHandled(initializeStoredSessionsStateSlice());
-
-      expect(testBed.getDispatchedAction(putStoredSession).payload.id).toBe(session.id);
-      expect(testBed.getDispatchedAction(setActiveSessionId).payload).toBe(session.id);
-    });
-
-    it('removes the legacy keys so it runs at most once', async () => {
-      const session = Session.freeformSession(LocalDate.of(2026, 4, 10), undefined);
-      const keyValueStore = makeKvStore({
-        'CurrentSessionStateV1-Version': '3',
-        CurrentSessionStateV1: toJsonString(session.toJSON()),
-      });
-      const testBed = bed({ keyValueStore });
-
-      await testBed.dispatchHandled(initializeStoredSessionsStateSlice());
-
-      expect(keyValueStore.raw.CurrentSessionStateV1).toBeUndefined();
-      expect(keyValueStore.raw['CurrentSessionStateV1-Version']).toBeUndefined();
-    });
-
-    it('does nothing on a fresh install, where neither key exists', async () => {
-      const keyValueStore = makeKvStore();
-      const testBed = bed({ keyValueStore });
-
-      await testBed.dispatchHandled(initializeStoredSessionsStateSlice());
-
-      testBed.expectNotDispatched(putStoredSession);
-      testBed.expectNotDispatched(setActiveSessionId);
-    });
-
+  describe('hydration', () => {
     it('restores the active session from the table on a later launch', async () => {
       const session = Session.freeformSession(LocalDate.of(2026, 4, 10), undefined);
-      await db.insert(sessionsSchema).values({ id: session.id, active: true, payload: session.toJSON() });
+      await new WorkoutRepository(db).setActive(session);
       const testBed = bed({});
 
       await testBed.dispatchHandled(initializeStoredSessionsStateSlice());
 
       expect(Object.keys(testBed.getDispatchedAction(setStoredSessions).payload)).toEqual([session.id]);
       expect(testBed.getDispatchedAction(setActiveSessionId).payload).toBe(session.id);
+    });
+
+    it('does not claim an active session when none was in progress', async () => {
+      await new WorkoutRepository(db).put(Session.freeformSession(LocalDate.of(2026, 4, 10), undefined));
+      const testBed = bed({});
+
+      await testBed.dispatchHandled(initializeStoredSessionsStateSlice());
+
+      testBed.expectNotDispatched(setActiveSessionId);
+    });
+  });
+
+  describe('updateStoredSession', () => {
+    async function startedWorkout() {
+      const workoutRepository = new WorkoutRepository(db);
+      const put = vi.spyOn(workoutRepository, 'put');
+      const harness = createEffectStore({ db, workoutRepository, logger: logger as never });
+      applyStoredSessionsEffects(harness.addEffect);
+      harness.store.dispatch(setSettingsIsHydrated(true));
+      const blueprint = makeWeightedBlueprint();
+      const session = makeSession([blueprint]);
+      harness.store.dispatch(putStoredSession(session));
+      await harness.settle();
+      put.mockClear();
+      return { harness, put, session };
+    }
+
+    it('writes the workout when a set is recorded', async () => {
+      const { harness, put, session } = await startedWorkout();
+
+      harness.store.dispatch(
+        updateStoredSession({ sessionId: session.id, update: (s) => s.withCycledExerciseReps(0, 0, tick()) }),
+      );
+      await harness.settle();
+
+      expect(put).toHaveBeenCalledTimes(1);
+      const { workouts } = await new WorkoutRepository(db).loadAll();
+      const stored = workouts[0]!.recordedExercises[0] as RecordedWeightedExercise;
+      expect(stored.potentialSets[0]!.set).toBeDefined();
+    });
+
+    it('writes nothing when only the rest timer changes', async () => {
+      const { harness, put, session } = await startedWorkout();
+
+      harness.store.dispatch(
+        updateStoredSession({
+          sessionId: session.id,
+          update: (s) => s.with({ restTimer: new RestTimer(tick(), tick()) }),
+        }),
+      );
+      await harness.settle();
+
+      expect(put).not.toHaveBeenCalled();
     });
   });
 });

@@ -10,6 +10,8 @@ import m0005 from './0005_worried_silvermane.sql';
 import m0006 from './0006_far_corsair.sql';
 import m0007 from './0007_brown_quicksilver.sql';
 import m0008 from './0008_far_catseye.sql';
+import m0009 from './0009_relational_workouts.sql';
+import m0010 from './0010_warmup_sets.sql';
 
   export default {
     journal,
@@ -22,7 +24,9 @@ m0004,
 m0005,
 m0006,
 m0007,
-m0008
+m0008,
+m0009,
+m0010
     }
   }
   

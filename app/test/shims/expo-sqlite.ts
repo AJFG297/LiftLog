@@ -46,7 +46,9 @@ export const backupDatabaseAsync: typeof expoBackupDatabaseAsync = async (opts) 
     `SELECT sql FROM sqlite_master WHERE sql IS NOT NULL AND name NOT LIKE 'sqlite_%' ORDER BY rootpage`,
   );
 
-  const stmts: string[] = [];
+  // Tables are copied alphabetically, so a child can land before its parent; check foreign keys at commit,
+  // the way a real page-level backup never has to.
+  const stmts: string[] = ['PRAGMA defer_foreign_keys = ON'];
 
   // Recreate schema on dest
   for (const row of schemaResult.rows) {

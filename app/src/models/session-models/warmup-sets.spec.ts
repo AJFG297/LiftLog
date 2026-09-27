@@ -267,11 +267,4 @@ describe('Session with warm-ups', () => {
     expect(weights(warmups)).toEqual([50, 80]);
     expect(warmups[0]!.set?.repsCompleted).toBe(5);
   });
-
-  it('fills a nil warm-up weight with the fallback unit', () => {
-    const blueprint = makeWeightedBlueprint({ warmupSets: [percent(50)] });
-    const exercise = RecordedWeightedExercise.empty(blueprint, 'nil');
-    const filled = sessionWith(exercise).withNoNilWeights('pounds')!;
-    expect((filled.recordedExercises[0] as RecordedWeightedExercise).warmupSets[0]!.weight.unit).toBe('pounds');
-  });
 });

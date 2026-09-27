@@ -29,7 +29,6 @@ need changing** to add app features - only touch it when the task is explicitly 
 - `models/` - domain models and typed shapes, incl. `models/storage/versions/` (persisted-state migrations).
 - `db/`, `drizzle/` - Drizzle ORM schema and the SQLite layer.
 - `hooks/` - shared React hooks. `utils/` - pure helpers. `i18n/` - Tolgee translations.
-- `gen/` - generated code; don't hand-edit.
 
 Platform-specific implementations use the `foo.tsx` + `foo.android.tsx` split (Metro picks the variant).
 

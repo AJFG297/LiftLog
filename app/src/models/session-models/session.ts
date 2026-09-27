@@ -90,23 +90,6 @@ export class Session {
     );
   }
 
-  withNoNilWeights(fallbackWeightUnit: WeightUnit): Session | undefined {
-    const withoutNilWeight = (ps: PotentialSet) =>
-      ps.with({
-        weight: ps.weight.with({ unit: ps.weight.unit === 'nil' ? fallbackWeightUnit : ps.weight.unit }),
-      });
-    return this.with({
-      recordedExercises: this.recordedExercises.map((re) =>
-        re instanceof RecordedWeightedExercise
-          ? re.with({
-              potentialSets: re.potentialSets.map(withoutNilWeight),
-              warmupSets: re.warmupSets.map(withoutNilWeight),
-            })
-          : re,
-      ),
-    });
-  }
-
   equals(other: Session | undefined): boolean {
     if (!other) {
       return false;

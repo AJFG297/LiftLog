@@ -24,6 +24,7 @@ import { DatabaseMigrationService } from './database-migration-service';
 import { ExpoSQLiteDatabase } from 'drizzle-orm/expo-sqlite';
 import { SQLiteDatabase } from 'expo-sqlite';
 import { DatabaseImportService } from '@/services/database-import-service';
+import { WorkoutRepository } from '@/services/workout-repository';
 
 export type Services = ReturnType<typeof createServices>;
 
@@ -46,6 +47,7 @@ export function createServices(store: Store<RootState>, db: ExpoSQLiteDatabase, 
   const tolgee = getTolgee(preferenceService);
   const workoutWorkerService = new WorkoutWorker(store.dispatch, store.getState, tolgee);
   const healthExportService: HES = new HealthExportService();
+  const workoutRepository = new WorkoutRepository(db);
   const databaseMigrationService = new DatabaseMigrationService(
     db,
     logger,
@@ -74,5 +76,6 @@ export function createServices(store: Store<RootState>, db: ExpoSQLiteDatabase, 
     db,
     expoDb,
     databaseMigrationService,
+    workoutRepository,
   };
 }

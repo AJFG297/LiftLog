@@ -210,7 +210,11 @@ const RecordedWeightedExerciseGenerator = fc
   .record({
     blueprint: WeightedExerciseBlueprintGenerator,
     potentialSets: fc.array(PotentialSetGenerator, { maxLength: 10 }),
-    warmupSets: fc.array(PotentialSetGenerator, { maxLength: 4 }),
+    // Warm-ups never carry an RPE: nothing sets one, and the workout tables don't store one.
+    warmupSets: fc.array(
+      PotentialSetGenerator.map((set) => set.with({ rpe: undefined })),
+      { maxLength: 4 },
+    ),
     notes: optional(fc.string()),
   })
   .map((x) => new RecordedWeightedExercise(x.blueprint, x.potentialSets, x.notes, x.warmupSets));

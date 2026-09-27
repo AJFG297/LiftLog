@@ -1,5 +1,4 @@
 import { Backend } from '@/models/backend';
-import { LiftLog } from '@/gen/proto';
 import { whatsNewEntries, WhatsNewEntry } from '@/models/whats-new';
 import type { RootState } from '@/store';
 import { BackupData, FeedBackupData } from '@/models/backup';
@@ -56,9 +55,6 @@ export type PlaintextExportFormat = 'CSV' | 'JSON';
 
 export const importData = createAction('importData');
 export const importDataSql = createAction<{ db: SQLiteDatabase }>('importDataSql');
-export const importDataProto = createAction<{
-  dao: LiftLog.Ui.Models.ExportedDataDao.ExportedDataDaoV2;
-}>('importDataProto');
 export type ImportBackupDataPayload = BackupData & {
   successMessage: string;
 };

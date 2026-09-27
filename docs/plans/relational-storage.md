@@ -151,7 +151,29 @@ Rough estimates, one person. Tracked in Linear as PM-8, with sub-issues PM-9 to 
   - `latestExercises` only grows on edit.
   - `importBackupData` doesn't await its upserts before re-running migrations.
 
+**Done in PM-9.** The snapshots are `store/stored-sessions/history-snapshots.spec.ts`, over a
+latest-version JSON copy of the fixture (`history-420.sessions.json.gz`) so they don't depend on the
+restore path phase 3 deletes; later phases re-point its `loadHistory` at the new hydration. The baseline
+is `npm run bench:startup` over a 5,000-session synthetic history, with numbers recorded on PM-9. All four
+bugs are fixed; the import one is fixed by settling nil weights in memory before the upsert, so the
+nil-weight migration is no longer re-run on import.
+
 ### Phase 1: new schema, exercise identity, repository (about 1 week)
+
+**Steps 1–3 done in PM-10**, with the backup part of phase 3. The tables follow the target schema sketch, with a few
+settled differences:
+- Exercises and sets are keyed by position within their workout rather than by their own ids.
+- Times used for ordering are epoch-millisecond columns beside the exact offset text.
+- `workout.blueprint_version` says which chain version the exercise blueprints were written at.
+- `exercise_id`, `started_at`/`ended_at` and `is_freeform` wait for the steps that need them.
+
+The migration history was not squashed: `0009` drops `session` and creates the tables, so a development
+install upgrades without a reinstall. `WorkoutRepository` writes through `writeAtomically`, because
+`db.transaction(async …)` isn't atomic on the device driver (see `docs/Storage.md`). Hydration still reads
+every row, though only the columns that rebuild a `Session`. Under Node/libsql the 5,000-session bench's
+migrate + hydrate step went from about 420 ms to about 750 ms, because it now reads about 89k rows
+instead of 5k payloads; phase 2 removes that read.
+
 
 1. **Schema.** Add the tables above and drop `session` in the same migration. Consider squashing
    `app/src/drizzle/` to one baseline. Add a check that the journal (`drizzle/migrations.js`) matches the
