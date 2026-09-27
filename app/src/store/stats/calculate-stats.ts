@@ -126,7 +126,7 @@ export function calculateStats(
     for (const ex of session.recordedExercises) {
       const blueprint = ex.blueprint;
       const key = blueprint.movementKey();
-      if (!ex.hasLoggedWorkingSet) continue;
+      if (!ex.isStarted) continue;
       if (!exerciseStatsMap.has(key)) {
         exerciseStatsMap.set(key, {
           exerciseName: blueprint.name,

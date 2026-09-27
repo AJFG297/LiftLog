@@ -54,7 +54,7 @@ export class HealthExportService implements HES {
       return;
     }
     const { startTime, endTime } = workout;
-    if (!workout.isStarted || !startTime || !endTime) {
+    if (!workout.hasLoggedAnySet || !startTime || !endTime) {
       return;
     }
     const { canShareBodyweight, canShareWorkout } = await this.requestPermissionInternal();
@@ -76,7 +76,7 @@ export class HealthExportService implements HES {
 
     if (canShareWorkout) {
       const exerciseQuantities = workout.recordedExercises
-        .filter((x) => x.isStarted)
+        .filter((x) => x.hasLoggedAnySet)
         .map(toQuantitySampleForSaving)
         .filter(isNotNullOrUndefined);
       await saveWorkoutSample(

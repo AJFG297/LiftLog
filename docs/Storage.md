@@ -147,7 +147,9 @@ A workout is stored across five tables (`db/schema.ts`), not as one payload:
   target and RPE.
 - **Warm-ups** get their own table rather than a flag on `weighted_set`, as the model keeps them in their
   own list: every aggregate over `weighted_set` leaves them out with no filter. They have no RPE and no
-  query columns, since nothing sums or ranks them.
+  query columns, since nothing sums or ranks them. `workout_exercise.latest_time_ms` is the last working
+  set too, so an exercise with only warm-ups logged never ranks as a performance; `workout.reference_time_ms`
+  is the last set of any kind, as it orders workouts by when they happened.
 - **The exercise blueprint** stays a JSON column on `workout_exercise`, and `workout.blueprint_version`
   records the `SessionBlueprintJSON` version it was written at. It is migrated on read by
   `sessionBlueprintMigrations`. A cardio set's own blueprint copy is JSON too; no chain step has ever

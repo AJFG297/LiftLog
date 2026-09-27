@@ -156,12 +156,23 @@ describe('the current set', () => {
 });
 
 describe('warm-up timing', () => {
-  it('starts the exercise and its clock', () => {
+  it('starts the clock but not the performance', () => {
     const at = tick();
     const exercise = withWarmups().withWarmupRepCount(0, 5, at);
-    expect(exercise.isStarted).toBe(true);
-    expect(exercise.earliestTime).toEqual(at);
+    expect(exercise.hasLoggedAnySet).toBe(true);
+    expect(exercise.firstActivityTime).toEqual(at);
+    expect(exercise.lastActivityTime).toEqual(at);
     expect(exercise.lastLoggedSlot).toMatchObject({ kind: 'warmup', index: 0 });
+    // What measures the lift sees nothing yet.
+    expect(exercise.isStarted).toBe(false);
+    expect(exercise.latestTime).toBeUndefined();
+    expect(exercise.earliestTime).toBeUndefined();
+  });
+
+  it('keeps the performance time on the working sets when a warm-up comes after them', () => {
+    const exercise = withWarmups().withRepCount(0, 10, tickAt(10, 0)).withWarmupRepCount(0, 5, tickAt(10, 5));
+    expect(exercise.latestTime).toEqual(tickAt(10, 0));
+    expect(exercise.lastActivityTime).toEqual(tickAt(10, 5));
   });
 
   it('counts toward the exercise duration', () => {

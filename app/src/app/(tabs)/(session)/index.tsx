@@ -136,7 +136,7 @@ function ListUpcomingWorkouts({
                 testID="start-resume-workout-button"
                 onPress={() => startSession(session)}
               >
-                {session.isStarted ? <T keyName="workout.resume.button" /> : <T keyName="workout.start.button" />}
+                {session.hasLoggedAnySet ? <T keyName="workout.resume.button" /> : <T keyName="workout.start.button" />}
               </Button>
             </CardActions>
           );

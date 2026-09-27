@@ -277,8 +277,7 @@ function updateDerivatives(state: WritableDraft<StoredSessionState>, session: Se
     state.earliestSession = session;
   }
   session.recordedExercises.forEach((exercise) => {
-    // Warm-ups alone are no performance to carry on from, though they do give the exercise a time.
-    if (!exercise.latestTime || !exercise.hasLoggedWorkingSet) {
+    if (!exercise.latestTime) {
       return;
     }
     const key = exercise.progressionKey();
@@ -430,6 +429,7 @@ export const storedSessionsReducer = storedSessionsSlice.reducer;
 
 export function getSessionReferenceTime(session: Session): OffsetDateTime {
   return (
-    session.lastExercise?.latestTime ?? session.date.atStartOfDay().atZone(ZoneId.systemDefault()).toOffsetDateTime()
+    session.lastExercise?.lastActivityTime ??
+    session.date.atStartOfDay().atZone(ZoneId.systemDefault()).toOffsetDateTime()
   );
 }

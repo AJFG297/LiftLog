@@ -48,14 +48,14 @@ export class Session {
    */
   get startTime(): OffsetDateTime | undefined {
     return this.recordedExercises.reduce<OffsetDateTime | undefined>((earliest, exercise) => {
-      const time = exercise.earliestTime;
+      const time = exercise.firstActivityTime;
       return time && (!earliest || time.isBefore(earliest)) ? time : earliest;
     }, undefined);
   }
 
   /** When the last set of the workout was logged, warm-ups included. */
   get endTime(): OffsetDateTime | undefined {
-    return this.lastExercise?.latestTime;
+    return this.lastExercise?.lastActivityTime;
   }
 
   static fromJSON(json: SessionJSON): Session {
@@ -300,7 +300,7 @@ export class Session {
       return this;
     }
     let newDate = this.date;
-    if (!this.isStarted) {
+    if (!this.hasLoggedAnySet) {
       newDate = time.toLocalDate();
     }
     return this.with({
@@ -366,16 +366,17 @@ export class Session {
     return this.recordedExercises.every((x) => x.isComplete);
   }
 
+  /**
+   * Whether anything that counts was logged. A session where only warm-ups got done isn't a training
+   * day, so the calendar, its intensity and the streak leave it out.
+   */
   get isStarted(): boolean {
     return this.recordedExercises.some((x) => x.isStarted);
   }
 
-  /**
-   * Whether anything that counts was logged. A session where only warm-ups got done is started, but
-   * it isn't a training day: the calendar, its intensity and the streak all ask this instead.
-   */
-  get hasLoggedWorkingSet(): boolean {
-    return this.recordedExercises.some((x) => x.hasLoggedWorkingSet);
+  /** Whether any set is logged, a warm-up included: the workout is under way. */
+  get hasLoggedAnySet(): boolean {
+    return this.recordedExercises.some((x) => x.hasLoggedAnySet);
   }
 
   get runningCardioSet():
@@ -445,8 +446,8 @@ export class Session {
     }
     const latestExerciseIndex = Enumerable.from(recordedExercises)
       .select(indexed)
-      .where((x) => x.item.isStarted)
-      .orderByDescending(({ item }) => item.latestTime, TemporalComparer)
+      .where((x) => x.item.hasLoggedAnySet)
+      .orderByDescending(({ item }) => item.lastActivityTime, TemporalComparer)
       .select((x) => x.index)
       .firstOrDefault(-1);
 
@@ -500,7 +501,7 @@ export class Session {
 
     for (const recordedExercise of recordedExercises) {
       if (!recordedExercise.isComplete) {
-        const latestTime = recordedExercise.latestTime;
+        const latestTime = recordedExercise.lastActivityTime;
         const epochSecond = latestTime?.toEpochSecond() ?? Number.MIN_VALUE;
 
         if (epochSecond > maxEpochSecond || !result) {
@@ -517,7 +518,7 @@ export class Session {
       return undefined;
     }
     const exercise = this.lastExercise;
-    if (this.nextExercise && exercise && exercise.latestTime && exercise instanceof RecordedWeightedExercise) {
+    if (this.nextExercise && exercise && exercise.lastActivityTime && exercise instanceof RecordedWeightedExercise) {
       const { minRest, failureRest } = exercise.blueprint.restBetweenSets;
       const rest = exercise.lastSetMissedTarget ? failureRest : minRest;
 
@@ -528,11 +529,12 @@ export class Session {
     }
   }
 
+  /** The exercise with the latest set, warm-ups included: the one rest and the workout's end follow. */
   get lastExercise(): RecordedExercise | undefined {
     return Enumerable.from(this.recordedExercises)
-      .where((x) => x.isStarted)
+      .where((x) => x.hasLoggedAnySet)
       .defaultIfEmpty(undefined)
-      .maxBy((x) => x.latestTime?.toInstant().toEpochMilli());
+      .maxBy((x) => x.lastActivityTime?.toInstant().toEpochMilli());
   }
 
   get latestWeightedExercise(): RecordedWeightedExercise | undefined {

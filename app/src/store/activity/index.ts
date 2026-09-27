@@ -46,7 +46,7 @@ function groupByDate<T>(items: T[], dateOf: (item: T) => LocalDate): Map<string,
 
 export const selectOwnSessionsByDate = createSelector([selectSessions], (sessions) =>
   groupByDate(
-    sessions.filter((x) => x.hasLoggedWorkingSet),
+    sessions.filter((x) => x.isStarted),
     (x) => x.date,
   ),
 );
@@ -54,7 +54,7 @@ export const selectOwnSessionsByDate = createSelector([selectSessions], (session
 /** Keyed by the date the session was performed, not the event timestamp. */
 export const selectFeedEventsByDate = createSelector([selectFeedEvents], (feed) =>
   groupByDate(
-    feed.filter((x) => x.session.hasLoggedWorkingSet),
+    feed.filter((x) => x.session.isStarted),
     (x) => x.session.date,
   ),
 );
@@ -66,7 +66,7 @@ export const selectVolumeScales = createSelector(
     const volumesByUser = new Map<string, number[]>();
 
     const push = (userId: string, session: Session) => {
-      if (!session.hasLoggedWorkingSet) return;
+      if (!session.isStarted) return;
       const volumes = volumesByUser.get(userId);
       if (volumes) {
         volumes.push(sessionVolume(session));

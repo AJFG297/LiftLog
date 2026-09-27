@@ -91,7 +91,7 @@ export default function SessionComponent(props: {
       const before = s.cardioSetAt(exerciseIndex, setIndex);
       const updated = s.withCardioSet(exerciseIndex, setIndex, update, now);
       return updated.cardioSetAt(exerciseIndex, setIndex)?.earnsRest(before)
-        ? withRestTimerAt(updated, updated.lastExercise?.latestTime)
+        ? withRestTimerAt(updated, updated.lastExercise?.lastActivityTime)
         : updated;
     });
   };
@@ -139,10 +139,10 @@ export default function SessionComponent(props: {
           timeProvider={() =>
             isActiveWorkout
               ? OffsetDateTime.now()
-              : (session.lastExercise?.latestTime ??
+              : (session.lastExercise?.lastActivityTime ??
                 session.date.atTime(LocalTime.now()).atZone(ZoneId.systemDefault()).toOffsetDateTime())
           }
-          resetSetTimer={() => updateSession((s) => withRestTimerAt(s, s.lastExercise?.latestTime))}
+          resetSetTimer={() => updateSession((s) => withRestTimerAt(s, s.lastExercise?.lastActivityTime))}
           recordedExercise={item}
           toStartNext={session.nextExercise === item}
           updateExercise={(update) =>

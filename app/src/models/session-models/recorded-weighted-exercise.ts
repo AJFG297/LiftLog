@@ -35,6 +35,9 @@ export interface SetPosition {
   index: number;
 }
 
+/** A logged slot and where it sits. */
+export type LoggedSlot = SetPosition & { slot: PotentialSet };
+
 export class RecordedWeightedExercise {
   readonly type = 'RecordedWeightedExercise';
 
@@ -125,7 +128,11 @@ export class RecordedWeightedExercise {
 
   /** The slot at `position`, or undefined when there is none there. */
   slotAt(position: SetPosition): PotentialSet | undefined {
-    return (position.kind === 'warmup' ? this.warmupSets : this.potentialSets)[position.index];
+    return this.listFor(position.kind)[position.index];
+  }
+
+  private listFor(kind: SetKind): PotentialSet[] {
+    return kind === 'warmup' ? this.warmupSets : this.potentialSets;
   }
 
   /**
@@ -248,7 +255,7 @@ export class RecordedWeightedExercise {
   }
 
   private withSlot({ kind, index }: SetPosition, reducer: (s: PotentialSet) => PotentialSet): RecordedWeightedExercise {
-    const list = kind === 'warmup' ? this.warmupSets : this.potentialSets;
+    const list = this.listFor(kind);
     const existingSet = list[index];
     if (!existingSet) {
       throw new IndexOutOfBoundsError(index, list);
@@ -346,31 +353,36 @@ export class RecordedWeightedExercise {
     );
   }
 
-  /** Started once any set is logged, a warm-up included. */
+  /**
+   * Started once a working set is logged. A warm-up alone doesn't count, so everything that measures
+   * the lift - stats, records, history, the performance the next session carries on from - gets that
+   * for free. Timing asks {@link hasLoggedAnySet} instead.
+   */
   get isStarted() {
-    return this.potentialSets.some((x) => x.set !== undefined) || this.warmupSets.some((x) => x.set !== undefined);
+    return this.potentialSets.some((x) => x.set !== undefined);
   }
 
-  /**
-   * Whether a working set is logged. Anything that measures the lift - stats, records, the
-   * performance the next session carries on from - asks this rather than {@link isStarted}, so a
-   * session where only the warm-ups got done counts for nothing.
-   */
-  get hasLoggedWorkingSet(): boolean {
-    return this.potentialSets.some((x) => x.set !== undefined);
+  /** Whether any set is logged, a warm-up included: the workout is under way, and rest is owed. */
+  get hasLoggedAnySet(): boolean {
+    return this.isStarted || this.warmupSets.some((x) => x.set !== undefined);
   }
 
   get hasLoggedRpe(): boolean {
     return this.potentialSets.some((x) => x.loggedRpe !== undefined);
   }
 
-  /** The most recently logged slot across warm-ups and working sets, and where it sits. */
-  get lastLoggedSlot(): (SetPosition & { slot: PotentialSet }) | undefined {
-    const warmupIndex = loggedIndexWhere(this.warmupSets, isAfter);
-    const workingIndex = loggedIndexWhere(this.potentialSets, isAfter);
+  /** The most recently logged slot across warm-ups and working sets. */
+  get lastLoggedSlot(): LoggedSlot | undefined {
+    return this.loggedSlotWhere(isAfter);
+  }
+
+  /** The logged slot, across both lists, that beats every other by `beats`. A warm-up wins a tie. */
+  private loggedSlotWhere(beats: (a: PotentialSet, b: PotentialSet) => boolean): LoggedSlot | undefined {
+    const warmupIndex = loggedIndexWhere(this.warmupSets, beats);
+    const workingIndex = loggedIndexWhere(this.potentialSets, beats);
     const warmup = this.warmupSets[warmupIndex];
     const working = this.potentialSets[workingIndex];
-    if (working && (!warmup || isAfter(working, warmup))) {
+    if (working && (!warmup || beats(working, warmup))) {
       return { kind: 'working', index: workingIndex, slot: working };
     }
     return warmup && { kind: 'warmup', index: warmupIndex, slot: warmup };
@@ -394,10 +406,7 @@ export class RecordedWeightedExercise {
     return this.lastLoggedSlot?.kind === 'warmup' ? { ...rest, maxRest: rest.minRest } : rest;
   }
 
-  /**
-   * The most recently logged working set. What measures the lift - a stat's date - reads this rather
-   * than {@link lastLoggedSlot}, so a warm-up done after the working sets never moves it.
-   */
+  /** The most recently logged working set; a warm-up done after the working sets never moves it. */
   get lastLoggedWorkingSet(): PotentialSet | undefined {
     return this.potentialSets[loggedIndexWhere(this.potentialSets, isAfter)];
   }
@@ -422,21 +431,30 @@ export class RecordedWeightedExercise {
     return workingIndex >= 0 ? { kind: 'working', index: workingIndex } : undefined;
   }
 
+  /** From the first set to the last, warm-ups included. */
   get duration(): Duration | undefined {
-    return this.latestTime && this.earliestTime ? Duration.between(this.earliestTime, this.latestTime) : undefined;
+    const { firstActivityTime, lastActivityTime } = this;
+    return firstActivityTime && lastActivityTime ? Duration.between(firstActivityTime, lastActivityTime) : undefined;
+  }
+
+  /** When the last working set was logged: what orders performances for history and carry-over. */
+  get latestTime(): OffsetDateTime | undefined {
+    return this.lastLoggedWorkingSet?.set!.completionDateTime;
+  }
+
+  /** When the first working set was logged. */
+  get earliestTime(): OffsetDateTime | undefined {
+    return this.potentialSets[loggedIndexWhere(this.potentialSets, isBefore)]?.set!.completionDateTime;
   }
 
   /** When the last set was logged, warm-ups included: timing (rest, duration, Health) reads it. */
-  get latestTime(): OffsetDateTime | undefined {
+  get lastActivityTime(): OffsetDateTime | undefined {
     return this.lastLoggedSlot?.slot.set!.completionDateTime;
   }
 
   /** When the first set was logged, warm-ups included. */
-  get earliestTime(): OffsetDateTime | undefined {
-    const warmup = this.warmupSets[loggedIndexWhere(this.warmupSets, isBefore)];
-    const working = this.potentialSets[loggedIndexWhere(this.potentialSets, isBefore)];
-    const earliest = working && (!warmup || isBefore(working, warmup)) ? working : warmup;
-    return earliest?.set!.completionDateTime;
+  get firstActivityTime(): OffsetDateTime | undefined {
+    return this.loggedSlotWhere(isBefore)?.slot.set!.completionDateTime;
   }
 
   /** Complete once every working set is logged; a skipped warm-up never holds an exercise open. */
