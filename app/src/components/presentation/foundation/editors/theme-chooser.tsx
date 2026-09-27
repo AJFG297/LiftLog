@@ -4,18 +4,19 @@ import { useAppTheme, spacing } from '@/hooks/useAppTheme';
 import { ColorSchemeSeed, ThemeMode } from '@/store/settings';
 import { hsvToHex, type HexColor } from '@/utils/color';
 import { sleep } from '@/utils/sleep';
-import { createMaterial3Theme } from '@pchmn/expo-material3-theme';
-import { T, useTranslate } from '@tolgee/react';
+import { ACCENT_PRESETS, accentTokens, VERMILION, type AccentPresetKey } from '@/utils/theme-tokens';
+import { isDynamicThemeSupported } from '@pchmn/expo-material3-theme';
+import { TranslationKey, useTranslate } from '@tolgee/react';
 import { useState } from 'react';
-import { View } from 'react-native';
+import { Platform, View } from 'react-native';
 import { FlatList } from 'react-native-gesture-handler';
 import Svg, { Path } from 'react-native-svg';
-import Button from '@/components/presentation/foundation/button';
 import ColorPickerDialog from '@/components/presentation/foundation/editors/color-picker-dialog';
 import { SelectPickerOption } from '@/components/presentation/foundation/select-picker';
 import { SegmentedGroup, SegmentListFormElement } from '@/components/presentation/foundation/segmented-list';
 import { SegmentedListSelect } from '@/components/presentation/foundation/segmented-list-select';
 import { SegmentedListSwitch } from '@/components/presentation/foundation/segmented-list-switch';
+import { SurfaceText } from '@/components/presentation/foundation/surface-text';
 
 interface ThemeChooserProps {
   seed: ColorSchemeSeed;
@@ -26,36 +27,44 @@ interface ThemeChooserProps {
   setThemeMode: (mode: ThemeMode) => void;
 }
 
-function ColorBall(props: {
-  selectedSeed: ColorSchemeSeed;
-  seed: `#${string}`;
-  onUpdateTheme: (seed: ColorSchemeSeed) => void | Promise<void>;
-}) {
-  const { colors, colorScheme } = useAppTheme();
-  const theme = createMaterial3Theme(props.seed);
-  const isSelected = props.seed === props.selectedSeed;
+const ACCENT_LABELS: Record<AccentPresetKey, TranslationKey> = {
+  vermilion: 'settings.theme.accent.vermilion',
+  forest: 'settings.theme.accent.forest',
+  blue: 'settings.theme.accent.blue',
+  violet: 'settings.theme.accent.violet',
+  rose: 'settings.theme.accent.rose',
+  teal: 'settings.theme.accent.teal',
+  amber: 'settings.theme.accent.amber',
+};
+
+// Swatches show the fill the app will actually use, which can differ from the seed (see `accentFill`).
+const PRESETS = ACCENT_PRESETS.map((preset) => ({ ...preset, fill: accentTokens(preset.seed, 'light').accent }));
+
+const SWATCH_SIZE = spacing[12];
+
+function sameColor(a: ColorSchemeSeed, b: HexColor) {
+  return a.toUpperCase() === b.toUpperCase();
+}
+
+function ColorBall(props: { fill: HexColor; label: string; selected: boolean; onPress: () => void }) {
+  const { tokens } = useAppTheme();
 
   return (
-    <FocusRing isSelected={isSelected}>
-      <View
-        style={{
-          borderRadius: spacing[12],
-          overflow: 'hidden',
-          borderColor: colors.outline,
-        }}
-      >
+    <FocusRing isSelected={props.selected}>
+      <View style={{ borderRadius: SWATCH_SIZE, overflow: 'hidden' }}>
         <TouchableRipple
+          accessibilityRole="radio"
+          accessibilityState={{ selected: props.selected }}
+          accessibilityLabel={props.label}
           style={{
-            width: spacing[12],
-            height: spacing[12],
-            borderRadius: spacing[12],
-            backgroundColor: theme[colorScheme].primary,
-            borderColor: colors.outlineVariant,
+            width: SWATCH_SIZE,
+            height: SWATCH_SIZE,
+            borderRadius: SWATCH_SIZE,
+            backgroundColor: props.fill,
+            borderColor: tokens.line2,
             borderWidth: 2,
           }}
-          onPress={() => {
-            void props.onUpdateTheme(props.seed);
-          }}
+          onPress={props.onPress}
         >
           <></>
         </TouchableRipple>
@@ -64,10 +73,39 @@ function ColorBall(props: {
   );
 }
 
-/** A ball hinting "any color" via a hue ring, or filled with the active custom color when one is set. */
-function CustomBall(props: { active: boolean; color: HexColor | undefined; onPress: () => void }) {
-  const { colors } = useAppTheme();
-  const size = spacing[12];
+function MatchWallpaperChip(props: { label: string; selected: boolean; onPress: () => void }) {
+  const { tokens } = useAppTheme();
+
+  return (
+    <FocusRing isSelected={props.selected}>
+      <View style={{ borderRadius: SWATCH_SIZE, overflow: 'hidden' }}>
+        <TouchableRipple
+          accessibilityRole="radio"
+          accessibilityState={{ selected: props.selected }}
+          accessibilityLabel={props.label}
+          style={{
+            height: SWATCH_SIZE,
+            paddingHorizontal: spacing[4],
+            justifyContent: 'center',
+            borderRadius: SWATCH_SIZE,
+            borderColor: tokens.line2,
+            borderWidth: 2,
+          }}
+          onPress={props.onPress}
+        >
+          <SurfaceText font="text-sm" weight="600" style={{ color: tokens.ink }}>
+            {props.label}
+          </SurfaceText>
+        </TouchableRipple>
+      </View>
+    </FocusRing>
+  );
+}
+
+/** A ball hinting "any color" via a hue ring, or filled with the active custom color's fill when one is set. */
+function CustomBall(props: { label: string; active: boolean; fill: HexColor | undefined; onPress: () => void }) {
+  const { tokens } = useAppTheme();
+  const size = SWATCH_SIZE;
   // Many thin wedges make the hue transitions blend into a smooth conic gradient (SVG has no conic).
   const count = 180;
   const step = (2 * Math.PI) / count;
@@ -83,20 +121,23 @@ function CustomBall(props: { active: boolean; color: HexColor | undefined; onPre
 
   return (
     <FocusRing isSelected={props.active}>
-      <View style={{ borderRadius: size, overflow: 'hidden', borderColor: colors.outline }}>
+      <View style={{ borderRadius: size, overflow: 'hidden' }}>
         <TouchableRipple
+          accessibilityRole="radio"
+          accessibilityState={{ selected: props.active }}
+          accessibilityLabel={props.label}
           style={{
             width: size,
             height: size,
             borderRadius: size,
-            borderColor: colors.outlineVariant,
+            borderColor: tokens.line2,
             borderWidth: 2,
             overflow: 'hidden',
           }}
           onPress={props.onPress}
         >
-          {props.active && props.color ? (
-            <View style={{ flex: 1, backgroundColor: props.color }} />
+          {props.active && props.fill ? (
+            <View style={{ flex: 1, backgroundColor: props.fill }} />
           ) : (
             <Svg width={size} height={size}>
               {wedges.map((w, i) => (
@@ -110,8 +151,6 @@ function CustomBall(props: { active: boolean; color: HexColor | undefined; onPre
   );
 }
 
-const PRESET_SEEDS = ['#550000', '#005500', '#000055', '#AA00AA', '#00AAAA', '#AAAA00', '#FFC0CB', '#7f3f00'] as const;
-
 export default function ThemeChooser(props: ThemeChooserProps) {
   const { t } = useTranslate();
   const [selectedSeed, setSelectedSeed] = useState(props.seed);
@@ -123,11 +162,20 @@ export default function ThemeChooser(props: ThemeChooserProps) {
     props.onUpdateTheme(seed);
   };
 
-  const colorSeeds = PRESET_SEEDS;
-  const isCustom = selectedSeed !== 'default' && !colorSeeds.includes(selectedSeed as (typeof PRESET_SEEDS)[number]);
+  const canMatchWallpaper = Platform.OS === 'android' && isDynamicThemeSupported;
+  // Without a wallpaper to match, a stored 'default' renders as vermilion (see useAppTheme), so it's shown
+  // as the vermilion swatch rather than as a choice that isn't on offer.
+  const shownSeed: ColorSchemeSeed = selectedSeed === 'default' && !canMatchWallpaper ? VERMILION : selectedSeed;
+  const customSeed =
+    shownSeed !== 'default' && !PRESETS.some((preset) => sameColor(shownSeed, preset.seed)) ? shownSeed : undefined;
 
-  const renderColorBall = ({ item }: { item: `#${string}` }) => (
-    <ColorBall selectedSeed={selectedSeed} seed={item} onUpdateTheme={updateSeed} />
+  const renderColorBall = ({ item }: { item: (typeof PRESETS)[number] }) => (
+    <ColorBall
+      fill={item.fill}
+      label={t(ACCENT_LABELS[item.key])}
+      selected={sameColor(shownSeed, item.seed)}
+      onPress={() => void updateSeed(item.seed)}
+    />
   );
 
   const themeModeOptions: SelectPickerOption<ThemeMode>[] = [
@@ -142,35 +190,34 @@ export default function ThemeChooser(props: ThemeChooserProps) {
         <SegmentListFormElement
           label={t('settings.theme.title')}
           line2={
-            <View
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: spacing[4],
-                marginBlockStart: spacing[2],
-              }}
-            >
-              <FocusRing isSelected={selectedSeed === 'default'}>
-                <Button style={{ position: 'relative' }} onPress={() => void updateSeed('default')}>
-                  <T keyName="generic.default.label" />
-                </Button>
-              </FocusRing>
-              <FlatList
-                horizontal
-                data={colorSeeds}
-                renderItem={renderColorBall}
-                keyExtractor={(item) => item}
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={{ gap: spacing[2], padding: spacing[2], alignItems: 'center' }}
-                ListFooterComponent={
-                  <CustomBall
-                    active={isCustom}
-                    color={isCustom ? selectedSeed : undefined}
-                    onPress={() => setPickerOpen(true)}
+            <FlatList
+              horizontal
+              accessibilityRole="radiogroup"
+              accessibilityLabel={t('settings.theme.title')}
+              data={PRESETS}
+              renderItem={renderColorBall}
+              keyExtractor={(item) => item.key}
+              showsHorizontalScrollIndicator={false}
+              style={{ marginBlockStart: spacing[2] }}
+              contentContainerStyle={{ gap: spacing[2], padding: spacing[2], alignItems: 'center' }}
+              ListHeaderComponent={
+                canMatchWallpaper ? (
+                  <MatchWallpaperChip
+                    label={t('settings.theme.match_wallpaper.label')}
+                    selected={shownSeed === 'default'}
+                    onPress={() => void updateSeed('default')}
                   />
-                }
-              />
-            </View>
+                ) : null
+              }
+              ListFooterComponent={
+                <CustomBall
+                  label={t('settings.theme.custom.label')}
+                  active={customSeed !== undefined}
+                  fill={customSeed && accentTokens(customSeed, 'light').accent}
+                  onPress={() => setPickerOpen(true)}
+                />
+              }
+            />
           }
         />
         <SegmentedListSelect
