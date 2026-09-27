@@ -1,16 +1,20 @@
 ---
 name: expo-ui-migration
 description: >-
-  Use when moving a react-native-paper component to native expo-ui (SwiftUI on iOS / Jetpack Compose on
-  Android), or authoring any new platform-split native control - i.e. creating a `foo.tsx` +
+  Use when moving a react-native-paper system-chrome control (sheet, menu, switch, picker, alert) to
+  native expo-ui (SwiftUI on iOS / Jetpack Compose on Android), or authoring any new platform-split native
+  control - i.e. creating a `foo.tsx` +
   `foo.android.tsx` + `foo-props.ts` triple that renders `@expo/ui` `Host`s. Covers the seedColor rule,
   the icon-interop trap, and the Compose/SwiftUI gotchas that are easy to get wrong.
 ---
 
 # Migrating a component to expo-ui (native)
 
-LiftLog is incrementally moving off `react-native-paper` onto native controls via `@expo/ui` - SwiftUI
-on iOS, Jetpack Compose (M3 expressive) on Android. Each migrated control is a **platform-split triple**.
+LiftLog is moving off `react-native-paper`. Per [ADR-0002](../../../docs/adr/0002-own-visual-language.md),
+**system chrome** goes native via `@expo/ui`: SwiftUI on iOS, Jetpack Compose (M3 expressive) on Android.
+That covers tabs, sheets, menus, switches, pickers and alerts. **Content surfaces** don't use this
+skill. Cards, set rows, the number pad and summaries are our own components built on the theme tokens
+(see `docs/plans/redesign.md`). Each native control is a **platform-split triple**.
 
 ## The triple
 

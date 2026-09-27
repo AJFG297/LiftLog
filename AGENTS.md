@@ -84,10 +84,16 @@ the wizard is how new users get the chance to enable it.
   [ADR-0001](docs/adr/0001-own-backend-no-upstream-compatibility.md).
 - Use **named exports** for new files (`export function Foo`), not default exports - even though older
   files use defaults. Don't bulk-convert existing files.
-- react-native-paper is being **incrementally migrated to expo-ui** (SwiftUI on iOS / Jetpack Compose on
-  Android) using a platform-split file convention: `foo.tsx` + `foo.android.tsx` + shared `foo-props.ts`.
-  For native `Host`s, seed theming with `colors.seedColor` (not `colors.primary`), let native components
-  own their slot colors, and use `@expo/material-symbols` XML icons inside Compose.
+- **Visual language ([ADR-0002](docs/adr/0002-own-visual-language.md)).** The app is being redesigned
+  screen by screen ([plan](docs/plans/redesign.md)).
+  - **Content surfaces are our own components**, built only from the theme tokens in `useAppTheme`:
+    cards, set rows, the number pad, summaries, chips.
+  - **System chrome stays native** via expo-ui: tabs, sheets (`formSheet`), menus, switches, pickers,
+    alerts.
+  - For native controls, use the platform-split convention: `foo.tsx` + `foo.android.tsx` + shared
+    `foo-props.ts`. Seed `Host`s with `colors.seedColor` (not `colors.primary`), let native components
+    own their slot colors, and use `@expo/material-symbols` XML icons inside Compose.
+  - react-native-paper is being phased out. Don't add new Paper usage.
 - The **React Compiler** is enabled, so it auto-memoizes render output - don't reach for `useMemo`,
   `useCallback`, or `React.memo` by default. Write plain values, functions, and inline objects; only add
   manual memoization for a proven need the compiler can't cover (e.g. a stable identity a non-React API
