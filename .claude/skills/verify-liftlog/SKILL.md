@@ -43,12 +43,14 @@ One-time per machine: `setup` creates the AVD. It checks that `maestro` is insta
 - `build`: `npm ci` if `node_modules` is missing, `expo prebuild --platform android` if `app/android/` is missing,
   then `gradlew app:assembleDebugOptimized` for arm64 only. A warm build takes about 2 minutes. Rebuild only when native
   code changes: `package.json` native deps, `app.json` plugins, or anything under `app/modules/` or `app/plugins/`.
-  If you change `app.json` plugins, delete `app/android/` so prebuild regenerates it. JS/TS edits hot-reload through
-  Metro.
+  If you change `app.json` plugins, delete `app/android/` so prebuild regenerates it. JS/TS edits need no rebuild,
+  but don't assume Metro picked them up. See "Metro can miss JS edits" under Gotchas.
 - `up`: cold-boots the emulator headless (`VERIFY_WINDOW=1` shows a window), waits for `sys.boot_completed`,
   runs `adb install -r`, and sets up `adb reverse tcp:8091`. It then starts Metro from this checkout's `app/`, waits
   for `/status` to report `packager-status:running`, and opens the dev client at the Metro URL. It prints the **run
-  id** and the evidence directory.
+  id** and the evidence directory. Don't pipe `up` into another command (`verify.sh up | tail`): Metro inherits the
+  pipe and holds it open, so the pipeline never ends even though `up` has finished. Redirect to a file instead
+  (`verify.sh up > up.log 2>&1`), or run it as a background task.
 - **Ready means `flows/ready.yaml` exits 0.** The flow launches the app, waits up to 3 minutes for the first bundle,
   dismisses the dev-client's developer-menu sheet, taps through the welcome wizard on a fresh install (Next, Next,
   Get started), and asserts the Workout tab's `Freeform workout` button. It's safe to re-run at any time.
@@ -158,6 +160,15 @@ all three hit other sessions' builds, Metro, and emulators.
   shows the Expo dev-launcher screen instead of LiftLog, re-run `up`, which re-opens the URL.
 - Running the whole `app/.maestro/` directory also runs `fresh-install-onboarding` unless you pass
   `--exclude-tags ci-only`. Run flows one at a time through `verify.sh flow`.
+- **Metro can miss JS edits.** Without watchman installed, Metro's file watcher didn't notice an edited file in a
+  git worktree. The app kept its already-built bundle, even across `am force-stop` and `launchApp`, and a flow that
+  should have failed passed. A fresh bundle request did return the new code, so asking Metro directly doesn't
+  show what the app is running. Before trusting a run after a JS edit, run `down` then `up` so Metro rebuilds
+  from disk. When comparing old and new code (a control run), also add a temporary `console.log` marker and confirm it
+  appears in `.verify-runs/.state/metro.log`.
+- **Installing with `npm ci --ignore-scripts` breaks `build`.** It skips `patch-package` and
+  `@shopify/react-native-skia`'s binary download, so the build fails with `Skia prebuilt binaries not found`.
+  `build` only runs `npm ci` when `node_modules` is missing, so run a plain `npm ci` in `app/` yourself.
 - Defaults are overridable with `VERIFY_AVD`, `VERIFY_EMU_PORT`, and `VERIFY_METRO_PORT`. Use them only when the
   defaults collide with something that isn't a verify instance.
 

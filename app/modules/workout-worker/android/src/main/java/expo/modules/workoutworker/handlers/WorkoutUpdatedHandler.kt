@@ -20,8 +20,6 @@ import expo.modules.workoutworker.utils.RestWindow
 import expo.modules.workoutworker.utils.WorkoutNotificationManager
 import expo.modules.workoutworker.utils.currentWeightedSetOf
 import kotlinx.coroutines.MainScope
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.DurationUnit.SECONDS
@@ -140,11 +138,6 @@ class WorkoutUpdatedHandler(
             }
             if (restNotif != null) {
                 notificationManager.notifyRest(restNotif)
-
-                MainScope().launch {
-                    delay(10_000)
-                    notificationManager.clearRestNotification()
-                }
             }
             @Suppress("AssignedValueIsNeverRead")
             previousProgress = progress
@@ -222,10 +215,6 @@ class WorkoutUpdatedHandler(
                         .setContentTitle(translations.workoutPersistentNotificationCardioTargetReachedMessage)
                         .build()
                 )
-                MainScope().launch {
-                    delay(10_000)
-                    notificationManager.clearRestNotification()
-                }
             }
 
             val timeMessage = when {

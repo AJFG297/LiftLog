@@ -10,6 +10,10 @@ import androidx.core.app.NotificationManagerCompat
 import expo.modules.workoutworker.R
 import expo.modules.workoutworker.WorkoutConstants.getLaunchAppAtWorkoutPagePendingIntent
 import expo.modules.workoutworker.WorkoutConstants.getLiveUpdateDeleteIntent
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 
 // Which stage of a rest break the timer is in, and the small icon that marks it in the notification
@@ -37,7 +41,13 @@ class WorkoutNotificationManager(private val context: Context) {
 
         const val PERSISTENT_CHANNEL_ID = "workout_channel"
         const val REST_CHANNEL_ID = "rest_channel"
+
+        private const val REST_NOTIFICATION_LIFETIME_MS = 10_000L
     }
+
+    private val headphoneAlertPlayer = HeadphoneAlertPlayer(context)
+
+    private var clearRestJob: Job? = null
 
     // Set once the user swipes the Live Update away; from then on we stop requesting promotion so
     // Android doesn't revoke our permission for re-posting a dismissed promoted notification.
@@ -114,10 +124,19 @@ class WorkoutNotificationManager(private val context: Context) {
         manager.notify(PERSISTENT_NOTIFICATION_ID, notification)
     }
 
+    // Posts a short-lived rest alert. Min and max rest alerts share an id, so the previous one is
+    // cancelled first - otherwise setOnlyAlertOnce silences the second, and the first one's pending
+    // clear would remove it early.
     fun notifyRest(notification: Notification) {
         val manager = context.getSystemService(NotificationManager::class.java)
+        clearRestJob?.cancel()
+        manager.cancel(REST_NOTIFICATION_ID)
         manager.notify(REST_NOTIFICATION_ID, notification)
-
+        headphoneAlertPlayer.playIfSilenced()
+        clearRestJob = MainScope().launch {
+            delay(REST_NOTIFICATION_LIFETIME_MS)
+            manager.cancel(REST_NOTIFICATION_ID)
+        }
     }
 
     fun clearPersistentNotification() {
