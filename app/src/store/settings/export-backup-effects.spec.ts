@@ -17,7 +17,7 @@ function makeFileExportService(): MockedObject<FileExportService> {
 describe('addExportBackupEffects', () => {
   let expoDb: SQLiteDatabase;
   beforeAll(async () => {
-    const bytes = await readFile(resolve(__dirname, '../../utils/__test__/export.liftlogbackup.sqlite.gz'));
+    const bytes = await readFile(resolve(__dirname, '../../utils/__test__/backup.liftlogbackup.sqlite.gz'));
 
     expoDb = await deserializeDatabaseAsync(gunzipSync(bytes));
   });

@@ -22,14 +22,12 @@ import { fetchUpcomingSessions } from '@/store/program';
 import { addUnpublishedSessionId } from '@/store/feed';
 import { setStatsIsDirty } from '@/store/stats';
 import { setPreferredLanguage } from '@/store/settings';
-import { Session } from '@/models/session-models';
-import { sessionMigrations } from '@/models/storage/versions/migrations';
-import { exercisesSchema, sessionsSchema } from '@/db/schema';
+import { exercisesSchema } from '@/db/schema';
+import { samePersistedContent } from '@/services/workout-rows';
 import { eq, sql } from 'drizzle-orm';
 import { toRecord } from '@/utils/reduce';
 import { fromExerciseDescriptorJSON, toExerciseDescriptorJSON } from '@/models/exercise-models';
 import { loadBuiltInExercises } from '@/services/exercise-catalog';
-import { migrateLegacyCurrentSession } from '@/store/stored-sessions/legacy-current-session';
 
 // Built-ins the user deleted, so they stay hidden across restarts and locale switches.
 const hiddenBuiltInExerciseIdsStorageKey = 'HiddenBuiltInExerciseIdList';
@@ -37,30 +35,22 @@ export function applyStoredSessionsEffects(addEffect: AddEffectFn) {
   // Dispatched AFTER settings, so we can safely access settings
   addEffect(
     initializeStoredSessionsStateSlice,
-    async (_, { cancelActiveListeners, getState, dispatch, extra: { keyValueStore, db, logger } }) => {
+    async (
+      _,
+      { cancelActiveListeners, getState, dispatch, extra: { keyValueStore, db, logger, workoutRepository } },
+    ) => {
       cancelActiveListeners();
       if (!getState().settings.isHydrated) {
         throw new Error('Settings must be hydrated before stored sessions');
       }
       await logger.time('initializeStoredSessions', async () => {
-        const rows = await db.select().from(sessionsSchema);
-        const storedSessions = rows.reduce(
-          toRecord(
-            (x) => x.id,
-            (row) => Session.fromJSON(sessionMigrations.migrate(row.payload)),
-          ),
-          {},
-        );
-        dispatch(setStoredSessions(storedSessions));
-        // Only when there is one: dispatching `undefined` would clear every flag in the table, and a
-        // kill between that write and the migration below would lose the workout in progress.
-        const activeRowId = rows.find((x) => x.active)?.id;
-        if (activeRowId) {
-          dispatch(setActiveSessionId(activeRowId));
+        const { workouts, activeWorkoutId } = await workoutRepository.loadAll();
+        dispatch(setStoredSessions(Object.fromEntries(workouts.map((x) => [x.id, x]))));
+        // Only when there is one: dispatching `undefined` would clear every flag in the table.
+        if (activeWorkoutId) {
+          dispatch(setActiveSessionId(activeWorkoutId));
         }
       });
-
-      await migrateLegacyCurrentSession(dispatch, getState, keyValueStore, logger);
 
       const savedExercises = (await db.select().from(exercisesSchema)).reduce(
         toRecord(
@@ -121,10 +111,8 @@ export function applyStoredSessionsEffects(addEffect: AddEffectFn) {
     }
   });
 
-  addEffect(deleteStoredSession, async (action, { extra: { logger, db } }) => {
-    await logger.time('deleteStoredSession', async () => {
-      await db.delete(sessionsSchema).where(eq(sessionsSchema.id, action.payload));
-    });
+  addEffect(deleteStoredSession, async (action, { extra: { logger, workoutRepository } }) => {
+    await logger.time('deleteStoredSession', () => workoutRepository.delete(action.payload));
   });
   addEffect(deleteStoredSession, async (action, { stateAfterReduce, extra: { healthExportService, logger } }) => {
     const workoutId = action.payload;
@@ -139,77 +127,46 @@ export function applyStoredSessionsEffects(addEffect: AddEffectFn) {
   });
 
   // Content only. The `active` flag has a single writer below, so a recorded set never touches it.
-  addEffect([putStoredSession, updateStoredSession], async (action, { getState, extra: { db, logger } }) => {
-    const sessionId = putStoredSession.match(action)
-      ? action.payload.id
-      : updateStoredSession.match(action)
-        ? action.payload.sessionId
-        : undefined;
-    // Read at write time rather than from stateAfterReduce, so a slow write still stores the newest
-    // payload if a later edit overtakes it.
-    const session = sessionId === undefined ? undefined : selectSession(getState(), sessionId);
-    if (!session) {
-      return;
-    }
-    await logger.time('persistStoredSession', async () => {
-      await db
-        .insert(sessionsSchema)
-        .values({
-          id: session.id,
-          active: false,
-          payload: session.toJSON(),
-        })
-        .onConflictDoUpdate({
-          target: sessionsSchema.id,
-          set: {
-            payload: sql.raw(`excluded.${sessionsSchema.payload.name}`),
-          },
-        });
+  addEffect(
+    [putStoredSession, updateStoredSession],
+    async (action, { getState, stateBeforeReduce, stateAfterReduce, extra: { logger, workoutRepository } }) => {
+      const sessionId = putStoredSession.match(action)
+        ? action.payload.id
+        : updateStoredSession.match(action)
+          ? action.payload.sessionId
+          : undefined;
+      if (sessionId === undefined) {
+        return;
+      }
+      // A rest timer or a running cardio timer isn't stored, so an update that changes only those writes
+      // nothing. That is most updates while resting.
+      if (updateStoredSession.match(action)) {
+        const before = selectSession(stateBeforeReduce, sessionId);
+        const after = selectSession(stateAfterReduce, sessionId);
+        if (before && after && samePersistedContent(before, after)) {
+          return;
+        }
+      }
+      // Read at write time rather than from stateAfterReduce, so a slow write still stores the newest
+      // content if a later edit overtakes it.
+      const session = selectSession(getState(), sessionId);
+      if (!session) {
+        return;
+      }
+      await logger.time('persistStoredSession', () => workoutRepository.put(session));
+    },
+  );
+
+  addEffect(setActiveSessionId, async (action, { getState, extra: { logger, workoutRepository } }) => {
+    await logger.time('setActiveSessionId', () => {
+      const sessionId = action.payload;
+      return workoutRepository.setActive(sessionId === undefined ? undefined : selectSession(getState(), sessionId));
     });
   });
 
-  // The only writer of `active`. It upserts rather than updates so it does not depend on the row having
-  // been written by the effect above first - the two are dispatched together and race.
-  addEffect(setActiveSessionId, async (action, { getState, extra: { db, logger } }) => {
-    await logger.time('setActiveSessionId', async () => {
-      await db.transaction(async (tx) => {
-        await tx.update(sessionsSchema).set({ active: false }).where(eq(sessionsSchema.active, true));
-        const sessionId = action.payload;
-        if (sessionId === undefined) {
-          return;
-        }
-        const session = selectSession(getState(), sessionId);
-        if (!session) {
-          return;
-        }
-        await tx
-          .insert(sessionsSchema)
-          .values({ id: session.id, active: true, payload: session.toJSON() })
-          .onConflictDoUpdate({ target: sessionsSchema.id, set: { active: true } });
-      });
-    });
-  });
-
-  addEffect(upsertStoredSessions, async (action, { cancelActiveListeners, extra: { db, logger } }) => {
+  addEffect(upsertStoredSessions, async (action, { cancelActiveListeners, extra: { logger, workoutRepository } }) => {
     cancelActiveListeners();
-    await logger.time('upsertStoredSessions', async () => {
-      // Restored sessions are never active - a backup should not resume someone else's workout, and an
-      // in-progress workout on this device keeps its flag because the conflict path only sets payload.
-      const toUpsert = action.payload.map((x) => ({
-        id: x.id,
-        active: false,
-        payload: x.toJSON(),
-      }));
-      await db
-        .insert(sessionsSchema)
-        .values(toUpsert)
-        .onConflictDoUpdate({
-          target: sessionsSchema.id,
-          set: {
-            payload: sql.raw(`excluded.${sessionsSchema.payload.name}`),
-          },
-        });
-    });
+    await logger.time('upsertStoredSessions', () => workoutRepository.putMany(action.payload));
   });
 
   addEffect(deleteExercise, async (action, { stateAfterReduce, extra: { db, keyValueStore } }) => {

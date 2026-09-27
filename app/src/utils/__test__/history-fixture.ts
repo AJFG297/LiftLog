@@ -8,10 +8,9 @@ import { sessionMigrations } from '@/models/storage/versions/migrations';
 import { Weight } from '@/models/weight';
 
 /**
- * The 420 sessions from `export.liftlogbackup.sqlite.gz`, restored once and saved as serialized sessions
- * sorted by id. The history snapshots load this rather than the backup so they don't depend on the
- * upstream-era restore path, which the storage rewrite deletes. Rows go through the session migration
- * chain, so the fixture keeps loading after a version bump.
+ * 420 sessions from a real upstream-era backup, restored once and saved as serialized sessions sorted by
+ * id. The same history is in `backup.liftlogbackup.sqlite.gz`, the restore fixture. Rows go through the
+ * session migration chain, so the fixture keeps loading after a version bump.
  */
 export function loadHistoryFixture(): Session[] {
   const json = JSON.parse(
