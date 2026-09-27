@@ -1,4 +1,4 @@
-import { spacing, useAppTheme } from '@/hooks/useAppTheme';
+import { numberStyle, spacing, useAppTheme } from '@/hooks/useAppTheme';
 import { RPE_VALUES, Rpe } from '@/models/session-models/rpe';
 import IconButton from '@/components/presentation/foundation/icon-button';
 import Button from '@/components/presentation/foundation/button';
@@ -18,7 +18,13 @@ export function RpeChips(props: RpeChipsProps) {
   return (
     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing[1], alignItems: 'center' }}>
       {RPE_VALUES.map((rpe) => (
-        <Chip key={rpe} testID={`rpe-${rpe}`} selected={props.value === rpe} onPress={() => props.onChange(rpe)}>
+        <Chip
+          key={rpe}
+          testID={`rpe-${rpe}`}
+          selected={props.value === rpe}
+          onPress={() => props.onChange(rpe)}
+          textStyle={numberStyle}
+        >
           {rpe}
         </Chip>
       ))}

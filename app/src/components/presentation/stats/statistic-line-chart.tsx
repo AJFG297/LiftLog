@@ -2,7 +2,7 @@ import { StatisticOverTime } from '@/store/stats';
 import { QuantityAxis } from '@/components/presentation/stats/quantity-axis';
 import { LineChart, lineDataItem } from 'react-native-gifted-charts';
 import { View } from 'react-native';
-import { spacing, useAppTheme } from '@/hooks/useAppTheme';
+import { numberStyle, spacing, useAppTheme } from '@/hooks/useAppTheme';
 import { useEffect, useState } from 'react';
 import { lineGraphProps } from '@/components/presentation/stats/line-graph-props';
 import { useFormatDate } from '@/hooks/useFormatDate';
@@ -89,7 +89,7 @@ function FocusedDatapointLabelComponent(props: { value: string; label: string })
       }}
     >
       <Text>{props.label}</Text>
-      <Text>{props.value}</Text>
+      <Text style={numberStyle}>{props.value}</Text>
     </View>
   );
 }

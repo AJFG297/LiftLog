@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { TextStyle } from 'react-native';
 import { TextInput, TextInputProps } from 'react-native-paper';
+import { numberStyle } from '@/hooks/useAppTheme';
 
 interface IntegerEditorProps {
   value: number;
@@ -11,7 +12,7 @@ interface IntegerEditorProps {
 }
 
 export function IntegerEditor(props: IntegerEditorProps & Partial<Omit<TextInputProps, keyof IntegerEditorProps>>) {
-  const { value, onChange, noUnderline, style, testID, ...rest } = props;
+  const { value, onChange, noUnderline, style, contentStyle, testID, ...rest } = props;
   const [text, setText] = useState(props.value.toString());
   const [editorValue, setEditorValue] = useState(value);
 
@@ -46,6 +47,8 @@ export function IntegerEditor(props: IntegerEditorProps & Partial<Omit<TextInput
       underlineStyle={noUnderline ? { display: 'none' } : {}}
       selectTextOnFocus
       style={[style]}
+      // Paper applies a font family only through contentStyle; `style` styles the container.
+      contentStyle={[numberStyle, contentStyle]}
       // oxlint-disable-next-line typescript/no-non-null-asserted-optional-chain
       textColor={style?.color! as string}
       onBlur={() => {

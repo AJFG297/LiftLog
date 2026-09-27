@@ -1,4 +1,4 @@
-import { useAppTheme, spacing, font } from '@/hooks/useAppTheme';
+import { useAppTheme, spacing, font, numberStyle } from '@/hooks/useAppTheme';
 import {
   getDurationComponents,
   updateDurationHours,
@@ -89,6 +89,7 @@ export default function DurationEditor(props: DurationEditorProps) {
               submitBehavior="blurAndSubmit"
               returnKeyType="done"
               style={{ width: spacing[24], textAlign: 'center' }}
+              contentStyle={numberStyle}
               value={hours}
               onChangeText={updateHours}
               onBlur={resetValues}
@@ -113,6 +114,7 @@ export default function DurationEditor(props: DurationEditorProps) {
           submitBehavior="blurAndSubmit"
           returnKeyType="done"
           style={{ width: spacing[24], textAlign: 'center' }}
+          contentStyle={numberStyle}
           value={minutes}
           readOnly={readonly}
           onChangeText={updateMinutes}
@@ -136,6 +138,7 @@ export default function DurationEditor(props: DurationEditorProps) {
           submitBehavior="blurAndSubmit"
           returnKeyType="done"
           style={{ width: spacing[24], textAlign: 'center' }}
+          contentStyle={numberStyle}
           value={seconds}
           readOnly={readonly}
           onChangeText={updateSeconds}

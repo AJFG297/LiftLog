@@ -1,6 +1,6 @@
 import React, { Fragment } from 'react';
 import { Text, StyleProp, TextStyle, TextProps } from 'react-native';
-import { useAppTheme } from '@/hooks/useAppTheme';
+import { fontFamily, useAppTheme } from '@/hooks/useAppTheme';
 
 interface LimitedHtmlProps {
   value: string;
@@ -74,7 +74,7 @@ export default function LimitedHtml({ value, emStyles, ...rest }: LimitedHtmlPro
   } as const;
 
   return (
-    <Text {...rest}>
+    <Text {...rest} style={[{ fontFamily: fontFamily.text }, rest.style]}>
       {segments.map((segment, index) => (
         <Fragment key={index}>
           {segment.insertBreakBefore && '\n'}

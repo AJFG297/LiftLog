@@ -69,7 +69,9 @@ export function ReactionSummary({ eventId, animateOnMount, compact }: ReactionSu
         {[...totals].map(([emoji, count]) => (
           <View key={emoji} style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[1] }}>
             <Text style={{ fontSize: 16 }}>{emoji}</Text>
-            <SurfaceText font="text-sm">{count.toString()}</SurfaceText>
+            <SurfaceText font="text-sm" numeric>
+              {count.toString()}
+            </SurfaceText>
           </View>
         ))}
         <FloatingEmojiLayer emojis={floating} onFinished={handleFinished} />

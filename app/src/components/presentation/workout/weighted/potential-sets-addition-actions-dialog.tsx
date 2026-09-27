@@ -1,4 +1,4 @@
-import { spacing, useAppTheme } from '@/hooks/useAppTheme';
+import { numberStyle, spacing, useAppTheme } from '@/hooks/useAppTheme';
 import { RpeChips } from '@/components/presentation/workout/weighted/rpe-picker';
 import { Rpe } from '@/models/session-models/rpe';
 import { PotentialSet } from '@/models/session-models';
@@ -63,6 +63,7 @@ export default function PotentialSetAdditionalActionsDialog({
                 value={repCountText}
                 selectTextOnFocus
                 error={!isValid}
+                contentStyle={numberStyle}
                 onChangeText={setRepCountText}
                 autoFocus
               />
@@ -72,7 +73,7 @@ export default function PotentialSetAdditionalActionsDialog({
                   <IconButton
                     key={i}
                     mode="outlined"
-                    icon={() => <Text>{i}</Text>}
+                    icon={() => <Text style={numberStyle}>{i}</Text>}
                     onPress={() => {
                       setRepCountText(i.toString());
                       updateRepCount(i);

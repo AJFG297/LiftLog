@@ -1,4 +1,4 @@
-import { ColorChoice, font, FontChoice, useAppTheme } from '@/hooks/useAppTheme';
+import { ColorChoice, font, FontChoice, fontFamily, numberStyle, useAppTheme } from '@/hooks/useAppTheme';
 import { bodyweightLoadText, bodyweightPrefix, shortFormatWeightUnit, Weight } from '@/models/weight';
 import { localeFormatBigNumber } from '@/utils/locale-bignumber';
 import { useTranslate } from '@tolgee/react';
@@ -22,6 +22,7 @@ export default function WeightFormat(props: WeightFormatProps) {
     display: 'flex',
     alignItems: 'center',
     flexDirection: 'row',
+    fontFamily: fontFamily.text,
     color: colors[props.color ?? 'onSurface'],
     fontWeight: props.fontWeight,
     ...(props.fontSize ? { ...font[props.fontSize] } : undefined),
@@ -35,7 +36,8 @@ export default function WeightFormat(props: WeightFormatProps) {
     return (
       <Text style={style}>
         {bodyweightPrefix(label, value)}
-        {localeFormatBigNumber(value)} <Text style={{ fontSize: 12 }}>{shortFormatWeightUnit(props.weight?.unit)}</Text>
+        <Text style={numberStyle}>{localeFormatBigNumber(value)}</Text>{' '}
+        <Text style={{ fontSize: 12 }}>{shortFormatWeightUnit(props.weight?.unit)}</Text>
       </Text>
     );
   }
@@ -43,7 +45,8 @@ export default function WeightFormat(props: WeightFormatProps) {
   const weightDisplay = localeFormatBigNumber(value) || '-';
   return (
     <Text style={style}>
-      {weightDisplay} <Text style={{ fontSize: 12 }}>{shortFormatWeightUnit(props.weight?.unit)}</Text>
+      <Text style={numberStyle}>{weightDisplay}</Text>{' '}
+      <Text style={{ fontSize: 12 }}>{shortFormatWeightUnit(props.weight?.unit)}</Text>
     </Text>
   );
 }

@@ -3,7 +3,7 @@ import { formatRepsTarget, Resistance, RepsTarget } from '@/models/blueprint-mod
 import { ReactNode } from 'react';
 import { Text, View } from 'react-native';
 import WeightFormat, { formatWeightText } from '@/components/presentation/foundation/weight-format';
-import { font, rounding, spacing, useAppTheme } from '@/hooks/useAppTheme';
+import { font, numberStyle, rounding, spacing, useAppTheme } from '@/hooks/useAppTheme';
 import TouchableRipple from '@/components/presentation/foundation/touchable-ripple';
 import Icon from '@/components/presentation/foundation/icon';
 import { formatRpe, Rpe } from '@/models/session-models/rpe';
@@ -124,6 +124,7 @@ export function PotentialSetDisplay(props: PotentialSetDisplayProps) {
               style={{
                 color: repsColor,
                 ...size.repsFont,
+                ...numberStyle,
               }}
             >
               <Text style={{ fontWeight: 'bold' }}>{repCountValue ?? '-'}</Text>
@@ -144,7 +145,7 @@ export function PotentialSetDisplay(props: PotentialSetDisplayProps) {
                 <Text
                   numberOfLines={1}
                   adjustsFontSizeToFit
-                  style={{ flexShrink: 1, color: hintColor, ...(warmup ? font['text-xs'] : undefined) }}
+                  style={{ flexShrink: 1, color: hintColor, ...(warmup ? font['text-xs'] : undefined), ...numberStyle }}
                 >
                   {previousHint}
                 </Text>
@@ -172,7 +173,7 @@ export function PotentialSetDisplay(props: PotentialSetDisplayProps) {
               />
             </Text>
             {warmup?.percent !== undefined && (
-              <Text style={{ color: colors.onSurfaceVariant, ...font['text-2xs'] }}>
+              <Text style={{ color: colors.onSurfaceVariant, ...font['text-2xs'], ...numberStyle }}>
                 {t('workout.warmup_set.percent.label', { percent: warmup.percent })}
               </Text>
             )}
@@ -185,6 +186,7 @@ export function PotentialSetDisplay(props: PotentialSetDisplayProps) {
             style={{
               color: props.rpe === undefined ? colors.onSurfaceVariant : colors.onSurface,
               ...size.footerFont,
+              ...numberStyle,
             }}
           >
             {props.rpe === undefined ? '@–' : formatRpe(props.rpe)}

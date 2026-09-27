@@ -3,7 +3,7 @@ import { Card, Icon, Text } from 'react-native-paper';
 import { useDispatch } from 'react-redux';
 import { View } from 'react-native';
 import EmptyInfo from '@/components/presentation/foundation/empty-info';
-import { useAppTheme, spacing, font } from '@/hooks/useAppTheme';
+import { useAppTheme, spacing, font, tabularText } from '@/hooks/useAppTheme';
 import { T, useTranslate } from '@tolgee/react';
 import ItemList from '@/components/presentation/foundation/item-list';
 import {
@@ -294,7 +294,7 @@ export default function SessionComponent(props: {
           <Text variant="bodyMedium">
             <T keyName="workout.total_time.label" />
           </Text>
-          <Text variant="bodyMedium" style={{ color: colors.primary, fontWeight: 'bold' }}>
+          <Text variant="bodyMedium" style={{ ...tabularText, color: colors.primary, fontWeight: 'bold' }}>
             {(session.duration && formatDuration(session.duration, 'hours-mins')) || '-'}
           </Text>
         </View>

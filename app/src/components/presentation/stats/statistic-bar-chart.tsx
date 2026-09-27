@@ -2,7 +2,7 @@ import { StatisticOverTime } from '@/store/stats';
 import { QuantityAxis } from '@/components/presentation/stats/quantity-axis';
 import { BarChart, barDataItem } from 'react-native-gifted-charts';
 import { View } from 'react-native';
-import { useAppTheme } from '@/hooks/useAppTheme';
+import { numberStyle, useAppTheme } from '@/hooks/useAppTheme';
 import { useState } from 'react';
 import { verticalBarChartProps } from '@/components/presentation/stats/line-graph-props';
 import { useFormatDate } from '@/hooks/useFormatDate';
@@ -25,7 +25,7 @@ export function StatisticBarChart<T>({
       value: axis.toNumber(stat.value),
       barWidth: charWidth * (topLabelText.length + 3),
       topLabelComponent: () => (
-        <Text style={{ width: 200, textAlign: 'center', pointerEvents: 'none' }}>{topLabelText}</Text>
+        <Text style={{ ...numberStyle, width: 200, textAlign: 'center', pointerEvents: 'none' }}>{topLabelText}</Text>
       ),
 
       label: formatDate(stat.dateTime.toLocalDate(), {

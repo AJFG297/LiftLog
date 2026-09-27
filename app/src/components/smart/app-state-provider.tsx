@@ -1,6 +1,6 @@
 import { Loader } from '@/components/presentation/foundation/loader';
 import Button from '@/components/presentation/foundation/button';
-import { useAppTheme, spacing } from '@/hooks/useAppTheme';
+import { fontFamily, useAppTheme, spacing } from '@/hooks/useAppTheme';
 import { useAppSelector } from '@/store';
 import { copyLogs } from '@/store/app';
 import { T } from '@tolgee/react';
@@ -76,7 +76,7 @@ function StuckHelp() {
 
   return (
     <View style={{ alignItems: 'center', gap: spacing[2] }}>
-      <Text style={{ color: colors.onSurfaceVariant, textAlign: 'center' }}>
+      <Text style={{ color: colors.onSurfaceVariant, fontFamily: fontFamily.text, textAlign: 'center' }}>
         <T keyName="app.stuck_loading.message" />
       </Text>
       <Button icon="bugReport" onPress={openBugReport}>
@@ -86,7 +86,7 @@ function StuckHelp() {
         <T keyName="app.stuck_loading.copy_logs.button" />
       </Button>
       {copied && (
-        <Text style={{ color: colors.onSurfaceVariant, textAlign: 'center' }}>
+        <Text style={{ color: colors.onSurfaceVariant, fontFamily: fontFamily.text, textAlign: 'center' }}>
           <T keyName="app.stuck_loading.copied.label" />
         </Text>
       )}

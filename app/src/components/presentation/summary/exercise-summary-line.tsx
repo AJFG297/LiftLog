@@ -30,7 +30,7 @@ export function ExerciseSummaryLine({
       <SurfaceText color={color} style={{ flexShrink: 1 }}>
         {exercise.blueprint.name}
       </SurfaceText>
-      <SurfaceText color={secondaryColor} style={{ maxWidth: SETS_MAX_WIDTH, textAlign: 'right' }}>
+      <SurfaceText numeric color={secondaryColor} style={{ maxWidth: SETS_MAX_WIDTH, textAlign: 'right' }}>
         {formatExerciseSummary(exercise, {
           isFilled,
           showWeight,

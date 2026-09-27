@@ -95,7 +95,7 @@ function SectionHeader(props: { label: string; count: number }) {
       <SurfaceText font="text-sm" weight="bold" color="onSurfaceVariant" style={{ letterSpacing: 0.6 }}>
         {props.label.toUpperCase()}
       </SurfaceText>
-      <SurfaceText font="text-sm" color="onSurfaceVariant">
+      <SurfaceText font="text-sm" color="onSurfaceVariant" numeric>
         {props.count.toString()}
       </SurfaceText>
     </View>

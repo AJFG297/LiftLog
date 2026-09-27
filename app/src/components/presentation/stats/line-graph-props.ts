@@ -1,4 +1,4 @@
-import { AppThemeColors } from '@/hooks/useAppTheme';
+import { AppThemeColors, fontFamily, numberStyle } from '@/hooks/useAppTheme';
 import { BarChartPropsType, CurveType, LineChartPropsType } from 'react-native-gifted-charts';
 
 export const lineGraphProps = (colors: AppThemeColors, width: number, numberOfPoints: number): LineChartPropsType => {
@@ -27,12 +27,14 @@ export const lineGraphProps = (colors: AppThemeColors, width: number, numberOfPo
     referenceLine1Config: {
       width: width - 30,
       color: colors.tertiary,
-      labelTextStyle: { color: colors.onSurface },
+      labelTextStyle: { color: colors.onSurface, fontFamily: fontFamily.text },
     },
     xAxisLabelTextStyle: {
       color: colors.onSurface,
+      fontFamily: fontFamily.text,
     },
     yAxisTextStyle: {
+      ...numberStyle,
       color: colors.onSurface,
     },
   };
@@ -54,13 +56,15 @@ export const verticalBarChartProps = (colors: AppThemeColors, width: number): Ba
     width: width - 30,
     xAxisLabelTextStyle: {
       color: colors.onSurface,
+      fontFamily: fontFamily.text,
     },
     referenceLine1Config: {
       width: width - 30,
       color: colors.tertiary,
-      labelTextStyle: { color: colors.onSurface },
+      labelTextStyle: { color: colors.onSurface, fontFamily: fontFamily.text },
     },
     yAxisTextStyle: {
+      ...numberStyle,
       color: colors.onSurface,
     },
   };

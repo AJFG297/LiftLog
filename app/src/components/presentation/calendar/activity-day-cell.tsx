@@ -70,7 +70,7 @@ export const ActivityDayCell = memo(function ActivityDayCell({
             borderWidth: isSelected ? 2 : 1,
           }}
         >
-          <SurfaceText font="text-sm" style={isEmpty ? undefined : { color: foreground }}>
+          <SurfaceText numeric font="text-sm" style={isEmpty ? undefined : { color: foreground }}>
             {formatDate(cell.date, { day: 'numeric' })}
           </SurfaceText>
 
@@ -89,6 +89,7 @@ export const ActivityDayCell = memo(function ActivityDayCell({
               ))}
               {hasOverflow && (
                 <SurfaceText
+                  numeric
                   font="text-2xs"
                   numberOfLines={1}
                   style={{
