@@ -1,6 +1,6 @@
 # Plan: app redesign ("Clarity")
 
-Status: **in progress**. Phase 0 is done (ADR-0002); phase 1 has started with PM-18 (theme tokens, see [Theming.md](../Theming.md)). The Linear parent issue is PM-16, "Spec: App redesign (Clarity)".
+Status: **in progress**. Phase 0 is done (ADR-0002); phase 1 has started with PM-18 (theme tokens) and PM-19 (fonts), both described in [Theming.md](../Theming.md). The Linear parent issue is PM-16, "Spec: App redesign (Clarity)".
 
 The prototypes live on a private claude.ai design canvas owned by the author
 (<https://claude.ai/artifact/47zQyGzQ5NcrAP7Yw4Szwx>). It holds 28 clickable phone screens: the chosen
