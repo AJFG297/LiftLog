@@ -51,7 +51,7 @@ export default function FocusRing({
     <View style={style}>
       <Animated.View
         style={{
-          borderColor: colors.outline,
+          borderColor: colors.onSurfaceVariant,
           position: 'absolute',
           top: pos,
           bottom: pos,

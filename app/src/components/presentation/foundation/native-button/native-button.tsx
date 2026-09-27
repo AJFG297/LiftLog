@@ -19,7 +19,7 @@ export default function NativeButton({
   disabled,
   style,
 }: NativeButtonProps) {
-  const { colors } = useAppTheme();
+  const { colors, tokens } = useAppTheme();
 
   return (
     <Host matchContents seedColor={colors.seedColor} colorScheme={colors.scheme} style={style}>
@@ -30,7 +30,9 @@ export default function NativeButton({
         modifiers={[
           buttonStyle(styleForVariant[variant]),
           controlSize('large'),
-          tint(colors.primary),
+          // A prominent button puts a white label on the tint, so it needs the fill; the others use the tint as
+          // text, which in dark mode needs the lighter ink.
+          tint(variant === 'filled' ? tokens.accent : tokens.accentInk),
           ...(disabled ? [disabledModifier(true)] : []),
         ]}
       />

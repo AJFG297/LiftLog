@@ -22,7 +22,11 @@ export function ExerciseSummaryLine({ exercise, isFilled, showWeight, color = 'o
       <SurfaceText color={color} style={{ flexShrink: 1 }}>
         {exercise.blueprint.name}
       </SurfaceText>
-      <SurfaceText color="onSurfaceVariant" style={{ maxWidth: SETS_MAX_WIDTH, textAlign: 'right' }}>
+      {/* Muted on ordinary surfaces; on a coloured one (a chat bubble) it has to follow the caller's colour. */}
+      <SurfaceText
+        color={color === 'onSurface' ? 'onSurfaceVariant' : color}
+        style={{ maxWidth: SETS_MAX_WIDTH, textAlign: 'right' }}
+      >
         {formatExerciseSummary(exercise, {
           isFilled,
           showWeight,
