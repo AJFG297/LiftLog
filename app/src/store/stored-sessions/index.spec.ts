@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import fc from 'fast-check';
 import { Duration, LocalDate, OffsetDateTime, ZoneOffset, YearMonth } from '@js-joda/core';
 import { v4 as uuid } from 'uuid';
 import {
@@ -260,6 +261,156 @@ describe('storedSessions reducer', () => {
 
     expect(state.sessions[session.id]).toBeUndefined();
     expect(Object.values(state.latestExercises).filter(Boolean)).toHaveLength(0);
+  });
+
+  describe('derived caches after edits and deletes', () => {
+    const at = (day: number, hour = 10) => OffsetDateTime.of(2026, 4, day, hour, 0, 0, 0, ZoneOffset.UTC);
+    const squatOn = (day: number, hour = 10) =>
+      createSessionWithCompletionTime(LocalDate.of(2026, 4, day), at(day, hour), 'Squat');
+    const latestSquat = (state: ReturnType<typeof reduce>) =>
+      Object.values(state.latestExercises).filter(Boolean) as RecordedWeightedExercise[];
+
+    it('deleting the earliest session moves the earliest to the next one', () => {
+      const first = squatOn(1);
+      const second = squatOn(5);
+
+      const state = reduce(upsertStoredSessions([first, second]), deleteStoredSession(first.id));
+
+      expect(state.earliestSession).toBe(second);
+    });
+
+    it('deleting the only session clears the earliest', () => {
+      const only = squatOn(1);
+
+      const state = reduce(putStoredSession(only), deleteStoredSession(only.id));
+
+      expect(state.earliestSession).toBeUndefined();
+    });
+
+    it('replacing every session resets the earliest', () => {
+      const old = squatOn(1);
+      const replacement = squatOn(5);
+
+      const state = reduce(putStoredSession(old), setStoredSessions({ [replacement.id]: replacement }));
+
+      expect(state.earliestSession).toBe(replacement);
+    });
+
+    it('moving the earliest session later hands the earliest to the session now first', () => {
+      const first = squatOn(1);
+      const second = squatOn(5);
+
+      const state = reduce(
+        upsertStoredSessions([first, second]),
+        updateStoredSession({ sessionId: first.id, update: (s) => s.withUpdatedDate(LocalDate.of(2026, 4, 9)) }),
+      );
+
+      expect(state.earliestSession).toBe(second);
+    });
+
+    it('an edit that moves the latest set earlier falls back to the session that is now latest', () => {
+      const earlier = squatOn(1);
+      const later = squatOn(5);
+
+      const state = reduce(
+        upsertStoredSessions([earlier, later]),
+        updateStoredSession({ sessionId: later.id, update: () => squatOn(1, 8).with({ id: later.id }) }),
+      );
+
+      expect(latestSquat(state)).toEqual([earlier.recordedExercises[0]]);
+    });
+
+    it('removing an exercise from the session that held its latest falls back to the previous one', () => {
+      const earlier = squatOn(1);
+      const later = squatOn(5);
+
+      const state = reduce(
+        upsertStoredSessions([earlier, later]),
+        updateStoredSession({ sessionId: later.id, update: (s) => s.with({ recordedExercises: [] }) }),
+      );
+
+      expect(latestSquat(state)).toEqual([earlier.recordedExercises[0]]);
+    });
+
+    it('removing the last occurrence of an exercise drops its key', () => {
+      const only = squatOn(1);
+
+      const state = reduce(
+        putStoredSession(only),
+        updateStoredSession({ sessionId: only.id, update: (s) => s.with({ recordedExercises: [] }) }),
+      );
+
+      expect(latestSquat(state)).toEqual([]);
+    });
+
+    it('logging a later set keeps the edited exercise as the latest', () => {
+      const earlier = squatOn(1);
+      const today = squatOn(5);
+      const logged = squatOn(5, 11).with({ id: today.id });
+
+      const state = reduce(
+        upsertStoredSessions([earlier, today]),
+        updateStoredSession({ sessionId: today.id, update: () => logged }),
+      );
+
+      expect(latestSquat(state)).toEqual([logged.recordedExercises[0]]);
+    });
+
+    it('stay equal to a rebuild from scratch after any mix of writes', () => {
+      const ids = ['a', 'b', 'c', 'd'];
+      const write = fc.record({
+        kind: fc.constantFrom('put', 'update', 'upsert', 'delete'),
+        id: fc.constantFrom(...ids),
+        day: fc.integer({ min: 1, max: 5 }),
+        hour: fc.integer({ min: 0, max: 3 }),
+        name: fc.constantFrom('Squat', 'Bench'),
+        abandoned: fc.boolean(),
+      });
+      const summarize = (state: ReturnType<typeof reduce>) => ({
+        earliest: state.earliestSession?.date.toString(),
+        latest: Object.fromEntries(
+          Object.entries(state.latestExercises).map(([key, exercise]) => [key, exercise?.latestTime?.toString()]),
+        ),
+      });
+
+      fc.assert(
+        fc.property(fc.array(write, { maxLength: 20 }), (writes) => {
+          const actions = writes.map((w): UnknownAction => {
+            const date = LocalDate.of(2026, 4, w.day);
+            const built = (
+              w.abandoned
+                ? createAbandonedSession(date, w.name)
+                : createSessionWithCompletionTime(date, at(w.day, w.hour), w.name)
+            ).with({ id: w.id });
+            switch (w.kind) {
+              case 'put':
+                return putStoredSession(built);
+              case 'update':
+                return updateStoredSession({ sessionId: w.id, update: () => built });
+              case 'upsert':
+                return upsertStoredSessions([built]);
+              default:
+                return deleteStoredSession(w.id);
+            }
+          });
+          const incremental = reduce(...actions);
+          const rebuilt = reduce(setStoredSessions({ ...incremental.sessions }));
+          expect(summarize(incremental)).toEqual(summarize(rebuilt));
+        }),
+      );
+    });
+
+    it('re-importing a session with an earlier latest set falls back as an edit would', () => {
+      const earlier = squatOn(1);
+      const later = squatOn(5);
+
+      const state = reduce(
+        upsertStoredSessions([earlier, later]),
+        upsertStoredSessions([squatOn(1, 8).with({ id: later.id })]),
+      );
+
+      expect(latestSquat(state)).toEqual([earlier.recordedExercises[0]]);
+    });
   });
 
   it('manages saved exercises', () => {

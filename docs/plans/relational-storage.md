@@ -151,6 +151,13 @@ Rough estimates, one person. Tracked in Linear as PM-8, with sub-issues PM-9 to 
   - `latestExercises` only grows on edit.
   - `importBackupData` doesn't await its upserts before re-running migrations.
 
+**Done in PM-9.** The snapshots are `store/stored-sessions/history-snapshots.spec.ts`, over a
+latest-version JSON copy of the fixture (`history-420.sessions.json.gz`) so they don't depend on the
+restore path phase 3 deletes; later phases re-point its `loadHistory` at the new hydration. The baseline
+is `npm run bench:startup` over a 5,000-session synthetic history, with numbers recorded on PM-9. All four
+bugs are fixed; the import one is fixed by settling nil weights in memory before the upsert, so the
+nil-weight migration is no longer re-run on import.
+
 ### Phase 1: new schema, exercise identity, repository (about 1 week)
 
 1. **Schema.** Add the tables above and drop `session` in the same migration. Consider squashing

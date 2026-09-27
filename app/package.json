@@ -21,6 +21,7 @@
     "json-schema": "node ./scripts/generate-json-schemas.js && node ./scripts/build-plan-validator.mjs",
     "test": "vitest",
     "test:coverage": "vitest run --coverage",
+    "bench:startup": "LIFTLOG_BENCH=1 vitest run src/store/stored-sessions/startup-baseline.spec.ts --execArgv=--expose-gc",
     "typecheck": "tsgo --noEmit",
     "e2e": "maestro test .maestro --exclude-tags ci-only",
     "e2e:ci": "maestro test .maestro"
