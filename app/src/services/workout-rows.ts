@@ -169,7 +169,8 @@ export function toWorkoutRows(session: Session): WorkoutRows {
 /** Rebuilds the session {@link toWorkoutRows} was given. Child rows may arrive in any order. */
 export function fromWorkoutRows(rows: StoredWorkoutRows): Session {
   const { workout } = rows;
-  const exercises = rows.exercises.toSorted(byPosition);
+  // A sorted copy, not `toSorted`: the app's Hermes runtime lacks the ES2023 copying array methods.
+  const exercises = [...rows.exercises].sort(byPosition);
   const weightedSets = groupByExercise(rows.weightedSets);
   const warmupSets = groupByExercise(rows.warmupSets);
   const cardioSets = groupByExercise(rows.cardioSets);

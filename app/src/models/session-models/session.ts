@@ -323,9 +323,10 @@ export class Session {
 
   withRemovedExercise(exerciseIndex: number): Session {
     return this.with({
-      recordedExercises: this.recordedExercises.toSpliced(exerciseIndex, 1),
+      // `filter`, not `toSpliced`: the app's Hermes runtime lacks the ES2023 copying array methods.
+      recordedExercises: this.recordedExercises.filter((_, index) => index !== exerciseIndex),
       blueprint: this.blueprint.with({
-        exercises: this.blueprint.exercises.toSpliced(exerciseIndex, 1),
+        exercises: this.blueprint.exercises.filter((_, index) => index !== exerciseIndex),
       }),
     });
   }
