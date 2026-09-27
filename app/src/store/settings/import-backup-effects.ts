@@ -86,6 +86,22 @@ export function addImportBackupEffects(addEffect: AddEffectFn) {
       const {
         payload: { db: backupDb },
       } = action;
+      // Backups from before workouts went relational keep them in `session`, which migration 0009
+      // drops. Old formats are unsupported (ADR-0001), so refuse rather than restore everything else
+      // with no workouts.
+      const legacySessionTable = await backupDb.getAllAsync<{ name: string }>(
+        `SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?`,
+        ['session'],
+      );
+      if (legacySessionTable.length) {
+        logger.warn('Rejected a pre-relational backup', { reason: 'it has a session table' });
+        dispatch(
+          showSnackbar({
+            text: tolgee.t("This backup is from an older version of LiftLog and can't be restored."),
+          }),
+        );
+        return;
+      }
       const drizzleBackupDb = drizzle(backupDb);
       const migrator = new DatabaseMigrationService(drizzleBackupDb, logger, {
         importOldData: async () => {},

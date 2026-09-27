@@ -176,6 +176,10 @@ on the cascades.
 Workout ids are kept end to end. They are the Health Connect / HealthKit record ids and the key the CSV
 import dedupes on.
 
+A backup from before this layout (it still has the `session` table) is rejected on restore with a
+snackbar, rather than migrated: `0009` drops `session`, so it would restore everything but its workouts.
+Old formats are unsupported (ADR-0001).
+
 ### Testing
 
 Effects that touch the DB use a real in-memory SQLite rather than a mock - `openDatabaseAsync(':memory:')`,
@@ -195,7 +199,8 @@ The workout storage is pinned by:
   migrator reads the folder, so without this a migration missing from `migrations.js` would pass every
   test and never run on a device.
 - `store/settings/import-backup-effects.spec.ts`: restores `utils/__test__/backup.liftlogbackup.sqlite.gz`,
-  a backup made by this app's own export, and round-trips export then restore.
+  a backup made by this app's own export, round-trips export then restore, and rejects a pre-relational
+  backup.
 
 History-derived behaviour is pinned by snapshots:
 

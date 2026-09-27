@@ -4,6 +4,7 @@ import { createAddEffectTestBed } from '@/utils/__test__/add-effect-testbed';
 import { describe, expect, it, vi } from 'vitest';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'path';
+import { gzipSync } from 'node:zlib';
 import { FeedBackupData } from '@/models/backup';
 import { FeedIdentity } from '@/models/feed-models';
 import { ProgramBlueprint } from '@/models/blueprint-models';
@@ -69,6 +70,33 @@ describe('import-backup-effects', () => {
     for (const session of expected) {
       expect(byId.get(session.id)!.toJSON()).toEqual(session.toJSON());
     }
+  });
+
+  it('rejects a pre-relational backup instead of restoring it without workouts', async () => {
+    const legacyDb = await openDatabaseAsync(':memory:');
+    await legacyDb.execAsync(`
+      CREATE TABLE session (id text PRIMARY KEY, active integer, payload text);
+      CREATE TABLE program (id text PRIMARY KEY, active integer, payload text);
+      INSERT INTO program (id, active, payload) VALUES ('program', 1, '{}');
+    `);
+    const bytes = gzipSync(await legacyDb.serializeAsync());
+    await legacyDb.closeAsync();
+    const testBed = createAddEffectTestBed({
+      services: {
+        filePickerService: { pickFile: vi.fn().mockResolvedValue({ bytes }) },
+        logger: silentLogger,
+        tolgee: { t: (s: string) => s },
+      },
+    });
+    addImportBackupEffects(testBed.addEffect);
+
+    await testBed.dispatchHandled(importData());
+    await testBed.dispatchHandled(testBed.getDispatchedAction(importDataSql));
+
+    testBed.expectNotDispatched(importBackupData);
+    expect(testBed.dispatchedActions.filter(showSnackbar.match).at(-1)?.payload.text).toBe(
+      "This backup is from an older version of LiftLog and can't be restored.",
+    );
   });
 
   it('dispatches the appropriate actions when importing', async () => {
