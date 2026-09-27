@@ -160,6 +160,21 @@ nil-weight migration is no longer re-run on import.
 
 ### Phase 1: new schema, exercise identity, repository (about 1 week)
 
+**Steps 1–3 done in PM-10**, with the backup part of phase 3. The tables follow the target schema sketch, with a few
+settled differences:
+- Exercises and sets are keyed by position within their workout rather than by their own ids.
+- Times used for ordering are epoch-millisecond columns beside the exact offset text.
+- `workout.blueprint_version` says which chain version the exercise blueprints were written at.
+- `exercise_id`, `started_at`/`ended_at` and `is_freeform` wait for the steps that need them.
+
+The migration history was not squashed: `0009` drops `session` and creates the tables, so a development
+install upgrades without a reinstall. `WorkoutRepository` writes through `writeAtomically`, because
+`db.transaction(async …)` isn't atomic on the device driver (see `docs/Storage.md`). Hydration still reads
+every row, though only the columns that rebuild a `Session`. Under Node/libsql the 5,000-session bench's
+migrate + hydrate step went from about 420 ms to about 750 ms, because it now reads about 89k rows
+instead of 5k payloads; phase 2 removes that read.
+
+
 1. **Schema.** Add the tables above and drop `session` in the same migration. Consider squashing
    `app/src/drizzle/` to one baseline. Add a check that the journal (`drizzle/migrations.js`) matches the
    folder: the Vitest shim reads the folder, so a missing journal entry wouldn't fail any test.

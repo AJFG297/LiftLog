@@ -756,34 +756,6 @@ describe('Session.getEmptySession', () => {
   });
 });
 
-// ─── withNoNilWeights ─────────────────────────────────────────────────────────
-
-describe('Session.withNoNilWeights', () => {
-  it('replaces nil weight units with the fallback unit', () => {
-    const bp = makeWeightedBlueprint();
-    const exercise = new RecordedWeightedExercise(bp, [emptyPotentialSet(new Weight(0, 'nil'))], undefined);
-    const session = new Session(
-      uuid(),
-      new SessionBlueprint('Test', [bp], ''),
-      [exercise],
-      LocalDate.of(2025, 4, 5),
-      undefined,
-      undefined,
-    );
-
-    const result = session.withNoNilWeights('kilograms')!;
-
-    expect((result.recordedExercises[0] as RecordedWeightedExercise).potentialSets[0]!.weight.unit).toBe('kilograms');
-  });
-
-  it('leaves non-nil units untouched', () => {
-    const session = makeSession([makeWeightedBlueprint()]);
-    const result = session.withNoNilWeights('pounds')!;
-    const sets = (result.recordedExercises[0] as RecordedWeightedExercise).potentialSets;
-    expect(sets.every((s) => s.weight.unit === 'kilograms')).toBe(true);
-  });
-});
-
 // ─── equals ───────────────────────────────────────────────────────────────────
 
 describe('Session.equals', () => {

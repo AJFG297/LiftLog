@@ -1,11 +1,9 @@
 import { beforeAll, describe, expect, it, vi } from 'vitest';
-import { combineReducers, configureStore } from '@reduxjs/toolkit';
+import { drizzle } from 'drizzle-orm/expo-sqlite';
+import { openDatabaseAsync } from 'expo-sqlite';
 import { DayOfWeek, LocalDate, YearMonth } from '@js-joda/core';
 import Enumerable from 'linq';
 import type { RootState } from '@/store/store';
-import { settingsReducer } from '@/store/settings';
-import feedReducer from '@/store/feed';
-import { statsReducer } from '@/store/stats';
 import {
   getSessionReferenceTime,
   selectHistoryPersonalRecords,
@@ -15,13 +13,15 @@ import {
   selectSessions,
   selectSessionsBy,
   selectSessionsInMonth,
-  setIsHydrated,
-  storedSessionsReducer,
-  upsertStoredSessions,
+  initializeStoredSessionsStateSlice,
 } from '@/store/stored-sessions';
 import { selectActivityMonth, selectStreakStats, selectVolumeScales } from '@/store/activity';
 import { calculateStats } from '@/store/stats/calculate-stats';
-import { selectPreferredWeightUnit, setFirstDayOfWeek } from '@/store/settings';
+import { selectPreferredWeightUnit, setFirstDayOfWeek, setIsHydrated as setSettingsIsHydrated } from '@/store/settings';
+import { applyStoredSessionsEffects } from '@/store/stored-sessions/effects';
+import { DatabaseMigrationService } from '@/services/database-migration-service';
+import { WorkoutRepository } from '@/services/workout-repository';
+import { createEffectStore } from '@/utils/__test__/effect-store';
 import { ProgressRepository } from '@/services/progress-repository';
 import { Session } from '@/models/session-models';
 import { describeExercise, describeSession, loadHistoryFixture, normalize } from '@/utils/__test__/history-fixture';
@@ -40,38 +40,46 @@ vi.stubEnv('TZ', 'UTC');
 const TODAY = LocalDate.parse('2026-06-03');
 
 let sessions: Session[];
-let store: ReturnType<typeof createHistoryStore>;
+let store: Awaited<ReturnType<typeof loadHistory>>;
 
-// The slices the history aggregates read. The app's root reducer lives beside `createServices`, which
-// can't load under Vitest.
-function createHistoryStore() {
-  return configureStore({
-    reducer: combineReducers({
-      settings: settingsReducer,
-      feed: feedReducer,
-      stats: statsReducer,
-      storedSessions: storedSessionsReducer,
-    }),
-    middleware: (getDefault) => getDefault({ serializableCheck: false, immutableCheck: false }),
-  });
-}
+const silentLogger = {
+  info: vi.fn(),
+  warn: vi.fn(),
+  debug: vi.fn(),
+  error: vi.fn(),
+  time: async (_: string, action: () => unknown) => action(),
+};
 
 /**
- * Loads history the way a backup restore does. Later storage tickets point this at their own hydration so
- * the same assertions keep running.
+ * Loads history the way the app does: the fixture is bulk-inserted through the repository, the way a backup
+ * restore or CSV import writes it, then hydrated by the real startup effect from the workout tables.
  */
-function loadHistory(target: ReturnType<typeof createHistoryStore>, history: Session[]) {
-  target.dispatch(upsertStoredSessions(history));
-  target.dispatch(setIsHydrated(true));
+async function loadHistory(history: Session[]) {
+  const db = drizzle(await openDatabaseAsync(':memory:'));
+  await new DatabaseMigrationService(db, silentLogger as never, { importOldData: async () => {} }).migrate();
+  const workoutRepository = new WorkoutRepository(db);
+  await workoutRepository.putMany(history);
+
+  const harness = createEffectStore({
+    db,
+    workoutRepository,
+    logger: silentLogger as never,
+    keyValueStore: { getItem: () => Promise.resolve(null) } as never,
+  });
+  applyStoredSessionsEffects(harness.addEffect);
+  harness.store.dispatch(setSettingsIsHydrated(true));
+  harness.store.dispatch(setFirstDayOfWeek(DayOfWeek.MONDAY));
+  harness.store.dispatch(initializeStoredSessionsStateSlice());
+  await harness.settle();
+  expect(silentLogger.error).not.toHaveBeenCalled();
+  return harness.store;
 }
 
 const state = () => store.getState() as unknown as RootState;
 
-beforeAll(() => {
+beforeAll(async () => {
   sessions = loadHistoryFixture();
-  store = createHistoryStore();
-  store.dispatch(setFirstDayOfWeek(DayOfWeek.MONDAY));
-  loadHistory(store, sessions);
+  store = await loadHistory(sessions);
 });
 
 describe('history aggregates over the 420-session fixture', () => {

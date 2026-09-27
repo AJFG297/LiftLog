@@ -8,25 +8,144 @@ import {
   AnyVersionProgramBlueprintJSON,
   AnyVersionReceivedReactionJSON,
   AnyVersionSentReactionJSON,
-  AnyVersionSessionJSON,
+  AnyVersionSessionBlueprintJSON,
   AnyVersionSessionUserEventJSON,
 } from '@/models/storage/versions/any';
 import { BackendFeature, BackendKind } from '@/models/backend';
 import { sql } from 'drizzle-orm';
-import { check, integer, primaryKey, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import {
+  check,
+  foreignKey,
+  index,
+  integer,
+  primaryKey,
+  real,
+  sqliteTable,
+  text,
+  uniqueIndex,
+} from 'drizzle-orm/sqlite-core';
+import type {
+  BigNumberJSON,
+  CardioExerciseSetBlueprintJSON,
+  DistanceUnitJSON,
+  DurationJSON,
+  LocalDateJSON,
+  OffsetDateTimeJSON,
+  WeightUnitJSON,
+} from '@/models/storage/versions/latest';
 
-export const sessionsSchema = sqliteTable(
-  'session',
+/**
+ * A workout: the user's history and the one in progress. Its exercises and sets live in the child tables
+ * below, and every write replaces all of one workout's child rows at once (see `WorkoutRepository`).
+ *
+ * Columns ending in `_ms` / `_kg` and the keys are computed on write from the domain model, so SQL can
+ * order and aggregate what the JS methods compute; they are never read back into a `Session`.
+ */
+type AnyVersionExerciseBlueprintJSON = AnyVersionSessionBlueprintJSON['exercises'][number];
+
+export const workoutsSchema = sqliteTable(
+  'workout',
   {
     id: text().primaryKey(),
     // The workout currently in progress, if any. At most one row may be active.
     active: integer({ mode: 'boolean' }).notNull().default(false),
-    payload: text('payload', { mode: 'json' }).$type<AnyVersionSessionJSON>().notNull(),
+    // The `SessionBlueprintJSON` version the exercise blueprints below were written at.
+    blueprintVersion: integer('blueprint_version').notNull(),
+    date: text().$type<LocalDateJSON>().notNull(),
+    name: text().notNull(),
+    notes: text().notNull(),
+    bodyweightValue: text('bodyweight_value').$type<BigNumberJSON>(),
+    bodyweightUnit: text('bodyweight_unit').$type<WeightUnitJSON>(),
+    // `getSessionReferenceTime`: the latest set, or the start of the day in the writer's zone.
+    referenceTimeMs: integer('reference_time_ms').notNull(),
+    volumeKg: real('volume_kg').notNull(),
   },
   (table) => [
-    uniqueIndex('single_active_session')
+    uniqueIndex('single_active_workout')
       .on(table.active)
       .where(sql`${table.active} = 1`),
+    index('workout_date').on(table.date),
+    index('workout_reference_time').on(table.referenceTimeMs),
+  ],
+);
+
+export const workoutExercisesSchema = sqliteTable(
+  'workout_exercise',
+  {
+    workoutId: text('workout_id')
+      .notNull()
+      .references(() => workoutsSchema.id, { onDelete: 'cascade' }),
+    position: integer().notNull(),
+    kind: text().$type<'weighted' | 'cardio'>().notNull(),
+    movementKey: text('movement_key').notNull(),
+    progressionKey: text('progression_key').notNull(),
+    latestTimeMs: integer('latest_time_ms'),
+    notes: text(),
+    // Migrated on read by `sessionBlueprintMigrations`, at the workout's `blueprint_version`.
+    blueprint: text({ mode: 'json' }).$type<AnyVersionExerciseBlueprintJSON>().notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.workoutId, table.position] }),
+    index('workout_exercise_movement').on(table.movementKey, table.latestTimeMs),
+    index('workout_exercise_progression').on(table.progressionKey, table.latestTimeMs),
+  ],
+);
+
+/** One slot of a weighted exercise. An unlogged slot has no reps or completion time, but keeps its weight, target and RPE. */
+export const weightedSetsSchema = sqliteTable(
+  'weighted_set',
+  {
+    workoutId: text('workout_id').notNull(),
+    exercisePosition: integer('exercise_position').notNull(),
+    position: integer().notNull(),
+    targetRepsMin: integer('target_reps_min').notNull(),
+    targetRepsMax: integer('target_reps_max').notNull(),
+    // Exact, as the user entered it. `weight_kg` is the same weight converted, for aggregates.
+    weightValue: text('weight_value').$type<BigNumberJSON>().notNull(),
+    weightUnit: text('weight_unit').$type<WeightUnitJSON>().notNull(),
+    weightKg: real('weight_kg').notNull(),
+    // The load actually moved: bodyweight folded in for bodyweight movements, zero for unloaded ones.
+    effectiveWeightKg: real('effective_weight_kg').notNull(),
+    rpe: real(),
+    reps: integer(),
+    // Exact, offset included. `completed_at_ms` is the same instant, for ordering across offsets.
+    completedAt: text('completed_at').$type<OffsetDateTimeJSON>(),
+    completedAtMs: integer('completed_at_ms'),
+  },
+  (table) => [
+    primaryKey({ columns: [table.workoutId, table.exercisePosition, table.position] }),
+    foreignKey({
+      columns: [table.workoutId, table.exercisePosition],
+      foreignColumns: [workoutExercisesSchema.workoutId, workoutExercisesSchema.position],
+    }).onDelete('cascade'),
+  ],
+);
+
+export const cardioSetsSchema = sqliteTable(
+  'cardio_set',
+  {
+    workoutId: text('workout_id').notNull(),
+    exercisePosition: integer('exercise_position').notNull(),
+    position: integer().notNull(),
+    // The set's own copy of what was planned; it can differ from the exercise blueprint's.
+    blueprint: text({ mode: 'json' }).$type<CardioExerciseSetBlueprintJSON>().notNull(),
+    completedAt: text('completed_at').$type<OffsetDateTimeJSON>(),
+    completedAtMs: integer('completed_at_ms'),
+    duration: text().$type<DurationJSON>(),
+    distanceValue: text('distance_value').$type<BigNumberJSON>(),
+    distanceUnit: text('distance_unit').$type<DistanceUnitJSON>(),
+    resistance: text().$type<BigNumberJSON>(),
+    incline: text().$type<BigNumberJSON>(),
+    weightValue: text('weight_value').$type<BigNumberJSON>(),
+    weightUnit: text('weight_unit').$type<WeightUnitJSON>(),
+    steps: integer(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.workoutId, table.exercisePosition, table.position] }),
+    foreignKey({
+      columns: [table.workoutId, table.exercisePosition],
+      foreignColumns: [workoutExercisesSchema.workoutId, workoutExercisesSchema.position],
+    }).onDelete('cascade'),
   ],
 );
 

@@ -1,22 +1,12 @@
-import { LiftLog } from '@/gen/proto';
 import { Logger } from '@/services/logger';
 import { showSnackbar } from '@/store/app';
 import { AddEffectFn } from '@/store/store';
 import { upsertSavedPlans } from '@/store/program';
-import {
-  beginFeedImport,
-  importBackupData,
-  importData,
-  importDataProto,
-  importDataSql,
-  selectPreferredWeightUnit,
-} from '@/store/settings';
+import { beginFeedImport, importBackupData, importData, importDataSql } from '@/store/settings';
 import { upsertExercises, upsertStoredSessions } from '@/store/stored-sessions';
 import { streamToUint8Array, writeInChunks } from '@/utils/stream';
 import { sleep } from '@/utils/sleep';
-import { Session } from '@/models/session-models';
 import { ProgramBlueprint } from '@/models/blueprint-models';
-import { ProtobufToJsonV1Migrator } from '@/models/storage/versions/initial/protobuf-migrator';
 import {
   FeedIdentity,
   FollowerFeedUser,
@@ -37,20 +27,13 @@ import {
   feedItemsSchema,
   feedPendingUsersSchema,
   programsSchema,
-  sessionsSchema,
 } from '@/db/schema';
-import { coalesceNilWeights } from '@/services/data-migrations/migrate-nil-weight-units';
+import { WorkoutRepository } from '@/services/workout-repository';
 import { toRecord } from '@/utils/reduce';
 import {
-  followRequestInboxMessageMigrations,
-  feedIdentityMigrations,
   sessionUserEventMigrations,
-  followedFeedUserMigrations,
-  followerFeedUserMigrations,
   exerciseDescriptorMigrations,
   programBlueprintMigrations,
-  sessionMigrations,
-  pendingFeedUserMigrations,
 } from '@/models/storage/versions/migrations';
 import { FeedUserJSON } from '@/models/storage/versions/latest';
 import { fromExerciseDescriptorJSON } from '@/models/exercise-models';
@@ -68,13 +51,6 @@ export function addImportBackupEffects(addEffect: AddEffectFn) {
     );
     await sleep(200);
     const gunzipped = await unGzipIfZipped(file.bytes, logger);
-    const parsedProto = tryParseProto(gunzipped, logger);
-    if (parsedProto) {
-      dispatch(importDataProto({ dao: parsedProto }));
-      return;
-    } else {
-      logger.warn('Failed to deserialize data into proto, trying sqlite', {});
-    }
     try {
       const db = await deserializeDatabaseAsync(gunzipped);
       dispatch(importDataSql({ db }));
@@ -88,15 +64,8 @@ export function addImportBackupEffects(addEffect: AddEffectFn) {
     }
   });
 
-  addEffect(importBackupData, async ({ payload }, { dispatch, getState }) => {
-    const { programs, exercises, feed, successMessage } = payload;
-    // Old backups can hold weights with no unit; give them the user's unit before anything is stored.
-    const preferredUnit = selectPreferredWeightUnit(getState());
-    const workouts = payload.workouts.map((session) => {
-      const json = session.toJSON();
-      const coalesced = coalesceNilWeights(json, preferredUnit);
-      return coalesced === json ? session : Session.fromJSON(coalesced);
-    });
+  addEffect(importBackupData, async ({ payload }, { dispatch }) => {
+    const { workouts, programs, exercises, feed, successMessage } = payload;
     dispatch(upsertStoredSessions(workouts));
     dispatch(upsertSavedPlans(programs));
     if (exercises) {
@@ -117,15 +86,30 @@ export function addImportBackupEffects(addEffect: AddEffectFn) {
       const {
         payload: { db: backupDb },
       } = action;
+      // Backups from before workouts went relational keep them in `session`, which migration 0009
+      // drops. Old formats are unsupported (ADR-0001), so refuse rather than restore everything else
+      // with no workouts.
+      const legacySessionTable = await backupDb.getAllAsync<{ name: string }>(
+        `SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?`,
+        ['session'],
+      );
+      if (legacySessionTable.length) {
+        logger.warn('Rejected a pre-relational backup', { reason: 'it has a session table' });
+        dispatch(
+          showSnackbar({
+            text: tolgee.t("This backup is from an older version of LiftLog and can't be restored."),
+          }),
+        );
+        return;
+      }
       const drizzleBackupDb = drizzle(backupDb);
       const migrator = new DatabaseMigrationService(drizzleBackupDb, logger, {
         importOldData: async () => {},
       });
 
       await migrator.migrate();
-      const workouts = (await drizzleBackupDb.select().from(sessionsSchema)).map((x) =>
-        Session.fromJSON(sessionMigrations.migrate(x.payload)),
-      );
+      // A backup's in-progress workout comes back as history: restoring never resumes a workout.
+      const { workouts } = await new WorkoutRepository(drizzleBackupDb).loadAll();
       const programs = (await drizzleBackupDb.select().from(programsSchema)).reduce(
         toRecord(
           (x) => x.id,
@@ -178,74 +162,6 @@ export function addImportBackupEffects(addEffect: AddEffectFn) {
       await action.payload.db.closeAsync();
     }
   });
-
-  addEffect(importDataProto, async ({ payload: { dao } }, { dispatch, extra: { tolgee } }) => {
-    const workouts = dao.sessions.map((s) =>
-      Session.fromJSON(sessionMigrations.migrate(ProtobufToJsonV1Migrator.migrateSession(s))),
-    );
-    const programs = Object.fromEntries(
-      Object.entries(dao.savedPrograms).map(
-        ([id, program]) =>
-          [
-            id,
-            ProgramBlueprint.fromJSON(
-              programBlueprintMigrations.migrate(ProtobufToJsonV1Migrator.migrateProgramBlueprint(program)),
-            ),
-          ] as const,
-      ),
-    );
-    let feed: FeedBackupData | undefined;
-    if (dao.feedState?.identity) {
-      feed = {
-        identity: FeedIdentity.fromJSON(
-          feedIdentityMigrations.migrate(ProtobufToJsonV1Migrator.migrateFeedIdentity(dao.feedState.identity)),
-        ),
-        feedItems: (dao.feedState.feedItems ?? []).map((x) =>
-          SessionUserEvent.fromJSON(
-            sessionUserEventMigrations.migrate(ProtobufToJsonV1Migrator.migrateSessionUserEvent(x)),
-          ),
-        ),
-        followed: (dao.feedState.followedUsers ?? []).map((x) => {
-          const json = ProtobufToJsonV1Migrator.migrateFollowedUser(x);
-          return fromFeedUserJSON(
-            json.type === 'FollowedFeedUser'
-              ? followedFeedUserMigrations.migrate(json)
-              : pendingFeedUserMigrations.migrate(json),
-          );
-        }),
-        followers: (dao.feedState.followers ?? []).map((x) =>
-          FollowerFeedUser.fromJSON(
-            followerFeedUserMigrations.migrate(ProtobufToJsonV1Migrator.migrateFollowerUser(x)),
-          ),
-        ),
-        followRequests: (dao.feedState.followRequests ?? []).map((x) =>
-          FollowRequestInboxMessage.fromJSON(
-            followRequestInboxMessageMigrations.migrate(ProtobufToJsonV1Migrator.migrateFollowRequest(x)),
-          ),
-        ),
-      };
-    }
-    dispatch(
-      importBackupData({
-        workouts,
-        programs,
-        feed,
-        successMessage: tolgee.t('Restore complete!'),
-      }),
-    );
-  });
-}
-
-function tryParseProto(
-  bytes: Uint8Array,
-  logger: Logger,
-): LiftLog.Ui.Models.ExportedDataDao.ExportedDataDaoV2 | undefined {
-  try {
-    return LiftLog.Ui.Models.ExportedDataDao.ExportedDataDaoV2.decode(bytes);
-  } catch (e) {
-    logger.warn('Could not parse bytes as proto', e);
-    return undefined;
-  }
 }
 
 async function unGzipIfZipped(bytes: Uint8Array, logger: Logger): Promise<Uint8Array> {

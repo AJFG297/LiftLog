@@ -65,6 +65,4 @@
 *.razor linguist-language=C#
 
 backend/RevenueCat/** linguist-generated
-app/src/gen/proto.js linguist-generated
-app/src/gen/proto.d.ts linguist-generated
 app/src/store/stored-sessions/__snapshots__/history-snapshots.spec.ts.snap linguist-generated

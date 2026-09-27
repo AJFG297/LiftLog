@@ -1,91 +1,104 @@
-import {
-  beginFeedImport,
-  importBackupData,
-  importData,
-  importDataProto,
-  importDataSql,
-  setUseImperialUnits,
-} from '@/store/settings';
+import { beginFeedImport, importBackupData, importData, importDataSql } from '@/store/settings';
 import { addImportBackupEffects } from '@/store/settings/import-backup-effects';
 import { createAddEffectTestBed } from '@/utils/__test__/add-effect-testbed';
 import { describe, expect, it, vi } from 'vitest';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'path';
+import { gzipSync } from 'node:zlib';
 import { FeedBackupData } from '@/models/backup';
 import { FeedIdentity } from '@/models/feed-models';
 import { ProgramBlueprint } from '@/models/blueprint-models';
 import { EmptySession, Session } from '@/models/session-models';
 import { uuid } from '@/utils/uuid';
-import { selectSession, upsertExercises, upsertStoredSessions } from '@/store/stored-sessions';
+import { upsertExercises, upsertStoredSessions } from '@/store/stored-sessions';
 import { applyStoredSessionsEffects } from '@/store/stored-sessions/effects';
 import { createEffectStore } from '@/utils/__test__/effect-store';
 import { openDatabaseAsync } from 'expo-sqlite';
 import { drizzle } from 'drizzle-orm/expo-sqlite';
-import { eq } from 'drizzle-orm';
-import { OffsetDateTime } from '@js-joda/core';
 import { DatabaseMigrationService } from '@/services/database-migration-service';
-import {
-  migrateNilWeightUnits,
-  migrateNilWeightUnitsDataMigration,
-} from '@/services/data-migrations/migrate-nil-weight-units';
-import { dataMigrationsSchema, sessionsSchema } from '@/db/schema';
-import { RecordedWeightedExerciseJSON, SessionJSON } from '@/models/storage/versions/latest';
-import { RecordedWeightedExercise } from '@/models/session-models';
-import { Weight } from '@/models/weight';
-import { sleep } from '@/utils/sleep';
-import { filledPotentialSet, makeSession, makeWeightedBlueprint } from '@/models/session-models/__test__/helpers';
+import { WorkoutRepository } from '@/services/workout-repository';
+import { exercisesSchema, programsSchema } from '@/db/schema';
+import { upsert } from '@/db/helpers';
+import { makeSession, makeWeightedBlueprint } from '@/models/session-models/__test__/helpers';
 import { upsertSavedPlans } from '@/store/program';
 import { showSnackbar } from '@/store/app';
+import { getBackupBytes } from '@/store/settings/util';
+import { loadHistoryFixture } from '@/utils/__test__/history-fixture';
+
+vi.stubEnv('TZ', 'UTC');
+
+const silentLogger = {
+  info: vi.fn(),
+  warn: vi.fn(),
+  debug: vi.fn(),
+  error: vi.fn(),
+  time: async (_: string, action: () => unknown) => action(),
+};
+
+/** Picks `bytes` as the backup file and runs the restore up to the `importBackupData` it dispatches. */
+async function restore(bytes: Uint8Array) {
+  const testBed = createAddEffectTestBed({
+    services: {
+      filePickerService: { pickFile: vi.fn().mockResolvedValue({ bytes }) },
+      logger: silentLogger,
+      tolgee: { t: (s: string) => s },
+    },
+  });
+  addImportBackupEffects(testBed.addEffect);
+  await testBed.dispatchHandled(importData());
+  await testBed.dispatchHandled(testBed.getDispatchedAction(importDataSql));
+  return testBed.getDispatchedAction(importBackupData).payload;
+}
 
 describe('import-backup-effects', () => {
-  it('dispatches a valid import when the sqlite db is there', async () => {
-    const realBytes = await readFile(resolve(__dirname, '../../utils/__test__/export.liftlogbackup.sqlite.gz'));
+  it('restores the workouts, programs, exercises and feed of a backup', async () => {
+    // Made by this app's own export (`getBackupBytes`): the 420-session history written through the
+    // repository, beside 13 programs, 962 exercises and a feed identity.
+    const bytes = await readFile(resolve(__dirname, '../../utils/__test__/backup.liftlogbackup.sqlite.gz'));
+
+    const restored = await restore(bytes);
+
+    expect(restored.workouts).toHaveLength(420);
+    expect(Object.values(restored.programs)).toHaveLength(13);
+    expect(Object.values(restored.exercises ?? {})).toHaveLength(962);
+    expect(restored.feed).toBeDefined();
+    expect(restored.successMessage).toBe('Restore complete!');
+    // Workout ids are health-export record ids and the CSV-import dedupe key, so a restore must keep them.
+    const expected = loadHistoryFixture();
+    expect(restored.workouts.map((x) => x.id).toSorted()).toEqual(expected.map((x) => x.id).toSorted());
+    const byId = new Map(restored.workouts.map((x) => [x.id, x]));
+    for (const session of expected) {
+      expect(byId.get(session.id)!.toJSON()).toEqual(session.toJSON());
+    }
+  });
+
+  it('rejects a pre-relational backup instead of restoring it without workouts', async () => {
+    const legacyDb = await openDatabaseAsync(':memory:');
+    await legacyDb.execAsync(`
+      CREATE TABLE session (id text PRIMARY KEY, active integer, payload text);
+      CREATE TABLE program (id text PRIMARY KEY, active integer, payload text);
+      INSERT INTO program (id, active, payload) VALUES ('program', 1, '{}');
+    `);
+    const bytes = gzipSync(await legacyDb.serializeAsync());
+    await legacyDb.closeAsync();
     const testBed = createAddEffectTestBed({
       services: {
-        filePickerService: {
-          pickFile: vi.fn().mockResolvedValue({ bytes: realBytes }),
-        },
+        filePickerService: { pickFile: vi.fn().mockResolvedValue({ bytes }) },
+        logger: silentLogger,
         tolgee: { t: (s: string) => s },
       },
     });
-
     addImportBackupEffects(testBed.addEffect);
+
     await testBed.dispatchHandled(importData());
-    const importDataSqlAction = testBed.getDispatchedAction(importDataSql);
+    await testBed.dispatchHandled(testBed.getDispatchedAction(importDataSql));
 
-    await testBed.dispatchHandled(importDataSqlAction);
-
-    const dispatchedImport = testBed.getDispatchedAction(importBackupData);
-    expect(dispatchedImport.payload.workouts).toHaveLength(420);
-    expect(dispatchedImport.payload.feed).toBeDefined();
-    expect(Object.values(dispatchedImport.payload.programs)).toHaveLength(13);
-    expect(Object.values(dispatchedImport.payload.exercises ?? {})).toHaveLength(962);
-    expect(dispatchedImport.payload.successMessage).toBe('Restore complete!');
+    testBed.expectNotDispatched(importBackupData);
+    expect(testBed.dispatchedActions.filter(showSnackbar.match).at(-1)?.payload.text).toBe(
+      "This backup is from an older version of LiftLog and can't be restored.",
+    );
   });
 
-  it('dispatches a valid import when it is a proto', async () => {
-    const realBytes = await readFile(resolve(__dirname, '../../utils/__test__/export.liftlogbackup.protobuf.gz'));
-    const testBed = createAddEffectTestBed({
-      services: {
-        filePickerService: {
-          pickFile: vi.fn().mockResolvedValue({ bytes: realBytes }),
-        },
-        tolgee: { t: (s: string) => s },
-      },
-    });
-
-    addImportBackupEffects(testBed.addEffect);
-    await testBed.dispatchHandled(importData());
-    const importDataSqlAction = testBed.getDispatchedAction(importDataProto);
-
-    await testBed.dispatchHandled(importDataSqlAction);
-
-    const dispatchedImport = testBed.getDispatchedAction(importBackupData);
-    expect(dispatchedImport.payload.workouts).toHaveLength(85);
-    expect(dispatchedImport.payload.feed).toBeUndefined();
-    expect(Object.values(dispatchedImport.payload.programs)).toHaveLength(0);
-    expect(dispatchedImport.payload.successMessage).toBe('Restore complete!');
-  });
   it('dispatches the appropriate actions when importing', async () => {
     const testBed = createAddEffectTestBed({
       initialState: { settings: { useImperialUnits: false } },
@@ -176,82 +189,64 @@ describe('import-backup-effects', () => {
   });
 });
 
-describe('importBackupData against a real database', () => {
-  async function setup() {
+describe('export then restore', () => {
+  it('round-trips workouts, programs and exercises through a backup file', async () => {
     const expoDb = await openDatabaseAsync(':memory:');
     const db = drizzle(expoDb);
-    const logger = {
-      info: vi.fn(),
-      warn: vi.fn(),
-      debug: vi.fn(),
-      error: vi.fn(),
-      // A write that takes a moment, as it does on a device with a real history.
-      time: async (_: string, action: () => unknown) => {
-        await sleep(5);
-        return action();
-      },
-    };
-    const preferenceService = { getUseImperialUnits: () => Promise.resolve(false) };
-    const databaseMigrationService = new DatabaseMigrationService(db, logger as never, {
-      // The one data migration an import can re-trigger, run the way DatabaseImportService does.
-      importOldData: async () => {
-        const run = (await db.select().from(dataMigrationsSchema)).map((x) => x.id);
-        if (!run.includes(migrateNilWeightUnitsDataMigration)) {
-          await migrateNilWeightUnits(db, preferenceService as never);
-        }
-      },
+    await new DatabaseMigrationService(db, silentLogger as never, { importOldData: async () => {} }).migrate();
+    const history = loadHistoryFixture().slice(0, 50);
+    const inProgress = makeSession([makeWeightedBlueprint({ name: 'Bench' })]);
+    const repository = new WorkoutRepository(db);
+    await repository.putMany(history);
+    await repository.setActive(inProgress);
+    const program = ProgramBlueprint.fromJSON({
+      version: 3,
+      name: 'Program',
+      sessions: [inProgress.blueprint.toJSON()],
+      lastEdited: '2026-04-10' as never,
     });
-    await databaseMigrationService.migrate();
+    await db.insert(programsSchema).values({ id: 'program', active: true, payload: program.toJSON() });
+    const exercise = {
+      name: 'Custom exercise',
+      force: null,
+      level: '',
+      mechanic: null,
+      equipment: null,
+      muscles: [],
+      instructions: '',
+      category: '',
+    };
+    await upsert(db, exercisesSchema, [{ id: 'custom', payload: exercise }]);
 
+    const restored = await restore(await getBackupBytes({ expoDb, includeFeed: false }));
+
+    const expected = [...history, inProgress];
+    expect(restored.workouts.map((x) => x.toJSON())).toEqual(expect.arrayContaining(expected.map((x) => x.toJSON())));
+    expect(restored.workouts).toHaveLength(expected.length);
+    expect(restored.programs.program?.toJSON()).toEqual(program.toJSON());
+    expect(restored.exercises?.custom).toEqual(exercise);
+    expect(restored.feed).toBeUndefined();
+  });
+
+  it('stores restored workouts with their ids, and never resumes one', async () => {
+    const db = drizzle(await openDatabaseAsync(':memory:'));
+    await new DatabaseMigrationService(db, silentLogger as never, { importOldData: async () => {} }).migrate();
+    const workoutRepository = new WorkoutRepository(db);
     const harness = createEffectStore({
       db,
-      logger: logger as never,
-      databaseMigrationService,
-      preferenceService: preferenceService as never,
+      workoutRepository,
+      logger: silentLogger as never,
       tolgee: { t: (s: string) => s } as never,
-      healthExportService: { canExport: () => false } as never,
     });
     applyStoredSessionsEffects(harness.addEffect);
     addImportBackupEffects(harness.addEffect);
-    return { db, harness };
-  }
+    const workouts = loadHistoryFixture().slice(0, 20);
 
-  function sessionWithNilWeight() {
-    const blueprint = makeWeightedBlueprint({ name: 'Squat' });
-    return makeSession([blueprint]).with({
-      recordedExercises: [
-        new RecordedWeightedExercise(
-          blueprint,
-          [filledPotentialSet(5, OffsetDateTime.parse('2025-04-05T10:00:00Z'), new Weight(100, 'nil'))],
-          undefined,
-        ),
-      ],
-    });
-  }
-
-  it('stores imported sessions with nil weights coalesced to the preferred unit', async () => {
-    const { db, harness } = await setup();
-    const session = sessionWithNilWeight();
-
-    harness.store.dispatch(importBackupData({ workouts: [session], programs: {}, successMessage: 'done' }));
+    harness.store.dispatch(importBackupData({ workouts, programs: {}, successMessage: 'done' }));
     await harness.settle();
 
-    const [row] = await db.select().from(sessionsSchema).where(eq(sessionsSchema.id, session.id));
-    const storedSet = (row!.payload as SessionJSON).recordedExercises[0] as RecordedWeightedExerciseJSON;
-    expect(storedSet.potentialSets[0]!.weight.unit).toBe('kilograms');
-    const inMemory = selectSession(harness.getState(), session.id)!.recordedExercises[0] as RecordedWeightedExercise;
-    expect(inMemory.potentialSets[0]!.weight.unit).toBe('kilograms');
-  });
-
-  it('uses pounds for nil weights when the user lifts in pounds', async () => {
-    const { harness } = await setup();
-    harness.store.dispatch(setUseImperialUnits(true));
-    const session = sessionWithNilWeight();
-
-    harness.store.dispatch(importBackupData({ workouts: [session], programs: {}, successMessage: 'done' }));
-    await harness.settle();
-
-    const inMemory = selectSession(harness.getState(), session.id)!.recordedExercises[0] as RecordedWeightedExercise;
-    expect(inMemory.potentialSets[0]!.weight.unit).toBe('pounds');
+    const stored = await workoutRepository.loadAll();
+    expect(stored.activeWorkoutId).toBeUndefined();
+    expect(stored.workouts.map((x) => x.id).toSorted()).toEqual(workouts.map((x) => x.id).toSorted());
   });
 });

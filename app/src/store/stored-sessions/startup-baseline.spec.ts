@@ -3,7 +3,7 @@ import { drizzle } from 'drizzle-orm/expo-sqlite';
 import { openDatabaseAsync } from 'expo-sqlite';
 import { LocalDate, YearMonth } from '@js-joda/core';
 import { DatabaseMigrationService } from '@/services/database-migration-service';
-import { sessionsSchema } from '@/db/schema';
+import { WorkoutRepository } from '@/services/workout-repository';
 import { applyStoredSessionsEffects } from '@/store/stored-sessions/effects';
 import {
   initializeStoredSessionsStateSlice,
@@ -22,8 +22,8 @@ import { generateSyntheticHistory } from '@/utils/__test__/synthetic-history';
  *   npm run bench:startup
  *
  * Seeds an in-memory database with a synthetic history, then measures a cold start the way the app does
- * one: run migrations, hydrate stored sessions (read every row, migrate its payload, build `Session`
- * instances, derive the caches), then the first pass of the whole-history selectors the home and History
+ * one: run migrations, hydrate stored sessions (read every workout table, rebuild `Session` instances from
+ * the rows, derive the caches), then the first pass of the whole-history selectors the home and History
  * screens run on mount. Heap is what a hydrated store retains over an empty one, after a forced GC.
  *
  * Numbers come from Node against libsql, not a phone against expo-sqlite, so compare them only with other
@@ -52,12 +52,7 @@ async function seedDatabase(count: number) {
   const expoDb = await openDatabaseAsync(':memory:');
   const db = drizzle(expoDb);
   await new DatabaseMigrationService(db, silentLogger as never, { importOldData: async () => {} }).migrate();
-  const sessions = generateSyntheticHistory({ count, end: TODAY });
-  for (let i = 0; i < sessions.length; i += 500) {
-    await db
-      .insert(sessionsSchema)
-      .values(sessions.slice(i, i + 500).map((x) => ({ id: x.id, active: false, payload: x.toJSON() })));
-  }
+  await new WorkoutRepository(db).putMany(generateSyntheticHistory({ count, end: TODAY }));
   return db;
 }
 
@@ -67,6 +62,7 @@ async function coldStart(db: Awaited<ReturnType<typeof seedDatabase>>, expectedS
   await new DatabaseMigrationService(db, silentLogger as never, { importOldData: async () => {} }).migrate();
   const harness = createEffectStore({
     db,
+    workoutRepository: new WorkoutRepository(db),
     logger: silentLogger as never,
     keyValueStore: { getItem: () => Promise.resolve(null) } as never,
   });
