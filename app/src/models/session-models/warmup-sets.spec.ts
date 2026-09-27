@@ -73,6 +73,25 @@ describe('warm-up slots', () => {
     expect(edited.blueprint.equals(exercise.blueprint)).toBe(true);
   });
 
+  it('follow the working weight when it changes mid-workout, from zero on a first session', () => {
+    const blueprint = makeWeightedBlueprint({ sets: 2, warmupSets: [percent(50), percent(70, 3), absolute(20)] });
+    const fresh = RecordedWeightedExercise.empty(blueprint, 'kilograms');
+    const moved = fresh.withWeight(0, new Weight(85, 'kilograms'), 'uncompletedSets');
+    // 42.5 and 59.5 on the 2.5 kg fallback step; the absolute one doesn't depend on the working weight.
+    expect(weights(moved.warmupSets)).toEqual([42.5, 60, 20]);
+  });
+
+  it('follow the heaviest working set when only one set changes', () => {
+    const moved = withWarmups().withWeight(1, new Weight(120, 'kilograms'), 'thisSet');
+    expect(weights(moved.warmupSets)).toEqual([60, 85]);
+  });
+
+  it('keep a logged weight, and a weight given for this session only, when the working weight changes', () => {
+    const exercise = withWarmups().withWarmupRepCount(0, 5, tick()).withWarmupWeight(1, new Weight(30, 'kilograms'));
+    const moved = exercise.withWeight(0, new Weight(140, 'kilograms'), 'allSets');
+    expect(weights(moved.warmupSets)).toEqual([50, 30]);
+  });
+
   it('throw on an index with no warm-up', () => {
     expect(() => withWarmups().withCycledWarmupRepCount(2, tick())).toThrow(IndexOutOfBoundsError);
   });

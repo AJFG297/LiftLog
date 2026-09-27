@@ -270,7 +270,28 @@ export class RecordedWeightedExercise {
       .with('thisSet', () => this.withSet(setIndex, (s) => s.with({ weight })))
       .with('uncompletedSets', () => this.withAllSets((s) => s.with({ weight: s.set ? s.weight : weight })))
       .with('allSets', () => this.withAllSets((s) => s.with({ weight })))
-      .exhaustive();
+      .exhaustive()
+      .withPercentWarmupsFollowing(this, weight.unit);
+  }
+
+  /**
+   * Unlogged percentage warm-ups follow the working weight as it changes during the workout - on an
+   * exercise's first session it starts at zero, so they would otherwise stay at zero. A warm-up whose
+   * weight no longer matches what the plan made of `before` was given one of its own, and keeps it.
+   */
+  private withPercentWarmupsFollowing(before: RecordedWeightedExercise, fallbackUnit: WeightUnit) {
+    return this.with({
+      warmupSets: this.warmupSets.map((slot, index) => {
+        const planned = this.blueprint.warmupSets[index];
+        if (slot.set || planned?.load?.type !== 'percent') {
+          return slot;
+        }
+        if (!slot.weight.equals(before.warmupSlotFor(planned, fallbackUnit).weight)) {
+          return slot;
+        }
+        return slot.with({ weight: this.warmupSlotFor(planned, fallbackUnit).weight });
+      }),
+    });
   }
 
   toJSON(): RecordedWeightedExerciseJSON {

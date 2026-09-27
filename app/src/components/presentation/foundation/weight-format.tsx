@@ -51,16 +51,18 @@ export default function WeightFormat(props: WeightFormatProps) {
 
 /**
  * {@link WeightFormat} as one plain string, for text that can't nest it (a translated template):
- * `60kg`, or on bodyweight `BW`, `BW +10kg`, `BW -20kg`.
+ * `60 kg`, or on bodyweight `BW`, `BW +10 kg`, `BW -20 kg`.
  */
 export function formatWeightText(weight: Weight, usesBodyweight: boolean, bodyweightLabel: string): string {
+  // Spaced like WeightFormat, which this sits beside on a set tile.
+  const text = `${localeFormatBigNumber(weight.value)} ${shortFormatWeightUnit(weight.unit)}`;
   if (!usesBodyweight) {
-    return weight.shortLocaleFormat();
+    return text;
   }
   if (weight.value.isZero()) {
     return bodyweightLabel;
   }
-  return `${bodyweightPrefix(bodyweightLabel, weight.value)}${weight.shortLocaleFormat()}`;
+  return `${bodyweightPrefix(bodyweightLabel, weight.value)}${text}`;
 }
 
 /** `BW +` before added load; a negative (assisted) load carries its own minus sign. */

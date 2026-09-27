@@ -137,9 +137,24 @@ export function PotentialSetDisplay(props: PotentialSetDisplayProps) {
               <Text style={{ ...size.targetFont, verticalAlign: 'top' }}>/{formatRepsTarget(props.repsTarget)}</Text>
             </Text>
             {!isFilled && previousHint !== undefined && (
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[0.5] }}>
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: spacing[0.5],
+                  maxWidth: '100%',
+                  paddingHorizontal: spacing[1],
+                }}
+              >
                 <Icon source={'history'} size={12} color={hintColor} />
-                <Text style={{ color: hintColor, ...(warmup ? font['text-xs'] : undefined) }}>{previousHint}</Text>
+                {/* A warm-up's reps × weight can outgrow a narrow tile: shrink it rather than clip it. */}
+                <Text
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  style={{ flexShrink: 1, color: hintColor, ...(warmup ? font['text-xs'] : undefined) }}
+                >
+                  {previousHint}
+                </Text>
               </View>
             )}
           </View>
