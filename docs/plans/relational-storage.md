@@ -170,8 +170,9 @@ settled differences:
 The migration history was not squashed: `0009` drops `session` and creates the tables, so a development
 install upgrades without a reinstall. `WorkoutRepository` writes through `writeAtomically`, because
 `db.transaction(async …)` isn't atomic on the device driver (see `docs/Storage.md`). Hydration still reads
-every row. Under Node/libsql the 5,000-session bench's migrate + hydrate step roughly doubled, because it
-now reads about 89k rows instead of 5k payloads; phase 2 removes that read.
+every row, though only the columns that rebuild a `Session`. Under Node/libsql the 5,000-session bench's
+migrate + hydrate step went from about 420 ms to about 750 ms, because it now reads about 89k rows
+instead of 5k payloads; phase 2 removes that read.
 
 
 1. **Schema.** Add the tables above and drop `session` in the same migration. Consider squashing

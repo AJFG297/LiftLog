@@ -13,6 +13,7 @@ import { AnyVersionSessionBlueprintJSON } from '@/models/storage/versions/any';
 import { sessionVolume } from '@/store/activity/volume';
 import { getSessionReferenceTime } from '@/store/stored-sessions';
 import { OffsetDateTime } from '@js-joda/core';
+import { getTableColumns, Table } from 'drizzle-orm';
 
 export type WorkoutRow = Omit<typeof workoutsSchema.$inferSelect, 'active'>;
 export type WorkoutExerciseRow = typeof workoutExercisesSchema.$inferSelect;
@@ -25,6 +26,31 @@ export interface WorkoutRows {
   exercises: WorkoutExerciseRow[];
   weightedSets: WeightedSetRow[];
   cardioSets: CardioSetRow[];
+}
+
+/**
+ * The columns {@link fromWorkoutRows} reads back. The query columns are computed on write for SQL and never
+ * rebuild a `Session`, so hydration leaves them out.
+ */
+export const readColumns = {
+  workout: omitColumns(workoutsSchema, ['referenceTimeMs', 'volumeKg']),
+  exercise: omitColumns(workoutExercisesSchema, ['kind', 'movementKey', 'progressionKey', 'latestTimeMs']),
+  weightedSet: omitColumns(weightedSetsSchema, ['weightKg', 'effectiveWeightKg', 'completedAtMs']),
+  cardioSet: omitColumns(cardioSetsSchema, ['completedAtMs']),
+};
+
+/** What {@link fromWorkoutRows} needs: {@link WorkoutRows} without the query columns. */
+export interface StoredWorkoutRows {
+  workout: Omit<WorkoutRow, 'referenceTimeMs' | 'volumeKg'>;
+  exercises: Omit<WorkoutExerciseRow, 'kind' | 'movementKey' | 'progressionKey' | 'latestTimeMs'>[];
+  weightedSets: Omit<WeightedSetRow, 'weightKg' | 'effectiveWeightKg' | 'completedAtMs'>[];
+  cardioSets: Omit<CardioSetRow, 'completedAtMs'>[];
+}
+
+function omitColumns<TTable extends Table, TKey extends keyof TTable['_']['columns']>(table: TTable, keys: TKey[]) {
+  return Object.fromEntries(
+    Object.entries(getTableColumns(table)).filter(([key]) => !keys.includes(key as TKey)),
+  ) as Omit<TTable['_']['columns'], TKey>;
 }
 
 /**
@@ -116,7 +142,7 @@ export function toWorkoutRows(session: Session): WorkoutRows {
 }
 
 /** Rebuilds the session {@link toWorkoutRows} was given. Child rows may arrive in any order. */
-export function fromWorkoutRows(rows: WorkoutRows): Session {
+export function fromWorkoutRows(rows: StoredWorkoutRows): Session {
   const { workout } = rows;
   const exercises = rows.exercises.toSorted(byPosition);
   const weightedSets = groupByExercise(rows.weightedSets);
@@ -151,10 +177,10 @@ export function fromWorkoutRows(rows: WorkoutRows): Session {
 }
 
 function toRecordedExerciseJSON(
-  exercise: WorkoutExerciseRow,
+  exercise: StoredWorkoutRows['exercises'][number],
   blueprint: SessionBlueprintJSON['exercises'][number],
-  weightedSets: WeightedSetRow[],
-  cardioSets: CardioSetRow[],
+  weightedSets: StoredWorkoutRows['weightedSets'],
+  cardioSets: StoredWorkoutRows['cardioSets'],
 ): RecordedExerciseJSON {
   const notes = exercise.notes ?? undefined;
   if (blueprint.type === 'WeightedExerciseBlueprint') {

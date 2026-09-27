@@ -10,6 +10,7 @@ import {
   WorkoutExerciseRow,
   WorkoutRows,
   fromWorkoutRows,
+  readColumns,
   toWorkoutRows,
 } from '@/services/workout-rows';
 
@@ -31,10 +32,10 @@ export class WorkoutRepository {
   /** Every stored workout, and which one (if any) is in progress. */
   async loadAll(): Promise<{ workouts: Session[]; activeWorkoutId: string | undefined }> {
     const [workouts, exercises, weightedSets, cardioSets] = await Promise.all([
-      this.db.select().from(workoutsSchema),
-      this.db.select().from(workoutExercisesSchema),
-      this.db.select().from(weightedSetsSchema),
-      this.db.select().from(cardioSetsSchema),
+      this.db.select(readColumns.workout).from(workoutsSchema),
+      this.db.select(readColumns.exercise).from(workoutExercisesSchema),
+      this.db.select(readColumns.weightedSet).from(weightedSetsSchema),
+      this.db.select(readColumns.cardioSet).from(cardioSetsSchema),
     ]);
     const exercisesByWorkout = groupByWorkout(exercises);
     const weightedSetsByWorkout = groupByWorkout(weightedSets);
