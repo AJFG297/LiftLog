@@ -127,7 +127,8 @@ When several statements must move together, use `writeAtomically(db, (tx) => [..
 `db/helpers.ts`. Don't write `db.transaction(async (tx) => …)`: on a device the expo-sqlite driver is
 synchronous and commits as soon as the callback returns, so every awaited statement runs after the commit,
 outside the transaction. Tests can't catch that, because Vitest's libsql driver is async and awaits the
-callback.
+callback. Older call sites still use the `async` form (programs, feed, backends, exercises, the data
+migrations) and are known debt, not a pattern to copy.
 
 ### Workouts
 

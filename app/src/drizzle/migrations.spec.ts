@@ -37,4 +37,11 @@ describe('drizzle migrations', () => {
       expect(bundled[key]).toBe(readFileSync(resolve(__dirname, `${entry.tag}.sql`), 'utf8'));
     }
   });
+
+  // Vitest's transform tolerates a repeated import binding; Metro rejects the whole bundle.
+  it('imports each migration exactly once', () => {
+    const source = readFileSync(resolve(__dirname, 'migrations.js'), 'utf8');
+    const imports = [...source.matchAll(/^import (m\d{4}) from '\.\/(.+)\.sql';$/gm)].map((x) => [x[1], x[2]]);
+    expect(imports).toEqual(journal.entries.map((x) => [`m${String(x.idx).padStart(4, '0')}`, x.tag]));
+  });
 });

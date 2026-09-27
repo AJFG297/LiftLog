@@ -66,8 +66,15 @@ could be any persisted version. Code that turns a stored row into a domain model
 migrates it first:
 
 ```ts
-Session.fromJSON(sessionMigrations.migrate(row.payload));
+ProgramBlueprint.fromJSON(programBlueprintMigrations.migrate(row.payload));
 ```
+
+Workouts are the exception to one payload per row: they are relational (see
+[Storage.md](./Storage.md#workouts)), and only each exercise's blueprint is JSON. That column is typed
+as the any-version exercise blueprint, and the workout row's `blueprint_version` records the version it
+was written at. `services/workout-rows.ts` puts the two back together as a `SessionBlueprintJSON` and
+runs `sessionBlueprintMigrations` over it. A session version bump that only changes recorded sets
+doesn't touch storage; the change becomes a SQL migration on the set tables instead.
 
 Because the payload is typed as the any-version union rather than the latest
 shape, `fromJSON` (which wants the latest shape) **won't compile until you

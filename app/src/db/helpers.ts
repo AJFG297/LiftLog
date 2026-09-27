@@ -29,7 +29,7 @@ export async function upsert<T, K>(
     });
 }
 
-type Transaction = Parameters<Parameters<ExpoSQLiteDatabase['transaction']>[0]>[0];
+export type Transaction = Parameters<Parameters<ExpoSQLiteDatabase['transaction']>[0]>[0];
 
 /**
  * Runs the statements `build` returns in one transaction, in order.

@@ -2,7 +2,7 @@ import { ExpoSQLiteDatabase } from 'drizzle-orm/expo-sqlite';
 import { eq, getTableColumns, inArray, sql } from 'drizzle-orm';
 import { SQLiteColumn, SQLiteTable } from 'drizzle-orm/sqlite-core';
 import { cardioSetsSchema, weightedSetsSchema, workoutExercisesSchema, workoutsSchema } from '@/db/schema';
-import { writeAtomically } from '@/db/helpers';
+import { Transaction, writeAtomically } from '@/db/helpers';
 import { Session } from '@/models/session-models';
 import {
   CardioSetRow,
@@ -13,7 +13,6 @@ import {
   toWorkoutRows,
 } from '@/services/workout-rows';
 
-type Transaction = Parameters<Parameters<ExpoSQLiteDatabase['transaction']>[0]>[0];
 type Statement = { run(): unknown };
 
 // Keeps every statement under SQLite's historical 999 bound-parameter limit.
@@ -104,7 +103,7 @@ function writeContent(tx: Transaction, rows: WorkoutRows[], { activate }: { acti
         .onConflictDoUpdate({
           target: workoutsSchema.id,
           set: {
-            ...excluded(contentColumns),
+            ...excludedValues(contentColumns),
             ...(activate ? { active: true } : {}),
           },
         }),
@@ -157,7 +156,8 @@ function chunkedValues<T>(values: T[], size: number): T[][] {
   return chunks;
 }
 
-function excluded(columns: Record<string, SQLiteColumn>) {
+/** `SET column = excluded.column` for each column, so an upsert takes the incoming row's values. */
+function excludedValues(columns: Record<string, SQLiteColumn>) {
   return Object.fromEntries(
     Object.entries(columns).map(([key, column]) => [key, sql.raw(`excluded.${column.name}`)] as const),
   );

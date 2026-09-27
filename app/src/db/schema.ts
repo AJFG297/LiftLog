@@ -8,6 +8,7 @@ import {
   AnyVersionProgramBlueprintJSON,
   AnyVersionReceivedReactionJSON,
   AnyVersionSentReactionJSON,
+  AnyVersionSessionBlueprintJSON,
   AnyVersionSessionUserEventJSON,
 } from '@/models/storage/versions/any';
 import { BackendFeature, BackendKind } from '@/models/backend';
@@ -28,7 +29,6 @@ import type {
   CardioExerciseSetBlueprintJSON,
   DistanceUnitJSON,
   DurationJSON,
-  ExerciseBlueprintJSON,
   LocalDateJSON,
   OffsetDateTimeJSON,
   WeightUnitJSON,
@@ -41,6 +41,8 @@ import type {
  * Columns ending in `_ms` / `_kg` and the keys are computed on write from the domain model, so SQL can
  * order and aggregate what the JS methods compute; they are never read back into a `Session`.
  */
+type AnyVersionExerciseBlueprintJSON = AnyVersionSessionBlueprintJSON['exercises'][number];
+
 export const workoutsSchema = sqliteTable(
   'workout',
   {
@@ -80,7 +82,7 @@ export const workoutExercisesSchema = sqliteTable(
     latestTimeMs: integer('latest_time_ms'),
     notes: text(),
     // Migrated on read by `sessionBlueprintMigrations`, at the workout's `blueprint_version`.
-    blueprint: text({ mode: 'json' }).$type<ExerciseBlueprintJSON>().notNull(),
+    blueprint: text({ mode: 'json' }).$type<AnyVersionExerciseBlueprintJSON>().notNull(),
   },
   (table) => [
     primaryKey({ columns: [table.workoutId, table.position] }),
