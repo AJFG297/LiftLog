@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import fc from 'fast-check';
+import { hsvToHex, type HexColor } from './color';
 // The package root pulls in its native module; the builder itself is pure.
 import { createThemeFromSourceColor } from '@pchmn/expo-material3-theme/build/utils/createMaterial3Theme';
 import {
@@ -41,7 +42,7 @@ function legiblePairs(t: ThemeTokens): [string, string, string][] {
   ];
 }
 
-function expectLegible(source: string) {
+function expectLegible(source: HexColor) {
   for (const variant of VARIANTS) {
     const tokens = themeTokens(source, variant);
     for (const [name, fg, bg] of legiblePairs(tokens)) {
@@ -50,7 +51,7 @@ function expectLegible(source: string) {
   }
 }
 
-const hexArb = fc.integer({ min: 0, max: 0xffffff }).map((n) => `#${n.toString(16).padStart(6, '0')}`);
+const hexArb = fc.integer({ min: 0, max: 0xffffff }).map((n) => `#${n.toString(16).padStart(6, '0')}` as const);
 
 describe('themeTokens', () => {
   it.each(ACCENT_PRESETS.map((p) => [p.key, p.seed]))('keeps the %s preset legible', (_key, seed) => {
@@ -64,8 +65,19 @@ describe('themeTokens', () => {
     );
   });
 
+  it('keeps every hue legible, vivid and muted', () => {
+    for (let hue = 0; hue < 360; hue += 10) {
+      for (const [s, v] of [
+        [1, 1],
+        [0.35, 0.6],
+      ] as const) {
+        expectLegible(hsvToHex(hue, s, v));
+      }
+    }
+  });
+
   it('handles the extremes: white, black, grey, and bright hues that must be pulled down', () => {
-    for (const source of ['#FFFFFF', '#000000', '#808080', '#FFFF00', '#00FFFF', '#00FF00', '#FF00FF']) {
+    for (const source of ['#FFFFFF', '#000000', '#808080', '#FFFF00', '#00FFFF', '#00FF00', '#FF00FF'] as const) {
       expectLegible(source);
     }
   });
@@ -109,7 +121,7 @@ describe('paperSchemeFromTokens', () => {
         const isDark = variant !== 'light';
         const tokens = themeTokens(source, variant);
         const base = createThemeFromSourceColor(source)[isDark ? 'dark' : 'light'];
-        const scheme = paperSchemeFromTokens(tokens, base, isDark);
+        const scheme = paperSchemeFromTokens(tokens, base, variant);
         expect(wcag(scheme.onPrimary, scheme.primary)).toBeGreaterThanOrEqual(MIN_TEXT_CONTRAST);
         expect(wcag(scheme.primary, scheme.background)).toBeGreaterThanOrEqual(MIN_TEXT_CONTRAST);
         expect(wcag(scheme.primary, scheme.surfaceContainer)).toBeGreaterThanOrEqual(MIN_TEXT_CONTRAST);
@@ -118,6 +130,10 @@ describe('paperSchemeFromTokens', () => {
         expect(wcag(scheme.onSurface, scheme.surfaceContainerHighest)).toBeGreaterThanOrEqual(7);
         expect(wcag(scheme.onSurfaceVariant, scheme.surfaceContainerHighest)).toBeGreaterThanOrEqual(MIN_TEXT_CONTRAST);
         expect(wcag(scheme.onPrimaryContainer, scheme.primaryContainer)).toBeGreaterThanOrEqual(MIN_TEXT_CONTRAST);
+        // Field borders and focus rings: WCAG's 3:1 for non-text boundaries.
+        for (const surface of [scheme.background, scheme.surfaceContainer]) {
+          expect(wcag(scheme.outline, surface)).toBeGreaterThanOrEqual(3);
+        }
       }),
       { numRuns: 50 },
     );

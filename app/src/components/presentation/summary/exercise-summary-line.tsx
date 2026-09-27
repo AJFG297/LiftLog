@@ -10,23 +10,27 @@ interface ExerciseSummaryLineProps {
   isFilled: boolean;
   showWeight: boolean;
   color?: ColorChoice;
+  /** The set summary on the right. Muted by default; a coloured surface (a chat bubble) passes its own. */
+  secondaryColor?: ColorChoice;
 }
 
 /** Half the row, so the two columns stay a grid: nothing here is ever wide enough to be worth breaking it for. */
 const SETS_MAX_WIDTH = '50%';
 
-export function ExerciseSummaryLine({ exercise, isFilled, showWeight, color = 'onSurface' }: ExerciseSummaryLineProps) {
+export function ExerciseSummaryLine({
+  exercise,
+  isFilled,
+  showWeight,
+  color = 'onSurface',
+  secondaryColor = 'onSurfaceVariant',
+}: ExerciseSummaryLineProps) {
   const { t } = useTranslate();
   return (
     <View style={{ flexDirection: 'row', justifyContent: 'space-between', columnGap: spacing[3] }}>
       <SurfaceText color={color} style={{ flexShrink: 1 }}>
         {exercise.blueprint.name}
       </SurfaceText>
-      {/* Muted on ordinary surfaces; on a coloured one (a chat bubble) it has to follow the caller's colour. */}
-      <SurfaceText
-        color={color === 'onSurface' ? 'onSurfaceVariant' : color}
-        style={{ maxWidth: SETS_MAX_WIDTH, textAlign: 'right' }}
-      >
+      <SurfaceText color={secondaryColor} style={{ maxWidth: SETS_MAX_WIDTH, textAlign: 'right' }}>
         {formatExerciseSummary(exercise, {
           isFilled,
           showWeight,

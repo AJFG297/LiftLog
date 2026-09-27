@@ -12,6 +12,7 @@ import { DarkTheme, ThemeProvider as NavigationThemeProvider, DefaultTheme } fro
 import { MsIconSrc } from '@/components/presentation/foundation/ms-icon-source';
 import { argbFromHex, Blend, Hct, hexFromArgb } from '@material/material-color-utilities';
 import { paperSchemeFromTokens, themeTokens, VERMILION, type ThemeTokens } from '@/utils/theme-tokens';
+import type { HexColor } from '@/utils/color';
 
 export const rounding = {
   roundedRectangleRadius: 10,
@@ -139,6 +140,12 @@ export type ColorChoice = keyof {
   [K in keyof AppThemeColors as AppThemeColors[K] extends string ? K : never]: AppThemeColors[K];
 };
 
+/**
+ * Whether the `'default'` seed can follow the wallpaper (Material You, Android 12+). Where it can't,
+ * `'default'` is vermilion.
+ */
+export const canMatchWallpaper = Platform.OS === 'android' && isDynamicThemeSupported;
+
 export interface AppTheme {
   /**
    * The Clarity palette (`utils/theme-tokens.ts`). Redesigned screens use only these; `colors` is the
@@ -181,15 +188,19 @@ export const AppThemeProvider: React.FC<AppThemeProviderProps> = ({ children }) 
   // With no source colour this is the system (Material You) scheme on Android 12+, and a scheme built
   // from the fallback everywhere else. We only read it to follow the wallpaper.
   const { theme: systemTheme } = useMaterial3Theme({ fallbackSourceColor: VERMILION });
-  const matchWallpaper = colorSchemeSeed === 'default' && Platform.OS === 'android' && isDynamicThemeSupported;
-  const accentSource =
-    colorSchemeSeed !== 'default' ? colorSchemeSeed : matchWallpaper ? systemTheme.light.primary : VERMILION;
+  const matchWallpaper = colorSchemeSeed === 'default' && canMatchWallpaper;
+  const accentSource: HexColor = matchWallpaper
+    ? (systemTheme.light.primary as HexColor)
+    : colorSchemeSeed === 'default'
+      ? VERMILION
+      : colorSchemeSeed;
 
-  const tokens = themeTokens(accentSource, isDark ? (trueBlack ? 'trueBlack' : 'dark') : 'light');
+  const variant = isDark ? (trueBlack ? 'trueBlack' : 'dark') : 'light';
+  const tokens = themeTokens(accentSource, variant);
   // The roles the tokens don't cover (secondary, tertiary, error containers) come from a full M3 scheme on
   // the same source: the system's own when matching the wallpaper, so those stay exact.
   const baseScheme = (matchWallpaper ? systemTheme : createMaterial3Theme(accentSource))[colorScheme];
-  const schemedTheme = paperSchemeFromTokens(tokens, baseScheme, isDark);
+  const schemedTheme = paperSchemeFromTokens(tokens, baseScheme, variant);
 
   const paperTheme = { ...(isDark ? MD3DarkTheme : MD3LightTheme), colors: schemedTheme };
   /* The seedColor is passed into the expo-ui Hosts and means something different per platform.

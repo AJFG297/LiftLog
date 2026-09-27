@@ -155,166 +155,163 @@ export const NEUTRALS: Record<ThemeVariant, NeutralTokens> = {
   trueBlack: trueBlackNeutrals,
 };
 
-const lightSemantic: SemanticTokens = {
-  positive: '#2E6B5E',
-  danger: '#B42318',
-  failure: '#C62828',
-  onFailure: WHITE,
+const FAILURE = { failure: '#C62828', onFailure: WHITE } as const;
+
+const SEMANTIC: Record<'light' | 'dark', SemanticTokens> = {
+  light: { positive: '#2E6B5E', danger: '#B42318', ...FAILURE },
+  dark: { positive: '#6CC0A8', danger: '#F97066', ...FAILURE },
 };
 
-const darkSemantic: SemanticTokens = {
-  positive: '#6CC0A8',
-  danger: '#F97066',
-  failure: '#C62828',
-  onFailure: WHITE,
-};
+/** A target tone plus a chroma cap: a muted source stays muted. */
+interface ToneShape {
+  tone: number;
+  chroma: number;
+}
 
 /**
- * Tone and chroma targets per accent token, measured from the canvas's vermilion. Chroma is a cap: a
- * muted source stays muted. `accent` itself has no target; it keeps the picked colour's tone when that
- * is legible (see `accentFill`).
+ * Tone and chroma targets for the accent tints, measured from the design's vermilion (see
+ * docs/plans/redesign.md). `accent` itself has no target; it keeps the picked colour's tone when that is
+ * legible (see `accentFill`).
  */
-const ACCENT_SHAPE = {
+const TINT_SHAPE = {
   light: {
     accentSoft: { tone: 94, chroma: 6 },
     accentSoftInk: { tone: 34, chroma: 55 },
     wash: { tone: 97, chroma: 2 },
     accentLine: { tone: 87, chroma: 12 },
     accentLine2: { tone: 78, chroma: 18 },
-    invAccent: { tone: 62, chroma: 54 },
   },
   dark: {
-    accentInk: { tone: 68, chroma: 46 },
     accentSoft: { tone: 16, chroma: 16 },
     accentSoftInk: { tone: 80, chroma: 26 },
     wash: { tone: 11, chroma: 5 },
     accentLine: { tone: 24, chroma: 22 },
     accentLine2: { tone: 35, chroma: 30 },
   },
-} as const;
+} satisfies Record<'light' | 'dark', Record<string, ToneShape>>;
+
+const LIGHT_INV_ACCENT: ToneShape = { tone: 62, chroma: 54 };
+const DARK_ACCENT_INK: ToneShape = { tone: 68, chroma: 46 };
 
 /** The darkest a fill may get, so it still reads as colour rather than as ink. */
 const MIN_FILL_TONE = 30;
 
-function toneOf(hex: string): number {
+type Direction = 'darker' | 'lighter';
+
+function toneOf(hex: HexColor): number {
   return Hct.fromInt(argbFromHex(hex)).tone;
 }
 
 /** WCAG contrast ratio between two colours. */
-export function contrastRatio(a: string, b: string): number {
+export function contrastRatio(a: HexColor, b: HexColor): number {
   return Contrast.ratioOfTones(toneOf(a), toneOf(b));
 }
 
-/**
- * Render a hue/chroma at a tone, then nudge the tone in `direction` until the rendered hex clears
- * `ratio` against every colour in `against`. Gamut mapping and hex rounding move the tone slightly, so
- * the check runs on the final hex rather than trusting the requested tone.
- */
-function fit(
-  hue: number,
-  chroma: number,
-  tone: number,
-  against: string[],
-  direction: 'darker' | 'lighter',
-  ratio = TARGET_CONTRAST,
-): HexColor {
-  const step = direction === 'darker' ? -0.5 : 0.5;
-  let t = tone;
-  for (;;) {
-    const hex = hexFromArgb(Hct.from(hue, chroma, t).toInt()) as HexColor;
-    const exhausted = direction === 'darker' ? t <= 0 : t >= 100;
-    if (exhausted || against.every((c) => contrastRatio(hex, c) >= ratio)) {
-      return hex;
-    }
-    t = Math.min(100, Math.max(0, t + step));
-  }
+function hctOf(source: HexColor): { hue: number; chroma: number; tone: number } {
+  const { hue, chroma, tone } = Hct.fromInt(argbFromHex(source));
+  // Greys have no meaningful hue, and pure white/black can report NaN; any finite hue renders them.
+  return { hue: Number.isFinite(hue) ? hue : 0, chroma, tone };
 }
 
-function at(hue: number, sourceChroma: number, shape: { tone: number; chroma: number }): HexColor {
+function colorAt(hue: number, sourceChroma: number, shape: ToneShape): HexColor {
   return hexFromArgb(Hct.from(hue, Math.min(sourceChroma, shape.chroma), shape.tone).toInt()) as HexColor;
 }
 
 /**
- * The fill keeps the picked colour's tone when white text on it (and, in light mode, the fill as text on
- * the page) is legible. A lighter pick is pulled down until it is, and a near-black one is lifted so the
- * fill still reads as a colour. Hue and chroma survive as far as the sRGB gamut allows.
+ * Like `colorAt`, but moves the tone in `direction` as far as needed for the colour to clear
+ * TARGET_CONTRAST against everything in `against`. The tone is solved for directly; gamut mapping and hex
+ * rounding can still shift the rendered colour slightly, so the final hex is checked and nudged if needed.
  */
-function accentFill(hue: number, chroma: number, sourceTone: number): HexColor {
-  const tone = Math.max(MIN_FILL_TONE, sourceTone);
-  return fit(hue, chroma, tone, [WHITE, lightNeutrals.bg], 'darker');
+function legibleColorAt(
+  hue: number,
+  sourceChroma: number,
+  shape: ToneShape,
+  against: HexColor[],
+  direction: Direction,
+): HexColor {
+  const darker = direction === 'darker';
+  const bound = darker ? 0 : 100;
+  const againstTones = against.map(toneOf);
+  const needed = againstTones.map((t) =>
+    darker ? Contrast.darker(t, TARGET_CONTRAST) : Contrast.lighter(t, TARGET_CONTRAST),
+  );
+  // -1 means no tone in range clears the ratio; head for the end of the range and take the best there is.
+  const limit = needed.includes(-1) ? bound : darker ? Math.min(...needed) : Math.max(...needed);
+  let tone = darker ? Math.min(shape.tone, limit) : Math.max(shape.tone, limit);
+
+  for (;;) {
+    const hex = colorAt(hue, sourceChroma, { ...shape, tone });
+    const rendered = toneOf(hex);
+    if (tone === bound || againstTones.every((t) => Contrast.ratioOfTones(rendered, t) >= TARGET_CONTRAST)) {
+      return hex;
+    }
+    tone = darker ? Math.max(bound, tone - 0.5) : Math.min(bound, tone + 0.5);
+  }
+}
+
+/**
+ * The accent fill, the same in every variant. It keeps the picked colour's tone when white text on it, and
+ * the fill as text on the light page, are legible. A lighter pick is pulled down until they are, and a
+ * near-black one is lifted so the fill still reads as a colour. Hue and chroma survive as far as the sRGB
+ * gamut allows.
+ */
+export function accentFill(source: HexColor): HexColor {
+  const { hue, chroma, tone } = hctOf(source);
+  return legibleColorAt(
+    hue,
+    chroma,
+    { tone: Math.max(MIN_FILL_TONE, tone), chroma },
+    [WHITE, lightNeutrals.bg],
+    'darker',
+  );
 }
 
 /** The accent family for one variant, generated from any source colour. */
-export function accentTokens(source: string, variant: ThemeVariant): AccentTokens {
-  const src = Hct.fromInt(argbFromHex(source));
-  const { chroma } = src;
-  // Greys have no meaningful hue, and pure white/black can report NaN; any finite hue renders them.
-  const hue = Number.isFinite(src.hue) ? src.hue : 0;
+export function accentTokens(source: HexColor, variant: ThemeVariant): AccentTokens {
+  const { hue, chroma } = hctOf(source);
+  const mode = variant === 'light' ? 'light' : 'dark';
+  const shape = TINT_SHAPE[mode];
   const neutrals = NEUTRALS[variant];
-  const accent = accentFill(hue, chroma, src.tone);
+  const accent = accentFill(source);
+  const accentSoft = colorAt(hue, chroma, shape.accentSoft);
 
-  if (variant === 'light') {
-    const shape = ACCENT_SHAPE.light;
-    const accentSoft = at(hue, chroma, shape.accentSoft);
-    return {
-      accent,
-      onAccent: WHITE,
-      // The fill is already chosen to be legible on the page and on cards, so light mode reuses it.
-      accentInk: accent,
-      accentSoft,
-      accentSoftInk: fit(
-        hue,
-        Math.min(chroma, shape.accentSoftInk.chroma),
-        shape.accentSoftInk.tone,
-        [accentSoft],
-        'darker',
-      ),
-      wash: at(hue, chroma, shape.wash),
-      accentLine: at(hue, chroma, shape.accentLine),
-      accentLine2: at(hue, chroma, shape.accentLine2),
-      invAccent: fit(
-        hue,
-        Math.min(chroma, shape.invAccent.chroma),
-        shape.invAccent.tone,
-        [neutrals.inverse],
-        'lighter',
-      ),
-    };
-  }
-
-  const shape = ACCENT_SHAPE.dark;
-  const accentSoft = at(hue, chroma, shape.accentSoft);
-  return {
+  const tints = {
     accent,
     onAccent: WHITE,
-    accentInk: fit(
-      hue,
-      Math.min(chroma, shape.accentInk.chroma),
-      shape.accentInk.tone,
-      [neutrals.card, neutrals.bg],
-      'lighter',
-    ),
     accentSoft,
-    accentSoftInk: fit(
+    accentSoftInk: legibleColorAt(
       hue,
-      Math.min(chroma, shape.accentSoftInk.chroma),
-      shape.accentSoftInk.tone,
+      chroma,
+      shape.accentSoftInk,
       [accentSoft],
-      'lighter',
+      mode === 'light' ? 'darker' : 'lighter',
     ),
-    wash: at(hue, chroma, shape.wash),
-    accentLine: at(hue, chroma, shape.accentLine),
-    accentLine2: at(hue, chroma, shape.accentLine2),
+    wash: colorAt(hue, chroma, shape.wash),
+    accentLine: colorAt(hue, chroma, shape.accentLine),
+    accentLine2: colorAt(hue, chroma, shape.accentLine2),
+  };
+
+  if (mode === 'light') {
+    return {
+      ...tints,
+      // The fill is already legible on the page and on cards, so light mode reuses it as text.
+      accentInk: accent,
+      invAccent: legibleColorAt(hue, chroma, LIGHT_INV_ACCENT, [neutrals.inverse], 'lighter'),
+    };
+  }
+  return {
+    ...tints,
+    accentInk: legibleColorAt(hue, chroma, DARK_ACCENT_INK, [neutrals.card, neutrals.bg], 'lighter'),
     // On the light inverted slab the fill works as text, as long as it clears the slab too.
-    invAccent: fit(hue, chroma, toneOf(accent), [neutrals.inverse], 'darker'),
+    invAccent: legibleColorAt(hue, chroma, { tone: toneOf(accent), chroma }, [neutrals.inverse], 'darker'),
   };
 }
 
-export function themeTokens(source: string, variant: ThemeVariant): ThemeTokens {
+export function themeTokens(source: HexColor, variant: ThemeVariant): ThemeTokens {
   return {
     ...NEUTRALS[variant],
     ...accentTokens(source, variant),
-    ...(variant === 'light' ? lightSemantic : darkSemantic),
+    ...SEMANTIC[variant === 'light' ? 'light' : 'dark'],
   };
 }
 
@@ -323,54 +320,68 @@ export function themeTokens(source: string, variant: ThemeVariant): ThemeTokens 
  * palette. `base` is a full M3 scheme generated from the same source; it supplies the roles the tokens
  * don't have an opinion on (secondary, tertiary, the error containers), already harmonised with the accent.
  */
-export function paperSchemeFromTokens(t: ThemeTokens, base: Material3Scheme, isDark: boolean): Material3Scheme {
-  // M3 expects `primary` to work as text on the page as well as a fill. In dark mode the fill is too dark
-  // for text, so Paper gets the text colour, with dark ink on it for contained buttons.
-  const primary = isDark ? t.accentInk : t.accent;
-  const onPrimary = isDark ? t.inverseInk : t.onAccent;
-  // The one step up from `card`, for tracks and wells drawn inside cards.
-  const inset = isDark ? t.track : t.segment;
+export function paperSchemeFromTokens(
+  tokens: ThemeTokens,
+  base: Material3Scheme,
+  variant: ThemeVariant,
+): Material3Scheme {
+  const perMode =
+    variant === 'light'
+      ? {
+          primary: tokens.accent,
+          onPrimary: tokens.onAccent,
+          surfaceContainerHighest: tokens.segment,
+          surfaceDim: tokens.track,
+        }
+      : {
+          // M3 expects `primary` to work as text on the page as well as a fill. In dark mode the fill is too
+          // dark for text, so Paper gets the text colour, with dark ink on it for contained buttons.
+          primary: tokens.accentInk,
+          onPrimary: tokens.inverseInk,
+          surfaceContainerHighest: tokens.track,
+          surfaceDim: tokens.bg,
+        };
 
   return {
     ...base,
-    primary,
-    onPrimary,
-    primaryContainer: t.accentSoft,
-    onPrimaryContainer: t.accentSoftInk,
-    inversePrimary: t.invAccent,
-    surfaceTint: t.accent,
+    ...perMode,
+    primaryContainer: tokens.accentSoft,
+    onPrimaryContainer: tokens.accentSoftInk,
+    inversePrimary: tokens.invAccent,
+    surfaceTint: tokens.accent,
 
-    background: t.bg,
-    onBackground: t.ink,
-    surface: t.bg,
-    onSurface: t.ink,
+    background: tokens.bg,
+    onBackground: tokens.ink,
+    surface: tokens.bg,
+    onSurface: tokens.ink,
     // Paper paints contained Cards with `surfaceVariant`, and nearly every card in the unconverted screens
     // is one, so this is what makes them white (dark: raised) cards on the page, as in the design.
-    surfaceVariant: t.card,
-    onSurfaceVariant: t.muted,
-    outline: t.faint,
-    outlineVariant: t.line,
-    inverseSurface: t.inverse,
-    inverseOnSurface: t.inverseInk,
+    surfaceVariant: tokens.card,
+    onSurfaceVariant: tokens.muted,
+    // M3 uses `outline` for boundaries that must stay visible (field borders, focus rings), which need 3:1.
+    // `faint` is decorative and falls short; the placeholder grey is the lightest neutral that clears it.
+    outline: tokens.placeholder,
+    outlineVariant: tokens.line,
+    inverseSurface: tokens.inverse,
+    inverseOnSurface: tokens.inverseInk,
 
-    surfaceContainerLowest: t.card,
-    surfaceContainerLow: t.card,
-    surfaceContainer: t.card,
-    surfaceContainerHigh: t.card,
-    surfaceContainerHighest: inset,
-    surfaceBright: t.card,
-    surfaceDim: isDark ? t.bg : t.track,
+    // Everything up to `High` is the card; `Highest` (in `perMode`) is the one step up, for wells in a card.
+    surfaceContainerLowest: tokens.card,
+    surfaceContainerLow: tokens.card,
+    surfaceContainer: tokens.card,
+    surfaceContainerHigh: tokens.card,
+    surfaceBright: tokens.card,
 
-    error: t.danger,
-    onError: isDark ? t.inverseInk : WHITE,
+    error: tokens.danger,
+    onError: perMode.onPrimary,
 
     elevation: {
       level0: 'transparent',
-      level1: t.card,
-      level2: t.card,
-      level3: t.card,
-      level4: t.card,
-      level5: t.card,
+      level1: tokens.card,
+      level2: tokens.card,
+      level3: tokens.card,
+      level4: tokens.card,
+      level5: tokens.card,
     },
   };
 }

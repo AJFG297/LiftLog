@@ -19,7 +19,11 @@ export function SharedProgramMessage({ message, isUser }: { message: AiChatShare
       {message.blueprint.sessions.map((s, i) => (
         <Fragment key={i}>
           <SessionSummaryTitle session={Session.getEmptySession(s, preferredWeightUnit)} color={color} />
-          <SessionSummary session={Session.getEmptySession(s, preferredWeightUnit)} color={color} />
+          <SessionSummary
+            session={Session.getEmptySession(s, preferredWeightUnit)}
+            color={color}
+            secondaryColor={isUser ? color : undefined}
+          />
         </Fragment>
       ))}
     </View>

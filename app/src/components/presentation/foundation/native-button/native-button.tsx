@@ -30,9 +30,9 @@ export default function NativeButton({
         modifiers={[
           buttonStyle(styleForVariant[variant]),
           controlSize('large'),
-          // A prominent button puts a white label on the tint, so it needs the fill; the others use the tint as
-          // text, which in dark mode needs the lighter ink.
-          tint(variant === 'filled' ? tokens.accent : tokens.accentInk),
+          // The Host's seedColor tint is the text-safe accent (lighter in dark mode). A prominent button puts
+          // a white label on its tint, so it alone needs the fill.
+          ...(variant === 'filled' ? [tint(tokens.accent)] : []),
           ...(disabled ? [disabledModifier(true)] : []),
         ]}
       />

@@ -39,11 +39,11 @@ fast-check):
 
 A pick whose fill would be too light for white text is pulled darker, and a near-black one is lifted so it
 still reads as a colour. Hue and chroma are kept as far as the sRGB gamut allows. The default, vermilion
-`#C2451E`, comes out as `#C0441D`, within a shade of the canvas.
+`#C2451E`, comes out as `#C0441D`, within a shade of the design.
 
 ## Where the accent comes from
 
-The `colorSchemeSeed` preference, unchanged:
+The `colorSchemeSeed` preference:
 
 - A `#RRGGBB` value is the user's accent (a preset or the custom wheel in Settings → Theme).
 - `'default'` means **Match wallpaper** on Android 12+: the system Material You primary becomes the
@@ -60,6 +60,8 @@ tokens by `paperSchemeFromTokens`, so old screens get the new palette. A few thi
   (which Paper paints contained Cards with), every `surfaceContainer*` level except `Highest`, and every
   `elevation` level are all `card`. `surfaceContainerHighest` is the one step up for wells inside a card.
   Don't rely on the difference between collapsed roles.
+- `outline` is the `placeholder` grey, the lightest neutral that clears 3:1 for field borders and focus
+  rings. `faint` would be too light.
 - New code reads `tokens`, not `colors`.
 
 ## expo-ui hosts

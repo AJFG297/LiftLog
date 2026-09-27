@@ -84,7 +84,7 @@ function AccentPreview({ seed }: { seed: HexColor }) {
         gap: spacing[3],
       }}
     >
-      <SurfaceText font="text-sm" weight="600" color="onSurfaceVariant">
+      <SurfaceText font="text-sm" weight="600" style={{ color: tokens.muted }}>
         <T keyName="settings.theme.custom.preview" />
       </SurfaceText>
       <View style={{ flexDirection: 'row', gap: spacing[2] }}>
@@ -92,7 +92,7 @@ function AccentPreview({ seed }: { seed: HexColor }) {
         <View style={{ ...swatch, flex: 1, backgroundColor: accent.accentSoft }} />
         <View style={{ ...swatch, flex: 1, backgroundColor: accent.wash }} />
       </View>
-      <SurfaceText font="text-xs" color="onSurfaceVariant">
+      <SurfaceText font="text-xs" style={{ color: tokens.muted }}>
         <T keyName="settings.theme.custom.contrast.body" />
       </SurfaceText>
     </View>
