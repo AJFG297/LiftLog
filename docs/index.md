@@ -52,6 +52,9 @@ work to find the docs relevant to your area, and update it whenever you add, rem
 - [plans/relational-storage.md](./plans/relational-storage.md) - draft plan (assumes no existing users,
   own backend only) to replace session JSON blobs with relational tables and put stable exercise IDs on
   blueprints: key decisions, target schema, phases, and the formats that must keep working.
+- [plans/redesign.md](./plans/redesign.md) - draft plan for the "Clarity" UI redesign: design summary,
+  key decisions (own visual language, a user-chosen accent over fixed neutrals, fonts, new tabs, set
+  types, sheets, number pad), the phased screen-by-screen rollout, verification and risks.
 
 ## Generated
 
