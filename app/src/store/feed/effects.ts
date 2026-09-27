@@ -52,7 +52,7 @@ import {
   feedUnpublishedSessionsSchema,
 } from '@/db/schema';
 import { eq, inArray, sql } from 'drizzle-orm';
-import { upsert } from '@/db/helpers';
+import { upsert, upsertStatement, writeAtomically } from '@/db/helpers';
 import {
   FeedIdentity,
   FollowerFeedUser,
@@ -176,17 +176,15 @@ export function applyFeedEffects(addEffect: AddEffectFn) {
   });
 
   addEffect(setFollowRequests, async (action, { extra: { db } }) => {
-    await db.transaction(async (tx) => {
-      await tx.delete(feedFollowRequestsSchema);
-      await upsert(
-        tx,
-        feedFollowRequestsSchema,
-        action.payload.map((req) => ({
-          id: req.senderUserId,
-          payload: req.toJSON(),
-        })),
-      );
-    });
+    const rows = action.payload.map((req) => ({
+      id: req.senderUserId,
+      payload: req.toJSON(),
+    }));
+    await writeAtomically(db, (tx) =>
+      [tx.delete(feedFollowRequestsSchema), upsertStatement(tx, feedFollowRequestsSchema, rows)].filter(
+        (statement) => statement !== undefined,
+      ),
+    );
   });
   addEffect(addFollower, async (action, { extra: { db } }) => {
     await upsert(db, feedFollowerUsersSchema, [
@@ -203,25 +201,19 @@ export function applyFeedEffects(addEffect: AddEffectFn) {
     await db.delete(feedFollowRequestsSchema).where(eq(feedFollowRequestsSchema.id, action.payload.senderUserId));
   });
   addEffect(putFollowedUser, async (action, { extra: { db } }) => {
-    await db.transaction(async (tx) => {
-      if (action.payload.type === 'PendingFeedUser') {
-        await upsert(tx, feedPendingUsersSchema, [
-          {
-            id: action.payload.id,
-            payload: action.payload.toJSON(),
-          },
-        ]);
-        await tx.delete(feedFollowedUsersSchema).where(eq(feedFollowedUsersSchema.id, action.payload.id));
-      } else {
-        await tx.delete(feedPendingUsersSchema).where(eq(feedPendingUsersSchema.id, action.payload.id));
-        await upsert(tx, feedFollowedUsersSchema, [
-          {
-            id: action.payload.id,
-            payload: action.payload.toJSON(),
-          },
-        ]);
-      }
-    });
+    const user = action.payload;
+    await writeAtomically(db, (tx) =>
+      (user.type === 'PendingFeedUser'
+        ? [
+            upsertStatement(tx, feedPendingUsersSchema, [{ id: user.id, payload: user.toJSON() }]),
+            tx.delete(feedFollowedUsersSchema).where(eq(feedFollowedUsersSchema.id, user.id)),
+          ]
+        : [
+            tx.delete(feedPendingUsersSchema).where(eq(feedPendingUsersSchema.id, user.id)),
+            upsertStatement(tx, feedFollowedUsersSchema, [{ id: user.id, payload: user.toJSON() }]),
+          ]
+      ).filter((statement) => statement !== undefined),
+    );
   });
   addEffect(upsertFeedItems, async (action, { extra: { db } }) => {
     await upsert(

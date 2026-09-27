@@ -17,6 +17,7 @@ import { AsyncStream } from 'data-async-iterators';
 import { Logger } from '@/services/logger';
 import { selectLatestExercises } from '../stored-sessions';
 import { programsSchema } from '@/db/schema';
+import { writeAtomically } from '@/db/helpers';
 import { toLocalDateJSON } from '@/models/storage/versions/latest';
 import { programBlueprintMigrations } from '@/models/storage/versions/migrations';
 import { LocalDate } from '@js-joda/core';
@@ -132,18 +133,16 @@ async function persistPrograms(
   throwIfCancelled: () => void,
 ) {
   try {
-    await db.transaction(async (tx) => {
-      throwIfCancelled();
-      await tx.delete(programsSchema);
-      await tx.insert(programsSchema).values(
-        Object.entries(stateAfterReduce.program.savedPrograms).map(([key, program]) => ({
-          id: key,
-          active: key === stateAfterReduce.program.activePlanId,
-          payload: program.toJSON(),
-        })),
-      );
-      throwIfCancelled();
-    });
+    const rows = Object.entries(stateAfterReduce.program.savedPrograms).map(([key, program]) => ({
+      id: key,
+      active: key === stateAfterReduce.program.activePlanId,
+      payload: program.toJSON(),
+    }));
+    throwIfCancelled();
+    await writeAtomically(db, (tx) => [
+      tx.delete(programsSchema),
+      ...(rows.length ? [tx.insert(programsSchema).values(rows)] : []),
+    ]);
   } catch (e) {
     if (e instanceof TaskAbortError) {
       return;

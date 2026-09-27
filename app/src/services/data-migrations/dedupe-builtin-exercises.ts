@@ -1,6 +1,7 @@
 import { ExpoSQLiteDatabase } from 'drizzle-orm/expo-sqlite';
 import { eq } from 'drizzle-orm';
 import { KeyValueStore } from '../key-value-store';
+import { writeAtomically } from '@/db/helpers';
 import { dataMigrationsSchema, exercisesSchema } from '@/db/schema';
 import { ExerciseDescriptor } from '@/models/exercise-models';
 import { exerciseDescriptorMigrations } from '@/models/storage/versions/migrations';
@@ -48,11 +49,9 @@ export async function dedupeBuiltInExercises(db: ExpoSQLiteDatabase, keyValueSto
   const added = JSON.parse((await keyValueStore.getItem(addedBuiltInExerciseIdsStorageKey)) ?? '[]') as string[];
   const hidden = added.filter((id) => canonical[id] && !presentIds.has(id));
 
-  await db.transaction(async (tx) => {
-    for (const id of idsToDelete) {
-      await tx.delete(exercisesSchema).where(eq(exercisesSchema.id, id));
-    }
-    await tx.insert(dataMigrationsSchema).values({ id: dedupeBuiltInExercisesDataMigration });
-  });
+  await writeAtomically(db, (tx) => [
+    ...idsToDelete.map((id) => tx.delete(exercisesSchema).where(eq(exercisesSchema.id, id))),
+    tx.insert(dataMigrationsSchema).values({ id: dedupeBuiltInExercisesDataMigration }),
+  ]);
   await keyValueStore.setItem(hiddenBuiltInExerciseIdsStorageKey, JSON.stringify(hidden));
 }

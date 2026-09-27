@@ -3,7 +3,7 @@ import { LocalDate } from '@js-joda/core';
 import { drizzle } from 'drizzle-orm/expo-sqlite';
 import type { ExpoSQLiteDatabase } from 'drizzle-orm/expo-sqlite';
 import { openDatabaseAsync } from 'expo-sqlite';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { DatabaseMigrationService } from '@/services/database-migration-service';
 import { applyStoredSessionsEffects } from '@/store/stored-sessions/effects';
 import {
@@ -11,6 +11,7 @@ import {
   putStoredSession,
   sessionFinished,
   setActiveSessionId,
+  setExercises,
   setStoredSessions,
   upsertExercises,
   upsertStoredSessions,
@@ -176,6 +177,57 @@ describe('stored-sessions effects', () => {
 
     const [row] = await db.select().from(exercisesSchema).where(eq(exercisesSchema.id, 'custom'));
     expect(row?.payload).toEqual(exercise);
+  });
+
+  describe('setExercises', () => {
+    const exercise = (name: string) => ({
+      name,
+      force: null,
+      level: '',
+      mechanic: null,
+      equipment: null,
+      muscles: [],
+      instructions: '',
+      category: '',
+    });
+    const hydrated = {
+      storedSessions: { sessions: {}, activeSessionId: undefined, isHydrated: true },
+    } as Partial<RootState>;
+
+    it('replaces the stored exercises', async () => {
+      await db.insert(exercisesSchema).values({ id: 'old', payload: exercise('Old') });
+
+      await bed({ state: hydrated }).dispatchHandled(setExercises({ fresh: exercise('Fresh') }));
+
+      expect((await db.select().from(exercisesSchema)).map((r) => r.id)).toEqual(['fresh']);
+    });
+
+    it('clears the table when given no exercises', async () => {
+      await db.insert(exercisesSchema).values({ id: 'old', payload: exercise('Old') });
+
+      await bed({ state: hydrated }).dispatchHandled(setExercises({}));
+
+      expect(await db.select().from(exercisesSchema)).toHaveLength(0);
+    });
+
+    it('keeps the old exercises when writing the new ones fails', async () => {
+      await db.insert(exercisesSchema).values({ id: 'old', payload: exercise('Old') });
+      // A genuine SQLite failure partway through: the delete succeeds, then the insert aborts.
+      // Typed as the synchronous expo driver; under Vitest `run()` returns a promise.
+      await Promise.resolve(
+        db.run(
+          sql.raw(
+            `CREATE TRIGGER reject_exercise BEFORE INSERT ON exercise WHEN NEW.id = 'bad' BEGIN SELECT RAISE(ABORT, 'rejected'); END`,
+          ),
+        ),
+      );
+
+      logger.error.mockClear();
+      await bed({ state: hydrated }).dispatchHandled(setExercises({ good: exercise('Good'), bad: exercise('Bad') }));
+
+      expect(logger.error).toHaveBeenCalled();
+      expect((await db.select().from(exercisesSchema)).map((r) => r.id)).toEqual(['old']);
+    });
   });
 
   describe('sessionFinished', () => {

@@ -2,8 +2,8 @@ import { describe, it, expect, vi } from 'vitest';
 import { drizzle, type ExpoSQLiteDatabase } from 'drizzle-orm/expo-sqlite';
 import { openDatabaseAsync } from 'expo-sqlite';
 import { DatabaseMigrationService } from '@/services/database-migration-service';
-import { backendAssignmentsSchema, backendHeadersSchema, backendsSchema } from '@/db/schema';
-import { importBackends } from '@/services/data-migrations/import-backends';
+import { backendAssignmentsSchema, backendHeadersSchema, backendsSchema, dataMigrationsSchema } from '@/db/schema';
+import { importBackends, importBackendsDataMigration } from '@/services/data-migrations/import-backends';
 import { PreferenceService } from '@/services/preference-service';
 import { RemoteBackupSettings } from '@/store/settings/registry';
 
@@ -90,5 +90,24 @@ describe('importBackends', () => {
     await importBackends(db, preferenceService);
 
     expect(await db.select().from(backendHeadersSchema)).toEqual([]);
+  });
+
+  // Startup re-runs a migration only while its marker is missing, so a failure partway through must
+  // leave neither the marker nor the writes before it.
+  it('rolls back and leaves the migration unmarked when a later write fails', async () => {
+    const db = await createTestDb();
+    // Occupies the backup assignment's primary key, so the migration's plain insert of it fails.
+    await db.insert(backendAssignmentsSchema).values({ feature: 'backup', backendId: 'existing' });
+    const preferenceService = makePreferenceService({
+      endpoint: 'https://example.com/backup',
+      apiKey: 'secret',
+      includeFeedAccount: false,
+    });
+
+    await expect(importBackends(db, preferenceService)).rejects.toThrow();
+
+    expect(await db.select().from(backendsSchema)).toEqual([]);
+    expect(await db.select().from(backendHeadersSchema)).toEqual([]);
+    expect(await db.select().from(dataMigrationsSchema)).not.toContainEqual({ id: importBackendsDataMigration });
   });
 });
