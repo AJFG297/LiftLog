@@ -31,8 +31,13 @@ export function generateSyntheticHistory(options: { count: number; seed?: number
   const pick = <T>(items: readonly T[]): T => items[Math.floor(random() * items.length)]!;
   const end = options.end ?? LocalDate.parse('2026-06-01');
 
-  // Walk forward from a start far enough back to fit `count` sessions at roughly 5.5 a week.
-  let date = end.minusDays(Math.ceil((options.count / 5.5) * 7));
+  // About five sessions a week, with the occasional two-a-day and the occasional week off. The gaps are
+  // drawn up front so the walk can start exactly far enough back to land the last session on `end`; walking
+  // backward from `end` instead would reverse the load progression.
+  const gaps = Array.from({ length: Math.max(0, options.count - 1) }, () =>
+    random() < 0.1 ? 0 : random() < 0.02 ? 8 : 1 + Math.floor(random() * 2),
+  );
+  let date = end.minusDays(gaps.reduce((total, gap) => total + gap, 0));
   const loads = new Map<string, number>();
   const sessions: Session[] = [];
   let programIndex = 0;
@@ -106,9 +111,7 @@ export function generateSyntheticHistory(options: { count: number; seed?: number
       ),
     );
 
-    // Five or six sessions a week, with the occasional two-a-day and the occasional week off.
-    const gap = random() < 0.1 ? 0 : random() < 0.02 ? 8 : 1 + Math.floor(random() * 2);
-    date = date.plusDays(gap);
+    date = date.plusDays(gaps[sessions.length - 1] ?? 0);
   }
 
   return sessions;
