@@ -23,6 +23,7 @@ import { addUnpublishedSessionId } from '@/store/feed';
 import { setStatsIsDirty } from '@/store/stats';
 import { setPreferredLanguage } from '@/store/settings';
 import { exercisesSchema } from '@/db/schema';
+import { writeAtomically } from '@/db/helpers';
 import { samePersistedContent } from '@/services/workout-rows';
 import { eq, sql } from 'drizzle-orm';
 import { toRecord } from '@/utils/reduce';
@@ -226,14 +227,13 @@ export function applyStoredSessionsEffects(addEffect: AddEffectFn) {
     if (!stateAfterReduce.storedSessions.isHydrated) {
       return;
     }
-    await db.transaction(async (tx) => {
-      await tx.delete(exercisesSchema);
-      await tx.insert(exercisesSchema).values(
-        Object.entries(action.payload).map(([id, exercise]) => ({
-          id,
-          payload: toExerciseDescriptorJSON(exercise),
-        })),
-      );
-    });
+    const rows = Object.entries(action.payload).map(([id, exercise]) => ({
+      id,
+      payload: toExerciseDescriptorJSON(exercise),
+    }));
+    await writeAtomically(db, (tx) => [
+      tx.delete(exercisesSchema),
+      ...(rows.length ? [tx.insert(exercisesSchema).values(rows)] : []),
+    ]);
   });
 }

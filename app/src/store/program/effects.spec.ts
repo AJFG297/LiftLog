@@ -29,6 +29,7 @@ import { ProgramBlueprint, SessionBlueprint } from '@/models/blueprint-models';
 import { RemoteData } from '@/models/remote';
 import { diffSessionBlueprints, EmptySessionBlueprintDiff } from '@/models/blueprint-diff';
 import { programsSchema } from '@/db/schema';
+import { sql } from 'drizzle-orm';
 import type { ExpoSQLiteDatabase } from 'drizzle-orm/expo-sqlite';
 import type { RootState } from '@/store/store';
 
@@ -317,6 +318,40 @@ describe('program effects', () => {
       const inactiveRow = rows.find((r) => r.id === 'id-2');
       expect(activeRow?.active).toBe(true);
       expect(inactiveRow?.active).toBe(false);
+    });
+    it('with no programs left, clears the table', async () => {
+      await db.insert(programsSchema).values({ id: 'old', active: true, payload: makeProgram().toJSON() });
+      const testBed = createAddEffectTestBed({ initialState: makeProgramState({}, '', true), services: { db } });
+      applyProgramEffects(testBed.addEffect);
+      testBed.setStateBeforeReduce(makeProgramState({ old: makeProgram() }, 'old', true));
+
+      await testBed.dispatchHandled({ type: 'any/action' });
+
+      expect(await db.select().from(programsSchema)).toHaveLength(0);
+      expect(testBed.mockServices.logger.error).not.toHaveBeenCalled();
+    });
+
+    it('keeps the old programs when writing the new ones fails', async () => {
+      await db.insert(programsSchema).values({ id: 'old', active: true, payload: makeProgram('Old').toJSON() });
+      // A genuine SQLite failure partway through: the delete succeeds, then the insert aborts.
+      // Typed as the synchronous expo driver; under Vitest `run()` returns a promise.
+      await Promise.resolve(
+        db.run(
+          sql.raw(
+            `CREATE TRIGGER reject_program BEFORE INSERT ON program WHEN NEW.id = 'bad' BEGIN SELECT RAISE(ABORT, 'rejected'); END`,
+          ),
+        ),
+      );
+      const state = makeProgramState({ good: makeProgram('Good'), bad: makeProgram('Bad') }, 'good', true);
+      const testBed = createAddEffectTestBed({ initialState: state, services: { db } });
+      applyProgramEffects(testBed.addEffect);
+      testBed.setStateBeforeReduce(makeProgramState({ old: makeProgram('Old') }, 'old', true));
+
+      await testBed.dispatchHandled({ type: 'any/action' });
+
+      const rows = await db.select().from(programsSchema);
+      expect(rows.map((r) => r.id)).toEqual(['old']);
+      expect(testBed.mockServices.logger.error).toHaveBeenCalled();
     });
   });
 

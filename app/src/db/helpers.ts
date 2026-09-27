@@ -7,18 +7,24 @@ type JsonTableValue<T, K> = {
   payload: T;
 };
 
-export async function upsert<T, K>(
-  db: ExpoSQLiteDatabase,
-  schema: AnySQLiteTable & {
-    id: IndexColumn;
-    payload: Column & { _: { $type: T } };
-  },
+type JsonTable<T> = AnySQLiteTable & {
+  id: IndexColumn;
+  payload: Column & { _: { $type: T } };
+};
+
+/**
+ * Builds, without running, an insert that overwrites the payload of any row whose id already exists, for
+ * {@link writeAtomically}. Returns nothing for an empty list, which drizzle's `values()` rejects.
+ */
+export function upsertStatement<T, K>(
+  db: ExpoSQLiteDatabase | Transaction,
+  schema: JsonTable<T>,
   values: JsonTableValue<T, K>[],
 ) {
   if (!values.length) {
-    return;
+    return undefined;
   }
-  await db
+  return db
     .insert(schema)
     .values(values)
     .onConflictDoUpdate({
@@ -27,6 +33,10 @@ export async function upsert<T, K>(
         payload: sql.raw(`excluded.${schema.payload.name}`),
       },
     });
+}
+
+export async function upsert<T, K>(db: ExpoSQLiteDatabase, schema: JsonTable<T>, values: JsonTableValue<T, K>[]) {
+  await upsertStatement(db, schema, values);
 }
 
 export type Transaction = Parameters<Parameters<ExpoSQLiteDatabase['transaction']>[0]>[0];

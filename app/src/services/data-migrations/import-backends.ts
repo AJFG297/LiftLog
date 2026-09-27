@@ -1,3 +1,4 @@
+import { writeAtomically } from '@/db/helpers';
 import { backendAssignmentsSchema, backendHeadersSchema, backendsSchema, dataMigrationsSchema } from '@/db/schema';
 import { normalizeBackendUrl } from '@/models/backend';
 import { uuid } from '@/utils/uuid';
@@ -25,20 +26,22 @@ export async function importBackends(db: ExpoSQLiteDatabase, preferenceService: 
 
   await preferenceService.setPreference('backupIncludeFeedAccount', includeFeedAccount);
 
-  await db.transaction(async (tx) => {
-    if (endpoint.trim()) {
-      const id = uuid();
-      await tx.insert(backendsSchema).values({
-        id,
-        name: nameFromEndpoint(endpoint),
-        url: normalizeBackendUrl(endpoint),
-        kind: 'backupEndpoint',
-      });
-      if (apiKey.trim()) {
-        await tx.insert(backendHeadersSchema).values({ backendId: id, name: 'X-Api-Key', value: apiKey });
-      }
-      await tx.insert(backendAssignmentsSchema).values({ feature: 'backup', backendId: id });
-    }
-    await tx.insert(dataMigrationsSchema).values({ id: importBackendsDataMigration });
-  });
+  const id = uuid();
+  await writeAtomically(db, (tx) => [
+    ...(endpoint.trim()
+      ? [
+          tx.insert(backendsSchema).values({
+            id,
+            name: nameFromEndpoint(endpoint),
+            url: normalizeBackendUrl(endpoint),
+            kind: 'backupEndpoint',
+          }),
+          ...(apiKey.trim()
+            ? [tx.insert(backendHeadersSchema).values({ backendId: id, name: 'X-Api-Key', value: apiKey })]
+            : []),
+          tx.insert(backendAssignmentsSchema).values({ feature: 'backup', backendId: id }),
+        ]
+      : []),
+    tx.insert(dataMigrationsSchema).values({ id: importBackendsDataMigration }),
+  ]);
 }

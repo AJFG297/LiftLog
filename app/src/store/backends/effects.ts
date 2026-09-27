@@ -1,4 +1,5 @@
 import { backendAssignmentsSchema, backendHeadersSchema, backendsSchema } from '@/db/schema';
+import { writeAtomically } from '@/db/helpers';
 import { Backend } from '@/models/backend';
 import {
   clearBackendAssignment,
@@ -48,30 +49,28 @@ export function applyBackendsEffects(addEffect: AddEffectFn) {
       return;
     }
     const { id, name, url, kind, headers } = action.payload;
-    await db.transaction(async (tx) => {
-      await tx
+    const headerRows = headers
+      .filter((header) => header.name.trim())
+      .map(({ name: headerName, value }) => ({ backendId: id, name: headerName.trim(), value }));
+    await writeAtomically(db, (tx) => [
+      tx
         .insert(backendsSchema)
         .values({ id, name, url, kind })
-        .onConflictDoUpdate({ target: backendsSchema.id, set: { name, url, kind } });
-      await tx.delete(backendHeadersSchema).where(eq(backendHeadersSchema.backendId, id));
-      const rows = headers.filter((header) => header.name.trim());
-      if (rows.length) {
-        await tx
-          .insert(backendHeadersSchema)
-          .values(rows.map(({ name: headerName, value }) => ({ backendId: id, name: headerName.trim(), value })));
-      }
-    });
+        .onConflictDoUpdate({ target: backendsSchema.id, set: { name, url, kind } }),
+      tx.delete(backendHeadersSchema).where(eq(backendHeadersSchema.backendId, id)),
+      ...(headerRows.length ? [tx.insert(backendHeadersSchema).values(headerRows)] : []),
+    ]);
   });
 
   addEffect(removeBackend, async (action, { stateAfterReduce, extra: { db } }) => {
     if (!stateAfterReduce.backends.isHydrated) {
       return;
     }
-    await db.transaction(async (tx) => {
-      await tx.delete(backendHeadersSchema).where(eq(backendHeadersSchema.backendId, action.payload));
-      await tx.delete(backendsSchema).where(eq(backendsSchema.id, action.payload));
-      await tx.delete(backendAssignmentsSchema).where(eq(backendAssignmentsSchema.backendId, action.payload));
-    });
+    await writeAtomically(db, (tx) => [
+      tx.delete(backendHeadersSchema).where(eq(backendHeadersSchema.backendId, action.payload)),
+      tx.delete(backendsSchema).where(eq(backendsSchema.id, action.payload)),
+      tx.delete(backendAssignmentsSchema).where(eq(backendAssignmentsSchema.backendId, action.payload)),
+    ]);
   });
 
   addEffect(setBackendAssignment, async (action, { stateAfterReduce, extra: { db } }) => {
