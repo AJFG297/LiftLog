@@ -15,6 +15,10 @@ work to find the docs relevant to your area, and update it whenever you add, rem
   for an in-progress workout (persistent notifications, background timers, system UI). Redux stays the
   source of truth; the worker is disposable.
 
+- [Theming.md](./Theming.md) - the colour tokens in `useAppTheme().tokens`: fixed warm neutrals plus an
+  accent family generated from the user's colour, which token to use for what, the contrast guarantees,
+  Match wallpaper, and how the Paper scheme for unconverted screens is mapped from them.
+
 ## Features
 
 - [FeedProcess.md](./FeedProcess.md) - the opt-in social feed: the follow/accept flow, what is and isn't
