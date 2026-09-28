@@ -20,7 +20,10 @@ export type TargetReason =
   | { kind: 'repeatAfterMiss'; setLabel: string; reps: number | undefined; target: number };
 
 export interface TodaysTarget {
-  /** Undefined for a movement that tracks no load. For a bodyweight one, it is the added load. */
+  /**
+   * Undefined for a movement that tracks no load, or an empty bar that has not been loaded yet. For a
+   * bodyweight movement it is the added load, and nothing added still reads as bodyweight.
+   */
   weight: Weight | undefined;
   reps: RepsTarget;
   reason: TargetReason;
@@ -41,10 +44,17 @@ export function todaysTarget(
     return undefined;
   }
   return {
-    weight: exercise.tracksResistance ? slot.weight : undefined,
+    weight: showsWeight(exercise, slot.weight) ? slot.weight : undefined,
     reps: exercise.repsTargetForSet(index),
     reason: reasonFor(exercise, index, previous),
   };
+}
+
+function showsWeight(exercise: RecordedWeightedExercise, weight: Weight): boolean {
+  if (!exercise.tracksResistance) {
+    return false;
+  }
+  return exercise.blueprint.resistance === 'bodyweight' || !weight.value.isZero();
 }
 
 /** The heaviest set the progression check reads, the first on a tie; any set if none is read. */

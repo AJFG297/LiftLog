@@ -86,6 +86,16 @@ describe('todaysTarget', () => {
     expect(todaysTarget(today([0], blueprint), undefined)?.weight).toBeUndefined();
   });
 
+  it('shows only reps for an exercise that has no weight on it yet', () => {
+    expect(todaysTarget(today([0, 0, 0]), undefined)?.weight).toBeUndefined();
+  });
+
+  it('keeps a bodyweight movement with nothing added', () => {
+    const blueprint = makeWeightedBlueprint({ name: 'Pull-up', sets: 1, resistance: 'bodyweight' });
+
+    expect(todaysTarget(today([0], blueprint), undefined)?.weight).toEqual(new Weight(0, 'kilograms'));
+  });
+
   it('has nothing to show for an exercise with no sets', () => {
     expect(todaysTarget(today([]), undefined)).toBeUndefined();
   });
