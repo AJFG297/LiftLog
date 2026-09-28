@@ -56,9 +56,14 @@ A new toast replaces the current one. It stays for five seconds, longer on Andro
 for more time to act, and is announced to screen readers. Pressing the action runs it and dismisses the
 toast.
 
+With a screen reader on (VoiceOver or TalkBack), a toast with an action doesn't time out, since reaching the
+action can take longer than any timer. It stays until the action is pressed or a new toast replaces it, and
+offers a Dismiss accessibility action and, on iOS, the escape gesture (a two-finger scrub). A toast without
+an action keeps the usual timing.
+
 The state is a small reducer in `toast/toast-state.ts`: `hidden`, `shown` and `leaving` (the exit
 animation). Each toast has an id, so a timer or animation left over from a replaced toast can't touch the
-new one.
+new one. `toastTimeoutMs` in the same file decides how long a toast stays up.
 
 Native sheets and modals are presented above the root view, so a toast shown while one is open is hidden
 behind it. Close the sheet first, then show the toast, as the dev sheet does.

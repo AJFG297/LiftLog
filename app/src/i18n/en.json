@@ -269,6 +269,7 @@
   "generic.default.label": "Default",
   "generic.delete.button": "Delete",
   "generic.deny.button": "Deny",
+  "generic.dismiss.button": "Dismiss",
   "generic.dont_ask_again.button": "Don't ask again",
   "generic.duplicate.button": "Duplicate",
   "generic.duration.label": "Duration",

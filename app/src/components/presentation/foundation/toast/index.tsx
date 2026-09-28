@@ -2,20 +2,21 @@ import { SurfaceText } from '@/components/presentation/foundation/surface-text';
 import {
   hiddenToast,
   toastReducer,
+  toastTimeoutMs,
   type Toast,
   type ToastContent,
 } from '@/components/presentation/foundation/toast/toast-state';
 import { MIN_TOUCH_TARGET } from '@/components/presentation/foundation/touch-target';
 import { spacing, useAppTheme } from '@/hooks/useAppTheme';
-import { createContext, ReactNode, useContext, useEffect, useReducer, useRef } from 'react';
-import { AccessibilityInfo, Pressable, View } from 'react-native';
+import { useTranslate } from '@tolgee/react';
+import { createContext, ReactNode, useContext, useEffect, useReducer, useRef, useState } from 'react';
+import { AccessibilityActionEvent, AccessibilityInfo, Pressable, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { scheduleOnRN } from 'react-native-worklets';
 
 export type { ToastContent } from '@/components/presentation/foundation/toast/toast-state';
 
-const VISIBLE_MS = 5000;
 const ENTER_MS = 200;
 const EXIT_MS = 150;
 /** Can't measure the tab bar from above the navigator, so assume an 80pt bar plus an 8pt gap. */
@@ -50,20 +51,34 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     },
   };
 
-  const shownId = state.phase === 'shown' ? state.toast.id : undefined;
+  const [screenReaderEnabled, setScreenReaderEnabled] = useState(false);
   useEffect(() => {
-    if (shownId === undefined) return;
+    let cancelled = false;
+    void AccessibilityInfo.isScreenReaderEnabled().then((enabled) => {
+      if (!cancelled) setScreenReaderEnabled(enabled);
+    });
+    const subscription = AccessibilityInfo.addEventListener('screenReaderChanged', setScreenReaderEnabled);
+    return () => {
+      cancelled = true;
+      subscription.remove();
+    };
+  }, []);
+
+  const shownId = state.phase === 'shown' ? state.toast.id : undefined;
+  const timeoutMs = state.phase === 'shown' ? toastTimeoutMs(state.toast, screenReaderEnabled) : undefined;
+  useEffect(() => {
+    if (shownId === undefined || timeoutMs === undefined) return;
     let timer: ReturnType<typeof setTimeout> | undefined;
     let cancelled = false;
     // Android lengthens this for users who asked for more time to act (e.g. with TalkBack on).
-    void AccessibilityInfo.getRecommendedTimeoutMillis(VISIBLE_MS).then((ms) => {
+    void AccessibilityInfo.getRecommendedTimeoutMillis(timeoutMs).then((ms) => {
       if (!cancelled) timer = setTimeout(() => dispatch({ type: 'dismiss', id: shownId }), ms);
     });
     return () => {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [shownId]);
+  }, [shownId, timeoutMs]);
 
   return (
     <ToastContext.Provider value={api}>
@@ -93,8 +108,16 @@ function ToastView({
   onExited: () => void;
 }) {
   const { tokens } = useAppTheme();
+  const { t } = useTranslate();
   const insets = useSafeAreaInsets();
   const presence = useSharedValue(0);
+  // Offered wherever screen-reader focus is in the toast, since an actionable one doesn't time out for them.
+  const dismissAction = {
+    accessibilityActions: [{ name: 'dismiss', label: t('generic.dismiss.button') }],
+    onAccessibilityAction: (event: AccessibilityActionEvent) => {
+      if (event.nativeEvent.actionName === 'dismiss') onDismiss();
+    },
+  };
 
   useEffect(() => {
     AccessibilityInfo.announceForAccessibility(
@@ -131,6 +154,7 @@ function ToastView({
     >
       <Animated.View
         pointerEvents={leaving ? 'none' : 'auto'}
+        onAccessibilityEscape={onDismiss}
         style={[
           {
             flexDirection: 'row',
@@ -146,7 +170,11 @@ function ToastView({
           animatedStyle,
         ]}
       >
-        <SurfaceText font="text-sm" style={{ flex: 1, color: tokens.inverseInk, paddingVertical: spacing[2] }}>
+        <SurfaceText
+          {...dismissAction}
+          font="text-sm"
+          style={{ flex: 1, color: tokens.inverseInk, paddingVertical: spacing[2] }}
+        >
           {toast.message}
         </SurfaceText>
         {toast.action && (
@@ -155,6 +183,7 @@ function ToastView({
               toast.action?.onPress();
               onDismiss();
             }}
+            {...dismissAction}
             accessibilityRole="button"
             accessibilityLabel={toast.action.label}
             style={({ pressed }) => ({

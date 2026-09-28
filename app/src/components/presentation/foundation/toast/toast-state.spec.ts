@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   hiddenToast,
   toastReducer,
+  toastTimeoutMs,
   type ToastEvent,
   type ToastState,
 } from '@/components/presentation/foundation/toast/toast-state';
@@ -85,5 +86,20 @@ describe('toastReducer', () => {
       phase: 'shown',
       toast: saved,
     });
+  });
+});
+
+describe('toastTimeoutMs', () => {
+  const undo = { message: 'Set removed', action: { label: 'Undo', onPress: () => {} } };
+  const plain = { message: 'Workout saved' };
+
+  it('times every toast out after five seconds without a screen reader', () => {
+    expect(toastTimeoutMs(plain, false)).toBe(5000);
+    expect(toastTimeoutMs(undo, false)).toBe(5000);
+  });
+
+  it('keeps an actionable toast up for a screen reader, and times out one without an action', () => {
+    expect(toastTimeoutMs(undo, true)).toBeUndefined();
+    expect(toastTimeoutMs(plain, true)).toBe(5000);
   });
 });

@@ -4,6 +4,17 @@ export interface ToastContent {
   action?: { label: string; onPress: () => void };
 }
 
+export const TOAST_VISIBLE_MS = 5000;
+
+/**
+ * How long a toast stays up on its own, or `undefined` for until its action is pressed or a new toast
+ * replaces it. A screen-reader user can take longer than any timer to reach the action, so an actionable
+ * toast waits for them; they can still dismiss it with the Dismiss action or the escape gesture.
+ */
+export function toastTimeoutMs(toast: ToastContent, screenReaderEnabled: boolean): number | undefined {
+  return screenReaderEnabled && toast.action ? undefined : TOAST_VISIBLE_MS;
+}
+
 export interface Toast extends ToastContent {
   id: number;
 }
@@ -16,7 +27,7 @@ export type ToastState = { phase: 'hidden' } | { phase: 'shown'; toast: Toast } 
 
 export type ToastEvent =
   | { type: 'show'; toast: Toast }
-  /** The timer ran out or the action was pressed. */
+  /** The timer ran out, the action was pressed, or a screen-reader user dismissed it. */
   | { type: 'dismiss'; id: number }
   | { type: 'exited'; id: number };
 
