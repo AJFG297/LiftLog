@@ -280,6 +280,13 @@ const MaterialSymbols = {
 
 export type AppIconSource = keyof typeof MaterialSymbols | keyof typeof CustomIcons | (() => JSX.Element);
 
+export type AppIconName = keyof typeof MaterialSymbols;
+
+/** Draws a Material Symbol without going through Paper. */
+export function AppIcon({ name, size, color }: { name: AppIconName; size: number; color: string }) {
+  return <MsIcon icon={MaterialSymbols[name] ?? MaterialSymbols.info} size={size} color={color} />;
+}
+
 export function MsIconSrc({ name, ...rest }: IconProps) {
   if ((name as keyof typeof CustomIcons) in CustomIcons) {
     return (
