@@ -12,22 +12,33 @@ import { ScrollView, View } from 'react-native';
 import type { NumberPadAccessory } from './number-pad-accessory';
 import { PlateStack } from './plate-stack';
 
-export function NumberPadAccessoryRow(props: {
+interface NumberPadAccessoryRowProps {
   accessory: NumberPadAccessory | undefined;
   value: BigNumber | undefined;
-}) {
-  const { accessory, value } = props;
+}
+
+export function NumberPadAccessoryRow(props: NumberPadAccessoryRowProps) {
   return (
     <View style={{ minHeight: spacing[12], justifyContent: 'center' }}>
-      {accessory?.kind === 'rpe' ? (
-        <RpeRow value={accessory.value} onChange={accessory.onChange} />
-      ) : accessory?.kind === 'plates' && value ? (
-        <PlatesRow bar={accessory.bar} plates={accessory.plates} value={value} unit={accessory.unit} />
-      ) : (accessory?.kind === 'perDumbbell' || accessory?.kind === 'onStack') && value ? (
-        <LoadRow kind={accessory.kind} value={value} unit={accessory.unit} />
-      ) : undefined}
+      <AccessoryContent accessory={props.accessory} value={props.value} />
     </View>
   );
+}
+
+function AccessoryContent({ accessory, value }: NumberPadAccessoryRowProps) {
+  switch (accessory?.kind) {
+    case 'rpe':
+      return <RpeRow value={accessory.value} onChange={accessory.onChange} />;
+    case 'plates':
+      return value ? (
+        <PlatesRow bar={accessory.bar} plates={accessory.plates} value={value} unit={accessory.unit} />
+      ) : null;
+    case 'perDumbbell':
+    case 'onStack':
+      return value ? <LoadRow kind={accessory.kind} value={value} unit={accessory.unit} /> : null;
+    case undefined:
+      return null;
+  }
 }
 
 function AccessoryText(props: { children: string }) {
@@ -80,14 +91,16 @@ function PlatesRow(props: { bar: BigNumber; plates: readonly BigNumber[]; value:
   );
 }
 
-function LoadRow(props: { kind: 'perDumbbell' | 'onStack'; value: BigNumber; unit: LoadUnit }) {
+const LOAD_LABEL = {
+  perDumbbell: 'number_pad.per_dumbbell.label',
+  onStack: 'number_pad.on_stack.label',
+} as const;
+
+function LoadRow(props: { kind: keyof typeof LOAD_LABEL; value: BigNumber; unit: LoadUnit }) {
   const { t } = useTranslate();
-  const weight = formatWeightText(new Weight(props.value, props.unit));
   return (
     <AccessoryText>
-      {props.kind === 'perDumbbell'
-        ? t('number_pad.per_dumbbell.label', { weight })
-        : t('number_pad.on_stack.label', { weight })}
+      {t(LOAD_LABEL[props.kind], { weight: formatWeightText(new Weight(props.value, props.unit)) })}
     </AccessoryText>
   );
 }
