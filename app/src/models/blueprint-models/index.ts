@@ -22,6 +22,7 @@ import {
   toLocalDateJSON,
 } from '../storage/versions/latest';
 import { RecordedWeightedExercise } from '@/models/session-models';
+import { setLabels, type WorkingListKind } from '@/models/session-models/set-kind';
 import { Weight, WeightUnit } from '@/models/weight';
 
 export class ProgramBlueprint {
@@ -142,7 +143,7 @@ export class SessionBlueprint {
 
   toJSON(): SessionBlueprintJSON {
     return {
-      version: 7,
+      version: 8,
       name: this.name,
       exercises: this.exercises.map((exercise) => exercise.toJSON()),
       notes: this.notes,
@@ -492,13 +493,19 @@ export class ProgressionRule {
     );
   }
 
-  /** The exercise with this rule's move made, or `undefined` when the rule has nothing left to move. */
-  applyTo(exercise: RecordedWeightedExercise): RecordedWeightedExercise | undefined {
+  /**
+   * The exercise with this rule's move made, or `undefined` when the rule has nothing left to move. Only the
+   * slots that continue `carriedFrom`, the session the exercise's numbers came from, can move.
+   */
+  applyTo(
+    exercise: RecordedWeightedExercise,
+    carriedFrom: RecordedWeightedExercise,
+  ): RecordedWeightedExercise | undefined {
     // A load rule kept from before the load was turned off would climb a weight nothing displays.
     if (this.axis === 'load' && !exercise.tracksResistance) {
       return undefined;
     }
-    const indices = this.indicesToMove(exercise);
+    const indices = this.indicesToMove(exercise, carriedFrom);
     if (!indices.length) {
       return undefined;
     }
@@ -554,32 +561,37 @@ export class ProgressionRule {
     return Math.max(reachable - from, 0);
   }
 
-  private indicesToMove(exercise: RecordedWeightedExercise): number[] {
-    const sets = exercise.potentialSets;
+  /**
+   * Only the sets that continue the progression move: a drop set is neither checked nor climbed. A slot that
+   * started over is out before the ranking, or at no weight it would always be the lowest.
+   */
+  private indicesToMove(exercise: RecordedWeightedExercise, carriedFrom: RecordedWeightedExercise): number[] {
+    const eligible = exercise.workingIndicesContinuing(carriedFrom);
     if (this.scope.type === 'allSets') {
-      return sets.map((_, index) => index);
+      return eligible;
     }
     // Ranked by the rule's own axis: a reps rule that sorted by load would pick a set at random.
     const matching =
       this.axis === 'load'
-        ? lowestByWeight(exercise)
-        : lowestByNumber(sets.map((_, i) => exercise.repsTargetForSet(i).max));
-    return pickFrom(matching, this.scope.pick, sets.length);
+        ? lowestByWeight(exercise, eligible)
+        : lowestByNumber(eligible, (i) => exercise.repsTargetForSet(i).max);
+    return pickFrom(matching, this.scope.pick, exercise.potentialSets.length);
   }
 }
 
-function lowestByWeight(exercise: RecordedWeightedExercise): number[] {
+function lowestByWeight(exercise: RecordedWeightedExercise, eligible: number[]): number[] {
   const sets = exercise.potentialSets;
-  const lowest = [...sets].sort((a, b) => (a.weight.isGreaterThan(b.weight) ? 1 : -1))[0];
+  const lowest = eligible.map((index) => sets[index]!).sort((a, b) => (a.weight.isGreaterThan(b.weight) ? 1 : -1))[0];
   if (!lowest) {
     return [];
   }
-  return sets.flatMap((set, index) => (set.weight.equals(lowest.weight) ? [index] : []));
+  return eligible.filter((index) => sets[index]!.weight.equals(lowest.weight));
 }
 
-function lowestByNumber(values: number[]): number[] {
+function lowestByNumber(eligible: number[], valueAt: (index: number) => number): number[] {
+  const values = eligible.map(valueAt);
   const lowest = Math.min(...values);
-  return values.flatMap((value, index) => (value === lowest ? [index] : []));
+  return eligible.filter((_, position) => values[position] === lowest);
 }
 
 /** `middle` measures from the centre of *all* sets, not the centre of the matching ones. */
@@ -614,13 +626,17 @@ export function progressionEquals(a: ProgressionRule[], b: ProgressionRule[]): b
  * Ordered: the first rule that can still move is the one that moves. Every rule ahead of it has run
  * out of room, so any of those asking to `reset` gets put back to the plan on the way past - that
  * handoff is what makes double progression a ladder rather than a one-way climb.
+ *
+ * `carriedFrom` is the session the exercise was carried from. Leave it out when the exercise continues
+ * itself, as the editor's example does.
  */
 export function applyProgression(
   progression: ProgressionRule[],
   exercise: RecordedWeightedExercise,
+  carriedFrom: RecordedWeightedExercise = exercise,
 ): RecordedWeightedExercise {
   for (const [index, rule] of progression.entries()) {
-    const moved = rule.applyTo(exercise);
+    const moved = rule.applyTo(exercise, carriedFrom);
     if (moved) {
       return progression
         .slice(0, index)
@@ -710,6 +726,7 @@ export interface RepsTarget {
 /** What the plan asks for on one set. */
 export interface PlannedSet {
   reps: RepsTarget;
+  kind: WorkingListKind;
 }
 
 /**
@@ -731,14 +748,25 @@ export function formatRepsTarget(target: RepsTarget): string {
   return target.min === target.max ? `${target.max}` : `${target.min}-${target.max}`;
 }
 
-/** How a whole list of planned sets reads: `10`, `8-12`, or `12, 10, 8` for a pyramid. */
-export function formatPlannedSets(plannedSets: PlannedSet[]): string {
-  const uniform = uniformTarget(plannedSets);
-  return uniform ? formatRepsTarget(uniform) : plannedSets.map((s) => formatRepsTarget(s.reps)).join(', ');
+/**
+ * How a whole list of planned sets reads: `10`, `8-12`, or `12, 10, 8` for a pyramid. A set that is not
+ * a working set is spelled out with its letter, `10, 10, D 15`, so a change of kind reads as one.
+ */
+export function formatPlannedSets(plannedSets: PlannedSet[], separator = ', '): string {
+  const uniform = uniformWorkingTarget(plannedSets);
+  if (uniform) {
+    return formatRepsTarget(uniform);
+  }
+  const labels = setLabels(plannedSets.map((s) => s.kind));
+  return plannedSets
+    .map((s, index) =>
+      s.kind === 'working' ? formatRepsTarget(s.reps) : `${labels[index]} ${formatRepsTarget(s.reps)}`,
+    )
+    .join(separator);
 }
 
 /** The target every set shares, or undefined when they differ. */
-export function uniformTarget(plannedSets: PlannedSet[]): RepsTarget | undefined {
+export function uniformTarget(plannedSets: Pick<PlannedSet, 'reps'>[]): RepsTarget | undefined {
   const first = plannedSets[0]?.reps;
   if (!first) {
     return undefined;
@@ -746,12 +774,17 @@ export function uniformTarget(plannedSets: PlannedSet[]): RepsTarget | undefined
   return plannedSets.every((s) => s.reps.min === first.min && s.reps.max === first.max) ? first : undefined;
 }
 
+/** The target every set shares when they are all working sets, so the list reads as one target. */
+export function uniformWorkingTarget(plannedSets: PlannedSet[]): RepsTarget | undefined {
+  return plannedSets.every((s) => s.kind === 'working') ? uniformTarget(plannedSets) : undefined;
+}
+
 export function repsTargetsEqual(a: RepsTarget, b: RepsTarget): boolean {
   return a.min === b.min && a.max === b.max;
 }
 
 export function plannedSetsEqual(a: PlannedSet[], b: PlannedSet[]): boolean {
-  return a.length === b.length && a.every((s, i) => repsTargetsEqual(s.reps, b[i]!.reps));
+  return a.length === b.length && a.every((s, i) => repsTargetsEqual(s.reps, b[i]!.reps) && s.kind === b[i]!.kind);
 }
 
 /**
@@ -967,7 +1000,7 @@ export class WeightedExerciseBlueprint {
   static fromJSON(json: WeightedExerciseBlueprintJSON): WeightedExerciseBlueprint {
     return new WeightedExerciseBlueprint(
       json.name,
-      json.plannedSets.map((s) => ({ reps: { min: s.reps.min, max: s.reps.max } })),
+      json.plannedSets.map((s) => ({ reps: { min: s.reps.min, max: s.reps.max }, kind: s.kind })),
       json.progression.map(ProgressionRule.fromJSON),
       Rest.fromJSON(json.restBetweenSets),
       json.supersetWithNext,
@@ -1024,7 +1057,10 @@ export class WeightedExerciseBlueprint {
     return this.with({
       plannedSets: [
         ...this.plannedSets,
-        ...Array.from({ length: sets - this.plannedSets.length }, () => ({ reps: { ...last } })),
+        ...Array.from({ length: sets - this.plannedSets.length }, () => ({
+          reps: { ...last },
+          kind: 'working' as const,
+        })),
       ],
     });
   }
@@ -1059,7 +1095,7 @@ export class WeightedExerciseBlueprint {
     return {
       type: 'WeightedExerciseBlueprint',
       name: this.name,
-      plannedSets: this.plannedSets.map((s) => ({ reps: { min: s.reps.min, max: s.reps.max } })),
+      plannedSets: this.plannedSets.map((s) => ({ reps: { min: s.reps.min, max: s.reps.max }, kind: s.kind })),
       progression: this.progression.map((rule) => rule.toJSON()),
       restBetweenSets: Rest.toJSON(this.restBetweenSets),
       supersetWithNext: this.supersetWithNext,
@@ -1075,7 +1111,10 @@ export class WeightedExerciseBlueprint {
       other.name ?? this.name,
       other.plannedSets ??
         (other.sets !== undefined || other.repsConfig !== undefined
-          ? plannedSetsOf(other.sets ?? this.plannedSets.length, other.repsConfig ?? targetsAsRepsConfig(this))
+          ? withKindsOf(
+              this.plannedSets,
+              plannedSetsOf(other.sets ?? this.plannedSets.length, other.repsConfig ?? targetsAsRepsConfig(this)),
+            )
           : this.plannedSets),
       other.progression ?? this.progression,
       other.restBetweenSets ?? this.restBetweenSets,
@@ -1098,8 +1137,13 @@ export function plannedSetsOf(sets: number, repsConfig: RepsConfig): PlannedSet[
     .exhaustive();
   return Array.from({ length: Math.max(sets, 0) }, (_, index) => {
     const { min, max } = targetAt(index);
-    return { reps: { min, max } };
+    return { reps: { min, max }, kind: 'working' };
   });
+}
+
+/** A rep layout only describes reps, so re-laying the targets keeps each set's kind where it was. */
+function withKindsOf(existing: PlannedSet[], relaid: PlannedSet[]): PlannedSet[] {
+  return relaid.map((set, index) => ({ ...set, kind: existing[index]?.kind ?? set.kind }));
 }
 
 /** Existing targets in the form `with({ sets })` can resize without changing them. */

@@ -210,6 +210,24 @@ describe('WorkoutMessage JSON schema validation', () => {
       expect(validate('WorkoutUpdatedEvent', payload)).toBe(true);
     });
 
+    it.each(['working', 'failure', 'drop', 'myo'] as const)('validates a current %s set', (kind) => {
+      const exercise = makeWeightedExercise();
+      const payload: WorkoutUpdatedEvent = {
+        type: 'WorkoutUpdatedEvent',
+        workout: makeSession().toJSON(),
+        restTimerInfo: undefined,
+        cardioTimerInfo: undefined,
+        currentExerciseDetails: {
+          exercise: exercise.withSet(0, (s) => s.with({ kind })).toJSON(),
+          setKind: kind,
+          setIndex: 0,
+        },
+        totalWeightLifted: new Weight(0, 'kilograms').toJSON(),
+        workoutDuration: toDurationJSON(Duration.parse('PT1M')),
+      };
+      expect(validate('WorkoutUpdatedEvent', payload)).toBe(true);
+    });
+
     it('rejects a current set of an unknown kind', () => {
       const payload = {
         type: 'WorkoutUpdatedEvent',

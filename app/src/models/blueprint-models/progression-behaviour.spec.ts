@@ -44,7 +44,7 @@ function weightIncrementOf(config: ProgressionConfig): number {
 function exerciseWith(weights: number[], recorded = false): RecordedWeightedExercise {
   const blueprint = WeightedExerciseBlueprint.of({
     name: 'Squat',
-    plannedSets: weights.map(() => ({ reps: { min: 10, max: 10 } })),
+    plannedSets: weights.map(() => ({ reps: { min: 10, max: 10 }, kind: 'working' as const })),
   });
   return new RecordedWeightedExercise(
     blueprint,

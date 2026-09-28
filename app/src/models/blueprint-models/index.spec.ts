@@ -12,6 +12,8 @@ import {
   RepsConfig,
   WeightedExerciseBlueprint,
   cardioTargetEquals,
+  formatPlannedSets,
+  uniformWorkingTarget,
 } from '@/models/blueprint-models';
 import { RecordedWeightedExercise } from '@/models/session-models';
 import { LocalDate } from '@js-joda/core';
@@ -594,5 +596,59 @@ describe('WeightedExerciseBlueprint rep schemes', () => {
       expect(program.withSessionMovedUp(workoutA)).toBe(program);
       expect(program.withSessionMovedDown(workoutB)).toBe(program);
     });
+  });
+});
+
+describe('uniformWorkingTarget', () => {
+  const ten = { min: 10, max: 10 };
+
+  it('is the shared target of a list of working sets', () => {
+    expect(
+      uniformWorkingTarget([
+        { reps: { min: 8, max: 12 }, kind: 'working' },
+        { reps: { min: 8, max: 12 }, kind: 'working' },
+      ]),
+    ).toEqual({ min: 8, max: 12 });
+  });
+
+  it('is undefined when the targets differ, or when any set is another kind', () => {
+    expect(
+      uniformWorkingTarget([
+        { reps: ten, kind: 'working' },
+        { reps: { min: 8, max: 8 }, kind: 'working' },
+      ]),
+    ).toBeUndefined();
+    expect(
+      uniformWorkingTarget([
+        { reps: ten, kind: 'working' },
+        { reps: ten, kind: 'failure' },
+      ]),
+    ).toBeUndefined();
+  });
+});
+
+describe('formatPlannedSets', () => {
+  const ten = { min: 10, max: 10 };
+
+  it('writes one target when every set is a working set with the same target', () => {
+    expect(
+      formatPlannedSets([
+        { reps: ten, kind: 'working' },
+        { reps: ten, kind: 'working' },
+      ]),
+    ).toBe('10');
+  });
+
+  it('letters sets that are not working sets, with the separator the caller asks for', () => {
+    expect(
+      formatPlannedSets(
+        [
+          { reps: ten, kind: 'working' },
+          { reps: ten, kind: 'failure' },
+          { reps: { min: 12, max: 15 }, kind: 'drop' },
+        ],
+        ' / ',
+      ),
+    ).toBe('10 / F 10 / D 12-15');
   });
 });

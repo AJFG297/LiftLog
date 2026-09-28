@@ -1,5 +1,5 @@
 import { PotentialSet, RecordedCardioExercise, RecordedExercise, Session } from '@/models/session-models';
-import type { SetKind } from '@/models/session-models/recorded-weighted-exercise';
+import type { SetKind } from '@/models/session-models/set-kind';
 import { AddEffectFn } from '@/store/store';
 import { exportPlainText } from '@/store/settings';
 import Enumerable from 'linq';
@@ -71,7 +71,7 @@ class ExportedSetCsvRow {
     if (exercise instanceof RecordedCardioExercise) {
       return [];
     }
-    const row = (set: PotentialSet, targetReps: number, setType: SetKind) =>
+    const row = (set: PotentialSet, targetReps: number) =>
       new ExportedSetCsvRow(
         session.id,
         set.set!.completionDateTime.toString(),
@@ -83,14 +83,14 @@ class ExportedSetCsvRow {
         targetReps,
         exercise.notes ?? '',
         set.loggedRpe ?? '',
-        setType,
+        set.kind,
       );
     // Warm-ups come first, in the order they are done.
-    const warmups = exercise.warmupSets.filter((set) => set.set).map((set) => row(set, set.target.max, 'warmup'));
+    const warmups = exercise.warmupSets.filter((set) => set.set).map((set) => row(set, set.target.max));
     const working = exercise.potentialSets
       .map((set, index) => ({ set, index }))
       .filter((x) => x.set.set)
-      .map(({ set, index }) => row(set, exercise.repsTargetForSet(index).max, 'working'));
+      .map(({ set, index }) => row(set, exercise.repsTargetForSet(index).max));
     return [...warmups, ...working];
   }
 }

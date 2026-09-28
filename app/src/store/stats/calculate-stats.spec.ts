@@ -535,4 +535,77 @@ describe('calculateStats', () => {
       expect(result.weightedExerciseStats.map((s) => s.exerciseName)).toEqual(['Squat']);
     });
   });
+
+  describe('calculateStats - drop and myo sets', () => {
+    it('counts the volume of a session with only drop and myo sets, but gives it no record figures', () => {
+      const heavy = makeSession(LocalDate.of(2024, 5, 1), 'Curl', 20, 10, 3);
+      const date = LocalDate.of(2024, 5, 3);
+      const blueprint = makeBlueprint('Curl', 2, 12);
+      const baseTime = makeOffset(date);
+      const light = new Session(
+        'light',
+        makeSessionBlueprint('Arms', [blueprint]),
+        [
+          new RecordedWeightedExercise(
+            blueprint,
+            [
+              filledPotentialSet(12, baseTime, new Weight(10, 'kilograms')).with({ kind: 'drop' }),
+              filledPotentialSet(15, baseTime.plusSeconds(60), new Weight(8, 'kilograms')).with({ kind: 'myo' }),
+            ],
+            undefined,
+          ),
+        ],
+        date,
+        undefined,
+        undefined,
+      );
+
+      const curl = calculateStats([heavy, light], 'kilograms', makeRange(LocalDate.of(2024, 5, 1), date.plusDays(4)))
+        .weightedExerciseStats[0]!;
+
+      expect(curl.totalVolumeStatistics.statistics.map((x) => x.value.value.toNumber())).toEqual([600, 240]);
+      expect(curl.repsStatistics.breakdown).toEqual({
+        10: { numberOfSets: 3 },
+        12: { numberOfSets: 1 },
+        15: { numberOfSets: 1 },
+      });
+      expect(curl.maxLiftedPerSessionStatistics.statistics.map((x) => x.value.value.toNumber())).toEqual([20]);
+      expect(curl.max1RMPerSessionStatistics.statistics).toHaveLength(1);
+      expect(curl.series.reps.statistics.map((x) => x.value)).toEqual([10]);
+    });
+
+    describe('heaviest lift', () => {
+      const date = LocalDate.of(2024, 6, 3);
+
+      /** A completed session of one 12 x 40 kg drop set of curls. */
+      function dropOnlySession() {
+        const blueprint = makeWeightedBlueprint({
+          name: 'Curl',
+          plannedSets: [{ reps: { min: 12, max: 12 }, kind: 'drop' }],
+          progression: [],
+        });
+        const exercise = new RecordedWeightedExercise(
+          blueprint,
+          [filledPotentialSet(12, makeOffset(date), new Weight(40, 'kilograms')).with({ kind: 'drop' })],
+          undefined,
+        );
+        return new Session('drop', makeSessionBlueprint('Arms', [blueprint]), [exercise], date, undefined, undefined);
+      }
+
+      it('has none when only drop sets were logged', () => {
+        const result = calculateStats([dropOnlySession()], 'kilograms', makeRange(date, date.plusDays(6)));
+
+        expect(result.heaviestLift).toBeUndefined();
+      });
+
+      it('goes to a working set elsewhere, even one lighter than the drop set', () => {
+        const squat = makeSession(date.plusDays(1), 'Squat', 30);
+
+        const result = calculateStats([dropOnlySession(), squat], 'kilograms', makeRange(date, date.plusDays(6)));
+
+        expect(result.heaviestLift?.exerciseName).toBe('Squat');
+        expect(result.heaviestLift?.weight.value.toNumber()).toBe(30);
+      });
+    });
+  });
 });

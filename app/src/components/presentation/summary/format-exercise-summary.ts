@@ -51,7 +51,7 @@ export function formatSessionVolume(session: Session): string | undefined {
   for (const exercise of session.recordedExercises) {
     if (!(exercise instanceof RecordedWeightedExercise)) continue;
 
-    for (const potentialSet of exercise.potentialSets) {
+    for (const potentialSet of exercise.setsCountingTowards('countsTowardsVolume')) {
       if (!potentialSet.set) continue;
       const weight = exercise.effectiveWeight(potentialSet, session.bodyweight);
       if (weight.value.isZero()) continue;

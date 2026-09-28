@@ -55,10 +55,10 @@ Nothing about the format is Claude-specific. To use ChatGPT, Gemini, or anything
 > Rules that are easy to get wrong:
 >
 > - Treat every field in the schema as required, apart from the handful marked optional. Empty strings for `notes` and `link`.
-> - `"version": 3` on the root object, `"version": 7` on every session.
+> - `"version": 3` on the root object, `"version": 8` on every session.
 > - Weights, distances and progression steps are decimal **strings**: `"2.5"`, not `2.5`. Rep counts are plain integers.
 > - Rests and cardio times are ISO-8601 durations: `"PT3M"`, `"PT90S"`.
-> - A weighted exercise has no set count: one entry in `plannedSets` is one set. Cardio uses `sets`, an array of set objects.
+> - A weighted exercise has no set count: one entry in `plannedSets` is one set, and each has a `kind` (`"working"` for a plain set). Cardio uses `sets`, an array of set objects.
 > - Supersets are a flag on the preceding exercise: `"supersetWithNext": true`.
 > - `type` values are case-sensitive. Exercise types are PascalCase (`"WeightedExerciseBlueprint"`); cardio targets, progression scopes and resistance are lowercase or camelCase (`"time"`, `"allSets"`, `"bodyweight"`).
 >
@@ -77,7 +77,7 @@ A plan file is one JSON object: a name, a date, and a list of sessions. Each ses
   "lastEdited": "2026-07-12",
   "sessions": [
     {
-      "version": 7,
+      "version": 8,
       "name": "Push",
       "notes": "Chest, shoulders and triceps.",
       "exercises": [
@@ -85,9 +85,9 @@ A plan file is one JSON object: a name, a date, and a list of sessions. Each ses
           "type": "WeightedExerciseBlueprint",
           "name": "Barbell Bench Press",
           "plannedSets": [
-            { "reps": { "min": 5, "max": 5 } },
-            { "reps": { "min": 5, "max": 5 } },
-            { "reps": { "min": 5, "max": 5 } }
+            { "reps": { "min": 5, "max": 5 }, "kind": "working" },
+            { "reps": { "min": 5, "max": 5 }, "kind": "working" },
+            { "reps": { "min": 5, "max": 5 }, "kind": "working" }
           ],
           "restBetweenSets": { "minRest": "PT3M", "maxRest": "PT5M", "failureRest": "PT5M" },
           "supersetWithNext": false,
@@ -120,7 +120,24 @@ Complete examples live in [`plugins/liftlog-plan-builder/skills/create-liftlog-p
 
 An exercise is either a `WeightedExerciseBlueprint` or a `CardioExerciseBlueprint`, chosen by its `type`. The two can be mixed within a session.
 
-**Weighted exercises** have a list of planned sets, rest times, a resistance, and a list of progression rules. `plannedSets` holds one entry per set, each with that set's rep target as a `min`/`max` band - `min === max` is a plain "five reps". `restBetweenSets` needs all three of `minRest`, `maxRest`, and `failureRest` (the last being the rest taken after missing a rep target). `link` is a URL explaining the movement, and should stay `""` unless you have a real one.
+**Weighted exercises** have a list of planned sets, rest times, a resistance, and a list of progression rules. `plannedSets` holds one entry per set, each with that set's rep target as a `min`/`max` band - `min === max` is a plain "five reps" - and its `kind`, which says what the set is for (see [Set kinds](#set-kinds)). `restBetweenSets` needs all three of `minRest`, `maxRest`, and `failureRest` (the last being the rest taken after missing a rep target). `link` is a URL explaining the movement, and should stay `""` unless you have a real one.
+
+#### Set kinds
+
+| `kind`      | What it is                                  | Volume | Records | Progression check | Carries over |
+| ----------- | ------------------------------------------- | ------ | ------- | ----------------- | ------------ |
+| `"working"` | A plain set                                 | yes    | yes     | yes               | yes          |
+| `"failure"` | A set taken to failure                      | yes    | yes     | yes               | yes          |
+| `"drop"`    | A drop set: lighter, straight after another | yes    | no      | no                | no           |
+| `"myo"`     | A myo-rep set                               | yes    | no      | no                | no           |
+
+A set that is not part of the progression check never holds a progression back, and the rules never
+move it. One that does not carry over starts each session on the plan's reps. It keeps its own weight
+from last time as a starting point, since a drop set is usually the same drop each week, but only when that
+slot was the same kind last time. It never takes a working set's weight, and a working set never takes its: a working set that was a drop
+or myo set last time starts over at no weight and the plan's reps, and the rules leave it there for that
+session. In the app only working sets are numbered; the others show D, M or F. Warm-ups are not a
+`kind` - they are planned in `warmupSets` - and show W.
 
 `resistance` says where the load comes from: `external` for barbells, dumbbells and machines (the logged weight is the weight lifted), `bodyweight` for pull ups and dips (the logged weight is what is added on top of the lifter), or `none` for movements like crunches, where there is no weight at all and reps are the whole story.
 

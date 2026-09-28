@@ -38,7 +38,10 @@ export interface WorkoutUpdatedEvent {
 
 export interface CurrentExerciseDetails {
   exercise: RecordedExerciseJSON;
-  /** Which of the exercise's set lists `setIndex` points into. Cardio sets are always `working`. */
+  /**
+   * The kind of the set `setIndex` points at. A warm-up's index is into `warmupSets`, any other kind's
+   * into `potentialSets`. Cardio sets are always `working`.
+   */
   setKind: CurrentSetKind;
   /**
    * @asType integer
@@ -48,7 +51,7 @@ export interface CurrentExerciseDetails {
 
 // The same union as the domain's SetKind, declared again because this file is the worker's wire
 // contract: its schema and the generated Kotlin are built from it alone.
-export type CurrentSetKind = 'warmup' | 'working';
+export type CurrentSetKind = 'working' | 'warmup' | 'drop' | 'myo' | 'failure';
 
 export interface CardioTimerInfo {
   currentDuration: DurationJSON;

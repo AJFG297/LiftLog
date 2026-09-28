@@ -36,7 +36,7 @@ function exercise(
 ): RecordedWeightedExercise {
   const blueprint = WeightedExerciseBlueprint.of({
     name: 'Chin Up',
-    plannedSets: planned.map((reps) => ({ reps })),
+    plannedSets: planned.map((reps) => ({ reps, kind: 'working' as const })),
     resistance: options.resistance ?? 'none',
   });
   const targets = options.at ?? planned;
@@ -220,7 +220,7 @@ describe('reps progression', () => {
   describe('a band and a reps rule together', () => {
     const banded = (target: RepsTarget) =>
       new RecordedWeightedExercise(
-        WeightedExerciseBlueprint.of({ plannedSets: [{ reps: target }], resistance: 'external' }),
+        WeightedExerciseBlueprint.of({ plannedSets: [{ reps: target, kind: 'working' }], resistance: 'external' }),
         [emptyPotentialSet(new Weight(60, 'kilograms'), target)],
         undefined,
       );
@@ -285,7 +285,7 @@ describe('reps progression', () => {
     const load = ProgressionRule.load(bn(2.5));
     const blueprint = (progression: ProgressionRule[], init: { reps?: number; resistance?: Resistance } = {}) =>
       WeightedExerciseBlueprint.of({
-        plannedSets: at(init.reps ?? 8, init.reps ?? 8).map((reps) => ({ reps })),
+        plannedSets: at(init.reps ?? 8, init.reps ?? 8).map((reps) => ({ reps, kind: 'working' as const })),
         resistance: init.resistance ?? 'external',
         progression,
       });

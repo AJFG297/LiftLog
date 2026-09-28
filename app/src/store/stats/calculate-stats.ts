@@ -58,7 +58,10 @@ export function calculateStats(
       sessionTotal +
       session.recordedExercises.reduce((exerciseTotal, exercise) => {
         if (exercise instanceof RecordedWeightedExercise) {
-          return exerciseTotal + exercise.potentialSets.filter((set) => set.set !== undefined).length;
+          return (
+            exerciseTotal +
+            exercise.setsCountingTowards('countsTowardsVolume').filter((set) => set.set !== undefined).length
+          );
         }
         return exerciseTotal + exercise.sets.filter((set) => set.completionDateTime !== undefined).length;
       }, 0),
@@ -143,64 +146,51 @@ export function calculateStats(
         continue;
       }
       const exerciseStats = exerciseStatsMap.get(key)!;
-      // Max weight lifted for this exercise in this session
-      const maxWeight = ex.potentialSets
-        .filter((ps) => ps.set)
-        .map((ps) => ex.effectiveWeight(ps, session.bodyweight))
-        .reduce((a, b) => (a === null ? b : a.isGreaterThan(b) ? a : b), null as null | Weight);
-      if (!maxWeight) {
+      const recordSets = ex.setsCountingTowards('countsTowardsPrs').filter((ps) => ps.set);
+      const volumeSets = ex.setsCountingTowards('countsTowardsVolume').filter((ps) => ps.set);
+      if (!volumeSets.length) {
         continue;
       }
 
-      // Max 1RM for this exercise in this session
-      const max1RM = ex.potentialSets
-        .filter((ps) => ps.set)
-        .filter((ps) => ps.set!.repsCompleted)
-        .map((ps) => calculateOneRepMax(ps, ex.effectiveWeight(ps, session.bodyweight)))
-        .reduce((a, b) => (a === null ? b : a.isGreaterThan(b) ? a : b), null as null | Weight);
-      if (!max1RM) {
-        continue;
-      }
-
-      for (const set of ex.potentialSets) {
-        if (!set.set) {
-          continue;
-        }
-        exerciseStats.repsStatistics.breakdown[set.set.repsCompleted] ??= {
+      for (const set of volumeSets) {
+        exerciseStats.repsStatistics.breakdown[set.set!.repsCompleted] ??= {
           numberOfSets: 0,
         };
-        exerciseStats.repsStatistics.breakdown[set.set.repsCompleted]!.numberOfSets += 1;
+        exerciseStats.repsStatistics.breakdown[set.set!.repsCompleted]!.numberOfSets += 1;
       }
 
       // Dated by the last working set, so a warm-up logged afterwards doesn't move it.
-      const lastSet = ex.lastLoggedWorkingSet!;
-      if (exerciseStats.latestTime.isBefore(lastSet.set!.completionDateTime)) {
-        exerciseStats.latestTime = lastSet.set!.completionDateTime;
+      const dateTime = ex.lastLoggedWorkingSet!.set!.completionDateTime;
+      if (exerciseStats.latestTime.isBefore(dateTime)) {
+        exerciseStats.latestTime = dateTime;
         // How the exercise is programmed now, not how it was the first time it was logged.
         exerciseStats.primary = primaryAxisFor(blueprint);
       }
-      exerciseStats.maxWeightStatistics.push({
-        dateTime: lastSet.set!.completionDateTime,
-        value: maxWeight,
-      });
-      exerciseStats.maxRepsStatistics.push({
-        dateTime: lastSet.set!.completionDateTime,
-        value: ex.potentialSets.reduce((most, ps) => Math.max(most, ps.set?.repsCompleted ?? 0), 0),
-      });
-      exerciseStats.max1RMStatistics.push({
-        dateTime: lastSet.set!.completionDateTime,
-        value: max1RM,
-      });
       exerciseStats.totalVolumeStatistics.push({
-        dateTime: lastSet.set!.completionDateTime,
-        value: ex.potentialSets
-          .filter((x) => x.set)
-          .reduce(
-            (accum, set) =>
-              ex.effectiveWeight(set, session.bodyweight).multipliedBy(set.set!.repsCompleted).plus(accum),
-            Weight.NIL,
-          ),
+        dateTime,
+        value: volumeSets.reduce(
+          (accum, set) => ex.effectiveWeight(set, session.bodyweight).multipliedBy(set.set!.repsCompleted).plus(accum),
+          Weight.NIL,
+        ),
       });
+
+      // A session of only drop and myo sets still adds volume, but has no record figures to give.
+      const maxWeight = recordSets
+        .map((ps) => ex.effectiveWeight(ps, session.bodyweight))
+        .reduce((a, b) => (a === null ? b : a.isGreaterThan(b) ? a : b), null as null | Weight);
+      const max1RM = recordSets
+        .filter((ps) => ps.set!.repsCompleted)
+        .map((ps) => calculateOneRepMax(ps, ex.effectiveWeight(ps, session.bodyweight)))
+        .reduce((a, b) => (a === null ? b : a.isGreaterThan(b) ? a : b), null as null | Weight);
+      if (!maxWeight || !max1RM) {
+        continue;
+      }
+      exerciseStats.maxWeightStatistics.push({ dateTime, value: maxWeight });
+      exerciseStats.maxRepsStatistics.push({
+        dateTime,
+        value: recordSets.reduce((most, ps) => Math.max(most, ps.set!.repsCompleted), 0),
+      });
+      exerciseStats.max1RMStatistics.push({ dateTime, value: max1RM });
     }
   }
 
@@ -248,10 +238,15 @@ export function calculateStats(
       if (ex instanceof RecordedCardioExercise) {
         continue;
       }
-      const maxWeight = ex.potentialSets
+      const weights = ex
+        .setsCountingTowards('countsTowardsPrs')
         .filter((ps) => ps.set)
-        .map((ps) => ex.effectiveWeight(ps, session.bodyweight))
-        .reduce((a, b) => (a.isGreaterThan(b) ? a : b), Weight.NIL);
+        .map((ps) => ex.effectiveWeight(ps, session.bodyweight));
+      // Only drop or myo sets logged: there is no lift here to be the heaviest.
+      if (!weights.length) {
+        continue;
+      }
+      const maxWeight = weights.reduce((a, b) => (a.isGreaterThan(b) ? a : b));
       if (!heaviestLift || maxWeight.isGreaterThan(heaviestLift.weight)) {
         heaviestLift = {
           exerciseName: ex.blueprint.name,

@@ -7,7 +7,7 @@
     },
     "setKind": {
       "$ref": "./CurrentSetKind.json",
-      "description": "Which of the exercise's set lists `setIndex` points into. Cardio sets are always `working`."
+      "description": "The kind of the set `setIndex` points at. A warm-up's index is into `warmupSets`, any other kind's into `potentialSets`. Cardio sets are always `working`."
     },
     "setIndex": {
       "type": "integer"

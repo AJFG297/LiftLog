@@ -1,0 +1,1 @@
+ALTER TABLE `weighted_set` ADD `kind` text DEFAULT 'working' NOT NULL;

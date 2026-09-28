@@ -154,6 +154,13 @@ up even though the wrapper's own version never moves. A value whose version is
 _higher_ than the wrapper understands (data from a newer app version) is
 rejected; that's how untrusted feed items from the future are dropped on ingest.
 
+The AI plan is the exception: its version is also the planner's wire contract.
+The backend reads it from the generated `AiPlan.json` and tells any client that
+reports a lower one to update. When the embedded blueprint gains something an
+older client would silently misread (set kinds, v3 to v4), raise the AI plan's
+`pseudoMigrateUntil` and its `latest/` version together, then regenerate the
+schemas.
+
 ---
 
 ## Rules

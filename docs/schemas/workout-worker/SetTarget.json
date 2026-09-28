@@ -4,14 +4,9 @@
   "properties": {
     "reps": {
       "$ref": "./RepsTarget.json"
-    },
-    "kind": {
-      "$ref": "./PlannedSetKind.json"
     }
   },
   "required": [
-    "reps",
-    "kind"
-  ],
-  "description": "What the plan asks for on one set."
+    "reps"
+  ]
 }

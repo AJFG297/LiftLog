@@ -3,7 +3,7 @@ import { programBlueprintMigrations } from '@/models/storage/versions/migrations
 import { createMigrations } from './migrator';
 import type * as Latest from '@/models/storage/versions/latest/ai-plan';
 
-export const aiPlanMigrations = createMigrations<InitialAiPlanJSON>({ pseudoMigrateUntil: 3 })
+export const aiPlanMigrations = createMigrations<InitialAiPlanJSON>({ pseudoMigrateUntil: 4 })
   .dependsOn({
     blueprint: programBlueprintMigrations,
   })

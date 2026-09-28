@@ -240,7 +240,8 @@ var require_validate_schema = __commonJS({
     "use strict";
     module.exports = validate10;
     module.exports.default = validate10;
-    var schema29 = { "type": "string", "enum": ["none", "external", "bodyweight"] };
+    var schema30 = { "type": "string", "enum": ["none", "external", "bodyweight"] };
+    var schema17 = { "type": "string", "enum": ["working", "drop", "myo", "failure"], "description": "What a planned set is for. `working` is a plain set; `failure` is taken to failure and counts like a working set; `drop` and `myo` add volume but never set a record, gate progression or carry their numbers into the next session. Warm-ups are planned in `warmupSets`, not here." };
     function validate14(data, { instancePath = "", parentData, parentDataProperty, rootData = data } = {}) {
       let vErrors = null;
       let errors = 0;
@@ -254,20 +255,20 @@ var require_validate_schema = __commonJS({
           }
           errors++;
         }
+        if (data.kind === void 0) {
+          const err1 = { instancePath, schemaPath: "#/required", keyword: "required", params: { missingProperty: "kind" }, message: "must have required property 'kind'" };
+          if (vErrors === null) {
+            vErrors = [err1];
+          } else {
+            vErrors.push(err1);
+          }
+          errors++;
+        }
         if (data.reps !== void 0) {
           let data0 = data.reps;
           if (data0 && typeof data0 == "object" && !Array.isArray(data0)) {
             if (data0.min === void 0) {
-              const err1 = { instancePath: instancePath + "/reps", schemaPath: "#/definitions/RepsTarget/required", keyword: "required", params: { missingProperty: "min" }, message: "must have required property 'min'" };
-              if (vErrors === null) {
-                vErrors = [err1];
-              } else {
-                vErrors.push(err1);
-              }
-              errors++;
-            }
-            if (data0.max === void 0) {
-              const err2 = { instancePath: instancePath + "/reps", schemaPath: "#/definitions/RepsTarget/required", keyword: "required", params: { missingProperty: "max" }, message: "must have required property 'max'" };
+              const err2 = { instancePath: instancePath + "/reps", schemaPath: "#/definitions/RepsTarget/required", keyword: "required", params: { missingProperty: "min" }, message: "must have required property 'min'" };
               if (vErrors === null) {
                 vErrors = [err2];
               } else {
@@ -275,22 +276,19 @@ var require_validate_schema = __commonJS({
               }
               errors++;
             }
+            if (data0.max === void 0) {
+              const err3 = { instancePath: instancePath + "/reps", schemaPath: "#/definitions/RepsTarget/required", keyword: "required", params: { missingProperty: "max" }, message: "must have required property 'max'" };
+              if (vErrors === null) {
+                vErrors = [err3];
+              } else {
+                vErrors.push(err3);
+              }
+              errors++;
+            }
             if (data0.min !== void 0) {
               let data1 = data0.min;
               if (!(typeof data1 == "number" && (!(data1 % 1) && !isNaN(data1)) && isFinite(data1))) {
-                const err3 = { instancePath: instancePath + "/reps/min", schemaPath: "#/definitions/RepsTarget/properties/min/type", keyword: "type", params: { type: "integer" }, message: "must be integer" };
-                if (vErrors === null) {
-                  vErrors = [err3];
-                } else {
-                  vErrors.push(err3);
-                }
-                errors++;
-              }
-            }
-            if (data0.max !== void 0) {
-              let data2 = data0.max;
-              if (!(typeof data2 == "number" && (!(data2 % 1) && !isNaN(data2)) && isFinite(data2))) {
-                const err4 = { instancePath: instancePath + "/reps/max", schemaPath: "#/definitions/RepsTarget/properties/max/type", keyword: "type", params: { type: "integer" }, message: "must be integer" };
+                const err4 = { instancePath: instancePath + "/reps/min", schemaPath: "#/definitions/RepsTarget/properties/min/type", keyword: "type", params: { type: "integer" }, message: "must be integer" };
                 if (vErrors === null) {
                   vErrors = [err4];
                 } else {
@@ -299,22 +297,55 @@ var require_validate_schema = __commonJS({
                 errors++;
               }
             }
+            if (data0.max !== void 0) {
+              let data2 = data0.max;
+              if (!(typeof data2 == "number" && (!(data2 % 1) && !isNaN(data2)) && isFinite(data2))) {
+                const err5 = { instancePath: instancePath + "/reps/max", schemaPath: "#/definitions/RepsTarget/properties/max/type", keyword: "type", params: { type: "integer" }, message: "must be integer" };
+                if (vErrors === null) {
+                  vErrors = [err5];
+                } else {
+                  vErrors.push(err5);
+                }
+                errors++;
+              }
+            }
           } else {
-            const err5 = { instancePath: instancePath + "/reps", schemaPath: "#/definitions/RepsTarget/type", keyword: "type", params: { type: "object" }, message: "must be object" };
+            const err6 = { instancePath: instancePath + "/reps", schemaPath: "#/definitions/RepsTarget/type", keyword: "type", params: { type: "object" }, message: "must be object" };
             if (vErrors === null) {
-              vErrors = [err5];
+              vErrors = [err6];
             } else {
-              vErrors.push(err5);
+              vErrors.push(err6);
+            }
+            errors++;
+          }
+        }
+        if (data.kind !== void 0) {
+          let data3 = data.kind;
+          if (typeof data3 !== "string") {
+            const err7 = { instancePath: instancePath + "/kind", schemaPath: "#/definitions/PlannedSetKind/type", keyword: "type", params: { type: "string" }, message: "must be string" };
+            if (vErrors === null) {
+              vErrors = [err7];
+            } else {
+              vErrors.push(err7);
+            }
+            errors++;
+          }
+          if (!(data3 === "working" || data3 === "drop" || data3 === "myo" || data3 === "failure")) {
+            const err8 = { instancePath: instancePath + "/kind", schemaPath: "#/definitions/PlannedSetKind/enum", keyword: "enum", params: { allowedValues: schema17.enum }, message: "must be equal to one of the allowed values" };
+            if (vErrors === null) {
+              vErrors = [err8];
+            } else {
+              vErrors.push(err8);
             }
             errors++;
           }
         }
       } else {
-        const err6 = { instancePath, schemaPath: "#/type", keyword: "type", params: { type: "object" }, message: "must be object" };
+        const err9 = { instancePath, schemaPath: "#/type", keyword: "type", params: { type: "object" }, message: "must be object" };
         if (vErrors === null) {
-          vErrors = [err6];
+          vErrors = [err9];
         } else {
-          vErrors.push(err6);
+          vErrors.push(err9);
         }
         errors++;
       }
@@ -431,9 +462,9 @@ var require_validate_schema = __commonJS({
       validate16.errors = vErrors;
       return errors === 0;
     }
-    var schema22 = { "type": "string", "enum": ["reps", "load"], "description": "Which number a rule moves." };
+    var schema23 = { "type": "string", "enum": ["reps", "load"], "description": "Which number a rule moves." };
     var pattern0 = new RegExp("^-?\\d+(\\.\\d+)?$", "u");
-    var schema26 = { "type": "object", "properties": { "type": { "type": "string", "const": "lowestSets" }, "pick": { "type": "string", "enum": ["first", "middle", "last", "all"] } }, "required": ["type", "pick"], "description": "Ranks by the rule's own axis, so a reps rule picks the smallest target rather than the smallest weight." };
+    var schema27 = { "type": "object", "properties": { "type": { "type": "string", "const": "lowestSets" }, "pick": { "type": "string", "enum": ["first", "middle", "last", "all"] } }, "required": ["type", "pick"], "description": "Ranks by the rule's own axis, so a reps rule picks the smallest target rather than the smallest weight." };
     function validate19(data, { instancePath = "", parentData, parentDataProperty, rootData = data } = {}) {
       let vErrors = null;
       let errors = 0;
@@ -543,7 +574,7 @@ var require_validate_schema = __commonJS({
                   errors++;
                 }
                 if (!(data2 === "first" || data2 === "middle" || data2 === "last" || data2 === "all")) {
-                  const err10 = { instancePath: instancePath + "/pick", schemaPath: "#/definitions/LowestSetsScope/properties/pick/enum", keyword: "enum", params: { allowedValues: schema26.properties.pick.enum }, message: "must be equal to one of the allowed values" };
+                  const err10 = { instancePath: instancePath + "/pick", schemaPath: "#/definitions/LowestSetsScope/properties/pick/enum", keyword: "enum", params: { allowedValues: schema27.properties.pick.enum }, message: "must be equal to one of the allowed values" };
                   if (vErrors === null) {
                     vErrors = [err10];
                   } else {
@@ -643,7 +674,7 @@ var require_validate_schema = __commonJS({
             errors++;
           }
           if (!(data0 === "reps" || data0 === "load")) {
-            const err5 = { instancePath: instancePath + "/axis", schemaPath: "#/definitions/ProgressionAxis/enum", keyword: "enum", params: { allowedValues: schema22.enum }, message: "must be equal to one of the allowed values" };
+            const err5 = { instancePath: instancePath + "/axis", schemaPath: "#/definitions/ProgressionAxis/enum", keyword: "enum", params: { allowedValues: schema23.enum }, message: "must be equal to one of the allowed values" };
             if (vErrors === null) {
               vErrors = [err5];
             } else {
@@ -756,7 +787,7 @@ var require_validate_schema = __commonJS({
       validate18.errors = vErrors;
       return errors === 0;
     }
-    var schema34 = { "type": "string", "enum": ["kilograms", "pounds", "nil"] };
+    var schema35 = { "type": "string", "enum": ["kilograms", "pounds", "nil"] };
     function validate25(data, { instancePath = "", parentData, parentDataProperty, rootData = data } = {}) {
       let vErrors = null;
       let errors = 0;
@@ -791,7 +822,7 @@ var require_validate_schema = __commonJS({
             errors++;
           }
           if (!(data0 === "kilograms" || data0 === "pounds" || data0 === "nil")) {
-            const err3 = { instancePath: instancePath + "/unit", schemaPath: "#/definitions/WeightUnit/enum", keyword: "enum", params: { allowedValues: schema34.enum }, message: "must be equal to one of the allowed values" };
+            const err3 = { instancePath: instancePath + "/unit", schemaPath: "#/definitions/WeightUnit/enum", keyword: "enum", params: { allowedValues: schema35.enum }, message: "must be equal to one of the allowed values" };
             if (vErrors === null) {
               vErrors = [err3];
             } else {
@@ -1267,7 +1298,7 @@ var require_validate_schema = __commonJS({
             errors++;
           }
           if (!(data10 === "none" || data10 === "external" || data10 === "bodyweight")) {
-            const err19 = { instancePath: instancePath + "/resistance", schemaPath: "#/definitions/Resistance/enum", keyword: "enum", params: { allowedValues: schema29.enum }, message: "must be equal to one of the allowed values" };
+            const err19 = { instancePath: instancePath + "/resistance", schemaPath: "#/definitions/Resistance/enum", keyword: "enum", params: { allowedValues: schema30.enum }, message: "must be equal to one of the allowed values" };
             if (vErrors === null) {
               vErrors = [err19];
             } else {
@@ -1385,7 +1416,7 @@ var require_validate_schema = __commonJS({
       validate33.errors = vErrors;
       return errors === 0;
     }
-    var schema45 = { "type": "string", "enum": ["metre", "yard", "mile", "kilometre"] };
+    var schema46 = { "type": "string", "enum": ["metre", "yard", "mile", "kilometre"] };
     function validate35(data, { instancePath = "", parentData, parentDataProperty, rootData = data } = {}) {
       let vErrors = null;
       let errors = 0;
@@ -1442,7 +1473,7 @@ var require_validate_schema = __commonJS({
             errors++;
           }
           if (!(data1 === "metre" || data1 === "yard" || data1 === "mile" || data1 === "kilometre")) {
-            const err5 = { instancePath: instancePath + "/unit", schemaPath: "#/definitions/DistanceUnit/enum", keyword: "enum", params: { allowedValues: schema45.enum }, message: "must be equal to one of the allowed values" };
+            const err5 = { instancePath: instancePath + "/unit", schemaPath: "#/definitions/DistanceUnit/enum", keyword: "enum", params: { allowedValues: schema46.enum }, message: "must be equal to one of the allowed values" };
             if (vErrors === null) {
               vErrors = [err5];
             } else {
@@ -1977,8 +2008,8 @@ var require_validate_schema = __commonJS({
             }
             errors++;
           }
-          if (7 !== data0) {
-            const err5 = { instancePath: instancePath + "/version", schemaPath: "#/properties/version/const", keyword: "const", params: { allowedValue: 7 }, message: "must be equal to constant" };
+          if (8 !== data0) {
+            const err5 = { instancePath: instancePath + "/version", schemaPath: "#/properties/version/const", keyword: "const", params: { allowedValue: 8 }, message: "must be equal to constant" };
             if (vErrors === null) {
               vErrors = [err5];
             } else {

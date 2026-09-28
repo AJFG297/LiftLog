@@ -6,6 +6,7 @@ import { repsConfigToPlannedSets } from '@/models/storage/versions/migrations/st
 import { addSetTargets } from '@/models/storage/versions/migrations/steps/add-set-targets';
 import { progressiveOverloadToRules } from '@/models/storage/versions/migrations/steps/progressive-overload-to-rules';
 import { addWarmupSlots } from '@/models/storage/versions/migrations/steps/add-warmup-sets';
+import { addSlotKinds } from '@/models/storage/versions/migrations/steps/add-set-kinds';
 import { SessionJSON as InitialSessionJSON } from '@/models/storage/versions/initial';
 import { SessionJSON } from '@/models/storage/versions/latest/session';
 import { omit } from '@/utils/omit';
@@ -89,6 +90,13 @@ export const sessionMigrations = createMigrations<InitialSessionJSON>()
     version: 9,
     recordedExercises: session.recordedExercises.map((ex) =>
       ex.type === 'RecordedCardioExercise' ? ex : addWarmupSlots(ex),
+    ),
+  }))
+  .add((session) => ({
+    ...session,
+    version: 10,
+    recordedExercises: session.recordedExercises.map((ex) =>
+      ex.type === 'RecordedCardioExercise' ? ex : addSlotKinds(ex),
     ),
   }))
   .build<SessionJSON>();

@@ -7,7 +7,7 @@ A `.liftlogplan` file is a single JSON object. `ProgramBlueprint.json` in this d
 Read these first. They are the reason most generated plans fail to import.
 
 1. **Assume every field is required.** Only four are optional - `ceiling` and `onCeiling` on a progression rule, `restBetweenSets` on a cardio set, and `load` on a warm-up set. Everything else must be present, including `notes` and `link` when empty - use `""`.
-2. **`"version": 3`** goes on the root object, and **`"version": 7`** on every session. These are not the plan's own version number; they are the format's, and they differ from each other.
+2. **`"version": 3`** goes on the root object, and **`"version": 8`** on every session. These are not the plan's own version number; they are the format's, and they differ from each other.
 3. **Weights and steps are strings, not numbers.** `"step": "2.5"`, never `"step": 2.5`. Rep counts (`min`, `max`) are the exception: those are plain integers.
 4. **Rests and times are ISO-8601 durations.** `"PT3M"` is three minutes, `"PT90S"` is ninety seconds, `"PT1M30S"` also works. A bare `"90"` or `90` is invalid.
 5. **A weighted exercise has no set count.** One entry in `plannedSets` _is_ one set, so three sets of five means three identical entries. Cardio exercises use `sets`, an array, one entry per interval.
@@ -35,7 +35,7 @@ Read these first. They are the reason most generated plans fail to import.
 
 ```json
 {
-  "version": 7,
+  "version": 8,
   "name": "Push",
   "notes": "Chest, shoulders and triceps.",
   "exercises": [ ... ]
@@ -44,7 +44,7 @@ Read these first. They are the reason most generated plans fail to import.
 
 | Field       | Type   | Notes                                              |
 | ----------- | ------ | -------------------------------------------------- |
-| `version`   | number | Always `7`. Not `3` - a session versions on its own. |
+| `version`   | number | Always `8`. Not `3` - a session versions on its own. |
 | `name`      | string | e.g. `"Push"`, `"Upper A"`, `"Leg Day"`.           |
 | `notes`     | string | `""` if there's nothing to say.                    |
 | `exercises` | array  | Weighted and cardio exercises can be mixed freely. |
@@ -56,9 +56,9 @@ Read these first. They are the reason most generated plans fail to import.
   "type": "WeightedExerciseBlueprint",
   "name": "Barbell Bench Press",
   "plannedSets": [
-    { "reps": { "min": 5, "max": 5 } },
-    { "reps": { "min": 5, "max": 5 } },
-    { "reps": { "min": 5, "max": 5 } }
+    { "reps": { "min": 5, "max": 5 }, "kind": "working" },
+    { "reps": { "min": 5, "max": 5 }, "kind": "working" },
+    { "reps": { "min": 5, "max": 5 }, "kind": "working" }
   ],
   "restBetweenSets": { "minRest": "PT3M", "maxRest": "PT5M", "failureRest": "PT5M" },
   "supersetWithNext": false,
@@ -98,9 +98,9 @@ target:
 
 ```json
 "plannedSets": [
-  { "reps": { "min": 8, "max": 12 } },
-  { "reps": { "min": 8, "max": 12 } },
-  { "reps": { "min": 8, "max": 12 } }
+  { "reps": { "min": 8, "max": 12 }, "kind": "working" },
+  { "reps": { "min": 8, "max": 12 }, "kind": "working" },
+  { "reps": { "min": 8, "max": 12 }, "kind": "working" }
 ]
 ```
 
@@ -108,14 +108,34 @@ Sets do not have to match each other - this is how you write a ramp or a back-of
 
 ```json
 "plannedSets": [
-  { "reps": { "min": 5, "max": 5 } },
-  { "reps": { "min": 5, "max": 5 } },
-  { "reps": { "min": 8, "max": 10 } }
+  { "reps": { "min": 5, "max": 5 }, "kind": "working" },
+  { "reps": { "min": 5, "max": 5 }, "kind": "working" },
+  { "reps": { "min": 8, "max": 10 }, "kind": "working" }
 ]
 ```
 
 A rep range only counts as a success at the **top** of the range, so `8-12` with a weight rule is
 double progression: the weight goes up once every set hits 12.
+
+Every planned set has a `kind`, which says what the set is for:
+
+| Kind        | Use for                                                   | Counts towards                                            |
+| ----------- | --------------------------------------------------------- | --------------------------------------------------------- |
+| `"working"` | A plain set. Almost every set is one.                     | Volume, records and progression; its numbers carry over.  |
+| `"failure"` | A set taken to failure.                                   | The same as `"working"`.                                  |
+| `"drop"`    | A drop set: the weight comes down and you keep going.     | Volume only. Never a record, never gates progression.     |
+| `"myo"`     | A myo-rep set: short rests between mini-sets.             | Volume only, like `"drop"`.                               |
+
+A drop or myo set never holds progression back, and each session starts it at no weight rather than on
+last session's. Warm-ups are not a kind: they go in `warmupSets`.
+
+```json
+"plannedSets": [
+  { "reps": { "min": 12, "max": 12 }, "kind": "working" },
+  { "reps": { "min": 12, "max": 12 }, "kind": "working" },
+  { "reps": { "min": 15, "max": 15 }, "kind": "drop" }
+]
+```
 
 ### Warm-up sets
 
@@ -208,9 +228,9 @@ reps then load, is a rep ladder:
 
 ```json
 "plannedSets": [
-  { "reps": { "min": 6, "max": 6 } },
-  { "reps": { "min": 6, "max": 6 } },
-  { "reps": { "min": 6, "max": 6 } }
+  { "reps": { "min": 6, "max": 6 }, "kind": "working" },
+  { "reps": { "min": 6, "max": 6 }, "kind": "working" },
+  { "reps": { "min": 6, "max": 6 }, "kind": "working" }
 ],
 "progression": [
   {

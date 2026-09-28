@@ -84,5 +84,6 @@ move and does nothing at all.
 ---
 
 For the code behind this: `progressionKey()` and `applyProgression` in
-`app/src/models/blueprint-models/index.ts`, session start in `app/src/services/session-service.ts`, the
+`app/src/models/blueprint-models/index.ts`, session start in `app/src/services/session-service.ts`, what each slot
+carries over by its set kind in `PotentialSet.carriedInto` and `app/src/models/session-models/set-kind.ts`, the
 editor in `app/src/components/presentation/workout-editor/progressive-overload.tsx`.

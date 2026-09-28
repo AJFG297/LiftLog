@@ -101,6 +101,16 @@ describe('getImportForStrongLifts', () => {
     expect(rebuilt.equals(session)).toBe(true);
   });
 
+  it('imports every set as a working set: the StrongLifts export marks no drop or failure sets (a 0 is an unused or missed slot)', () => {
+    const kinds = importSample().workouts.flatMap((session) =>
+      session.recordedExercises.flatMap((exercise) => [
+        ...(exercise as RecordedWeightedExercise).potentialSets.map((set) => set.kind),
+        ...(exercise as RecordedWeightedExercise).blueprint.plannedSets.map((set) => set.kind),
+      ]),
+    );
+    expect(new Set(kinds)).toEqual(new Set(['working']));
+  });
+
   it('assigns stable session ids for identical content', () => {
     const a = importSample();
     const b = importSample();

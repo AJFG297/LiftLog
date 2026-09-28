@@ -94,6 +94,7 @@ export function toWorkoutRows(session: Session): WorkoutRows {
         const setJson = exerciseJson.potentialSets[position]!;
         weightedSets.push({
           ...slotRow(workoutId, exercisePosition, position, setJson),
+          kind: setJson.kind,
           weightKg: potentialSet.weight.convertTo('kilograms').value.toNumber(),
           effectiveWeightKg: exercise
             .effectiveWeight(potentialSet, session.bodyweight)
@@ -164,7 +165,7 @@ export function fromWorkoutRows(rows: StoredWorkoutRows): Session {
   } as AnyVersionSessionBlueprintJSON);
 
   const json: SessionJSON = {
-    version: 9,
+    version: 10,
     id: workout.id,
     blueprint: { name: workout.name, notes: workout.notes },
     date: workout.date,
@@ -198,8 +199,8 @@ function toRecordedExerciseJSON(
       type: 'RecordedWeightedExercise',
       blueprint,
       notes,
-      potentialSets: weightedSets.map((set) => ({ ...slotFromRow(set), rpe: set.rpe ?? undefined })),
-      warmupSets: warmupSets.map(slotFromRow),
+      potentialSets: weightedSets.map((set) => ({ ...slotFromRow(set), kind: set.kind, rpe: set.rpe ?? undefined })),
+      warmupSets: warmupSets.map((set) => ({ ...slotFromRow(set), kind: 'warmup' })),
     };
   }
   return {
@@ -255,7 +256,9 @@ function slotRow(
   };
 }
 
-function slotFromRow(row: Omit<WarmupSetRow, 'workoutId' | 'exercisePosition' | 'position'>): PotentialSetJSON {
+function slotFromRow(
+  row: Omit<WarmupSetRow, 'workoutId' | 'exercisePosition' | 'position'>,
+): Omit<PotentialSetJSON, 'kind'> {
   return {
     target: { reps: { min: row.targetRepsMin, max: row.targetRepsMax } },
     weight: { value: row.weightValue, unit: row.weightUnit },

@@ -20,6 +20,7 @@ import {
   WeightedExerciseBlueprintJSON,
 } from '@/models/storage/versions/latest';
 import { EmptySession } from '@/models/session-models';
+import { isWorkingListKind } from '@/models/session-models/set-kind';
 
 export interface AiChatPlanResponse {
   type: 'chatPlan';
@@ -135,13 +136,15 @@ function fillProgression(partial: DeepPartial<ProgressionRuleJSON>[] | undefined
  */
 function fillPlannedSets(partial: DeepPartial<PlannedSetJSON>[] | undefined): PlannedSetJSON[] {
   if (!partial?.length) {
-    return emptyWeightedExercise.plannedSets.map((s) => ({ reps: { ...s.reps } }));
+    return emptyWeightedExercise.plannedSets.map((s) => ({ reps: { ...s.reps }, kind: s.kind }));
   }
   return partial.map((set) => ({
     reps: {
       min: set?.reps?.min ?? set?.reps?.max ?? defaultRepsTarget.min,
       max: set?.reps?.max ?? set?.reps?.min ?? defaultRepsTarget.max,
     },
+    // A streamed plan can end part-way through a string ("dr"), and the model can invent a kind.
+    kind: isWorkingListKind(set?.kind) ? set.kind : 'working',
   }));
 }
 
@@ -213,7 +216,7 @@ function fillExercise(partial: DeepPartial<ExerciseBlueprintJSON> = {}): Exercis
 
 function fillSession(partial: DeepPartial<SessionBlueprintJSON> = {}): SessionBlueprintJSON {
   return {
-    version: 7,
+    version: 8,
     name: partial.name ?? emptySessionBlueprint.name,
     exercises: (partial.exercises ?? []).map(fillExercise),
     notes: partial.notes ?? emptySessionBlueprint.notes,
@@ -240,13 +243,14 @@ export function aiPlanFromJSON(partialJson: DeepPartial<AnyVersionAiPlanJSON>): 
     throw new Error('Cannot parse partial json');
   }
   const plan = aiPlanMigrations.migrate(
-    partialJson.version === 3
+    // A v3 plan is a v4 plan whose sets carry no kind, which the fill reads as working.
+    partialJson.version === 3 || partialJson.version === 4
       ? {
-          version: 3,
+          version: partialJson.version,
           name: partialJson.name ?? '',
           description: partialJson.description ?? '',
           // The any-version plan type no longer couples the outer version to the embedded
-          // blueprint's, so `version === 3` can't narrow it - but a v3 wire plan is latest-shaped.
+          // blueprint's, so the version check can't narrow it - but a v3 or v4 wire plan is latest-shaped.
           blueprint: fillBlueprint(partialJson.blueprint as DeepPartial<ProgramBlueprintJSON>),
         }
       : (partialJson as AnyVersionAiPlanJSON),

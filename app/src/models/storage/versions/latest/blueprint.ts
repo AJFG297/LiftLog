@@ -12,7 +12,7 @@ export interface ProgramBlueprintJSON {
 }
 
 export interface SessionBlueprintJSON {
-  version: 7;
+  version: 8;
   name: string;
   exercises: ExerciseBlueprintJSON[];
   notes: string;
@@ -135,7 +135,15 @@ export type ResistanceJSON = 'none' | 'external' | 'bodyweight';
 /** What the plan asks for on one set. */
 export interface PlannedSetJSON {
   reps: RepsTargetJSON;
+  kind: PlannedSetKindJSON;
 }
+
+/**
+ * What a planned set is for. `working` is a plain set; `failure` is taken to failure and counts like a
+ * working set; `drop` and `myo` add volume but never set a record, gate progression or carry their
+ * numbers into the next session. Warm-ups are planned in `warmupSets`, not here.
+ */
+export type PlannedSetKindJSON = 'working' | 'drop' | 'myo' | 'failure';
 
 /** Always a band; `min === max` is a point target. */
 export interface RepsTargetJSON {

@@ -9,14 +9,18 @@ const validBlueprint: ProgramBlueprintJSON = {
   lastEdited: '2024-01-01' as LocalDateJSON,
   sessions: [
     {
-      version: 7,
+      version: 8,
       name: 'Day 1',
       notes: '',
       exercises: [
         {
           type: 'WeightedExerciseBlueprint',
           name: 'Squat',
-          plannedSets: [{ reps: { min: 5, max: 5 } }, { reps: { min: 5, max: 5 } }, { reps: { min: 5, max: 5 } }],
+          plannedSets: [
+            { reps: { min: 5, max: 5 }, kind: 'working' },
+            { reps: { min: 5, max: 5 }, kind: 'working' },
+            { reps: { min: 5, max: 5 }, kind: 'working' },
+          ],
           restBetweenSets: {
             minRest: 'PT1M' as DurationJSON,
             maxRest: 'PT3M' as DurationJSON,

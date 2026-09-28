@@ -4,7 +4,7 @@
   "lastEdited": "2026-07-12",
   "sessions": [
     {
-      "version": 7,
+      "version": 8,
       "name": "Push",
       "notes": "Chest, shoulders and triceps. Leave one or two reps in reserve on the first working set.",
       "exercises": [
@@ -12,9 +12,9 @@
           "type": "WeightedExerciseBlueprint",
           "name": "Barbell Bench Press",
           "plannedSets": [
-            { "reps": { "min": 5, "max": 5 } },
-            { "reps": { "min": 5, "max": 5 } },
-            { "reps": { "min": 5, "max": 5 } }
+            { "reps": { "min": 5, "max": 5 }, "kind": "working" },
+            { "reps": { "min": 5, "max": 5 }, "kind": "working" },
+            { "reps": { "min": 5, "max": 5 }, "kind": "working" }
           ],
           "restBetweenSets": {
             "minRest": "PT3M",
@@ -43,9 +43,9 @@
           "type": "WeightedExerciseBlueprint",
           "name": "Overhead Press",
           "plannedSets": [
-            { "reps": { "min": 8, "max": 8 } },
-            { "reps": { "min": 8, "max": 8 } },
-            { "reps": { "min": 8, "max": 8 } }
+            { "reps": { "min": 8, "max": 8 }, "kind": "working" },
+            { "reps": { "min": 8, "max": 8 }, "kind": "working" },
+            { "reps": { "min": 8, "max": 8 }, "kind": "working" }
           ],
           "restBetweenSets": {
             "minRest": "PT2M",
@@ -70,9 +70,9 @@
           "type": "WeightedExerciseBlueprint",
           "name": "Lateral Raise",
           "plannedSets": [
-            { "reps": { "min": 10, "max": 12 } },
-            { "reps": { "min": 10, "max": 12 } },
-            { "reps": { "min": 10, "max": 12 } }
+            { "reps": { "min": 10, "max": 12 }, "kind": "working" },
+            { "reps": { "min": 10, "max": 12 }, "kind": "working" },
+            { "reps": { "min": 10, "max": 12 }, "kind": "working" }
           ],
           "restBetweenSets": {
             "minRest": "PT1M",
@@ -97,9 +97,10 @@
           "type": "WeightedExerciseBlueprint",
           "name": "Triceps Pushdown",
           "plannedSets": [
-            { "reps": { "min": 12, "max": 12 } },
-            { "reps": { "min": 12, "max": 12 } },
-            { "reps": { "min": 12, "max": 12 } }
+            { "reps": { "min": 12, "max": 12 }, "kind": "working" },
+            { "reps": { "min": 12, "max": 12 }, "kind": "working" },
+            { "reps": { "min": 12, "max": 12 }, "kind": "working" },
+            { "reps": { "min": 15, "max": 15 }, "kind": "drop" }
           ],
           "restBetweenSets": {
             "minRest": "PT1M",
@@ -123,14 +124,14 @@
       ]
     },
     {
-      "version": 7,
+      "version": 8,
       "name": "Pull",
       "notes": "Back and biceps.",
       "exercises": [
         {
           "type": "WeightedExerciseBlueprint",
           "name": "Deadlift",
-          "plannedSets": [{ "reps": { "min": 5, "max": 5 } }],
+          "plannedSets": [{ "reps": { "min": 5, "max": 5 }, "kind": "working" }],
           "restBetweenSets": {
             "minRest": "PT3M",
             "maxRest": "PT5M",
@@ -154,9 +155,9 @@
           "type": "WeightedExerciseBlueprint",
           "name": "Pull Up",
           "plannedSets": [
-            { "reps": { "min": 6, "max": 6 } },
-            { "reps": { "min": 6, "max": 6 } },
-            { "reps": { "min": 6, "max": 6 } }
+            { "reps": { "min": 6, "max": 6 }, "kind": "working" },
+            { "reps": { "min": 6, "max": 6 }, "kind": "working" },
+            { "reps": { "min": 6, "max": 6 }, "kind": "working" }
           ],
           "restBetweenSets": {
             "minRest": "PT2M",
@@ -189,9 +190,9 @@
           "type": "WeightedExerciseBlueprint",
           "name": "Barbell Row",
           "plannedSets": [
-            { "reps": { "min": 10, "max": 10 } },
-            { "reps": { "min": 10, "max": 10 } },
-            { "reps": { "min": 10, "max": 10 } }
+            { "reps": { "min": 10, "max": 10 }, "kind": "working" },
+            { "reps": { "min": 10, "max": 10 }, "kind": "working" },
+            { "reps": { "min": 10, "max": 10 }, "kind": "working" }
           ],
           "restBetweenSets": {
             "minRest": "PT2M",
@@ -216,9 +217,9 @@
           "type": "WeightedExerciseBlueprint",
           "name": "Barbell Curl",
           "plannedSets": [
-            { "reps": { "min": 12, "max": 12 } },
-            { "reps": { "min": 12, "max": 12 } },
-            { "reps": { "min": 12, "max": 12 } }
+            { "reps": { "min": 12, "max": 12 }, "kind": "working" },
+            { "reps": { "min": 12, "max": 12 }, "kind": "working" },
+            { "reps": { "min": 12, "max": 12 }, "kind": "working" }
           ],
           "restBetweenSets": {
             "minRest": "PT1M",
@@ -242,7 +243,7 @@
       ]
     },
     {
-      "version": 7,
+      "version": 8,
       "name": "Legs",
       "notes": "",
       "exercises": [
@@ -250,9 +251,9 @@
           "type": "WeightedExerciseBlueprint",
           "name": "Back Squat",
           "plannedSets": [
-            { "reps": { "min": 5, "max": 5 } },
-            { "reps": { "min": 5, "max": 5 } },
-            { "reps": { "min": 5, "max": 5 } }
+            { "reps": { "min": 5, "max": 5 }, "kind": "working" },
+            { "reps": { "min": 5, "max": 5 }, "kind": "working" },
+            { "reps": { "min": 5, "max": 5 }, "kind": "working" }
           ],
           "restBetweenSets": {
             "minRest": "PT3M",
@@ -277,9 +278,9 @@
           "type": "WeightedExerciseBlueprint",
           "name": "Romanian Deadlift",
           "plannedSets": [
-            { "reps": { "min": 10, "max": 10 } },
-            { "reps": { "min": 10, "max": 10 } },
-            { "reps": { "min": 10, "max": 10 } }
+            { "reps": { "min": 10, "max": 10 }, "kind": "working" },
+            { "reps": { "min": 10, "max": 10 }, "kind": "working" },
+            { "reps": { "min": 10, "max": 10 }, "kind": "working" }
           ],
           "restBetweenSets": {
             "minRest": "PT2M",
@@ -304,10 +305,10 @@
           "type": "WeightedExerciseBlueprint",
           "name": "Standing Calf Raise",
           "plannedSets": [
-            { "reps": { "min": 15, "max": 15 } },
-            { "reps": { "min": 15, "max": 15 } },
-            { "reps": { "min": 15, "max": 15 } },
-            { "reps": { "min": 15, "max": 15 } }
+            { "reps": { "min": 15, "max": 15 }, "kind": "working" },
+            { "reps": { "min": 15, "max": 15 }, "kind": "working" },
+            { "reps": { "min": 15, "max": 15 }, "kind": "working" },
+            { "reps": { "min": 15, "max": 15 }, "kind": "working" }
           ],
           "restBetweenSets": {
             "minRest": "PT1M",

@@ -23,6 +23,7 @@ import { Duration, LocalDate, OffsetDateTime, LocalTime, ZoneOffset } from '@js-
 import BigNumber from 'bignumber.js';
 import fc from 'fast-check';
 import { RPE_VALUES } from '@/models/session-models/rpe';
+import type { WorkingListKind } from '@/models/session-models/set-kind';
 
 function optional<T>(gen: fc.Arbitrary<T>): fc.Arbitrary<T | undefined> {
   return fc.option(gen, { nil: undefined });
@@ -66,6 +67,8 @@ const OffsetDateTimeGenerator = fc
 
 const RestGenerator = fc.constantFrom(Rest.short, Rest.medium, Rest.long);
 
+const WorkingListKindGenerator = fc.constantFrom<WorkingListKind[]>('working', 'drop', 'myo', 'failure');
+
 const PlannedWarmupSetGenerator: fc.Arbitrary<PlannedWarmupSet> = fc.record({
   load: fc.oneof(
     fc.constant(undefined),
@@ -87,8 +90,14 @@ const WeightedExerciseBlueprintGenerator = fc
     notes: fc.string(),
     link: fc.webUrl(),
     warmupSets: fc.array(PlannedWarmupSetGenerator, { maxLength: 4 }),
+    kinds: fc.array(WorkingListKindGenerator, { maxLength: 10 }),
   })
-  .map((x) => WeightedExerciseBlueprint.empty().with(x));
+  .map((x) => {
+    const blueprint = WeightedExerciseBlueprint.empty().with(x);
+    return blueprint.with({
+      plannedSets: blueprint.plannedSets.map((set, index) => ({ ...set, kind: x.kinds[index] ?? 'working' })),
+    });
+  });
 
 const CardioTargetGenerator = fc.record<CardioTarget>({
   type: fc.constant('time'),
@@ -161,6 +170,7 @@ const PotentialSetGenerator = fc
     }),
     weight: WeightGenerator,
     rpe: fc.option(fc.constantFrom(...RPE_VALUES), { nil: undefined }),
+    kind: WorkingListKindGenerator,
   })
   .map(PotentialSet.of);
 
@@ -212,7 +222,7 @@ const RecordedWeightedExerciseGenerator = fc
     potentialSets: fc.array(PotentialSetGenerator, { maxLength: 10 }),
     // Warm-ups never carry an RPE: nothing sets one, and the workout tables don't store one.
     warmupSets: fc.array(
-      PotentialSetGenerator.map((set) => set.with({ rpe: undefined })),
+      PotentialSetGenerator.map((set) => set.with({ rpe: undefined, kind: 'warmup' })),
       { maxLength: 4 },
     ),
     notes: optional(fc.string()),

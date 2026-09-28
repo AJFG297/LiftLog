@@ -131,17 +131,17 @@ describe('warm-ups never count', () => {
 
 describe('the current set', () => {
   it('is the first unlogged warm-up before any working set is logged', () => {
-    expect(withWarmups().currentSet).toEqual({ kind: 'warmup', index: 0 });
-    expect(withWarmups().withCycledWarmupRepCount(0, tick()).currentSet).toEqual({ kind: 'warmup', index: 1 });
+    expect(withWarmups().currentSet).toEqual({ list: 'warmup', index: 0 });
+    expect(withWarmups().withCycledWarmupRepCount(0, tick()).currentSet).toEqual({ list: 'warmup', index: 1 });
   });
 
   it('moves to the working sets once every warm-up is logged', () => {
     const exercise = withWarmups().withWarmupRepCount(0, 5, tick()).withWarmupRepCount(1, 3, tick());
-    expect(exercise.currentSet).toEqual({ kind: 'working', index: 0 });
+    expect(exercise.currentSet).toEqual({ list: 'working', index: 0 });
   });
 
   it('leaves a skipped warm-up behind once the working sets begin', () => {
-    expect(withWarmups([10, undefined]).currentSet).toEqual({ kind: 'working', index: 1 });
+    expect(withWarmups([10, undefined]).currentSet).toEqual({ list: 'working', index: 1 });
   });
 
   it('is undefined once every working set is logged', () => {
@@ -150,8 +150,8 @@ describe('the current set', () => {
 
   it('points at the slot slotAt returns', () => {
     const exercise = withWarmups();
-    expect(exercise.slotAt({ kind: 'warmup', index: 1 })).toBe(exercise.warmupSets[1]);
-    expect(exercise.slotAt({ kind: 'working', index: 0 })).toBe(exercise.potentialSets[0]);
+    expect(exercise.slotAt({ list: 'warmup', index: 1 })).toBe(exercise.warmupSets[1]);
+    expect(exercise.slotAt({ list: 'working', index: 0 })).toBe(exercise.potentialSets[0]);
   });
 });
 
@@ -162,7 +162,7 @@ describe('warm-up timing', () => {
     expect(exercise.hasLoggedAnySet).toBe(true);
     expect(exercise.firstActivityTime).toEqual(at);
     expect(exercise.lastActivityTime).toEqual(at);
-    expect(exercise.lastLoggedSlot).toMatchObject({ kind: 'warmup', index: 0 });
+    expect(exercise.lastLoggedSlot).toMatchObject({ list: 'warmup', index: 0 });
     // What measures the lift sees nothing yet.
     expect(exercise.isStarted).toBe(false);
     expect(exercise.latestTime).toBeUndefined();

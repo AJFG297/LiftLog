@@ -18,6 +18,7 @@ import {
   uniformTarget,
   WeightedExerciseBlueprint,
 } from '@/models/blueprint-models';
+import { setLabels, type WorkingListKind } from '@/models/session-models/set-kind';
 import { useAppSelector } from '@/store';
 import { ExtractType } from '@/utils/extract-type';
 import { TranslationKey, useTranslate } from '@tolgee/react';
@@ -103,7 +104,11 @@ export function WeightedExerciseEditor({
           />
         </View>
         {repsConfig.type === 'perSet' ? (
-          <PerSetRepsEditor repsConfig={repsConfig} setRepsConfig={setRepsConfig} />
+          <PerSetRepsEditor
+            repsConfig={repsConfig}
+            setRepsConfig={setRepsConfig}
+            kinds={exercise.plannedSets.map((set) => set.kind)}
+          />
         ) : repsConfig.type === 'range' ? (
           <RangeRepsEditor repsConfig={repsConfig} setRepsConfig={setRepsConfig} />
         ) : (
@@ -226,11 +231,14 @@ function FixedRepsEditor({
 function PerSetRepsEditor({
   repsConfig,
   setRepsConfig,
+  kinds,
 }: {
   repsConfig: ExtractType<RepsConfig, 'perSet'>;
   setRepsConfig: (config: RepsConfig) => void;
+  kinds: WorkingListKind[];
 }) {
   const { t } = useTranslate();
+  const labels = setLabels(repsConfig.targets.map((_, index) => kinds[index] ?? 'working'));
 
   const setSetReps = (index: number, value: number) => {
     const reps = Math.max(value, 1);
@@ -245,7 +253,7 @@ function PerSetRepsEditor({
       {repsConfig.targets?.map((target, index) => (
         <View key={index} style={{ flexGrow: 1, flexBasis: '25%', minWidth: spacing[16] }}>
           <FixedIncrementer
-            label={t('exercise.set_number.label', { number: index + 1 })}
+            label={t('exercise.set_number.label', { number: labels[index] })}
             onValueChange={(value) => setSetReps(index, value)}
             value={target.max}
             testID={`exercise-set-reps-${index}`}

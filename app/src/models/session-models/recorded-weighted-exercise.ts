@@ -19,6 +19,14 @@ import {
 } from '@/models/storage/versions/latest';
 import { Weight, WeightUnit } from '@/models/weight';
 import { isRpe, Rpe } from '@/models/session-models/rpe';
+import {
+  continuesProgression,
+  keepsLastWeight,
+  setKindHas,
+  SetKind,
+  SetKindRule,
+  SetList,
+} from '@/models/session-models/set-kind';
 import { IndexOutOfBoundsError } from '@/utils/index-out-of-bounds';
 import { Duration, OffsetDateTime } from '@js-joda/core';
 import BigNumber from 'bignumber.js';
@@ -26,12 +34,9 @@ import { match } from 'ts-pattern';
 
 export type WeightAppliesTo = 'thisSet' | 'uncompletedSets' | 'allSets';
 
-/** Which of an exercise's two set lists a slot lives in. */
-export type SetKind = 'warmup' | 'working';
-
 /** A slot's place in the exercise: its list, and its index within that list. */
 export interface SetPosition {
-  kind: SetKind;
+  list: SetList;
   index: number;
 }
 
@@ -41,20 +46,27 @@ export type LoggedSlot = SetPosition & { slot: PotentialSet };
 export class RecordedWeightedExercise {
   readonly type = 'RecordedWeightedExercise';
 
+  /**
+   * One slot per planned warm-up, done before the working sets. Rebuilt from the plan at session
+   * start rather than carried over (see {@link withWarmupsFromPlan}), and never given an RPE. Every
+   * slot here is a warm-up whatever it was built as.
+   */
+  readonly warmupSets: PotentialSet[];
+
   constructor(
     readonly blueprint: WeightedExerciseBlueprint,
     /**
-     * Working sets only. Everything that counts - the success check, progression, records, volume,
-     * stats - reads this list, which is what keeps warm-ups out of all of it without a filter.
+     * The working list: every set but the warm-ups. What a set counts towards is its kind's, so
+     * aggregates read {@link setsCountingTowards} rather than this list.
      */
     readonly potentialSets: PotentialSet[],
     readonly notes: string | undefined,
-    /**
-     * One slot per planned warm-up, done before the working sets. Rebuilt from the plan at session
-     * start rather than carried over (see {@link withWarmupsFromPlan}), and never given an RPE.
-     */
-    readonly warmupSets: PotentialSet[] = [],
-  ) {}
+    warmupSets: PotentialSet[] = [],
+  ) {
+    this.warmupSets = warmupSets.every((s) => s.kind === 'warmup')
+      ? warmupSets
+      : warmupSets.map((s) => s.with({ kind: 'warmup' }));
+  }
 
   static fromJSON(json: RecordedWeightedExerciseJSON): RecordedWeightedExercise {
     return new RecordedWeightedExercise(
@@ -83,7 +95,7 @@ export class RecordedWeightedExercise {
   static empty(b: WeightedExerciseBlueprint, unit: WeightUnit): RecordedWeightedExercise {
     return new RecordedWeightedExercise(
       b,
-      b.plannedSets.map((s) => new PotentialSet(undefined, new Weight(0, unit), s.reps)),
+      b.plannedSets.map((s) => PotentialSet.of({ weight: new Weight(0, unit), target: s.reps, kind: s.kind })),
       undefined,
     ).withWarmupsFromPlan(unit);
   }
@@ -102,7 +114,8 @@ export class RecordedWeightedExercise {
 
   /**
    * A fresh slot for one planned warm-up: a percentage of the heaviest working set, or an absolute
-   * weight converted into the session's unit, either way rounded to the exercise's increment.
+   * weight converted into the session's unit, either way rounded to the exercise's increment. It
+   * becomes a `warmup` slot when it goes into {@link warmupSets}.
    */
   warmupSlotFor(warmup: PlannedWarmupSet, fallbackUnit: WeightUnit): PotentialSet {
     const heaviest = this.heaviestWorkingWeight;
@@ -110,13 +123,13 @@ export class RecordedWeightedExercise {
     const target = { min: warmup.reps, max: warmup.reps };
     const load = this.tracksResistance ? warmup.load : undefined;
     if (!load) {
-      return new PotentialSet(undefined, new Weight(0, unit), target);
+      return PotentialSet.of({ weight: new Weight(0, unit), target });
     }
     const raw =
       load.type === 'percent'
         ? (heaviest ?? new Weight(0, unit)).convertTo(unit).multipliedBy(new BigNumber(load.percent).dividedBy(100))
         : load.weight.convertTo(unit);
-    return new PotentialSet(undefined, roundWarmupWeight(raw, warmupIncrementFor(this.blueprint, unit)), target);
+    return PotentialSet.of({ weight: roundWarmupWeight(raw, warmupIncrementFor(this.blueprint, unit)), target });
   }
 
   private get heaviestWorkingWeight(): Weight | undefined {
@@ -128,11 +141,11 @@ export class RecordedWeightedExercise {
 
   /** The slot at `position`, or undefined when there is none there. */
   slotAt(position: SetPosition): PotentialSet | undefined {
-    return this.listFor(position.kind)[position.index];
+    return this.listFor(position.list)[position.index];
   }
 
-  private listFor(kind: SetKind): PotentialSet[] {
-    return kind === 'warmup' ? this.warmupSets : this.potentialSets;
+  private listFor(list: SetList): PotentialSet[] {
+    return list === 'warmup' ? this.warmupSets : this.potentialSets;
   }
 
   /**
@@ -218,14 +231,14 @@ export class RecordedWeightedExercise {
 
   /** The tap on a warm-up: the same cycle as a working set, from its own target down to cleared. */
   withCycledWarmupRepCount(warmupIndex: number, time: OffsetDateTime): RecordedWeightedExercise {
-    return this.withSlot({ kind: 'warmup', index: warmupIndex }, (s) =>
+    return this.withSlot({ list: 'warmup', index: warmupIndex }, (s) =>
       s.with({ set: cycledSet(s.set, s.target.max, time) }),
     );
   }
 
   /** Exact reps for a warm-up, or `undefined` to clear it. */
   withWarmupRepCount(warmupIndex: number, reps: number | undefined, time: OffsetDateTime): RecordedWeightedExercise {
-    return this.withSlot({ kind: 'warmup', index: warmupIndex }, (s) =>
+    return this.withSlot({ list: 'warmup', index: warmupIndex }, (s) =>
       s.with({ set: reps === undefined ? undefined : new RecordedSet(reps, time) }),
     );
   }
@@ -235,7 +248,7 @@ export class RecordedWeightedExercise {
    * save-to-plan prompt, and the next session rebuilds the warm-up from the plan.
    */
   withWarmupWeight(warmupIndex: number, weight: Weight): RecordedWeightedExercise {
-    return this.withSlot({ kind: 'warmup', index: warmupIndex }, (s) => s.with({ weight }));
+    return this.withSlot({ list: 'warmup', index: warmupIndex }, (s) => s.with({ weight }));
   }
 
   withAllWarmupSets(reducer: (s: PotentialSet) => PotentialSet): RecordedWeightedExercise {
@@ -251,17 +264,17 @@ export class RecordedWeightedExercise {
   }
 
   withSet(setIndex: number, reducer: (s: PotentialSet) => PotentialSet) {
-    return this.withSlot({ kind: 'working', index: setIndex }, reducer);
+    return this.withSlot({ list: 'working', index: setIndex }, reducer);
   }
 
-  private withSlot({ kind, index }: SetPosition, reducer: (s: PotentialSet) => PotentialSet): RecordedWeightedExercise {
-    const list = this.listFor(kind);
-    const existingSet = list[index];
+  private withSlot({ list, index }: SetPosition, reducer: (s: PotentialSet) => PotentialSet): RecordedWeightedExercise {
+    const slots = this.listFor(list);
+    const existingSet = slots[index];
     if (!existingSet) {
-      throw new IndexOutOfBoundsError(index, list);
+      throw new IndexOutOfBoundsError(index, slots);
     }
-    const updated = list.with(index, reducer(existingSet));
-    return this.with(kind === 'warmup' ? { warmupSets: updated } : { potentialSets: updated });
+    const updated = slots.with(index, reducer(existingSet));
+    return this.with(list === 'warmup' ? { warmupSets: updated } : { potentialSets: updated });
   }
 
   withAllSets(reducer: (s: PotentialSet) => PotentialSet) {
@@ -347,7 +360,7 @@ export class RecordedWeightedExercise {
   }
 
   totalWeightLiftedWith(bodyweight: Weight | undefined): Weight {
-    return this.potentialSets.reduce(
+    return this.setsCountingTowards('countsTowardsVolume').reduce(
       (accum, set) => accum.plus(this.effectiveWeight(set, bodyweight).multipliedBy(set.set?.repsCompleted ?? 0)),
       Weight.NIL,
     );
@@ -383,9 +396,9 @@ export class RecordedWeightedExercise {
     const warmup = this.warmupSets[warmupIndex];
     const working = this.potentialSets[workingIndex];
     if (working && (!warmup || beats(working, warmup))) {
-      return { kind: 'working', index: workingIndex, slot: working };
+      return { list: 'working', index: workingIndex, slot: working };
     }
-    return warmup && { kind: 'warmup', index: warmupIndex, slot: warmup };
+    return warmup && { list: 'warmup', index: warmupIndex, slot: warmup };
   }
 
   /**
@@ -394,7 +407,7 @@ export class RecordedWeightedExercise {
    */
   get lastSetMissedTarget(): boolean {
     const last = this.lastLoggedSlot;
-    return last?.kind === 'working' && last.slot.set!.repsCompleted < this.repsTargetForSet(last.index).min;
+    return last?.list === 'working' && last.slot.set!.repsCompleted < this.repsTargetForSet(last.index).min;
   }
 
   /**
@@ -403,7 +416,7 @@ export class RecordedWeightedExercise {
    */
   get restAfterLastSet(): Rest {
     const rest = this.blueprint.restBetweenSets;
-    return this.lastLoggedSlot?.kind === 'warmup' ? { ...rest, maxRest: rest.minRest } : rest;
+    return this.lastLoggedSlot?.list === 'warmup' ? { ...rest, maxRest: rest.minRest } : rest;
   }
 
   /** The most recently logged working set; a warm-up done after the working sets never moves it. */
@@ -425,10 +438,10 @@ export class RecordedWeightedExercise {
     const workingStarted = this.potentialSets.some((x) => x.set);
     const warmupIndex = workingStarted ? -1 : this.warmupSets.findIndex((x) => !x.set);
     if (warmupIndex >= 0) {
-      return { kind: 'warmup', index: warmupIndex };
+      return { list: 'warmup', index: warmupIndex };
     }
     const workingIndex = this.currentSetIndex;
-    return workingIndex >= 0 ? { kind: 'working', index: workingIndex } : undefined;
+    return workingIndex >= 0 ? { list: 'working', index: workingIndex } : undefined;
   }
 
   /** From the first set to the last, warm-ups included. */
@@ -462,11 +475,36 @@ export class RecordedWeightedExercise {
     return !this.potentialSets.some((x) => x.set === undefined);
   }
 
-  /// <summary>
-  /// An exercise is considered a success if ALL sets are successful
-  /// </summary>
+  /** The sets whose kind counts towards `rule`, in order. Warm-ups count towards none. */
+  setsCountingTowards(rule: SetKindRule): PotentialSet[] {
+    return this.potentialSets.filter((set) => setKindHas(set.kind, rule));
+  }
+
+  /** Indexes into the working list of the sets whose kind counts towards `rule`. */
+  workingIndicesCountingTowards(rule: SetKindRule): number[] {
+    return this.potentialSets.flatMap((set, index) => (setKindHas(set.kind, rule) ? [index] : []));
+  }
+
+  /**
+   * Indexes into the working list of the slots that continue `last`'s progression, which are the only ones
+   * a rule may move. A slot whose kind changed so that it started over from the plan is left there.
+   */
+  workingIndicesContinuing(last: RecordedWeightedExercise): number[] {
+    return this.potentialSets.flatMap((set, index) => {
+      const was = last.potentialSets[index];
+      return was && continuesProgression(was.kind, set.kind) ? [index] : [];
+    });
+  }
+
+  /**
+   * A success once every set the progression check reads met the top of its target. A drop or myo set
+   * short of its reps never holds the lift back.
+   */
   get isSuccessForProgressiveOverload(): boolean {
-    return this.potentialSets.every((x, index) => x.set && x.set.repsCompleted >= this.repsTargetForSet(index).max);
+    return this.workingIndicesCountingTowards('countsTowardsProgression').every((index) => {
+      const set = this.potentialSets[index]!.set;
+      return set && set.repsCompleted >= this.repsTargetForSet(index).max;
+    });
   }
 }
 
@@ -552,6 +590,8 @@ export class PotentialSet {
      * the set is logged, and so changing the reps (which rebuilds the recorded set) keeps it.
      */
     readonly rpe?: Rpe,
+    /** Always `warmup` for a slot in `warmupSets`: the exercise makes it so. */
+    readonly kind: SetKind = 'working',
   ) {}
 
   /** Build a set from named fields; preferred over the constructor, which leads with the absent one. */
@@ -560,8 +600,9 @@ export class PotentialSet {
     weight: Weight;
     target?: RepsTarget;
     rpe?: Rpe | undefined;
+    kind?: SetKind;
   }): PotentialSet {
-    return new PotentialSet(init.set, init.weight, init.target, init.rpe);
+    return new PotentialSet(init.set, init.weight, init.target, init.rpe, init.kind);
   }
 
   static fromJSON(json: PotentialSetJSON): PotentialSet {
@@ -573,7 +614,23 @@ export class PotentialSet {
         max: json.target.reps.max,
       },
       isRpe(json.rpe) ? json.rpe : undefined,
+      json.kind,
     );
+  }
+
+  /**
+   * This slot as the next session's slot of `kind`, before any progression rule runs. It keeps its weight
+   * and, where reps are what advances, its target only as {@link continuesProgression} and
+   * {@link keepsLastWeight} allow; otherwise it opens on the plan's reps at no weight, in its own unit.
+   */
+  carriedInto(
+    kind: SetKind,
+    next: { planTarget: RepsTarget; repsAreProgressed: boolean; fallbackUnit: WeightUnit },
+  ): PotentialSet {
+    const unit = this.weight.unit === 'nil' ? next.fallbackUnit : this.weight.unit;
+    const weight = keepsLastWeight(this.kind, kind) ? this.weight : new Weight(0, unit);
+    const target = continuesProgression(this.kind, kind) && next.repsAreProgressed ? this.target : next.planTarget;
+    return PotentialSet.of({ weight, target, kind });
   }
 
   /** The RPE to show anywhere but the live workout: one left on a set that was never logged means nothing. */
@@ -593,7 +650,8 @@ export class PotentialSet {
       this.weight.equals(other.weight) &&
       this.target.min === other.target.min &&
       this.target.max === other.target.max &&
-      this.rpe === other.rpe
+      this.rpe === other.rpe &&
+      this.kind === other.kind
     );
   }
 
@@ -603,12 +661,14 @@ export class PotentialSet {
       'weight' in other ? other.weight! : this.weight,
       other.target ?? this.target,
       'rpe' in other ? other.rpe : this.rpe,
+      other.kind ?? this.kind,
     );
   }
 
   toJSON(): PotentialSetJSON {
     return {
       target: { reps: { min: this.target.min, max: this.target.max } },
+      kind: this.kind,
       set: this.set?.toJSON(),
       weight: this.weight.toJSON(),
       rpe: this.rpe,

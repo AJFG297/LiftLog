@@ -9,7 +9,7 @@ import TouchableRipple from '@/components/presentation/foundation/touchable-ripp
 import Icon from '@/components/presentation/foundation/icon';
 import { formatRpe, Rpe } from '@/models/session-models/rpe';
 import { WarmupTile } from '@/components/presentation/workout/weighted/warmup-tile';
-import { WarmupBadge } from '@/components/presentation/workout/warmup-badge';
+import { SetBadge } from '@/components/presentation/foundation/set-badge';
 import { useTranslate } from '@tolgee/react';
 
 export type PotentialSetSize = 'default' | 'compact';
@@ -162,7 +162,13 @@ export function PotentialSetDisplay(props: PotentialSetDisplayProps) {
           </View>
         </Pressable>
         {/* Over the reps rather than inside them: a ripple takes exactly one child. */}
-        {warmup && <WarmupBadge size="small" style={{ position: 'absolute', top: spacing[0.5], left: spacing[0.5] }} />}
+        {props.set.kind !== 'working' && (
+          <SetBadge
+            kind={props.set.kind}
+            size="small"
+            style={{ position: 'absolute', top: spacing[0.5], left: spacing[0.5] }}
+          />
+        )}
       </View>
       {showsWeight && (
         <FooterRow
