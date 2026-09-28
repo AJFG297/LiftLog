@@ -9,16 +9,16 @@ import {
   weightAccessoryFor,
 } from '@/components/presentation/foundation/number-pad';
 import { Chip } from '@/components/presentation/foundation/chip';
-import SegmentedPicker from '@/components/presentation/foundation/segmented-picker';
+import { SegmentedControl } from '@/components/presentation/foundation/segmented-control';
 import { SurfaceText } from '@/components/presentation/foundation/surface-text';
 import { formatWeightText } from '@/components/presentation/foundation/weight-format';
 import { rounding, spacing, tabularText, useAppTheme } from '@/hooks/useAppTheme';
 import { useMountEffect } from '@/hooks/useMountEffect';
-import { equipmentClassOf, weightStepFor } from '@/models/equipment';
+import { type EquipmentClass, equipmentClassOf, weightStepFor } from '@/models/equipment';
 import type { Rpe } from '@/models/session-models/rpe';
 import { type LoadUnit, shortFormatWeightUnit, Weight } from '@/models/weight';
 import { useAppSelector } from '@/store';
-import { selectPreferredWeightUnit, setThemeMode, type ThemeMode } from '@/store/settings';
+import { selectPreferredWeightUnit, setThemeMode } from '@/store/settings';
 import { localeDecimalSeparator } from '@/utils/locale-bignumber';
 import BigNumber from 'bignumber.js';
 import { Redirect, Stack, useLocalSearchParams } from 'expo-router';
@@ -27,14 +27,13 @@ import { Pressable, ScrollView, View } from 'react-native';
 import { useDispatch } from 'react-redux';
 
 type FieldKind = 'weight' | 'reps';
-type DevEquipment = 'barbell' | 'dumbbell' | 'cable' | 'machine' | 'unknown';
 
-const DEV_EQUIPMENT: { value: DevEquipment; label: string }[] = [
+const DEV_EQUIPMENT: { value: EquipmentClass | undefined; label: string }[] = [
   { value: 'barbell', label: 'Barbell' },
   { value: 'dumbbell', label: 'Dumbbell' },
   { value: 'cable', label: 'Cable' },
   { value: 'machine', label: 'Machine' },
-  { value: 'unknown', label: 'Other' },
+  { value: undefined, label: 'Other' },
 ];
 
 const PLACEHOLDER_WEIGHT: Record<LoadUnit, number> = { kilograms: 60, pounds: 135 };
@@ -59,8 +58,8 @@ function DevNumberPad() {
   const [unit, setUnit] = useState<LoadUnit>(
     params.unit === 'pounds' || params.unit === 'kilograms' ? params.unit : preferredUnit,
   );
-  const [equipment, setEquipment] = useState<DevEquipment>(
-    isDevEquipment(params.equipment) ? params.equipment : 'barbell',
+  const [equipment, setEquipment] = useState<EquipmentClass | undefined>(
+    params.equipment === undefined ? 'barbell' : equipmentClassOf(params.equipment),
   );
   const [fieldKind, setFieldKind] = useState<FieldKind>(params.field === 'reps' ? 'reps' : 'weight');
   const [rpe, setRpe] = useState<Rpe | undefined>(undefined);
@@ -71,12 +70,12 @@ function DevNumberPad() {
   const [logged, setLogged] = useState<string | undefined>(undefined);
   const [visible, setVisible] = useState(true);
 
-  const fieldFor = (kind: FieldKind, forUnit: LoadUnit, forEquipment: DevEquipment): NumberPadField =>
+  const fieldFor = (kind: FieldKind, forUnit: LoadUnit, forEquipment: EquipmentClass | undefined): NumberPadField =>
     kind === 'weight'
       ? {
           placeholder: PLACEHOLDER_WEIGHT[forUnit],
           allowDecimal: true,
-          step: weightStepFor(classOf(forEquipment), forUnit, new BigNumber(2.5)),
+          step: weightStepFor(forEquipment, forUnit, new BigNumber(2.5)),
         }
       : { placeholder: PLACEHOLDER_REPS, allowDecimal: false, step: 1 };
 
@@ -113,20 +112,21 @@ function DevNumberPad() {
   const accessory: NumberPadAccessory | undefined =
     fieldKind === 'reps'
       ? { kind: 'rpe', value: rpe, onChange: setRpe }
-      : weightAccessoryFor(classOf(equipment), unit, { bar: barWeight[unit], plates: availablePlates[unit] });
+      : weightAccessoryFor(equipment, unit, { bar: barWeight[unit], plates: availablePlates[unit] });
 
   return (
     <View style={{ flex: 1, backgroundColor: tokens.bg }}>
       <Stack.Screen options={{ title: 'Number pad' }} />
       <ScrollView contentContainerStyle={{ padding: spacing.pageHorizontalMargin, gap: spacing[4] }}>
         <DevControl label="Unit">
-          <SegmentedPicker
+          <SegmentedControl
+            accessibilityLabel="Unit"
             value={unit}
             options={[
               { value: 'kilograms', label: 'kg' },
               { value: 'pounds', label: 'lb' },
             ]}
-            onChange={(value: LoadUnit) => {
+            onChange={(value) => {
               setUnit(value);
               open(fieldKind, value);
             }}
@@ -136,7 +136,7 @@ function DevNumberPad() {
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing[2] }}>
             {DEV_EQUIPMENT.map((option) => (
               <Chip
-                key={option.value}
+                key={option.label}
                 label={option.label}
                 selected={equipment === option.value}
                 onPress={() => {
@@ -148,14 +148,15 @@ function DevNumberPad() {
           </View>
         </DevControl>
         <DevControl label="Theme">
-          <SegmentedPicker
+          <SegmentedControl
+            accessibilityLabel="Theme"
             value={themeMode}
             options={[
               { value: 'light', label: 'Light' },
               { value: 'dark', label: 'Dark' },
               { value: 'system', label: 'System' },
             ]}
-            onChange={(value: ThemeMode) => dispatch(setThemeMode(value))}
+            onChange={(value) => dispatch(setThemeMode(value))}
           />
         </DevControl>
 
@@ -248,12 +249,4 @@ function DevField(props: {
       </SurfaceText>
     </Pressable>
   );
-}
-
-function isDevEquipment(value: string | undefined): value is DevEquipment {
-  return DEV_EQUIPMENT.some((option) => option.value === value);
-}
-
-function classOf(equipment: DevEquipment) {
-  return equipmentClassOf(equipment === 'unknown' ? null : equipment);
 }
