@@ -6,6 +6,11 @@ import { fromBigNumberJSON, toBigNumberJSON, WeightJSON } from './storage/versio
 // nil is special in that it basically tries to coalesce into whatever else is given
 export type WeightUnit = 'kilograms' | 'pounds' | 'nil';
 
+/** A unit a load is actually weighed in: the user's preferred unit, or the one plates come in. */
+export type LoadUnit = Exclude<WeightUnit, 'nil'>;
+
+export type PerUnit<T> = Record<LoadUnit, T>;
+
 export class Weight {
   public value: BigNumber;
 

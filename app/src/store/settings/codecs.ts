@@ -1,5 +1,6 @@
 import { DayOfWeek, Instant } from '@js-joda/core';
 import { match, P } from 'ts-pattern';
+import type { PerUnit } from '@/models/weight';
 
 export type ColorSchemeSeed = 'default' | `#${string}`;
 
@@ -73,6 +74,34 @@ export const dayOfWeekCodec: Codec<DayOfWeek> = {
       .otherwise(() => undefined),
   serialize: (value) => value.name(),
 };
+
+/** A value per plate unit, stored as JSON. Anything that isn't a valid value for both units reads as absent. */
+export function perUnitCodec<T>(isValue: (value: unknown) => value is T): Codec<PerUnit<T>> {
+  return {
+    deserialize: (raw) => {
+      try {
+        const parsed: unknown = JSON.parse(raw ?? '');
+        return typeof parsed === 'object' &&
+          parsed !== null &&
+          'kilograms' in parsed &&
+          'pounds' in parsed &&
+          isValue(parsed.kilograms) &&
+          isValue(parsed.pounds)
+          ? { kilograms: parsed.kilograms, pounds: parsed.pounds }
+          : undefined;
+      } catch {
+        return undefined;
+      }
+    },
+    serialize: (value) => JSON.stringify(value),
+  };
+}
+
+export const isBarWeight = (value: unknown): value is number =>
+  typeof value === 'number' && Number.isFinite(value) && value >= 0;
+
+export const isPlateList = (value: unknown): value is number[] =>
+  Array.isArray(value) && value.every((plate) => typeof plate === 'number' && Number.isFinite(plate) && plate > 0);
 
 export const instantCodec: Codec<Instant> = {
   deserialize: (raw) => {

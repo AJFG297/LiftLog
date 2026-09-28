@@ -13,6 +13,7 @@ import {
   setWelcomeWizardCompleted,
 } from '@/store/settings';
 import { useTranslate } from '@tolgee/react';
+import { useRouter } from 'expo-router';
 import { useDispatch } from 'react-redux';
 import { SettingsPage } from '@/components/layout/settings-page';
 import { SegmentedGroup } from '@/components/presentation/foundation/segmented-list';
@@ -23,6 +24,7 @@ export default function AppConfigurationPage() {
   const { t } = useTranslate();
   const settings = useAppSelector((state: RootState) => state.settings);
   const dispatch = useDispatch();
+  const { push } = useRouter();
 
   return (
     <SettingsPage title={t('settings.app_configuration.title')} caption={t('settings.app_configuration.subtitle')}>
@@ -70,6 +72,13 @@ export default function AppConfigurationPage() {
           supportingText={t('workout.keep_screen_awake.subtitle')}
           value={settings.keepScreenAwakeDuringWorkout}
           onValueChange={(value) => dispatch(setKeepScreenAwakeDuringWorkout(value))}
+        />
+        <SegmentedListLink
+          testID="barAndPlates"
+          label={t('settings.bar_and_plates.title')}
+          icon={'fitnessCenter'}
+          supportingText={t('settings.bar_and_plates.subtitle')}
+          onPress={() => push('/settings/bar-and-plates')}
         />
       </SegmentedGroup>
 

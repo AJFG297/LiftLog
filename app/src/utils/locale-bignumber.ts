@@ -8,6 +8,11 @@ function localeUsesComma(): boolean {
   return usesComma;
 }
 
+/** The decimal separator our formatting uses, for showing a number as it's typed. */
+export function localeDecimalSeparator(): string {
+  return localeUsesComma() ? ',' : '.';
+}
+
 export function localeParseBigNumber(numStr: string): BigNumber {
   return parseDecimal(numStr, localeUsesComma());
 }
@@ -40,7 +45,7 @@ export function localeFormatBigNumber(num: BigNumber | undefined, decimalPlaces?
   const format = {
     groupSeparator: localeUsesComma() ? ' ' : ',',
     groupSize: 3,
-    decimalSeparator: localeUsesComma() ? ',' : '.',
+    decimalSeparator: localeDecimalSeparator(),
   };
   if (localeUsesComma()) {
     return decimalPlaces !== undefined ? num.toFormat(decimalPlaces, format) : num.toFormat(format);

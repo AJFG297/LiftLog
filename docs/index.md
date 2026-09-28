@@ -32,6 +32,9 @@ work to find the docs relevant to your area, and update it whenever you add, rem
   numbers carry into today (and why weight carries but reps usually do not), and how the progressive
   overload rules move them. Covers rule order, limits and starting over, rules that can never run, and
   the two ways to set up double progression. Ends with pointers to the code.
+- [NumberPad.md](./NumberPad.md) - the in-screen number pad for weight and reps: how a field's buffer
+  behaves (placeholder, typing, ± steps), the step per equipment and unit, the accessory row (plate
+  maths, per dumbbell, on the stack, RPE chips), and the bar and plate preferences behind plate maths.
 - [PlanFileFormat.md](./PlanFileFormat.md) - the `.liftlogplan` file format, how plans are imported and
   exported, and the Claude skill that authors plan files against the schema.
 - [PlaintextExport.md](./PlaintextExport.md) — CSV/JSON export of workout data, including which fields
