@@ -5,6 +5,7 @@ import {
   type Toast,
   type ToastContent,
 } from '@/components/presentation/foundation/toast/toast-state';
+import { MIN_TOUCH_TARGET } from '@/components/presentation/foundation/touch-target';
 import { spacing, useAppTheme } from '@/hooks/useAppTheme';
 import { createContext, ReactNode, useContext, useEffect, useReducer, useRef } from 'react';
 import { AccessibilityInfo, Pressable, View } from 'react-native';
@@ -157,8 +158,8 @@ function ToastView({
             accessibilityRole="button"
             accessibilityLabel={toast.action.label}
             style={({ pressed }) => ({
-              minHeight: 44,
-              minWidth: 44,
+              minHeight: MIN_TOUCH_TARGET,
+              minWidth: MIN_TOUCH_TARGET,
               paddingHorizontal: spacing[3],
               borderRadius: 10,
               alignItems: 'center',
