@@ -17,7 +17,10 @@ export interface SetKindRules {
   countsTowardsPrs: boolean;
   /** Whether the set has to meet its target for the progression rules to fire, and whether they move it. */
   countsTowardsProgression: boolean;
-  /** Whether the next session starts the set on this one's numbers. */
+  /**
+   * Whether the set's numbers carry into the next session's progression: its weight, and its reps where reps
+   * are progressed. A kind that doesn't still opens on its own weight from last time, but only its own.
+   */
   carriesOver: boolean;
   /** What stands in for the set's number. Only working sets are numbered. */
   letter: SetKindLetter | null;

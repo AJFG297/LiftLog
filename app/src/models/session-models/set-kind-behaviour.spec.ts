@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import Enumerable from 'linq';
 import { LocalDate, OffsetDateTime } from '@js-joda/core';
-import { SessionBlueprint } from '@/models/blueprint-models';
+import BigNumber from 'bignumber.js';
+import { ProgressionRule, SessionBlueprint } from '@/models/blueprint-models';
 import { PotentialSet, RecordedSet, RecordedWeightedExercise, Session } from '@/models/session-models';
 import type { SetKind, WorkingListKind } from '@/models/session-models/set-kind';
 import { makeSession, makeWeightedBlueprint } from '@/models/session-models/__test__/helpers';
@@ -106,8 +107,8 @@ describe('the next session', () => {
   it.each([
     ['working', 80],
     ['failure', 80],
-    ['drop', 0],
-    ['myo', 0],
+    ['drop', 80],
+    ['myo', 80],
   ] as const)('carry-over: a %s set at 80 kg starts the next session at %d kg', (kind, weight) => {
     const next = nextAfter(exerciseWith(slot(kind, 80, 10, 10, 3)));
 
@@ -129,6 +130,36 @@ describe('the next session', () => {
     const next = nextAfter(withPlannedWarmup);
 
     expect(next.warmupSets.map((s) => [s.kind, s.weight.value.toNumber()])).toEqual([['warmup', 20]]);
+  });
+
+  it('carry-over: a drop set keeps its weight but not a rep target a reps rule won', () => {
+    const last = exerciseWith(slot('drop', 40, 12, 12, 3));
+    const blueprint = last.blueprint.with({
+      progression: [ProgressionRule.of({ axis: 'reps', step: new BigNumber(1), ceiling: new BigNumber(15) })],
+    });
+
+    const session = service().hydrateSessionFromBlueprint(new SessionBlueprint('Legs', [blueprint], ''), {
+      [blueprint.progressionKey()]: last.with({ blueprint }),
+    });
+
+    const drop = (session.recordedExercises[0] as RecordedWeightedExercise).potentialSets[2]!;
+    expect([drop.kind, drop.weight.value.toNumber(), drop.target]).toEqual(['drop', 40, { min: 10, max: 10 }]);
+  });
+
+  it('carry-over: a drop set that was a working set last time starts at no weight', () => {
+    const last = exerciseWith(slot('working', 100, 10, 10, 3));
+    const blueprint = last.blueprint.with({
+      progression: [],
+      plannedSets: [0, 1, 2].map((i) => ({ reps: { min: 10, max: 10 }, kind: i === 2 ? 'drop' : 'working' })),
+    });
+
+    const session = service().hydrateSessionFromBlueprint(new SessionBlueprint('Legs', [blueprint], ''), {
+      [blueprint.progressionKey()]: last,
+    });
+
+    expect(
+      (session.recordedExercises[0] as RecordedWeightedExercise).potentialSets.map((s) => s.weight.value.toNumber()),
+    ).toEqual([100, 100, 0]);
   });
 
   it('carry-over: a working set that was a drop set last time does not take on its lighter weight', () => {
@@ -156,6 +187,6 @@ describe('the next session', () => {
 
     expect(
       (session.recordedExercises[0] as RecordedWeightedExercise).potentialSets.map((s) => s.weight.value.toNumber()),
-    ).toEqual([102.5, 102.5, 0]);
+    ).toEqual([102.5, 102.5, 60]);
   });
 });

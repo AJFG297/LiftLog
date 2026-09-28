@@ -132,8 +132,9 @@ An exercise is either a `WeightedExerciseBlueprint` or a `CardioExerciseBlueprin
 | `"myo"`     | A myo-rep set                               | yes    | no      | no                | no           |
 
 A set that is not part of the progression check never holds a progression back, and the rules never
-move it. One that does not carry over starts each session at no weight and the plan's reps, rather than
-on last session's numbers. In the app only working sets are numbered; the others show D, M or F. Warm-ups are not a
+move it. One that does not carry over starts each session on the plan's reps. It keeps its own weight
+from last time as a starting point, since a drop set is usually the same drop each week, but only when that
+slot was the same kind last time. It never takes a working set's weight, and a working set never takes its. In the app only working sets are numbered; the others show D, M or F. Warm-ups are not a
 `kind` - they are planned in `warmupSets` - and show W.
 
 `resistance` says where the load comes from: `external` for barbells, dumbbells and machines (the logged weight is the weight lifted), `bodyweight` for pull ups and dips (the logged weight is what is added on top of the lifter), or `none` for movements like crunches, where there is no weight at all and reps are the whole story.

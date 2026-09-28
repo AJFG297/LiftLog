@@ -139,6 +139,9 @@ counts towards:
 | drop | yes | no | no | no |
 | myo | yes | no | no | no |
 
+- Carry-over "no" means a drop or myo set doesn't continue the progression. It still opens on its own weight
+  from last session, as a starting point the rules never move.
+- A warm-up's percentage is taken from the heaviest set in the working list, drop and myo sets included.
 - This needs a storage migration (skill `add-storage-migration`) and a worker message schema bump.
 - It also touches the plan/AI schemas (regenerate with `npm run json-schema`), plaintext export and CSV
   import.

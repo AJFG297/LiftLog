@@ -104,16 +104,18 @@ export class SessionService {
         // lineage keeps what a rule won for it. Where they are a fixed prescription it is re-seeded
         // from the plan, because the only thing that could have changed it is an edit to the plan -
         // and that edit already had its own say in the save-changes dialog.
-        // A slot only picks up where the last one left off when both are kinds that carry over: a drop
-        // set's lighter weight is not the next working set's, and a drop set starts fresh either way.
+        // A slot continues the last one's progression only when both are kinds that carry over: a drop
+        // set's lighter weight is not the next working set's. A drop or myo set still opens on its own
+        // weight from last time, as a starting point the rules never move.
         .otherwise((x) =>
           x.potentialSets.map((ps, index) => {
             const kind = e.plannedSets[index]?.kind ?? 'working';
             const carries = setKindCounts(ps.kind, 'carriesOver') && setKindCounts(kind, 'carriesOver');
             return PotentialSet.of({
-              weight: carries
-                ? ps.weight
-                : new Weight(0, ps.weight.unit === 'nil' ? $this.getDefaultWeightUnit() : ps.weight.unit),
+              weight:
+                carries || ps.kind === kind
+                  ? ps.weight
+                  : new Weight(0, ps.weight.unit === 'nil' ? $this.getDefaultWeightUnit() : ps.weight.unit),
               target: carries && e.repsAreProgressed ? ps.target : e.repsTargetForSet(index),
               kind,
             });
