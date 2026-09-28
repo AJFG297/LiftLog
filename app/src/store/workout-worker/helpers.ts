@@ -42,7 +42,7 @@ export function getCurrentExerciseDetails(session: Session): CurrentExerciseDeta
   const current = next instanceof RecordedWeightedExercise ? next.currentSet : undefined;
   return {
     exercise: next.toJSON(),
-    setKind: current?.kind ?? 'working',
+    setKind: current?.list ?? 'working',
     setIndex: current?.index ?? next.currentSetIndex,
   };
 }

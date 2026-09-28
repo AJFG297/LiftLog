@@ -66,7 +66,7 @@ export default function WeightedExercise(props: WeightedExerciseProps) {
             repsTarget={set.target}
             onTap={() => {
               const time = timeProvider();
-              tap({ kind: 'warmup', index }, (ex) => ex.withCycledWarmupRepCount(index, time));
+              tap({ list: 'warmup', index }, (ex) => ex.withCycledWarmupRepCount(index, time));
             }}
             previousRepCount={undefined}
             onUpdateReps={(reps) => {
@@ -78,7 +78,7 @@ export default function WeightedExercise(props: WeightedExerciseProps) {
             showRpe={false}
             rpe={undefined}
             onUpdateRpe={undefined}
-            toStartNext={setToStartNext?.kind === 'warmup' && setToStartNext.index === index}
+            toStartNext={setToStartNext?.list === 'warmup' && setToStartNext.index === index}
             resistance={recordedExercise.blueprint.resistance}
             weightIncrement={recordedExercise.blueprint.weightIncrement}
             warmup={warmupTileFor(recordedExercise, index, previous)}
@@ -91,7 +91,7 @@ export default function WeightedExercise(props: WeightedExerciseProps) {
             repsTarget={recordedExercise.repsTargetForSet(index)}
             onTap={() => {
               const time = timeProvider();
-              tap({ kind: 'working', index }, (ex) => ex.withCycledRepCount(index, time));
+              tap({ list: 'working', index }, (ex) => ex.withCycledRepCount(index, time));
             }}
             previousRepCount={previous?.potentialSets[index]?.set?.repsCompleted}
             onUpdateReps={(reps) => {
@@ -103,7 +103,7 @@ export default function WeightedExercise(props: WeightedExerciseProps) {
             showRpe={showRpe}
             rpe={rpeFor(index)}
             onUpdateRpe={canEditRpe ? (rpe) => updateExercise((ex) => ex.withRpe(index, rpe)) : undefined}
-            toStartNext={setToStartNext?.kind === 'working' && setToStartNext.index === index}
+            toStartNext={setToStartNext?.list === 'working' && setToStartNext.index === index}
             resistance={recordedExercise.blueprint.resistance}
             weightIncrement={recordedExercise.blueprint.weightIncrement}
           />

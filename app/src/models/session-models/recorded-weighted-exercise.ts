@@ -19,6 +19,7 @@ import {
 } from '@/models/storage/versions/latest';
 import { Weight, WeightUnit } from '@/models/weight';
 import { isRpe, Rpe } from '@/models/session-models/rpe';
+import type { SetList } from '@/models/session-models/set-kind';
 import { IndexOutOfBoundsError } from '@/utils/index-out-of-bounds';
 import { Duration, OffsetDateTime } from '@js-joda/core';
 import BigNumber from 'bignumber.js';
@@ -26,12 +27,11 @@ import { match } from 'ts-pattern';
 
 export type WeightAppliesTo = 'thisSet' | 'uncompletedSets' | 'allSets';
 
-/** Which of an exercise's two set lists a slot lives in. */
-export type SetKind = 'warmup' | 'working';
+export type { SetKind, SetList, WorkingListKind } from '@/models/session-models/set-kind';
 
 /** A slot's place in the exercise: its list, and its index within that list. */
 export interface SetPosition {
-  kind: SetKind;
+  list: SetList;
   index: number;
 }
 
@@ -128,11 +128,11 @@ export class RecordedWeightedExercise {
 
   /** The slot at `position`, or undefined when there is none there. */
   slotAt(position: SetPosition): PotentialSet | undefined {
-    return this.listFor(position.kind)[position.index];
+    return this.listFor(position.list)[position.index];
   }
 
-  private listFor(kind: SetKind): PotentialSet[] {
-    return kind === 'warmup' ? this.warmupSets : this.potentialSets;
+  private listFor(list: SetList): PotentialSet[] {
+    return list === 'warmup' ? this.warmupSets : this.potentialSets;
   }
 
   /**
@@ -218,14 +218,14 @@ export class RecordedWeightedExercise {
 
   /** The tap on a warm-up: the same cycle as a working set, from its own target down to cleared. */
   withCycledWarmupRepCount(warmupIndex: number, time: OffsetDateTime): RecordedWeightedExercise {
-    return this.withSlot({ kind: 'warmup', index: warmupIndex }, (s) =>
+    return this.withSlot({ list: 'warmup', index: warmupIndex }, (s) =>
       s.with({ set: cycledSet(s.set, s.target.max, time) }),
     );
   }
 
   /** Exact reps for a warm-up, or `undefined` to clear it. */
   withWarmupRepCount(warmupIndex: number, reps: number | undefined, time: OffsetDateTime): RecordedWeightedExercise {
-    return this.withSlot({ kind: 'warmup', index: warmupIndex }, (s) =>
+    return this.withSlot({ list: 'warmup', index: warmupIndex }, (s) =>
       s.with({ set: reps === undefined ? undefined : new RecordedSet(reps, time) }),
     );
   }
@@ -235,7 +235,7 @@ export class RecordedWeightedExercise {
    * save-to-plan prompt, and the next session rebuilds the warm-up from the plan.
    */
   withWarmupWeight(warmupIndex: number, weight: Weight): RecordedWeightedExercise {
-    return this.withSlot({ kind: 'warmup', index: warmupIndex }, (s) => s.with({ weight }));
+    return this.withSlot({ list: 'warmup', index: warmupIndex }, (s) => s.with({ weight }));
   }
 
   withAllWarmupSets(reducer: (s: PotentialSet) => PotentialSet): RecordedWeightedExercise {
@@ -251,17 +251,17 @@ export class RecordedWeightedExercise {
   }
 
   withSet(setIndex: number, reducer: (s: PotentialSet) => PotentialSet) {
-    return this.withSlot({ kind: 'working', index: setIndex }, reducer);
+    return this.withSlot({ list: 'working', index: setIndex }, reducer);
   }
 
-  private withSlot({ kind, index }: SetPosition, reducer: (s: PotentialSet) => PotentialSet): RecordedWeightedExercise {
-    const list = this.listFor(kind);
-    const existingSet = list[index];
+  private withSlot({ list, index }: SetPosition, reducer: (s: PotentialSet) => PotentialSet): RecordedWeightedExercise {
+    const slots = this.listFor(list);
+    const existingSet = slots[index];
     if (!existingSet) {
-      throw new IndexOutOfBoundsError(index, list);
+      throw new IndexOutOfBoundsError(index, slots);
     }
-    const updated = list.with(index, reducer(existingSet));
-    return this.with(kind === 'warmup' ? { warmupSets: updated } : { potentialSets: updated });
+    const updated = slots.with(index, reducer(existingSet));
+    return this.with(list === 'warmup' ? { warmupSets: updated } : { potentialSets: updated });
   }
 
   withAllSets(reducer: (s: PotentialSet) => PotentialSet) {
@@ -383,9 +383,9 @@ export class RecordedWeightedExercise {
     const warmup = this.warmupSets[warmupIndex];
     const working = this.potentialSets[workingIndex];
     if (working && (!warmup || beats(working, warmup))) {
-      return { kind: 'working', index: workingIndex, slot: working };
+      return { list: 'working', index: workingIndex, slot: working };
     }
-    return warmup && { kind: 'warmup', index: warmupIndex, slot: warmup };
+    return warmup && { list: 'warmup', index: warmupIndex, slot: warmup };
   }
 
   /**
@@ -394,7 +394,7 @@ export class RecordedWeightedExercise {
    */
   get lastSetMissedTarget(): boolean {
     const last = this.lastLoggedSlot;
-    return last?.kind === 'working' && last.slot.set!.repsCompleted < this.repsTargetForSet(last.index).min;
+    return last?.list === 'working' && last.slot.set!.repsCompleted < this.repsTargetForSet(last.index).min;
   }
 
   /**
@@ -403,7 +403,7 @@ export class RecordedWeightedExercise {
    */
   get restAfterLastSet(): Rest {
     const rest = this.blueprint.restBetweenSets;
-    return this.lastLoggedSlot?.kind === 'warmup' ? { ...rest, maxRest: rest.minRest } : rest;
+    return this.lastLoggedSlot?.list === 'warmup' ? { ...rest, maxRest: rest.minRest } : rest;
   }
 
   /** The most recently logged working set; a warm-up done after the working sets never moves it. */
@@ -425,10 +425,10 @@ export class RecordedWeightedExercise {
     const workingStarted = this.potentialSets.some((x) => x.set);
     const warmupIndex = workingStarted ? -1 : this.warmupSets.findIndex((x) => !x.set);
     if (warmupIndex >= 0) {
-      return { kind: 'warmup', index: warmupIndex };
+      return { list: 'warmup', index: warmupIndex };
     }
     const workingIndex = this.currentSetIndex;
-    return workingIndex >= 0 ? { kind: 'working', index: workingIndex } : undefined;
+    return workingIndex >= 0 ? { list: 'working', index: workingIndex } : undefined;
   }
 
   /** From the first set to the last, warm-ups included. */
