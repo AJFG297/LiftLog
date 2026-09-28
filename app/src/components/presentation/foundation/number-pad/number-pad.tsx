@@ -2,13 +2,12 @@ import { SurfaceText } from '@/components/presentation/foundation/surface-text';
 import { formatWeightText } from '@/components/presentation/foundation/weight-format';
 import { spacing, useAppTheme } from '@/hooks/useAppTheme';
 import { type LoadUnit, Weight } from '@/models/weight';
-import { localeFormatBigNumber } from '@/utils/locale-bignumber';
+import { localeDecimalSeparator, localeFormatBigNumber } from '@/utils/locale-bignumber';
 import { msArrowForward } from '@material-symbols-react-native/outlined-400/msArrowForward';
 import { msBackspace } from '@material-symbols-react-native/outlined-400/msBackspace';
 import { msCheck } from '@material-symbols-react-native/outlined-400/msCheck';
 import { msKeyboardHide } from '@material-symbols-react-native/outlined-400/msKeyboardHide';
 import { useTranslate } from '@tolgee/react';
-import { getLocales } from 'expo-localization';
 import { View } from 'react-native';
 import Animated, { ReduceMotion, SlideInDown, SlideOutDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -44,7 +43,6 @@ export function NumberPad(props: NumberPadProps) {
   }
 
   const { buffer, onAction } = props;
-  const decimalSeparator = getLocales()[0]?.decimalSeparator || '.';
   const step = props.unit ? formatWeightText(new Weight(buffer.step, props.unit)) : localeFormatBigNumber(buffer.step);
   const digitKey = (digit: Digit) => (
     <NumberPadKey key={digit} label={digit} onPress={() => onAction({ type: 'digit', digit })}>
@@ -79,7 +77,7 @@ export function NumberPad(props: NumberPadProps) {
             {buffer.allowDecimal ? (
               <NumberPadKey label={t('number_pad.decimal.button')} onPress={() => onAction({ type: 'decimal' })}>
                 <SurfaceText numeric font="text-2xl" style={{ color: tokens.ink }}>
-                  {decimalSeparator}
+                  {localeDecimalSeparator()}
                 </SurfaceText>
               </NumberPadKey>
             ) : (

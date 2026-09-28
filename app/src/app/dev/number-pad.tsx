@@ -19,8 +19,8 @@ import type { Rpe } from '@/models/session-models/rpe';
 import { type LoadUnit, shortFormatWeightUnit, Weight } from '@/models/weight';
 import { useAppSelector } from '@/store';
 import { selectPreferredWeightUnit, setThemeMode, type ThemeMode } from '@/store/settings';
+import { localeDecimalSeparator } from '@/utils/locale-bignumber';
 import BigNumber from 'bignumber.js';
-import { getLocales } from 'expo-localization';
 import { Redirect, Stack, useLocalSearchParams } from 'expo-router';
 import { type ReactNode, useReducer, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
@@ -219,7 +219,6 @@ function DevField(props: {
   onPress: () => void;
 }) {
   const { tokens } = useAppTheme();
-  const decimalSeparator = getLocales()[0]?.decimalSeparator || '.';
   const typed = props.buffer ? props.buffer.typed : (props.committed?.toString() ?? null);
   return (
     <Pressable
@@ -245,7 +244,7 @@ function DevField(props: {
         accessibilityLiveRegion="polite"
         style={{ color: typed === null ? tokens.placeholder : tokens.ink }}
       >
-        {typed === null ? String(props.placeholder) : typed.replace('.', decimalSeparator)}
+        {typed === null ? String(props.placeholder) : typed.replace('.', localeDecimalSeparator())}
       </SurfaceText>
     </Pressable>
   );
