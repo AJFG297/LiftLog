@@ -4,7 +4,7 @@ import { SetBadge, type SetBadgeProps } from '@/components/presentation/foundati
 import { SheetHeader } from '@/components/presentation/foundation/sheet-header';
 import { useToast } from '@/components/presentation/foundation/toast';
 import { spacing, useAppTheme } from '@/hooks/useAppTheme';
-import { useRouter } from 'expo-router';
+import { Redirect, useRouter } from 'expo-router';
 import { View } from 'react-native';
 
 const OPTIONS: { badge: SetBadgeProps; title: string; subtitle: string }[] = [
@@ -15,7 +15,14 @@ const OPTIONS: { badge: SetBadgeProps; title: string; subtitle: string }[] = [
   { badge: { kind: 'failure' }, title: 'To failure', subtitle: 'Stopped when another rep was not possible' },
 ];
 
-export default function DevComponentsSheet() {
+export default function DevComponentsSheetRoute() {
+  if (!__DEV__) {
+    return <Redirect href="/" />;
+  }
+  return <DevComponentsSheet />;
+}
+
+function DevComponentsSheet() {
   const { tokens } = useAppTheme();
   const router = useRouter();
   const toast = useToast();

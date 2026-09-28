@@ -14,7 +14,7 @@ import { spacing, useAppTheme } from '@/hooks/useAppTheme';
 import { useAppSelector } from '@/store';
 import { setColorSchemeSeed, setThemeMode } from '@/store/settings';
 import { ACCENT_PRESETS } from '@/utils/theme-tokens';
-import { Stack, useRouter } from 'expo-router';
+import { Redirect, Stack, useRouter } from 'expo-router';
 import { ReactNode, useState } from 'react';
 import { View } from 'react-native';
 import { useDispatch } from 'react-redux';
@@ -27,7 +27,14 @@ const MUSCLES = ['Chest', 'Back', 'Legs', 'Shoulders'];
  * Every foundation primitive on one page, for checking them in light and dark and with different accents.
  * Not linked from the app; open `liftlog://dev/components`. English only.
  */
-export default function DevComponents() {
+export default function DevComponentsRoute() {
+  if (!__DEV__) {
+    return <Redirect href="/" />;
+  }
+  return <DevComponents />;
+}
+
+function DevComponents() {
   return (
     <FullHeightScrollView
       scrollStyle={{ paddingHorizontal: spacing.pageHorizontalMargin }}
