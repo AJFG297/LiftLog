@@ -10,7 +10,10 @@ type TokenName = keyof ThemeTokens;
 interface SetBadgeLook {
   fill: TokenName;
   ink: TokenName;
-  /** Drop and myo sets are ringed in the accent so they read as "a variation of a working set". */
+  /**
+   * An accent ring around the fill. Warm-ups have one because their soft fill is close to a tile's own colour;
+   * drop and myo have one so they read as a variation of a working set.
+   */
   ring?: TokenName;
   spokenLabel: TranslationKey;
 }
@@ -20,6 +23,7 @@ export const SET_BADGE_LOOK: Record<SetKind, SetBadgeLook> = {
   warmup: {
     fill: 'accentSoft',
     ink: 'accentSoftInk',
+    ring: 'accentInk',
     spokenLabel: 'workout.set_badge.warmup.label',
   },
   drop: {

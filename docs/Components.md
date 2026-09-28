@@ -47,7 +47,7 @@ out as "Set 2", "Warm-up set", "Drop set" and so on.
 One table, `SET_BADGE_LOOK` in `set-badge/set-badge-kinds.ts`, maps each `SetKind` (`working`,
 `warmup`, `drop`, `myo`, `failure`) to its fill, ink, optional ring and its spoken name. The letter comes from
 `SET_KIND_RULES` in `models/session-models/set-kind.ts`, the table every other screen reads. Failure
-is the `failure` red. Drop and myo are ink with an accent ring. Warm-up is `accentSoft`. A working set is
+is the `failure` red. Drop and myo are ink with an accent ring. Warm-up is `accentSoft` with the same ring, because the soft fill alone is close to a set tile's colour. A working set is
 the page colour with its number in Geist Mono. The badge's props only allow a number on a working set.
 
 It comes in two sizes: the default 36pt circle, and `size="small"` (16pt), which sits in the corner of a

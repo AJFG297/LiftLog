@@ -42,6 +42,13 @@ describe('SET_BADGE_LOOK', () => {
     }
   });
 
+  it('rings warm-up, drop and myo badges in the accent, so they stand out from the tile under them', () => {
+    const ringed = (Object.keys(SET_BADGE_LOOK) as SetKind[]).filter(
+      (kind) => SET_BADGE_LOOK[kind].ring === 'accentInk',
+    );
+    expect(ringed).toEqual(['warmup', 'drop', 'myo']);
+  });
+
   it('draws failure sets in the failure red, whatever the accent', () => {
     const tokens = themeTokens('#2F5BD3', 'dark');
     const { fill, ink } = SET_BADGE_LOOK.failure;
