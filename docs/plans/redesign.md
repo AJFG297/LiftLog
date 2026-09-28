@@ -1,6 +1,6 @@
 # Plan: app redesign ("Clarity")
 
-Status: **in progress**. Phase 0 is done (ADR-0002); phase 1 has started with PM-18 (theme tokens) and PM-19 (fonts), both described in [Theming.md](../Theming.md). The Linear parent issue is PM-16, "Spec: App redesign (Clarity)".
+Status: **in progress**. Phases 0 and 1 are done: ADR-0002 is accepted, and the theme tokens, fonts, core components, number pad and new set types are merged (see [Theming.md](../Theming.md)). Phase 2, the live workout, is next. The Linear parent issue is PM-16, "Spec: App redesign (Clarity)".
 
 The prototypes live on a private claude.ai design canvas owned by the author
 (<https://claude.ai/artifact/47zQyGzQ5NcrAP7Yw4Szwx>). It holds 28 clickable phone screens: the chosen
@@ -157,7 +157,8 @@ counts towards:
 
 **D8. The number pad and plate maths.**
 
-- Weight and reps in the live workout use our own number pad, not the system keyboard.
+- Weight and reps use our own number pad, not the system keyboard, both in the live workout and in the
+  routine editor. One input system everywhere; the editor doesn't keep steppers.
 - The ± step depends on equipment: barbell 2.5 kg / 5 lb, dumbbell 2 kg / 5 lb, machine and cable 2.5 kg /
   5 lb. When the equipment is unknown, the step falls back to the blueprint's weight increment.
 - Plate maths needs a bar weight and a plate set per unit. These are new preferences with sensible
@@ -200,8 +201,13 @@ Each numbered step is one Linear issue (child of PM-16) and roughly one PR.
 **Phase 3: plan and look back**
 
 11. **PM-24.** New tab structure (D4) and the Home screen: history, the Up next card, and the in-progress bar.
-12. **PM-26.** Routines tab and the routine editor, including the Advanced rest section. Related: PM-4.
+12. **PM-26.** Routines tab and the routine editor, including the Advanced rest section. Weights and reps use
+    the number pad (D8). Related: PM-4.
 13. **PM-32.** Exercise picker: search, muscle and equipment filters, recents, order of selection, create custom.
+    From first use on a phone:
+    - A new exercise must start with an empty name and a placeholder. Today `useAddExercise` and
+      `exercise-manager.tsx` save "New Exercise" as the real name, so it has to be deleted before typing.
+    - The built-in exercise library is too small. A bigger one belongs here or in its own issue.
 14. **PM-25.** Past workout detail (a single list) with "Do again" and "Save as routine".
 
 **Phase 4: needs design first**
@@ -234,6 +240,11 @@ Dependencies: 2 → 3 → 4 → (7, 11, 12, 14). Step 5 and step 6 → 8. Step 7
 
 ## Open questions
 
-- Should the number pad also replace the keyboard in the routine editor, or do steppers stay there?
-- Should RIR be offered as an alternative to RPE?
+Answered:
+
+- The number pad replaces the keyboard in the routine editor too (D8, step 12).
+- RIR isn't offered as an alternative to RPE, for now.
+
+Still open:
+
 - Does Progress (step 15) need its own round of prototypes before it's built? Probably yes.
