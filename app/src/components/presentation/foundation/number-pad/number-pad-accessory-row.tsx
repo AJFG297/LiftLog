@@ -1,3 +1,4 @@
+import { Chip } from '@/components/presentation/foundation/chip';
 import { SurfaceText } from '@/components/presentation/foundation/surface-text';
 import { spacing, tabularText, useAppTheme } from '@/hooks/useAppTheme';
 import { platesFor, type LoadUnit } from '@/models/plates';
@@ -9,7 +10,6 @@ import BigNumber from 'bignumber.js';
 import { ScrollView, View } from 'react-native';
 import type { NumberPadAccessory } from './number-pad-accessory';
 import { PlateStack } from './plate-stack';
-import { RpeChip } from './rpe-chip';
 
 export function formatLoad(value: BigNumber, unit: LoadUnit | undefined): string {
   return unit ? `${localeFormatBigNumber(value)} ${shortFormatWeightUnit(unit)}` : localeFormatBigNumber(value);
@@ -108,9 +108,11 @@ function RpeRow(props: { value: Rpe | undefined; onChange: (rpe: Rpe | undefined
       </SurfaceText>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing[2] }}>
         {RPE_VALUES.map((rpe) => (
-          <RpeChip
+          <Chip
             key={rpe}
+            numeric
             label={localeFormatBigNumber(new BigNumber(rpe))}
+            accessibilityLabel={t('number_pad.rpe_value.label', { rpe: localeFormatBigNumber(new BigNumber(rpe)) })}
             selected={props.value === rpe}
             onPress={() => props.onChange(props.value === rpe ? undefined : rpe)}
           />

@@ -757,6 +757,7 @@
   "number_pad.per_dumbbell.label": "{weight} per dumbbell",
   "number_pad.on_stack.label": "{weight} on the stack",
   "number_pad.rpe.label": "RPE",
+  "number_pad.rpe_value.label": "RPE {rpe}",
   "settings.bar_and_plates.title": "Bar and plates",
   "settings.bar_and_plates.subtitle": "The bar and plates you lift with, for working out what to load on each side",
   "settings.bar_and_plates.kilograms.subtitle": "These are in kilograms. Change units in Localisation.",
