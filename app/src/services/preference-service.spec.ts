@@ -206,6 +206,41 @@ describe('PreferenceService - firstDayOfWeek', () => {
   });
 });
 
+// ─── barWeight / availablePlates ──────────────────────────────────────────────
+
+describe('PreferenceService - bar weight and plates', () => {
+  it('defaults to a 20 kg / 45 lb bar and standard plates when unset', async () => {
+    const { service } = makeService();
+    expect(await service.getPreference('barWeight')).toEqual({ kilograms: 20, pounds: 45 });
+    expect(await service.getPreference('availablePlates')).toEqual({
+      kilograms: [25, 20, 15, 10, 5, 2.5, 1.25],
+      pounds: [45, 35, 25, 10, 5, 2.5],
+    });
+  });
+
+  it('writes JSON and reads it back', async () => {
+    const { service, store } = makeService();
+    await service.setPreference('barWeight', { kilograms: 15, pounds: 35 });
+    await service.setPreference('availablePlates', { kilograms: [20, 1.25], pounds: [45] });
+    expect(store.setItem).toHaveBeenCalledWith('barWeight', '{"kilograms":15,"pounds":35}');
+    expect(store.setItem).toHaveBeenCalledWith('availablePlates', '{"kilograms":[20,1.25],"pounds":[45]}');
+    expect(await service.getPreference('barWeight')).toEqual({ kilograms: 15, pounds: 35 });
+    expect(await service.getPreference('availablePlates')).toEqual({ kilograms: [20, 1.25], pounds: [45] });
+  });
+
+  it('falls back to the defaults for anything unreadable', async () => {
+    const read = (key: 'barWeight' | 'availablePlates', raw: string) =>
+      makeService({ [key]: raw }).service.getPreference(key);
+    expect(await read('barWeight', 'garbage')).toEqual({ kilograms: 20, pounds: 45 });
+    expect(await read('barWeight', '{"kilograms":15}')).toEqual({ kilograms: 20, pounds: 45 });
+    expect(await read('barWeight', '{"kilograms":-1,"pounds":35}')).toEqual({ kilograms: 20, pounds: 45 });
+    expect(await read('availablePlates', '{"kilograms":[20,"5"],"pounds":[45]}')).toEqual({
+      kilograms: [25, 20, 15, 10, 5, 2.5, 1.25],
+      pounds: [45, 35, 25, 10, 5, 2.5],
+    });
+  });
+});
+
 // ─── proToken (has a __DEV__ write guard) ─────────────────────────────────────
 
 describe('PreferenceService - proToken', () => {

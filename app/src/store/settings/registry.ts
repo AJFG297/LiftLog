@@ -1,4 +1,5 @@
 import { BackendId } from '@/models/backend';
+import { DEFAULT_BAR_WEIGHT, DEFAULT_PLATES, type PerUnit } from '@/models/plates';
 import { RemoteData } from '@/models/remote';
 import { DayOfWeek, Instant } from '@js-joda/core';
 import { ActionCreatorWithPreparedPayload, createAction, UnknownAction } from '@reduxjs/toolkit';
@@ -9,6 +10,9 @@ import {
   ColorSchemeSeed,
   dayOfWeekCodec,
   intCodec,
+  isBarWeight,
+  isPlateList,
+  perUnitCodec,
   PlansSortOrder,
   plansSortOrderCodec,
   stringCodec,
@@ -75,6 +79,8 @@ export const preferenceRegistry = {
   themeMode: pref<ThemeMode>({ default: 'system', codec: themeModeCodec }),
   plansSortOrder: pref<PlansSortOrder>({ default: 'name', codec: plansSortOrderCodec }),
   firstDayOfWeek: pref<DayOfWeek>({ default: DayOfWeek.SUNDAY, codec: dayOfWeekCodec }),
+  barWeight: pref<PerUnit<number>>({ default: DEFAULT_BAR_WEIGHT, codec: perUnitCodec(isBarWeight) }),
+  availablePlates: pref<PerUnit<number[]>>({ default: DEFAULT_PLATES, codec: perUnitCodec(isPlateList) }),
 
   // Generic read, but bespoke write-back (permission gate + revert).
   exportToHealthAggregator: pref({ default: false, codec: boolCodec, persist: false }),

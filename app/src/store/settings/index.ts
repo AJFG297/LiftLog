@@ -101,6 +101,8 @@ export const {
   setLogRpe,
   setTrueBlackDarkTheme,
   setThemeMode,
+  setBarWeight,
+  setAvailablePlates,
 } = preferenceSetters;
 
 export const { selectPreferredWeightUnit } = settingsSlice.selectors;
