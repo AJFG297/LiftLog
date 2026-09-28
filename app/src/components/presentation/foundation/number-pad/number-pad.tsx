@@ -3,10 +3,6 @@ import { formatWeightText } from '@/components/presentation/foundation/weight-fo
 import { spacing, useAppTheme } from '@/hooks/useAppTheme';
 import { type LoadUnit, Weight } from '@/models/weight';
 import { localeDecimalSeparator, localeFormatBigNumber } from '@/utils/locale-bignumber';
-import { msArrowForward } from '@material-symbols-react-native/outlined-400/msArrowForward';
-import { msBackspace } from '@material-symbols-react-native/outlined-400/msBackspace';
-import { msCheck } from '@material-symbols-react-native/outlined-400/msCheck';
-import { msKeyboardHide } from '@material-symbols-react-native/outlined-400/msKeyboardHide';
 import { useTranslate } from '@tolgee/react';
 import { View } from 'react-native';
 import Animated, { ReduceMotion, SlideInDown, SlideOutDown } from 'react-native-reanimated';
@@ -85,13 +81,13 @@ export function NumberPad(props: NumberPadProps) {
             )}
             {digitKey('0')}
             <NumberPadKey label={t('number_pad.delete.button')} onPress={() => onAction({ type: 'backspace' })}>
-              <NumberPadKeyIcon icon={msBackspace} color={tokens.ink} />
+              <NumberPadKeyIcon name="backspace" color={tokens.ink} />
             </NumberPadKey>
           </View>
         </View>
         <View style={{ flex: 1, gap: spacing[2] }}>
           <NumberPadKey label={t('number_pad.hide.button')} onPress={props.onHide}>
-            <NumberPadKeyIcon icon={msKeyboardHide} color={tokens.ink} />
+            <NumberPadKeyIcon name="keyboardHide" color={tokens.ink} />
           </NumberPadKey>
           <NumberPadKey
             label={t('number_pad.step_down.button', { step })}
@@ -114,7 +110,7 @@ export function NumberPad(props: NumberPadProps) {
             label={props.primary === 'next' ? t('number_pad.next.button') : t('number_pad.log_set.button')}
             onPress={props.onPrimary}
           >
-            <NumberPadKeyIcon icon={props.primary === 'next' ? msArrowForward : msCheck} color={tokens.onAccent} />
+            <NumberPadKeyIcon name={props.primary === 'next' ? 'arrowForward' : 'check'} color={tokens.onAccent} />
           </NumberPadKey>
         </View>
       </View>

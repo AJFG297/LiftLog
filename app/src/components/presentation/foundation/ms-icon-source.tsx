@@ -1,8 +1,10 @@
 import { msAdd } from '@material-symbols-react-native/outlined-400/msAdd';
 import { msArrowDownward } from '@material-symbols-react-native/outlined-400/msArrowDownward';
+import { msArrowForward } from '@material-symbols-react-native/outlined-400/msArrowForward';
 import { msArrowUpward } from '@material-symbols-react-native/outlined-400/msArrowUpward';
 import { msAssignment } from '@material-symbols-react-native/outlined-400/msAssignment';
 import { msAssignmentFill } from '@material-symbols-react-native/outlined-400/msAssignmentFill';
+import { msBackspace } from '@material-symbols-react-native/outlined-400/msBackspace';
 import { msBugReport } from '@material-symbols-react-native/outlined-400/msBugReport';
 import { msClose } from '@material-symbols-react-native/outlined-400/msClose';
 import { msContentCopy } from '@material-symbols-react-native/outlined-400/msContentCopy';
@@ -50,6 +52,7 @@ import { msChevronLeft } from '@material-symbols-react-native/outlined-400/msChe
 import { msForum } from '@material-symbols-react-native/outlined-400/msForum';
 import { msForumFill } from '@material-symbols-react-native/outlined-400/msForumFill';
 import { msInventory } from '@material-symbols-react-native/outlined-400/msInventory';
+import { msKeyboardHide } from '@material-symbols-react-native/outlined-400/msKeyboardHide';
 import { msChevronRight } from '@material-symbols-react-native/outlined-400/msChevronRight';
 import { msArrowDropDown } from '@material-symbols-react-native/outlined-400/msArrowDropDown';
 import { msCheck } from '@material-symbols-react-native/outlined-400/msCheck';
@@ -140,9 +143,11 @@ const MaterialSymbols = {
   add: msAdd,
   addCircle: msAddCircle,
   arrowDownward: msArrowDownward,
+  arrowForward: msArrowForward,
   arrowUpward: msArrowUpward,
   assignment: msAssignment,
   assignmentFill: msAssignmentFill,
+  backspace: msBackspace,
   bugReport: msBugReport,
   campaign: msCampaign,
   close: msClose,
@@ -243,6 +248,7 @@ const MaterialSymbols = {
   fitnessCenter: msFitnessCenter,
   fitnessCenterFill: msFitnessCenterFill,
   inventory: msInventory,
+  keyboardHide: msKeyboardHide,
 
   chevronLeft: msChevronLeft,
   chevronRight: msChevronRight,

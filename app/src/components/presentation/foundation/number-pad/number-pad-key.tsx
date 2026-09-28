@@ -1,6 +1,6 @@
 import { rounding, useAppTheme } from '@/hooks/useAppTheme';
-import { MsIcon } from 'material-symbols-react-native';
-import { ComponentProps, ReactNode } from 'react';
+import { type AppIconName, MsIconSrc } from '@/components/presentation/foundation/ms-icon-source';
+import { ReactNode } from 'react';
 import { Pressable, View } from 'react-native';
 
 const KEY_MIN_HEIGHT = 52;
@@ -40,10 +40,10 @@ export function NumberPadKeySpacer() {
   );
 }
 
-export function NumberPadKeyIcon(props: { icon: ComponentProps<typeof MsIcon>['icon']; color: string }) {
+export function NumberPadKeyIcon(props: { name: AppIconName; color: string }) {
   return (
     <View importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
-      <MsIcon icon={props.icon} size={24} color={props.color} />
+      <MsIconSrc name={props.name} size={24} color={props.color} />
     </View>
   );
 }
