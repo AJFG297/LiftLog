@@ -238,11 +238,15 @@ export function calculateStats(
       if (ex instanceof RecordedCardioExercise) {
         continue;
       }
-      const maxWeight = ex
+      const weights = ex
         .setsCountingTowards('countsTowardsPrs')
         .filter((ps) => ps.set)
-        .map((ps) => ex.effectiveWeight(ps, session.bodyweight))
-        .reduce((a, b) => (a.isGreaterThan(b) ? a : b), Weight.NIL);
+        .map((ps) => ex.effectiveWeight(ps, session.bodyweight));
+      // Only drop or myo sets logged: there is no lift here to be the heaviest.
+      if (!weights.length) {
+        continue;
+      }
+      const maxWeight = weights.reduce((a, b) => (a.isGreaterThan(b) ? a : b));
       if (!heaviestLift || maxWeight.isGreaterThan(heaviestLift.weight)) {
         heaviestLift = {
           exerciseName: ex.blueprint.name,
