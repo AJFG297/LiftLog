@@ -1,4 +1,4 @@
-import { formatRepsTarget, uniformTarget } from '@/models/blueprint-models';
+import { formatPlannedSets, formatRepsTarget, uniformWorkingTarget } from '@/models/blueprint-models';
 import { RecordedExercise, RecordedWeightedExercise, Session } from '@/models/session-models';
 import { bodyweightLoadText, Weight } from '@/models/weight';
 import { formatDistance } from '@/utils/distance';
@@ -6,13 +6,15 @@ import { formatCardioTarget } from '@/utils/format-cardio-target';
 import { formatTimeSpan } from '@/utils/format-time-span';
 import { localeFormatBigNumber } from '@/utils/locale-bignumber';
 import { formatRpe, Rpe } from '@/models/session-models/rpe';
+import { setLabels } from '@/models/session-models/set-kind';
 
 /**
  * A text rendering of an exercise, for surfaces that summarise a session rather than let you work through it.
  * Sets that repeat collapse into a multiplier -- three identical sets are one fact, not three -- but sets that
  * differ are kept apart, because a pyramid is the interesting thing about a pyramid. A weightless exercise says
  * nothing about weight rather than claiming "0 kg". A set reads `3 × 5 100kg @8`: `@` is kept for RPE, so the
- * weight goes unmarked.
+ * weight goes unmarked. A set that is not a working set leads with its letter, `D 12 40kg`, and never joins a
+ * working set's run.
  */
 export function formatExerciseSummary(
   exercise: RecordedExercise,
@@ -77,14 +79,19 @@ function filledRuns(
   usesBodyweight: boolean,
   bodyweightLabel: string,
 ): SetRun[] {
+  const kindLabels = setLabels(exercise.potentialSets.map((potentialSet) => potentialSet.kind));
   return runsOf(
-    exercise.potentialSets
-      .filter((potentialSet) => potentialSet.set)
-      .map((potentialSet) => ({
-        label: potentialSet.set!.repsCompleted.toString(),
-        weight: weightOf(potentialSet.weight, showWeight, usesBodyweight, bodyweightLabel),
-        rpe: potentialSet.loggedRpe,
-      })),
+    exercise.potentialSets.flatMap((potentialSet, index) => {
+      if (!potentialSet.set) return [];
+      const reps = potentialSet.set.repsCompleted.toString();
+      return [
+        {
+          label: potentialSet.kind === 'working' ? reps : `${kindLabels[index]} ${reps}`,
+          weight: weightOf(potentialSet.weight, showWeight, usesBodyweight, bodyweightLabel),
+          rpe: potentialSet.loggedRpe,
+        },
+      ];
+    }),
   );
 }
 
@@ -94,9 +101,9 @@ function bodyweightWeightLabel(weight: Weight, bodyweightLabel: string): string 
 }
 
 /**
- * A plan is a shape, not a log, so it collapses to one line: `sets × reps` when every set shares a target,
- * or the per-set targets spelled out (`12/10/8`) for a pyramid. A rep range shows as `min–max`. The weight,
- * when shown, becomes a range if it steps between sets.
+ * A plan is a shape, not a log, so it collapses to one line: `sets × reps` when every set is a working set
+ * with the same target, or the per-set targets spelled out (`12/10/8`, `5/5/F 5/D 12`) otherwise. A rep
+ * range shows as `min–max`. The weight, when shown, becomes a range if it steps between sets.
  *
  * Targets come off the sets rather than the blueprint, since a rule that has climbed the reps leaves the
  * plan's numbers behind and the card would otherwise promise a session you are not about to do.
@@ -108,10 +115,10 @@ function formatPlanned(
   bodyweightLabel: string,
 ): string {
   const sets = exercise.potentialSets;
-  const targets = sets.map((_, index) => exercise.repsTargetForSet(index));
-  const uniform = uniformTarget(targets.map((reps) => ({ reps })));
+  const targets = sets.map((set, index) => ({ reps: exercise.repsTargetForSet(index), kind: set.kind }));
+  const uniform = uniformWorkingTarget(targets);
   const shape =
-    uniform === undefined ? targets.map(formatRepsTarget).join('/') : `${sets.length} × ${formatRepsTarget(uniform)}`;
+    uniform === undefined ? formatPlannedSets(targets, '/') : `${sets.length} × ${formatRepsTarget(uniform)}`;
 
   if (usesBodyweight) {
     if (!showWeight) {

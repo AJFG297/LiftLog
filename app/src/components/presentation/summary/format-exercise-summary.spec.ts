@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { formatExerciseSummary, formatSessionVolume } from '@/components/presentation/summary/format-exercise-summary';
 import { PotentialSet, RecordedSet, RecordedWeightedExercise, Session } from '@/models/session-models';
+import type { WorkingListKind } from '@/models/session-models/set-kind';
 import { SessionBlueprint } from '@/models/blueprint-models';
 import { Weight } from '@/models/weight';
 import { LocalDate } from '@js-joda/core';
@@ -13,7 +14,7 @@ const filled = { isFilled: true, showWeight: true, bodyweightLabel: 'BW' };
 
 /** Every set is seeded with the plan's target, which is what building a session does. */
 function exerciseOf(
-  sets: { reps: number | undefined; weight: number | Weight }[],
+  sets: { reps: number | undefined; weight: number | Weight; kind?: WorkingListKind }[],
   blueprint = makeWeightedBlueprint(),
 ) {
   return new RecordedWeightedExercise(
@@ -24,6 +25,7 @@ function exerciseOf(
           set.reps === undefined ? undefined : RecordedSet.of({ repsCompleted: set.reps, completionDateTime: tick() }),
         weight: set.weight instanceof Weight ? set.weight : new Weight(set.weight, 'kilograms'),
         target: blueprint.repsTargetForSet(index),
+        kind: set.kind,
       }),
     ),
     undefined,
@@ -292,5 +294,66 @@ describe('summaries describe working sets only', () => {
 
   it('leaves warm-ups out of the session volume', () => {
     expect(formatSessionVolume(sessionOf(withWarmup(200, true)))).toBe('1,800kg');
+  });
+});
+
+describe('summaries letter sets that are not working sets', () => {
+  const planned = { isFilled: false, bodyweightLabel: 'BW', showWeight: false };
+
+  /** Sets at their own rep targets, logged or not. */
+  function kindsOf(sets: { reps: number; weight: number; kind: WorkingListKind }[], logged: boolean) {
+    return new RecordedWeightedExercise(
+      makeWeightedBlueprint(),
+      sets.map((set) =>
+        PotentialSet.of({
+          set: logged ? RecordedSet.of({ repsCompleted: set.reps, completionDateTime: tick() }) : undefined,
+          weight: new Weight(set.weight, 'kilograms'),
+          target: { min: set.reps, max: set.reps },
+          kind: set.kind,
+        }),
+      ),
+      undefined,
+    );
+  }
+
+  const benchPress = [
+    { reps: 5, weight: 100, kind: 'working' },
+    { reps: 5, weight: 100, kind: 'working' },
+    { reps: 5, weight: 100, kind: 'failure' },
+    { reps: 12, weight: 40, kind: 'drop' },
+    { reps: 15, weight: 40, kind: 'myo' },
+  ] as const;
+
+  it('spells out a plan with its letters', () => {
+    expect(formatExerciseSummary(kindsOf([...benchPress], false), planned)).toBe('5/5/F 5/D 12/M 15');
+  });
+
+  it('spells out a plan whose sets share a target but not a kind', () => {
+    const exercise = exerciseOf([
+      { reps: undefined, weight: 60 },
+      { reps: undefined, weight: 60 },
+      { reps: undefined, weight: 60, kind: 'drop' },
+    ]);
+
+    expect(formatExerciseSummary(exercise, { ...planned, showWeight: true })).toBe('10/10/D 10 60kg');
+  });
+
+  it('keeps a logged set that is not a working set out of the working sets’ run', () => {
+    expect(formatExerciseSummary(kindsOf([...benchPress], true), filled)).toBe(
+      '2 × 5 100kg · F 5 100kg · D 12 40kg · M 15 40kg',
+    );
+  });
+
+  it('collapses repeated sets of the same kind, letter and all', () => {
+    const exercise = kindsOf(
+      [
+        { reps: 8, weight: 60, kind: 'working' },
+        { reps: 12, weight: 40, kind: 'drop' },
+        { reps: 12, weight: 40, kind: 'drop' },
+      ],
+      true,
+    );
+
+    expect(formatExerciseSummary(exercise, filled)).toBe('8 60kg · 2 × D 12 40kg');
   });
 });

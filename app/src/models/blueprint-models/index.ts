@@ -22,7 +22,7 @@ import {
   toLocalDateJSON,
 } from '../storage/versions/latest';
 import { RecordedWeightedExercise } from '@/models/session-models';
-import { setLabels, type WorkingListKind } from '@/models/session-models/set-kind';
+import { setLabels, type SetKind, type WorkingListKind } from '@/models/session-models/set-kind';
 import { Weight, WeightUnit } from '@/models/weight';
 
 export class ProgramBlueprint {
@@ -748,11 +748,14 @@ export function formatRepsTarget(target: RepsTarget): string {
   return target.min === target.max ? `${target.max}` : `${target.min}-${target.max}`;
 }
 
+/** A {@link PlannedSet}, or a session slot's target and kind, which is typed as any {@link SetKind}. */
+type KindedTarget = { reps: RepsTarget; kind: SetKind };
+
 /**
  * How a whole list of planned sets reads: `10`, `8-12`, or `12, 10, 8` for a pyramid. A set that is not
  * a working set is spelled out with its letter, `10, 10, D 15`, so a change of kind reads as one.
  */
-export function formatPlannedSets(plannedSets: PlannedSet[], separator = ', '): string {
+export function formatPlannedSets(plannedSets: readonly KindedTarget[], separator = ', '): string {
   const uniform = uniformWorkingTarget(plannedSets);
   if (uniform) {
     return formatRepsTarget(uniform);
@@ -766,7 +769,7 @@ export function formatPlannedSets(plannedSets: PlannedSet[], separator = ', '): 
 }
 
 /** The target every set shares, or undefined when they differ. */
-export function uniformTarget(plannedSets: Pick<PlannedSet, 'reps'>[]): RepsTarget | undefined {
+export function uniformTarget(plannedSets: readonly Pick<PlannedSet, 'reps'>[]): RepsTarget | undefined {
   const first = plannedSets[0]?.reps;
   if (!first) {
     return undefined;
@@ -775,7 +778,7 @@ export function uniformTarget(plannedSets: Pick<PlannedSet, 'reps'>[]): RepsTarg
 }
 
 /** The target every set shares when they are all working sets, so the list reads as one target. */
-export function uniformWorkingTarget(plannedSets: PlannedSet[]): RepsTarget | undefined {
+export function uniformWorkingTarget(plannedSets: readonly KindedTarget[]): RepsTarget | undefined {
   return plannedSets.every((s) => s.kind === 'working') ? uniformTarget(plannedSets) : undefined;
 }
 
