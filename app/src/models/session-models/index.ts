@@ -8,6 +8,7 @@ import {
 import { RecordedCardioExercise, RecordedCardioExerciseSet } from '@/models/session-models/recorded-cardio-exercise';
 import { fromRecordedExerciseJSON, RecordedExercise } from '@/models/session-models/recorded-exercise';
 import { RestTimer } from '@/models/session-models/rest-timer';
+import { SESSION_FEELS, SessionFeel, SessionReflection } from '@/models/session-models/reflection';
 
 export {
   RecordedWeightedExercise,
@@ -21,4 +22,6 @@ export {
   EmptySession,
   fromRecordedExerciseJSON,
   WeightAppliesTo,
+  SESSION_FEELS,
 };
+export type { SessionFeel, SessionReflection };

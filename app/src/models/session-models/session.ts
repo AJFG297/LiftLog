@@ -25,6 +25,7 @@ import {
 } from '@/models/session-models/recorded-exercise';
 import { PotentialSet, RecordedWeightedExercise } from '@/models/session-models/recorded-weighted-exercise';
 import { RestTimer } from '@/models/session-models/rest-timer';
+import { normalizedReflection, reflectionsEqual, SessionReflection } from '@/models/session-models/reflection';
 import { IndexOutOfBoundsError } from '@/utils/index-out-of-bounds';
 
 export class Session {
@@ -35,6 +36,8 @@ export class Session {
     readonly date: LocalDate,
     readonly bodyweight: Weight | undefined,
     readonly restTimer: RestTimer | undefined,
+    /** Not in {@link toJSON}; see {@link SessionReflection}. */
+    readonly reflection?: SessionReflection,
   ) {}
   get duration(): Duration | undefined {
     const { startTime, endTime } = this;
@@ -100,6 +103,7 @@ export class Session {
       this.date.equals(other.date) &&
       equal(this.bodyweight, other.bodyweight) &&
       this.blueprint.equals(other.blueprint) &&
+      reflectionsEqual(this.reflection, other.reflection) &&
       this.recordedExercises.length === other.recordedExercises.length &&
       this.recordedExercises.every((exercise, index) => exercise.equals(other.recordedExercises[index]))
     );
@@ -113,6 +117,7 @@ export class Session {
       'date' in other ? (other.date ?? this.date) : this.date,
       'bodyweight' in other ? other.bodyweight : this.bodyweight,
       'restTimer' in other ? other.restTimer : this.restTimer,
+      'reflection' in other ? normalizedReflection(other.reflection) : this.reflection,
     );
   }
 
