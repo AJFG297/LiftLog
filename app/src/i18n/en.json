@@ -756,5 +756,13 @@
   "number_pad.plates.below_bar.label": "Lighter than the bar ({bar})",
   "number_pad.per_dumbbell.label": "{weight} per dumbbell",
   "number_pad.on_stack.label": "{weight} on the stack",
-  "number_pad.rpe.label": "RPE"
+  "number_pad.rpe.label": "RPE",
+  "settings.bar_and_plates.title": "Bar and plates",
+  "settings.bar_and_plates.subtitle": "The bar and plates you lift with, for working out what to load on each side",
+  "settings.bar_and_plates.kilograms.subtitle": "These are in kilograms. Change units in Localisation.",
+  "settings.bar_and_plates.pounds.subtitle": "These are in pounds. Change units in Localisation.",
+  "settings.bar_weight.label": "Bar weight",
+  "settings.bar_weight.subtitle": "What the empty bar weighs",
+  "settings.available_plates.label": "Plates",
+  "settings.available_plates.subtitle": "Switch on the plates your gym has. Each one can be used on both sides as many times as needed."
 }
