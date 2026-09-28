@@ -26,6 +26,8 @@ there, LiftLog tells you nothing new was added.
   version.
 - If you delete an imported workout and import the same file again, it comes back.
 - Only weighted sets are imported. Cardio-only or timed-only rows are skipped.
+- Every imported set is a working set. Neither export marks drop, myo or failure sets (a StrongLifts
+  `0` is an unused or missed slot, not a set taken to failure), so there is nothing to map.
 - Comments and notes from the file become exercise notes. 
 
 ## Supported formats

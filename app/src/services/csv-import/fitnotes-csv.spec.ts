@@ -85,6 +85,16 @@ describe('getImportForFitNotes', () => {
     expect(rebuilt.equals(session)).toBe(true);
   });
 
+  it('imports every set as a working set: the FitNotes CSV export has no set-type column', () => {
+    const kinds = importSample().workouts.flatMap((session) =>
+      session.recordedExercises.flatMap((exercise) => [
+        ...(exercise as RecordedWeightedExercise).potentialSets.map((set) => set.kind),
+        ...(exercise as RecordedWeightedExercise).blueprint.plannedSets.map((set) => set.kind),
+      ]),
+    );
+    expect(new Set(kinds)).toEqual(new Set(['working']));
+  });
+
   it('groups multiple dates into multiple sessions', () => {
     const backup = importSample();
     expect(backup.workouts.map((s) => s.date.toString())).toEqual(['2026-08-04', '2026-08-05']);

@@ -23,6 +23,7 @@ import {
 } from './blueprint-diff';
 import { UseTranslateResult } from '@tolgee/react';
 import { makeWeightedBlueprint } from '@/models/session-models/__test__/helpers';
+import type { WorkingListKind } from '@/models/session-models/set-kind';
 import { Weight } from '@/models/weight';
 
 describe('diffSessionBlueprints', () => {
@@ -673,6 +674,38 @@ describe('getChangeDescription', () => {
       oldValue: '10',
       newValue: '10',
     });
+  });
+});
+
+describe('set kinds in the plan diff', () => {
+  const squat = (kinds: WorkingListKind[]) =>
+    makeWeightedBlueprint({
+      name: 'Squat',
+      plannedSets: kinds.map((kind) => ({ reps: { min: 10, max: 10 }, kind })),
+      progression: [ProgressionRule.load(BigNumber(2.5))],
+    });
+  const t: UseTranslateResult['t'] = (key, params?) => ({ key, params }) as unknown as string;
+
+  it('treats a change of set kind as a modification of the planned sets', () => {
+    const original = new SessionBlueprint('Workout', [squat(['working', 'working', 'working'])], '');
+    const modified = new SessionBlueprint('Workout', [squat(['working', 'working', 'drop'])], '');
+
+    const diff = diffSessionBlueprints(original, modified);
+
+    expect(diff.modifiedExercises[0]!.changes.map((c) => [c.kind, c.type])).toEqual([
+      ['exercisePlannedSets', 'modified'],
+    ]);
+    expect(getChangeDescription(t, diff.modifiedExercises[0]!.changes[0]!)).toEqual({
+      key: 'plan.diff.generic_two_value_change.body',
+      params: { oldValue: '10', newValue: '10, 10, D 10' },
+    });
+    expect(applySessionBlueprintDiff(original, diff).equals(modified)).toBe(true);
+  });
+
+  it('finds no change when the kinds match', () => {
+    const plan = () => new SessionBlueprint('Workout', [squat(['failure', 'working', 'myo'])], '');
+
+    expect(diffSessionBlueprints(plan(), plan()).hasChanges).toBe(false);
   });
 });
 

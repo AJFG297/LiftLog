@@ -22,7 +22,7 @@ import {
   toLocalDateJSON,
 } from '../storage/versions/latest';
 import { RecordedWeightedExercise } from '@/models/session-models';
-import type { WorkingListKind } from '@/models/session-models/set-kind';
+import { setLabels, type WorkingListKind } from '@/models/session-models/set-kind';
 import { Weight, WeightUnit } from '@/models/weight';
 
 export class ProgramBlueprint {
@@ -735,10 +735,21 @@ export function formatRepsTarget(target: RepsTarget): string {
   return target.min === target.max ? `${target.max}` : `${target.min}-${target.max}`;
 }
 
-/** How a whole list of planned sets reads: `10`, `8-12`, or `12, 10, 8` for a pyramid. */
+/**
+ * How a whole list of planned sets reads: `10`, `8-12`, or `12, 10, 8` for a pyramid. A set that is not
+ * a working set is spelled out with its letter, `10, 10, D 15`, so a change of kind reads as one.
+ */
 export function formatPlannedSets(plannedSets: PlannedSet[]): string {
   const uniform = uniformTarget(plannedSets);
-  return uniform ? formatRepsTarget(uniform) : plannedSets.map((s) => formatRepsTarget(s.reps)).join(', ');
+  if (uniform && plannedSets.every((s) => s.kind === 'working')) {
+    return formatRepsTarget(uniform);
+  }
+  const labels = setLabels(plannedSets.map((s) => s.kind));
+  return plannedSets
+    .map((s, index) =>
+      s.kind === 'working' ? formatRepsTarget(s.reps) : `${labels[index]} ${formatRepsTarget(s.reps)}`,
+    )
+    .join(', ');
 }
 
 /** The target every set shares, or undefined when they differ. */

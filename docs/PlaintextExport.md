@@ -27,7 +27,9 @@ b59ab47f-8955-4a23-afa3-5d472dacc575,2024-10-16T10:45:06,Incline Dumbbell Bench 
 logged. RPE can only be logged while **Log RPE** is on (Settings -> App configuration), but the column is always
 present. The JSON export carries the same value as `rpe` on each set.
 
-`SetType` is `warmup` for a logged warm-up set and `working` for every other set. An exercise's warm-ups come
-before its working sets, and their `TargetReps` is the warm-up's planned reps. Warm-ups never have an RPE. The
-column is last, after `RPE`, so tools that read the older columns by position keep working. In the JSON export,
-warm-ups are in each weighted exercise's `warmupSets`, apart from the working sets in `potentialSets`.
+`SetType` is what the set was for: `working`, `warmup`, `failure` (taken to failure), `drop` (a drop set) or
+`myo` (a myo-rep set). An exercise's warm-ups come before its other sets, and their `TargetReps` is the warm-up's
+planned reps. Warm-ups never have an RPE. The column is last, after `RPE`, so tools that read the older columns by
+position keep working. In the JSON export every set carries the same value as `kind`; warm-ups are in each
+weighted exercise's `warmupSets`, apart from the other sets in `potentialSets`, and each planned set in the
+exercise's `blueprint.plannedSets` has a `kind` too.

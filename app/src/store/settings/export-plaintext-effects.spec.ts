@@ -285,6 +285,30 @@ describe('export-plaintext-effects', () => {
       expect(column('TargetReps')).toEqual(['5', '10', '10']);
     });
 
+    it('writes each set its own type: failure, drop and myo as well as working and warmup', async () => {
+      const fileExportService = makeFileExportService();
+      const exercise = withLoggedWarmups(makeWeightedExercise('Bench Press', 4, 100, 10), [{ reps: 5, weightKg: 50 }]);
+      const kinds = ['working', 'failure', 'drop', 'myo'] as const;
+      const typed = kinds.reduce((ex, kind, index) => ex.withSet(index, (s) => s.with({ kind })), exercise);
+      const testBed = createAddEffectTestBed({
+        services: {
+          progressRepository: makeProgressRepository([makeSession([typed])]),
+          fileExportService,
+        },
+      });
+      addExportPlaintextEffects(testBed.addEffect);
+
+      await testBed.dispatchHandled(exportPlainText({ format: 'CSV' }));
+
+      const [, bytes] = fileExportService.exportBytes.mock.calls[0]!;
+      const rows = new TextDecoder()
+        .decode(bytes)
+        .trim()
+        .split('\n')
+        .map((line) => line.trim().split(','));
+      expect(rows.slice(1).map((row) => row.at(-1))).toEqual(['warmup', 'working', 'failure', 'drop', 'myo']);
+    });
+
     it('exports rows across multiple sessions', async () => {
       const fileExportService = makeFileExportService();
       const sessions = [
