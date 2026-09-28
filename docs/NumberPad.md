@@ -44,7 +44,7 @@ The row above the keys explains the value being typed:
 - **Barbell:** the plates for each side, with a drawing of them. `platesFor(weight, bar, plates)` in
   `models/plates.ts` uses the fewest plates, heaviest first, assuming any number of each size. A weight it
   can't make exactly gets the heaviest load under it and says how far short that is. A weight lighter than
-  the bar says so.
+  the bar says so. The drawing shows up to eight plates a side, then a count of the rest.
 - **Dumbbell:** the weight is per dumbbell. **Cable and machine:** the weight is what's on the stack.
 - **Reps:** RPE chips, 6 to 10 in half steps. Tapping the selected chip clears it.
 
