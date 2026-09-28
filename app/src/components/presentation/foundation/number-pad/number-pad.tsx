@@ -1,6 +1,7 @@
 import { SurfaceText } from '@/components/presentation/foundation/surface-text';
+import { formatWeightText } from '@/components/presentation/foundation/weight-format';
 import { spacing, useAppTheme } from '@/hooks/useAppTheme';
-import type { LoadUnit } from '@/models/weight';
+import { type LoadUnit, Weight } from '@/models/weight';
 import { localeFormatBigNumber } from '@/utils/locale-bignumber';
 import { msArrowForward } from '@material-symbols-react-native/outlined-400/msArrowForward';
 import { msBackspace } from '@material-symbols-react-native/outlined-400/msBackspace';
@@ -12,7 +13,7 @@ import { View } from 'react-native';
 import Animated, { ReduceMotion, SlideInDown, SlideOutDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NumberPadAccessory } from './number-pad-accessory';
-import { formatLoad, NumberPadAccessoryRow } from './number-pad-accessory-row';
+import { NumberPadAccessoryRow } from './number-pad-accessory-row';
 import { type Digit, type NumberPadAction, type NumberPadBuffer, numberPadValue } from './number-pad-buffer';
 import { NumberPadKey, NumberPadKeyIcon, NumberPadKeySpacer } from './number-pad-key';
 
@@ -44,7 +45,7 @@ export function NumberPad(props: NumberPadProps) {
 
   const { buffer, onAction } = props;
   const decimalSeparator = getLocales()[0]?.decimalSeparator || '.';
-  const step = formatLoad(buffer.step, props.unit);
+  const step = props.unit ? formatWeightText(new Weight(buffer.step, props.unit)) : localeFormatBigNumber(buffer.step);
   const digitKey = (digit: Digit) => (
     <NumberPadKey key={digit} label={digit} onPress={() => onAction({ type: 'digit', digit })}>
       <SurfaceText numeric font="text-2xl" style={{ color: tokens.ink }}>
@@ -65,7 +66,7 @@ export function NumberPad(props: NumberPadProps) {
       }}
     >
       <View style={{ paddingHorizontal: spacing[2] }}>
-        <NumberPadAccessoryRow accessory={props.accessory} value={numberPadValue(buffer)} unit={props.unit} />
+        <NumberPadAccessoryRow accessory={props.accessory} value={numberPadValue(buffer)} />
       </View>
       <View style={{ flexDirection: 'row', gap: spacing[2] }}>
         <View style={{ flex: 3, gap: spacing[2] }}>

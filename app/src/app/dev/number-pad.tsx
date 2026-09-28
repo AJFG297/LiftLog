@@ -1,5 +1,4 @@
 import {
-  formatLoad,
   NumberPad,
   type NumberPadAccessory,
   type NumberPadBuffer,
@@ -12,11 +11,12 @@ import {
 import { Chip } from '@/components/presentation/foundation/chip';
 import SegmentedPicker from '@/components/presentation/foundation/segmented-picker';
 import { SurfaceText } from '@/components/presentation/foundation/surface-text';
+import { formatWeightText } from '@/components/presentation/foundation/weight-format';
 import { rounding, spacing, tabularText, useAppTheme } from '@/hooks/useAppTheme';
 import { useMountEffect } from '@/hooks/useMountEffect';
 import { equipmentClassOf, weightStepFor } from '@/models/equipment';
 import type { Rpe } from '@/models/session-models/rpe';
-import { type LoadUnit, shortFormatWeightUnit } from '@/models/weight';
+import { type LoadUnit, shortFormatWeightUnit, Weight } from '@/models/weight';
 import { useAppSelector } from '@/store';
 import { selectPreferredWeightUnit, setThemeMode, type ThemeMode } from '@/store/settings';
 import BigNumber from 'bignumber.js';
@@ -102,7 +102,9 @@ function DevNumberPad() {
   const logSet = () => {
     const weight = committed.weight ?? new BigNumber(PLACEHOLDER_WEIGHT[unit]);
     const reps = numberPadValue(buffer) ?? new BigNumber(PLACEHOLDER_REPS);
-    setLogged(`Logged ${formatLoad(weight, unit)} × ${reps.toString()}${rpe === undefined ? '' : ` @${rpe}`}`);
+    setLogged(
+      `Logged ${formatWeightText(new Weight(weight, unit))} × ${reps.toString()}${rpe === undefined ? '' : ` @${rpe}`}`,
+    );
     setCommitted({ weight: undefined, reps: undefined });
     setRpe(undefined);
     open('weight');
@@ -111,7 +113,7 @@ function DevNumberPad() {
   const accessory: NumberPadAccessory | undefined =
     fieldKind === 'reps'
       ? { kind: 'rpe', value: rpe, onChange: setRpe }
-      : weightAccessoryFor(classOf(equipment), { bar: barWeight[unit], plates: availablePlates[unit] });
+      : weightAccessoryFor(classOf(equipment), unit, { bar: barWeight[unit], plates: availablePlates[unit] });
 
   return (
     <View style={{ flex: 1, backgroundColor: tokens.bg }}>

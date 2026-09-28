@@ -1,9 +1,10 @@
 import { Chip } from '@/components/presentation/foundation/chip';
 import { SurfaceText } from '@/components/presentation/foundation/surface-text';
+import { formatWeightText } from '@/components/presentation/foundation/weight-format';
 import { spacing, tabularText, useAppTheme } from '@/hooks/useAppTheme';
 import { platesFor } from '@/models/plates';
 import { RPE_VALUES, type Rpe } from '@/models/session-models/rpe';
-import { type LoadUnit, shortFormatWeightUnit } from '@/models/weight';
+import { type LoadUnit, Weight } from '@/models/weight';
 import { localeFormatBigNumber } from '@/utils/locale-bignumber';
 import { useTranslate } from '@tolgee/react';
 import BigNumber from 'bignumber.js';
@@ -11,24 +12,19 @@ import { ScrollView, View } from 'react-native';
 import type { NumberPadAccessory } from './number-pad-accessory';
 import { PlateStack } from './plate-stack';
 
-export function formatLoad(value: BigNumber, unit: LoadUnit | undefined): string {
-  return unit ? `${localeFormatBigNumber(value)} ${shortFormatWeightUnit(unit)}` : localeFormatBigNumber(value);
-}
-
 export function NumberPadAccessoryRow(props: {
   accessory: NumberPadAccessory | undefined;
   value: BigNumber | undefined;
-  unit: LoadUnit | undefined;
 }) {
-  const { accessory, value, unit } = props;
+  const { accessory, value } = props;
   return (
     <View style={{ minHeight: spacing[12], justifyContent: 'center' }}>
       {accessory?.kind === 'rpe' ? (
         <RpeRow value={accessory.value} onChange={accessory.onChange} />
       ) : accessory?.kind === 'plates' && value ? (
-        <PlatesRow bar={accessory.bar} plates={accessory.plates} value={value} unit={unit} />
+        <PlatesRow bar={accessory.bar} plates={accessory.plates} value={value} unit={accessory.unit} />
       ) : (accessory?.kind === 'perDumbbell' || accessory?.kind === 'onStack') && value ? (
-        <LoadRow kind={accessory.kind} value={value} unit={unit} />
+        <LoadRow kind={accessory.kind} value={value} unit={accessory.unit} />
       ) : undefined}
     </View>
   );
@@ -48,18 +44,13 @@ function AccessoryText(props: { children: string }) {
   );
 }
 
-function PlatesRow(props: {
-  bar: BigNumber;
-  plates: readonly BigNumber[];
-  value: BigNumber;
-  unit: LoadUnit | undefined;
-}) {
+function PlatesRow(props: { bar: BigNumber; plates: readonly BigNumber[]; value: BigNumber; unit: LoadUnit }) {
   const { t } = useTranslate();
   const loading = platesFor(props.value, props.bar, props.plates);
   if (loading.kind === 'belowBar') {
     return (
       <AccessoryText>
-        {t('number_pad.plates.below_bar.label', { bar: formatLoad(props.bar, props.unit) })}
+        {t('number_pad.plates.below_bar.label', { bar: formatWeightText(new Weight(props.bar, props.unit)) })}
       </AccessoryText>
     );
   }
@@ -72,7 +63,10 @@ function PlatesRow(props: {
         });
   const text =
     loading.kind === 'inexact'
-      ? t('number_pad.plates.inexact.label', { plates: perSide, amount: formatLoad(loading.remainder, props.unit) })
+      ? t('number_pad.plates.inexact.label', {
+          plates: perSide,
+          amount: formatWeightText(new Weight(loading.remainder, props.unit)),
+        })
       : perSide;
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[3] }}>
@@ -86,9 +80,9 @@ function PlatesRow(props: {
   );
 }
 
-function LoadRow(props: { kind: 'perDumbbell' | 'onStack'; value: BigNumber; unit: LoadUnit | undefined }) {
+function LoadRow(props: { kind: 'perDumbbell' | 'onStack'; value: BigNumber; unit: LoadUnit }) {
   const { t } = useTranslate();
-  const weight = formatLoad(props.value, props.unit);
+  const weight = formatWeightText(new Weight(props.value, props.unit));
   return (
     <AccessoryText>
       {props.kind === 'perDumbbell'

@@ -1,15 +1,15 @@
 import { SettingsPage } from '@/components/layout/settings-page';
-import { formatLoad } from '@/components/presentation/foundation/number-pad';
 import { SegmentedGroup } from '@/components/presentation/foundation/segmented-list';
 import { SegmentedListSelect } from '@/components/presentation/foundation/segmented-list-select';
 import { SegmentedListSwitch } from '@/components/presentation/foundation/segmented-list-switch';
 import { SurfaceText } from '@/components/presentation/foundation/surface-text';
+import { formatWeightText } from '@/components/presentation/foundation/weight-format';
 import { spacing, useAppTheme } from '@/hooks/useAppTheme';
 import { BAR_WEIGHTS, PLATE_SIZES } from '@/models/plates';
+import { Weight } from '@/models/weight';
 import { useAppSelector } from '@/store';
 import { selectPreferredWeightUnit, setAvailablePlates, setBarWeight } from '@/store/settings';
 import { useTranslate } from '@tolgee/react';
-import BigNumber from 'bignumber.js';
 import { View } from 'react-native';
 import { useDispatch } from 'react-redux';
 
@@ -21,7 +21,7 @@ export default function BarAndPlatesPage() {
   const barWeight = useAppSelector((state) => state.settings.barWeight);
   const availablePlates = useAppSelector((state) => state.settings.availablePlates);
 
-  const label = (weight: number) => formatLoad(new BigNumber(weight), unit);
+  const label = (weight: number) => formatWeightText(new Weight(weight, unit));
   const barOptions = [...new Set([...BAR_WEIGHTS[unit], barWeight[unit]])]
     .sort((a, b) => a - b)
     .map((weight) => ({ value: weight, label: label(weight) }));
