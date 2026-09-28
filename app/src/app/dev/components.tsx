@@ -10,7 +10,7 @@ import { SegmentedControl } from '@/components/presentation/foundation/segmented
 import { SetBadge } from '@/components/presentation/foundation/set-badge';
 import { SurfaceText } from '@/components/presentation/foundation/surface-text';
 import { useToast } from '@/components/presentation/foundation/toast';
-import { spacing, useAppTheme } from '@/hooks/useAppTheme';
+import { spacing, tabularText, useAppTheme } from '@/hooks/useAppTheme';
 import { useAppSelector } from '@/store';
 import { setColorSchemeSeed, setThemeMode } from '@/store/settings';
 import { ACCENT_PRESETS } from '@/utils/theme-tokens';
@@ -67,6 +67,11 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
   );
 }
 
+function Chevron() {
+  const { tokens } = useAppTheme();
+  return <MsIconSrc name="chevronRight" size={20} color={tokens.faint} />;
+}
+
 function ThemeSection() {
   const dispatch = useDispatch();
   const { colorScheme } = useAppTheme();
@@ -114,7 +119,7 @@ function CardSection() {
           Pressable card
         </SurfaceText>
         <SurfaceText font="text-sm" style={{ color: tokens.muted }}>
-          Pressed <SurfaceText numeric>{presses}</SurfaceText> times
+          Pressed {presses} times
         </SurfaceText>
       </Card>
     </Section>
@@ -220,7 +225,7 @@ function ListRowSection() {
           subtitle="Barbell · rest 2:30"
           leading={<SetBadge kind="working" number={1} />}
           trailing={
-            <SurfaceText font="text-sm" style={{ color: tokens.muted }}>
+            <SurfaceText font="text-sm" style={[tabularText, { color: tokens.muted }]}>
               5 × 5
             </SurfaceText>
           }
@@ -230,7 +235,7 @@ function ListRowSection() {
           title="Overhead press"
           subtitle="Pressable row"
           onPress={() => toast.show({ message: 'Overhead press' })}
-          trailing={<MsIconSrc name="chevronRight" size={20} color={tokens.faint} />}
+          trailing={<Chevron />}
         />
       </Card>
     </Section>
@@ -263,17 +268,15 @@ function ProgressSection() {
 }
 
 function ToastAndSheetSection() {
-  const { tokens } = useAppTheme();
   const toast = useToast();
   const router = useRouter();
-  const chevron = <MsIconSrc name="chevronRight" size={20} color={tokens.faint} />;
   return (
     <Section title="Toast and sheet">
       <Card style={{ padding: 0, overflow: 'hidden' }}>
-        <ListRow title="Show a toast" trailing={chevron} onPress={() => toast.show({ message: 'Workout saved' })} />
+        <ListRow title="Show a toast" trailing={<Chevron />} onPress={() => toast.show({ message: 'Workout saved' })} />
         <ListRow
           title="Show a toast with Undo"
-          trailing={chevron}
+          trailing={<Chevron />}
           onPress={() =>
             toast.show({
               message: 'Set removed',
@@ -284,7 +287,7 @@ function ToastAndSheetSection() {
         <ListRow
           title="Open a sheet"
           subtitle="formSheetOptions([0.5, 0.9]) and SheetHeader"
-          trailing={chevron}
+          trailing={<Chevron />}
           onPress={() => router.push('/dev/components-sheet')}
         />
       </Card>
@@ -293,14 +296,12 @@ function ToastAndSheetSection() {
 }
 
 function HapticsSection() {
-  const { tokens } = useAppTheme();
-  const chevron = <MsIconSrc name="chevronRight" size={20} color={tokens.faint} />;
   return (
     <Section title="Haptics">
       <Card style={{ padding: 0, overflow: 'hidden' }}>
-        <ListRow title="Set logged" trailing={chevron} onPress={haptics.setLogged} />
-        <ListRow title="Rest over" trailing={chevron} onPress={haptics.restOver} />
-        <ListRow title="Selection" trailing={chevron} onPress={haptics.selection} />
+        <ListRow title="Set logged" trailing={<Chevron />} onPress={haptics.setLogged} />
+        <ListRow title="Rest over" trailing={<Chevron />} onPress={haptics.restOver} />
+        <ListRow title="Selection" trailing={<Chevron />} onPress={haptics.selection} />
       </Card>
     </Section>
   );
