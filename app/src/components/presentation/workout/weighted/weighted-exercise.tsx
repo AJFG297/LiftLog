@@ -17,6 +17,8 @@ interface WeightedExerciseProps {
   /** The Log RPE setting. Off still shows RPE already logged, it just stops offering to enter it. */
   rpeEnabled: boolean;
   showPreviousButton: boolean;
+  /** See {@link ExerciseSection}'s `variant`. */
+  variant?: 'list' | 'focus';
 
   timeProvider: () => OffsetDateTime;
   updateExercise: (update: Updater<RecordedWeightedExercise>) => void;
@@ -54,6 +56,7 @@ export default function WeightedExercise(props: WeightedExerciseProps) {
       toStartNext={props.toStartNext}
       isReadonly={props.isReadonly}
       showPreviousButton={props.showPreviousButton}
+      variant={props.variant}
       updateExercise={props.updateExercise}
       onEditExercise={props.onEditExercise}
       onRemoveExercise={props.onRemoveExercise}
