@@ -1,4 +1,9 @@
 import { msAdd } from '@material-symbols-react-native/outlined-400/msAdd';
+import { msDragIndicator } from '@material-symbols-react-native/outlined-400/msDragIndicator';
+import { msExpandMore } from '@material-symbols-react-native/outlined-400/msExpandMore';
+import { msFormatListBulleted } from '@material-symbols-react-native/outlined-400/msFormatListBulleted';
+import { msSwapHoriz } from '@material-symbols-react-native/outlined-400/msSwapHoriz';
+import { msTrackChanges } from '@material-symbols-react-native/outlined-400/msTrackChanges';
 import { msArrowDownward } from '@material-symbols-react-native/outlined-400/msArrowDownward';
 import { msArrowForward } from '@material-symbols-react-native/outlined-400/msArrowForward';
 import { msArrowUpward } from '@material-symbols-react-native/outlined-400/msArrowUpward';
@@ -282,6 +287,11 @@ const MaterialSymbols = {
   anchor: msAnchor,
 
   pause: msPause,
+  dragIndicator: msDragIndicator,
+  expandMore: msExpandMore,
+  formatListBulleted: msFormatListBulleted,
+  swapHoriz: msSwapHoriz,
+  trackChanges: msTrackChanges,
 };
 
 export type AppIconSource = keyof typeof MaterialSymbols | keyof typeof CustomIcons | (() => JSX.Element);
