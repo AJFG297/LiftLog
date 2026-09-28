@@ -325,7 +325,7 @@ describe('summaries letter sets that are not working sets', () => {
   ] as const;
 
   it('spells out a plan with its letters', () => {
-    expect(formatExerciseSummary(kindsOf([...benchPress], false), planned)).toBe('5/5/F 5/D 12/M 15');
+    expect(formatExerciseSummary(kindsOf([...benchPress], false), planned)).toBe('5/5/F\u00A05/D\u00A012/M\u00A015');
   });
 
   it('spells out a plan whose sets share a target but not a kind', () => {
@@ -335,12 +335,12 @@ describe('summaries letter sets that are not working sets', () => {
       { reps: undefined, weight: 60, kind: 'drop' },
     ]);
 
-    expect(formatExerciseSummary(exercise, { ...planned, showWeight: true })).toBe('10/10/D 10 60kg');
+    expect(formatExerciseSummary(exercise, { ...planned, showWeight: true })).toBe('10/10/D\u00A010 60kg');
   });
 
   it('keeps a logged set that is not a working set out of the working sets’ run', () => {
     expect(formatExerciseSummary(kindsOf([...benchPress], true), filled)).toBe(
-      '2 × 5 100kg · F 5 100kg · D 12 40kg · M 15 40kg',
+      '2 × 5 100kg · F\u00A05 100kg · D\u00A012 40kg · M\u00A015 40kg',
     );
   });
 
@@ -354,6 +354,6 @@ describe('summaries letter sets that are not working sets', () => {
       true,
     );
 
-    expect(formatExerciseSummary(exercise, filled)).toBe('8 60kg · 2 × D 12 40kg');
+    expect(formatExerciseSummary(exercise, filled)).toBe('8 60kg · 2 × D\u00A012 40kg');
   });
 });

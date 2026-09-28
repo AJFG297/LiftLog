@@ -753,7 +753,8 @@ type KindedTarget = { reps: RepsTarget; kind: SetKind };
 
 /**
  * How a whole list of planned sets reads: `10`, `8-12`, or `12, 10, 8` for a pyramid. A set that is not
- * a working set is spelled out with its letter, `10, 10, D 15`, so a change of kind reads as one.
+ * a working set is spelled out with its letter, `10, 10, D 15`, so a change of kind reads as one. A no-break
+ * space holds the letter to its reps when the line wraps.
  */
 export function formatPlannedSets(plannedSets: readonly KindedTarget[], separator = ', '): string {
   const uniform = uniformWorkingTarget(plannedSets);
@@ -763,7 +764,7 @@ export function formatPlannedSets(plannedSets: readonly KindedTarget[], separato
   const labels = setLabels(plannedSets.map((s) => s.kind));
   return plannedSets
     .map((s, index) =>
-      s.kind === 'working' ? formatRepsTarget(s.reps) : `${labels[index]} ${formatRepsTarget(s.reps)}`,
+      s.kind === 'working' ? formatRepsTarget(s.reps) : `${labels[index]}\u00A0${formatRepsTarget(s.reps)}`,
     )
     .join(separator);
 }

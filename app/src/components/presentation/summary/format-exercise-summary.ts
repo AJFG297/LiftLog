@@ -14,7 +14,7 @@ import { setLabels } from '@/models/session-models/set-kind';
  * differ are kept apart, because a pyramid is the interesting thing about a pyramid. A weightless exercise says
  * nothing about weight rather than claiming "0 kg". A set reads `3 × 5 100kg @8`: `@` is kept for RPE, so the
  * weight goes unmarked. A set that is not a working set leads with its letter, `D 12 40kg`, and never joins a
- * working set's run.
+ * working set's run. A no-break space holds the letter to its reps when the line wraps.
  */
 export function formatExerciseSummary(
   exercise: RecordedExercise,
@@ -86,7 +86,7 @@ function filledRuns(
       const reps = potentialSet.set.repsCompleted.toString();
       return [
         {
-          label: potentialSet.kind === 'working' ? reps : `${kindLabels[index]} ${reps}`,
+          label: potentialSet.kind === 'working' ? reps : `${kindLabels[index]}\u00A0${reps}`,
           weight: weightOf(potentialSet.weight, showWeight, usesBodyweight, bodyweightLabel),
           rpe: potentialSet.loggedRpe,
         },

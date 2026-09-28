@@ -649,6 +649,6 @@ describe('formatPlannedSets', () => {
         ],
         ' / ',
       ),
-    ).toBe('10 / F 10 / D 12-15');
+    ).toBe('10 / F\u00A010 / D\u00A012-15');
   });
 });
