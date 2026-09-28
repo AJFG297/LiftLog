@@ -280,7 +280,10 @@ const MaterialSymbols = {
 
 export type AppIconSource = keyof typeof MaterialSymbols | keyof typeof CustomIcons | (() => JSX.Element);
 
-export function MsIconSrc({ name, ...rest }: IconProps) {
+export type AppIconName = keyof typeof MaterialSymbols;
+
+// Paper passes its full IconProps; only these are needed, so it can also be used directly.
+export function MsIconSrc({ name, ...rest }: Pick<IconProps, 'name' | 'size' | 'color'>) {
   if ((name as keyof typeof CustomIcons) in CustomIcons) {
     return (
       <SvgXml

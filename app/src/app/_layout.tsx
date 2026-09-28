@@ -12,6 +12,8 @@ import StackWithHeader from '@/components/layout/stack-with-header';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { requireOptionalNativeModule } from 'expo';
+import { ToastProvider } from '@/components/presentation/foundation/toast';
+import { formSheetOptions } from '@/components/presentation/foundation/form-sheet-options';
 
 install();
 
@@ -37,9 +39,11 @@ export default function RootLayout() {
             <AppThemeProvider>
               <AppStateProvider>
                 <SnackbarProvider>
-                  {Platform.OS === 'android' && <StatusBar style="auto" />}
-                  <PlanImportGate />
-                  <Layout />
+                  <ToastProvider>
+                    {Platform.OS === 'android' && <StatusBar style="auto" />}
+                    <PlanImportGate />
+                    <Layout />
+                  </ToastProvider>
                 </SnackbarProvider>
               </AppStateProvider>
             </AppThemeProvider>
@@ -56,18 +60,10 @@ function Layout() {
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="exercise-search" options={{ presentation: 'modal' }} />
       <Stack.Screen name="exercise-editor" />
-      <Stack.Screen
-        name="exercise-history"
-        options={{
-          presentation: 'formSheet',
-          sheetAllowedDetents: [0.6, 0.95],
-          sheetGrabberVisible: true,
-          sheetCornerRadius: 28,
-          headerShown: false,
-        }}
-      />
+      <Stack.Screen name="exercise-history" options={formSheetOptions([0.6, 0.95])} />
       <Stack.Screen name="workout-editor" />
       <Stack.Screen name="diff-save" />
+      <Stack.Screen name="dev/components-sheet" options={formSheetOptions([0.5, 0.9])} />
     </StackWithHeader>
   );
 }
