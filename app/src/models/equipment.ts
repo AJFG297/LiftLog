@@ -1,5 +1,5 @@
 import BigNumber from 'bignumber.js';
-import type { LoadUnit, PerUnit } from '@/models/plates';
+import type { LoadUnit, PerUnit } from '@/models/weight';
 
 export type EquipmentClass = 'barbell' | 'dumbbell' | 'cable' | 'machine';
 

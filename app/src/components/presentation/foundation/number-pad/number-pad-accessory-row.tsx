@@ -1,9 +1,9 @@
 import { Chip } from '@/components/presentation/foundation/chip';
 import { SurfaceText } from '@/components/presentation/foundation/surface-text';
 import { spacing, tabularText, useAppTheme } from '@/hooks/useAppTheme';
-import { platesFor, type LoadUnit } from '@/models/plates';
+import { platesFor } from '@/models/plates';
 import { RPE_VALUES, type Rpe } from '@/models/session-models/rpe';
-import { shortFormatWeightUnit } from '@/models/weight';
+import { type LoadUnit, shortFormatWeightUnit } from '@/models/weight';
 import { localeFormatBigNumber } from '@/utils/locale-bignumber';
 import { useTranslate } from '@tolgee/react';
 import BigNumber from 'bignumber.js';

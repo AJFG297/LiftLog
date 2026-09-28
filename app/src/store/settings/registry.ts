@@ -1,5 +1,6 @@
 import { BackendId } from '@/models/backend';
-import { DEFAULT_BAR_WEIGHT, DEFAULT_PLATES, type PerUnit } from '@/models/plates';
+import { DEFAULT_BAR_WEIGHT, DEFAULT_PLATES } from '@/models/plates';
+import type { PerUnit } from '@/models/weight';
 import { RemoteData } from '@/models/remote';
 import { DayOfWeek, Instant } from '@js-joda/core';
 import { ActionCreatorWithPreparedPayload, createAction, UnknownAction } from '@reduxjs/toolkit';

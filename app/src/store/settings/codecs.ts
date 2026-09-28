@@ -1,6 +1,6 @@
 import { DayOfWeek, Instant } from '@js-joda/core';
 import { match, P } from 'ts-pattern';
-import type { PerUnit } from '@/models/plates';
+import type { PerUnit } from '@/models/weight';
 
 export type ColorSchemeSeed = 'default' | `#${string}`;
 

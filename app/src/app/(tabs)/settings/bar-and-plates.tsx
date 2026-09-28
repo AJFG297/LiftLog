@@ -5,7 +5,7 @@ import { SegmentedListSelect } from '@/components/presentation/foundation/segmen
 import { SegmentedListSwitch } from '@/components/presentation/foundation/segmented-list-switch';
 import { SurfaceText } from '@/components/presentation/foundation/surface-text';
 import { spacing, useAppTheme } from '@/hooks/useAppTheme';
-import { BAR_WEIGHTS, type LoadUnit, PLATE_SIZES } from '@/models/plates';
+import { BAR_WEIGHTS, PLATE_SIZES } from '@/models/plates';
 import { useAppSelector } from '@/store';
 import { selectPreferredWeightUnit, setAvailablePlates, setBarWeight } from '@/store/settings';
 import { useTranslate } from '@tolgee/react';
@@ -17,7 +17,7 @@ export default function BarAndPlatesPage() {
   const { t } = useTranslate();
   const { tokens } = useAppTheme();
   const dispatch = useDispatch();
-  const unit: LoadUnit = useAppSelector(selectPreferredWeightUnit) === 'pounds' ? 'pounds' : 'kilograms';
+  const unit = useAppSelector(selectPreferredWeightUnit);
   const barWeight = useAppSelector((state) => state.settings.barWeight);
   const availablePlates = useAppSelector((state) => state.settings.availablePlates);
 

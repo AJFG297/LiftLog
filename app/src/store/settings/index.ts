@@ -3,7 +3,7 @@ import { whatsNewEntries, WhatsNewEntry } from '@/models/whats-new';
 import type { RootState } from '@/store';
 import { BackupData, FeedBackupData } from '@/models/backup';
 import type { ExternalImportFormat } from '@/services/csv-import';
-import { WeightUnit } from '@/models/weight';
+import type { LoadUnit } from '@/models/weight';
 import { createAction, createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { SQLiteDatabase } from 'expo-sqlite';
 import {
@@ -47,7 +47,7 @@ const settingsSlice = createSlice({
     });
   },
   selectors: {
-    selectPreferredWeightUnit: (state): WeightUnit => (state.useImperialUnits ? 'pounds' : 'kilograms'),
+    selectPreferredWeightUnit: (state): LoadUnit => (state.useImperialUnits ? 'pounds' : 'kilograms'),
   },
 });
 export const initializeSettingsStateSlice = createAction('initializeSettingsStateSlice');

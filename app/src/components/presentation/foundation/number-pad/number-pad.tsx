@@ -1,6 +1,6 @@
 import { SurfaceText } from '@/components/presentation/foundation/surface-text';
 import { spacing, useAppTheme } from '@/hooks/useAppTheme';
-import type { LoadUnit } from '@/models/plates';
+import type { LoadUnit } from '@/models/weight';
 import { localeFormatBigNumber } from '@/utils/locale-bignumber';
 import { msArrowForward } from '@material-symbols-react-native/outlined-400/msArrowForward';
 import { msBackspace } from '@material-symbols-react-native/outlined-400/msBackspace';

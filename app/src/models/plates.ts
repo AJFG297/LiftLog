@@ -1,10 +1,5 @@
 import BigNumber from 'bignumber.js';
-import type { WeightUnit } from '@/models/weight';
-
-/** A unit plates come in. `nil` weights have no plates. */
-export type LoadUnit = Exclude<WeightUnit, 'nil'>;
-
-export type PerUnit<T> = Record<LoadUnit, T>;
+import type { PerUnit } from '@/models/weight';
 
 export const DEFAULT_BAR_WEIGHT: PerUnit<number> = { kilograms: 20, pounds: 45 };
 
