@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { LocalDate, OffsetDateTime } from '@js-joda/core';
 import BigNumber from 'bignumber.js';
-import { findPersonalRecords } from '@/store/stats/personal-records';
+import { findPersonalRecords, sessionRecords } from '@/store/stats/personal-records';
 import { RecordedWeightedExercise, Session } from '@/models/session-models';
 import { ProgressionRule, Rest, SessionBlueprint } from '@/models/blueprint-models';
 import { Weight } from '@/models/weight';
@@ -176,5 +176,42 @@ describe('findPersonalRecords for exercises that track no load', () => {
 
     // s2 is the first real sighting, so it is no record.
     expect(records.size).toBe(0);
+  });
+});
+
+describe('sessionRecords', () => {
+  it('reports a heavier set than ever with the weight it beat', () => {
+    const records = sessionRecords(session('s3', day(15), [exercise('Bench', kg(90), 4)]), [
+      session('s1', day(1), [exercise('Bench', kg(85), 5)]),
+      session('s2', day(8), [exercise('Bench', kg(80), 5)]),
+    ]);
+
+    expect(records).toEqual([
+      { kind: 'heaviestWeight', exerciseName: 'Bench', weight: kg(90), reps: 4, previous: kg(85) },
+    ]);
+  });
+
+  it('reports a better estimated 1RM at a weight lifted before', () => {
+    // Epley: 100kg x 5 = 116.7; 100kg x 6 = 120.
+    const records = sessionRecords(session('s2', day(8), [exercise('Squat', kg(100), 6)]), [
+      session('s1', day(1), [exercise('Squat', kg(100), 5)]),
+    ]);
+
+    expect(records).toEqual([
+      {
+        kind: 'estimatedOneRepMax',
+        exerciseName: 'Squat',
+        oneRepMax: kg(100).multipliedBy(new BigNumber(1).plus(new BigNumber(6).div(30))),
+        previous: kg(100).multipliedBy(new BigNumber(1).plus(new BigNumber(5).div(30))),
+      },
+    ]);
+  });
+
+  it('reports nothing for a first sighting, a match or a regression', () => {
+    const earlier = [session('s1', day(1), [exercise('Squat', kg(100), 5)])];
+
+    expect(sessionRecords(session('s2', day(8), [exercise('Bench', kg(60), 5)]), earlier)).toEqual([]);
+    expect(sessionRecords(session('s2', day(8), [exercise('Squat', kg(100), 5)]), earlier)).toEqual([]);
+    expect(sessionRecords(session('s2', day(8), [exercise('Squat', kg(90), 5)]), earlier)).toEqual([]);
   });
 });
