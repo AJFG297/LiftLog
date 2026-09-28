@@ -742,5 +742,19 @@
   "workout.rpe.clear.button": "Clear RPE",
   "whats_new.log_rpe.title": "Log RPE on your sets",
   "whats_new.log_rpe.body": "You can now rate how hard each set felt, from RPE 6 to 10. Turn it on and an RPE chip appears on every working set - pick it before or after you log the set.",
-  "whats_new.log_rpe.cta": "Turn on RPE"
+  "whats_new.log_rpe.cta": "Turn on RPE",
+  "number_pad.hide.button": "Hide keypad",
+  "number_pad.delete.button": "Delete",
+  "number_pad.decimal.button": "Decimal point",
+  "number_pad.step_up.button": "Add {step}",
+  "number_pad.step_down.button": "Subtract {step}",
+  "number_pad.next.button": "Next field",
+  "number_pad.log_set.button": "Log set",
+  "number_pad.plates.per_side.label": "Per side: {plates}",
+  "number_pad.plates.bar_only.label": "Just the bar",
+  "number_pad.plates.inexact.label": "{plates} · {amount} short",
+  "number_pad.plates.below_bar.label": "Lighter than the bar ({bar})",
+  "number_pad.per_dumbbell.label": "{weight} per dumbbell",
+  "number_pad.on_stack.label": "{weight} on the stack",
+  "number_pad.rpe.label": "RPE"
 }
