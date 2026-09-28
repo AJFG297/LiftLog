@@ -1,174 +1,193 @@
-import FullHeightScrollView from '@/components/layout/full-height-scroll-view';
-import LimitedHtml from '@/components/presentation/foundation/limited-html';
-import ListSwitch from '@/components/presentation/foundation/list-switch';
-import { PageActions } from '@/components/presentation/foundation/page-actions';
-import SaveIcon from '@expo/material-symbols/save.xml';
-import SessionDiffView from '@/components/presentation/summary/session-diff-view';
-import { spacing } from '@/hooks/useAppTheme';
-import {
-  diffSessionBlueprints,
-  EmptySessionBlueprintDiff,
-  PlanDiff,
-  SessionBlueprintDiff,
-} from '@/models/blueprint-diff';
+import { ActionButton } from '@/components/presentation/foundation/action-button';
+import Menu from '@/components/presentation/foundation/menu';
+import { MsIconSrc } from '@/components/presentation/foundation/ms-icon-source';
+import { RoundIconButton } from '@/components/presentation/foundation/round-icon-button';
+import { SurfaceText } from '@/components/presentation/foundation/surface-text';
+import { useToast } from '@/components/presentation/foundation/toast';
+import { RoutineChangeRow } from '@/components/presentation/summary/routine-change-row';
+import { routineChangeCopy } from '@/components/presentation/summary/routine-change-copy';
+import { spacing, useAppTheme } from '@/hooks/useAppTheme';
+import { useOnDismiss } from '@/hooks/useOnDismiss';
+import { diffSessionBlueprints, PlanDiff, SessionBlueprintDiff } from '@/models/blueprint-diff';
+import { ProgramBlueprint } from '@/models/blueprint-models';
+import { routineChanges, routineUpdateDiff } from '@/models/routine-update';
 import { EmptySession } from '@/models/session-models';
 import { useAppSelector, useAppSelectorWithArg } from '@/store';
 import {
   applyDiffToPlan,
   fetchUpcomingSessions,
+  savePlan,
   selectNewWorkoutName,
   selectPendingPlanDiff,
+  selectProgram,
   setPendingPlanDiff,
 } from '@/store/program';
 import { useTranslate } from '@tolgee/react';
-import { Stack, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { View } from 'react-native';
-import { Text } from 'react-native-paper';
+import { ScrollView, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDispatch } from 'react-redux';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useOnDismiss } from '@/hooks/useOnDismiss';
 
-/**
- * Creates a diff for updating an existing workout in the plan.
- * Compares the original session blueprint against the modified session.
- */
-function createUpdateExistingWorkoutDiff(currentPlanDiff: PlanDiff): SessionBlueprintDiff {
-  return diffSessionBlueprints(currentPlanDiff.diff.originalSession, currentPlanDiff.diff.newSession);
+/** Today's whole workout as a new routine, diffed against nothing so every exercise is an addition. */
+function saveAsNewRoutineDiff(planDiff: PlanDiff, name: string): SessionBlueprintDiff {
+  return diffSessionBlueprints(EmptySession.blueprint, planDiff.diff.newSession.with({ name }));
 }
 
 /**
- * Creates a diff for adding a new workout to the plan.
- * Compares against an empty session so all exercises appear as "added".
- * Preserves the original session references for potential undo/comparison.
+ * The "Update your routine?" sheet: the structural changes made during a finished workout, each kept for
+ * next time while it is ticked. Opened over the summary (or Home) with the diff in `pendingPlanDiff`.
  */
-function createAddNewWorkoutDiff(currentPlanDiff: PlanDiff, newWorkoutName: string): SessionBlueprintDiff {
-  const newSessionWithName = currentPlanDiff.diff.newSession.with({
-    name: newWorkoutName,
-  });
-
-  return {
-    // Diff against empty session so everything shows as "added"
-    ...diffSessionBlueprints(EmptySession.blueprint, newSessionWithName),
-    // Preserve original references so we can use them again when we turn the switch off
-    originalSession: currentPlanDiff.diff.originalSession,
-    newSession: currentPlanDiff.diff.newSession,
-  };
-}
-
 export function SessionDiffSaveEditor() {
   const dispatch = useDispatch();
   const { t } = useTranslate();
-  const { dismiss } = useRouter();
-  const currentPlanDiff = useAppSelector(selectPendingPlanDiff);
-  const [selectedDiff, setSelectedDiff] = useState<SessionBlueprintDiff>();
-  const newWorkoutName = useAppSelectorWithArg(selectNewWorkoutName, currentPlanDiff?.programId ?? '');
+  const { tokens } = useAppTheme();
+  const router = useRouter();
+  const toast = useToast();
+  const insets = useSafeAreaInsets();
+  const planDiff = useAppSelector(selectPendingPlanDiff);
+  const programId = planDiff?.programId ?? '';
+  const program: ProgramBlueprint | undefined = useAppSelectorWithArg(selectProgram, programId);
+  const newRoutineName = useAppSelectorWithArg(selectNewWorkoutName, programId);
+  // Rows start ticked: each one is something the lifter chose to do today.
+  const [unticked, setUnticked] = useState<ReadonlySet<string>>(new Set());
 
-  // Track whether user has opted to create a new workout instead of updating existing
-  const [isCreatingNewWorkout, setIsCreatingNewWorkout] = useState(false);
-
-  // Can only edit existing if we have a diff (not an add operation)
-  const canEditExistingWorkout = currentPlanDiff?.type === 'diff';
-
-  // If user selected "create new" OR we can't edit existing, we're adding a new workout
-  const saveAsNewWorkout = isCreatingNewWorkout || !canEditExistingWorkout;
-
-  // Clear the diff on any exit so the trigger can reopen for a later diff
+  // Clear the diff on any exit so the next finished workout can open the sheet again.
   useOnDismiss(() => dispatch(setPendingPlanDiff(undefined)));
 
-  /**
-   * Handles toggling between "update existing workout" and "save as new workout" modes.
-   * Recalculates the diff based on the selected mode:
-   * - Update existing: compares original → modified session
-   * - Save as new: compares empty → modified session (shows all as additions)
-   */
-  const handleSaveModeChange = (createNew: boolean) => {
-    if (!currentPlanDiff) return;
+  if (!planDiff) {
+    return <View style={{ flex: 1, backgroundColor: tokens.card }} />;
+  }
 
-    setIsCreatingNewWorkout(createNew);
+  const updating = planDiff.type === 'diff';
+  const routineName = updating ? planDiff.diff.originalSession.name : planDiff.diff.newSession.name;
+  const rows = routineChanges(planDiff.diff);
+  const kept = rows.filter((row) => !unticked.has(row.id));
 
-    const newDiff = createNew
-      ? createAddNewWorkoutDiff(currentPlanDiff, newWorkoutName)
-      : createUpdateExistingWorkoutDiff(currentPlanDiff);
+  const toggle = (id: string) =>
+    setUnticked((current) => {
+      const next = new Set(current);
+      if (!next.delete(id)) {
+        next.add(id);
+      }
+      return next;
+    });
 
-    dispatch(setPendingPlanDiff({ ...currentPlanDiff, diff: newDiff }));
-  };
-
-  const getSwitchSubtitle = (): string => {
-    if (!canEditExistingWorkout || isCreatingNewWorkout) {
-      return t('plan.diff.dialog_save_as_new_switch_on.subtitle', {
-        newWorkoutName,
-      });
-    }
-    return t('plan.diff.dialog_save_as_new_switch_off.subtitle', {
-      originalSessionName: currentPlanDiff?.diff.originalSession.name,
+  const applyAndClose = (diff: PlanDiff, message: string) => {
+    const before = program;
+    dispatch(applyDiffToPlan(diff));
+    dispatch(fetchUpcomingSessions());
+    // A native sheet covers the toast, so it closes first.
+    router.back();
+    toast.show({
+      message,
+      action: before
+        ? {
+            label: t('generic.undo.button'),
+            onPress: () => {
+              dispatch(savePlan({ programId, programBlueprint: before }));
+              dispatch(fetchUpcomingSessions());
+            },
+          }
+        : undefined,
     });
   };
 
-  const save = () => {
-    if (selectedDiff && currentPlanDiff) {
-      dispatch(
-        applyDiffToPlan(
-          saveAsNewWorkout
-            ? { type: 'add', programId: currentPlanDiff.programId, diff: selectedDiff }
-            : { ...currentPlanDiff, diff: selectedDiff },
-        ),
-      );
+  const apply = () => {
+    const diff = routineUpdateDiff(planDiff.diff, new Set(kept.map((row) => row.id)));
+    if (!updating) {
+      applyAndClose({ ...planDiff, diff }, t('finish.save_routine.saved.message', { name: routineName }));
+      return;
     }
-    dispatch(fetchUpcomingSessions());
-    dismiss();
+    applyAndClose(
+      { ...planDiff, diff },
+      kept.length === 1
+        ? t('finish.update_routine.updated_one.message', { name: routineName })
+        : t('finish.update_routine.updated_many.message', { name: routineName, count: kept.length }),
+    );
   };
 
-  const floatingBottomContainer = (
-    <PageActions
-      primaryKind="commit"
-      primary={{
-        label: t('generic.save.button'),
-        icon: SaveIcon,
-        systemImage: 'square.and.arrow.down',
-        onPress: save,
-      }}
-    />
-  );
+  const saveAsNewRoutine = () =>
+    applyAndClose(
+      { type: 'add', programId, diff: saveAsNewRoutineDiff(planDiff, newRoutineName) },
+      t('finish.save_routine.saved.message', { name: newRoutineName }),
+    );
+
+  const applyLabel =
+    kept.length === 0
+      ? t('finish.update_routine.nothing_selected.button')
+      : updating
+        ? t('finish.update_routine.apply.button', { count: kept.length })
+        : t('finish.save_routine.apply.button', { count: kept.length });
 
   return (
-    <SafeAreaView edges={{ bottom: 'additive', top: 'off' }} style={{ flex: 1 }}>
-      <FullHeightScrollView
-        floatingChildren={floatingBottomContainer}
-        scrollStyle={{ padding: spacing.pageHorizontalMargin }}
+    <View style={{ flex: 1, backgroundColor: tokens.card }}>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{
+          paddingHorizontal: spacing.pageHorizontalMargin,
+          paddingBottom: Math.max(insets.bottom, spacing[4]),
+          gap: spacing[4],
+        }}
       >
-        <Stack.Screen options={{ title: t('plan.diff.dialog.title') }} />
-        <Text
-          style={{
-            paddingBlockEnd: spacing[2],
-          }}
-          variant="bodyMedium"
-        >
-          {currentPlanDiff?.type === 'diff' ? (
-            <LimitedHtml
-              value={t('plan.diff.dialog_update.body', {
-                originalSessionName: currentPlanDiff?.diff.originalSession.name,
-              })}
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingTop: spacing[3] }}>
+          <RoundIconButton icon="close" accessibilityLabel={t('generic.close.button')} onPress={() => router.back()} />
+          {updating ? (
+            <Menu
+              size={44}
+              trigger={(open) => (
+                <RoundIconButton
+                  icon="moreHoriz"
+                  accessibilityLabel={t('finish.update_routine.more_options.label')}
+                  onPress={open}
+                />
+              )}
+              items={[
+                {
+                  label: t('finish.update_routine.save_as_new.button'),
+                  icon: 'add',
+                  systemImage: 'plus.rectangle.on.rectangle',
+                  onPress: saveAsNewRoutine,
+                },
+              ]}
             />
-          ) : (
-            t('plan.diff.dialog_add.body')
-          )}
-        </Text>
-        <View style={{ marginHorizontal: -spacing.pageHorizontalMargin }}>
-          {canEditExistingWorkout && (
-            <ListSwitch
-              value={isCreatingNewWorkout}
-              supportingText={<LimitedHtml value={getSwitchSubtitle()} />}
-              onValueChange={handleSaveModeChange}
-              headline={t('plan.diff.dialog_save_as_new_switch.title')}
-            />
-          )}
+          ) : null}
         </View>
-        <SessionDiffView
-          diff={currentPlanDiff?.diff ?? EmptySessionBlueprintDiff}
-          onSelectedDiffChange={setSelectedDiff}
-        />
-      </FullHeightScrollView>
-    </SafeAreaView>
+        <View style={{ gap: spacing[1], paddingHorizontal: spacing[1] }}>
+          <SurfaceText font="text-2xl" weight="700" accessibilityRole="header" style={{ color: tokens.ink }}>
+            {updating
+              ? t('finish.update_routine.title', { name: routineName })
+              : t('finish.save_routine.title', { name: routineName })}
+          </SurfaceText>
+          <SurfaceText font="text-sm" style={{ color: tokens.muted }}>
+            {updating ? t('finish.update_routine.body') : t('finish.save_routine.body')}
+          </SurfaceText>
+        </View>
+        <View style={{ gap: spacing[2] }}>
+          {rows.map((row) => (
+            <RoutineChangeRow
+              key={row.id}
+              {...routineChangeCopy(t, row)}
+              selected={!unticked.has(row.id)}
+              onToggle={() => toggle(row.id)}
+            />
+          ))}
+        </View>
+        <View style={{ flexDirection: 'row', gap: spacing[2], paddingHorizontal: spacing[1] }}>
+          <MsIconSrc name="info" size={16} color={tokens.muted} />
+          <SurfaceText font="text-sm" style={{ flex: 1, color: tokens.muted }}>
+            {t('finish.update_routine.progression_note.body')}
+          </SurfaceText>
+        </View>
+        <View style={{ gap: spacing[2] }}>
+          <ActionButton label={applyLabel} disabled={kept.length === 0} onPress={apply} />
+          <ActionButton
+            variant="secondary"
+            label={updating ? t('finish.update_routine.keep.button') : t('finish.save_routine.skip.button')}
+            onPress={() => router.back()}
+          />
+        </View>
+      </ScrollView>
+    </View>
   );
 }
