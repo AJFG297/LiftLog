@@ -1,21 +1,19 @@
 import { SettingsPage } from '@/components/layout/settings-page';
+import { ListRow } from '@/components/presentation/foundation/list-row';
 import { SegmentedGroup } from '@/components/presentation/foundation/segmented-list';
 import { SegmentedListSelect } from '@/components/presentation/foundation/segmented-list-select';
 import { SegmentedListSwitch } from '@/components/presentation/foundation/segmented-list-switch';
-import { SurfaceText } from '@/components/presentation/foundation/surface-text';
 import { formatWeightText } from '@/components/presentation/foundation/weight-format';
-import { spacing, useAppTheme } from '@/hooks/useAppTheme';
+import { spacing } from '@/hooks/useAppTheme';
 import { BAR_WEIGHTS, PLATE_SIZES } from '@/models/plates';
 import { Weight } from '@/models/weight';
 import { useAppSelector } from '@/store';
 import { selectPreferredWeightUnit, setAvailablePlates, setBarWeight } from '@/store/settings';
 import { useTranslate } from '@tolgee/react';
-import { View } from 'react-native';
 import { useDispatch } from 'react-redux';
 
 export default function BarAndPlatesPage() {
   const { t } = useTranslate();
-  const { tokens } = useAppTheme();
   const dispatch = useDispatch();
   const unit = useAppSelector(selectPreferredWeightUnit);
   const barWeight = useAppSelector((state) => state.settings.barWeight);
@@ -50,14 +48,11 @@ export default function BarAndPlatesPage() {
         />
       </SegmentedGroup>
 
-      <View style={{ gap: spacing[1], paddingHorizontal: spacing[1] }}>
-        <SurfaceText font="text-base" weight="600" style={{ color: tokens.ink }}>
-          {t('settings.available_plates.label')}
-        </SurfaceText>
-        <SurfaceText font="text-sm" style={{ color: tokens.muted }}>
-          {t('settings.available_plates.subtitle')}
-        </SurfaceText>
-      </View>
+      <ListRow
+        title={t('settings.available_plates.label')}
+        subtitle={t('settings.available_plates.subtitle')}
+        style={{ minHeight: 0, paddingVertical: 0, paddingHorizontal: spacing[1] }}
+      />
       <SegmentedGroup>
         {PLATE_SIZES[unit].map((plate) => (
           <SegmentedListSwitch
