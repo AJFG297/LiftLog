@@ -40,9 +40,10 @@ export function getCurrentExerciseDetails(session: Session): CurrentExerciseDeta
   // A weighted exercise's next set may be a warm-up, which the worker labels as one. Once every
   // working set is logged there is no current set, and the index stays at -1 as it always has.
   const current = next instanceof RecordedWeightedExercise ? next.currentSet : undefined;
+  const slot = current && (next as RecordedWeightedExercise).slotAt(current);
   return {
     exercise: next.toJSON(),
-    setKind: current?.list ?? 'working',
+    setKind: slot?.kind ?? 'working',
     setIndex: current?.index ?? next.currentSetIndex,
   };
 }

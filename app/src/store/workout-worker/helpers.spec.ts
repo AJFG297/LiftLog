@@ -188,6 +188,17 @@ describe('warm-ups in the workout worker', () => {
     expect(getCurrentExerciseDetails(sessionWith([5, 3]))).toMatchObject({ setKind: 'working', setIndex: 0 });
   });
 
+  it('names the kind of the working-list set that comes next, indexing the working list', () => {
+    const session = sessionWith([5, 3], [10, undefined]);
+    const exercise = session.recordedExercises[0] as RecordedWeightedExercise;
+    const withDrop = session.withExercise(
+      0,
+      exercise.withSet(1, (s) => s.with({ kind: 'drop' })),
+    );
+
+    expect(getCurrentExerciseDetails(withDrop)).toMatchObject({ setKind: 'drop', setIndex: 1 });
+  });
+
   it('leaves a skipped warm-up behind once a working set is logged', () => {
     expect(getCurrentExerciseDetails(sessionWith([], [10, undefined]))).toMatchObject({
       setKind: 'working',
