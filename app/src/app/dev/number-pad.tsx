@@ -87,7 +87,7 @@ function DevNumberPad() {
     }
   });
 
-  const open = (kind: FieldKind, forUnit = unit, forEquipment = equipment) => {
+  const open = (kind: FieldKind, forUnit: LoadUnit, forEquipment: EquipmentClass | undefined) => {
     setFieldKind(kind);
     setVisible(true);
     send({ type: 'reset', field: fieldFor(kind, forUnit, forEquipment) });
@@ -95,7 +95,7 @@ function DevNumberPad() {
 
   const commitAndOpen = (kind: FieldKind) => {
     setCommitted({ ...committed, [fieldKind]: numberPadValue(buffer) });
-    open(kind);
+    open(kind, unit, equipment);
   };
 
   const logSet = () => {
@@ -106,7 +106,7 @@ function DevNumberPad() {
     );
     setCommitted({ weight: undefined, reps: undefined });
     setRpe(undefined);
-    open('weight');
+    open('weight', unit, equipment);
   };
 
   const accessory: NumberPadAccessory | undefined =
@@ -128,7 +128,7 @@ function DevNumberPad() {
             ]}
             onChange={(value) => {
               setUnit(value);
-              open(fieldKind, value);
+              open(fieldKind, value, equipment);
             }}
           />
         </DevControl>
