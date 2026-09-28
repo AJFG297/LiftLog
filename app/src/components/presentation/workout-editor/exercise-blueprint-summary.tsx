@@ -11,7 +11,7 @@ import {
   ExerciseBlueprint,
   formatPlannedSets,
   formatRepsTarget,
-  uniformTarget,
+  uniformWorkingTarget,
   matchCardioTarget,
   WeightedExerciseBlueprint,
 } from '@/models/blueprint-models';
@@ -108,8 +108,7 @@ export { formatCardioTarget };
 
 function WeightedExerciseBlueprintSummary({ blueprint }: { blueprint: WeightedExerciseBlueprint }) {
   const sets = blueprint.plannedSets.length;
-  const allWorking = blueprint.plannedSets.every((s) => s.kind === 'working');
-  const uniform = allWorking ? uniformTarget(blueprint.plannedSets) : undefined;
+  const uniform = uniformWorkingTarget(blueprint.plannedSets);
   return (
     <View style={{ gap: spacing[1], alignItems: 'flex-start' }}>
       <SurfaceText>

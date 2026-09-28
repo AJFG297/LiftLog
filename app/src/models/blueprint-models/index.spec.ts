@@ -13,6 +13,7 @@ import {
   WeightedExerciseBlueprint,
   cardioTargetEquals,
   formatPlannedSets,
+  uniformWorkingTarget,
 } from '@/models/blueprint-models';
 import { RecordedWeightedExercise } from '@/models/session-models';
 import { LocalDate } from '@js-joda/core';
@@ -595,6 +596,34 @@ describe('WeightedExerciseBlueprint rep schemes', () => {
       expect(program.withSessionMovedUp(workoutA)).toBe(program);
       expect(program.withSessionMovedDown(workoutB)).toBe(program);
     });
+  });
+});
+
+describe('uniformWorkingTarget', () => {
+  const ten = { min: 10, max: 10 };
+
+  it('is the shared target of a list of working sets', () => {
+    expect(
+      uniformWorkingTarget([
+        { reps: { min: 8, max: 12 }, kind: 'working' },
+        { reps: { min: 8, max: 12 }, kind: 'working' },
+      ]),
+    ).toEqual({ min: 8, max: 12 });
+  });
+
+  it('is undefined when the targets differ, or when any set is another kind', () => {
+    expect(
+      uniformWorkingTarget([
+        { reps: ten, kind: 'working' },
+        { reps: { min: 8, max: 8 }, kind: 'working' },
+      ]),
+    ).toBeUndefined();
+    expect(
+      uniformWorkingTarget([
+        { reps: ten, kind: 'working' },
+        { reps: ten, kind: 'failure' },
+      ]),
+    ).toBeUndefined();
   });
 });
 

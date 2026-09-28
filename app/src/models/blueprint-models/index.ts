@@ -740,8 +740,8 @@ export function formatRepsTarget(target: RepsTarget): string {
  * a working set is spelled out with its letter, `10, 10, D 15`, so a change of kind reads as one.
  */
 export function formatPlannedSets(plannedSets: PlannedSet[], separator = ', '): string {
-  const uniform = uniformTarget(plannedSets);
-  if (uniform && plannedSets.every((s) => s.kind === 'working')) {
+  const uniform = uniformWorkingTarget(plannedSets);
+  if (uniform) {
     return formatRepsTarget(uniform);
   }
   const labels = setLabels(plannedSets.map((s) => s.kind));
@@ -759,6 +759,11 @@ export function uniformTarget(plannedSets: Pick<PlannedSet, 'reps'>[]): RepsTarg
     return undefined;
   }
   return plannedSets.every((s) => s.reps.min === first.min && s.reps.max === first.max) ? first : undefined;
+}
+
+/** The target every set shares when they are all working sets, so the list reads as one target. */
+export function uniformWorkingTarget(plannedSets: PlannedSet[]): RepsTarget | undefined {
+  return plannedSets.every((s) => s.kind === 'working') ? uniformTarget(plannedSets) : undefined;
 }
 
 export function repsTargetsEqual(a: RepsTarget, b: RepsTarget): boolean {
