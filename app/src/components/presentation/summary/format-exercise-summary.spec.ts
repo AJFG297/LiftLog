@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { formatExerciseSummary, formatSessionVolume } from '@/components/presentation/summary/format-exercise-summary';
+import { aiPlanFromJSON } from '@/models/ai-models';
 import { PotentialSet, RecordedSet, RecordedWeightedExercise, Session } from '@/models/session-models';
 import type { WorkingListKind } from '@/models/session-models/set-kind';
 import { SessionBlueprint } from '@/models/blueprint-models';
@@ -326,6 +327,34 @@ describe('summaries letter sets that are not working sets', () => {
 
   it('spells out a plan with its letters', () => {
     expect(formatExerciseSummary(kindsOf([...benchPress], false), planned)).toBe('5/5/F\u00A05/D\u00A012/M\u00A015');
+  });
+
+  it('previews a plan the AI planner is still streaming, whose last kind is cut off', () => {
+    const plan = aiPlanFromJSON({
+      version: 4,
+      name: 'PPL',
+      blueprint: {
+        sessions: [
+          {
+            name: 'Push',
+            exercises: [
+              {
+                type: 'WeightedExerciseBlueprint',
+                name: 'Bench Press',
+                // Untyped, as the stream is: the backend closes the string it stopped in.
+                plannedSets: [
+                  { reps: { min: 5, max: 5 }, kind: 'working' },
+                  { reps: { min: 12, max: 12 }, kind: 'dr' },
+                ].map((set) => ({ ...set, kind: set.kind as string })),
+              },
+            ],
+          },
+        ],
+      },
+    });
+    const session = Session.getEmptySession(plan.blueprint.sessions[0]!, 'kilograms');
+
+    expect(formatExerciseSummary(session.recordedExercises[0]!, planned)).toBe('5/12');
   });
 
   it('spells out a plan whose sets share a target but not a kind', () => {
