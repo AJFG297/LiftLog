@@ -697,7 +697,7 @@ describe('set kinds in the plan diff', () => {
     ]);
     expect(getChangeDescription(t, diff.modifiedExercises[0]!.changes[0]!)).toEqual({
       key: 'plan.diff.generic_two_value_change.body',
-      params: { oldValue: '10', newValue: '10, 10, D 10' },
+      params: { oldValue: '10', newValue: '10, 10, D\u00A010' },
     });
     expect(applySessionBlueprintDiff(original, diff).equals(modified)).toBe(true);
   });

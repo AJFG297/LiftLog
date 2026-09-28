@@ -14,15 +14,16 @@ import com.limajuice.liftlog.RecordedWeightedExercise
  */
 data class CurrentWeightedSet(
     val exercise: RecordedWeightedExercise,
-    val isWarmup: Boolean,
+    val kind: CurrentSetKind,
     val index: Int,
     val slot: PotentialSet?,
-)
+) {
+    val isWarmup get() = kind == CurrentSetKind.warmup
+}
 
 fun currentWeightedSetOf(details: CurrentExerciseDetails?): CurrentWeightedSet? {
     val exercise = details?.exercise as? RecordedWeightedExercise ?: return null
     val index = details.setIndex.toInt()
-    val isWarmup = details.setKind == CurrentSetKind.warmup
-    val sets = if (isWarmup) exercise.warmupSets else exercise.potentialSets
-    return CurrentWeightedSet(exercise, isWarmup, index, sets.getOrNull(index))
+    val sets = if (details.setKind == CurrentSetKind.warmup) exercise.warmupSets else exercise.potentialSets
+    return CurrentWeightedSet(exercise, details.setKind, index, sets.getOrNull(index))
 }
