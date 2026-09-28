@@ -7,6 +7,13 @@ export type SetKind = 'working' | 'warmup' | 'drop' | 'myo' | 'failure';
  */
 export type WorkingListKind = Exclude<SetKind, 'warmup'>;
 
+const WORKING_LIST_KINDS: readonly string[] = ['working', 'drop', 'myo', 'failure'] satisfies WorkingListKind[];
+
+/** Checks an untyped value, such as a kind the AI planner emitted, before it is looked up in the rules. */
+export function isWorkingListKind(value: unknown): value is WorkingListKind {
+  return typeof value === 'string' && WORKING_LIST_KINDS.includes(value);
+}
+
 /** Which of an exercise's two set lists a slot lives in. */
 export type SetList = 'warmup' | 'working';
 

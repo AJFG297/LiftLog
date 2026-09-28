@@ -20,6 +20,7 @@ import {
   WeightedExerciseBlueprintJSON,
 } from '@/models/storage/versions/latest';
 import { EmptySession } from '@/models/session-models';
+import { isWorkingListKind } from '@/models/session-models/set-kind';
 
 export interface AiChatPlanResponse {
   type: 'chatPlan';
@@ -142,7 +143,8 @@ function fillPlannedSets(partial: DeepPartial<PlannedSetJSON>[] | undefined): Pl
       min: set?.reps?.min ?? set?.reps?.max ?? defaultRepsTarget.min,
       max: set?.reps?.max ?? set?.reps?.min ?? defaultRepsTarget.max,
     },
-    kind: set?.kind ?? 'working',
+    // A streamed plan can end part-way through a string ("dr"), and the model can invent a kind.
+    kind: isWorkingListKind(set?.kind) ? set.kind : 'working',
   }));
 }
 

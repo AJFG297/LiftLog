@@ -289,6 +289,30 @@ describe('aiPlanFromJSON', () => {
       expect(exercise.plannedSets.map((s) => s.kind)).toEqual(['working', 'drop']);
     });
 
+    it('reads a kind that is cut off, made up or a warm-up as a working set', () => {
+      // Untyped, as the planner's stream is: '' and 'dr' are how a streamed 'drop' arrives part-way.
+      const plannedSets = ['', 'dr', 'amrap', 'warmup', 'myo'].map((kind) => ({ reps: { min: 12, max: 12 }, kind }));
+      const exercise = firstExercise({
+        version: 4,
+        name: 'PPL',
+        blueprint: {
+          sessions: [
+            {
+              exercises: [
+                {
+                  type: 'WeightedExerciseBlueprint',
+                  name: 'Curl',
+                  plannedSets,
+                },
+              ],
+            },
+          ],
+        },
+      }) as WeightedExerciseBlueprint;
+
+      expect(exercise.plannedSets.map((s) => s.kind)).toEqual(['working', 'working', 'working', 'working', 'myo']);
+    });
+
     it('rejects a plan from a contract newer than v4', () => {
       expect(() => parse({ version: 5, name: 'PPL' })).toThrow(UnsupportedVersionError);
     });
