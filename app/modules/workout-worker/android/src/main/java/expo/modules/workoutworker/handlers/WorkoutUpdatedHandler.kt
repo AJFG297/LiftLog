@@ -19,6 +19,7 @@ import expo.modules.workoutworker.utils.RepeatingTimerAction
 import expo.modules.workoutworker.utils.RestWindow
 import expo.modules.workoutworker.utils.WorkoutNotificationManager
 import expo.modules.workoutworker.utils.currentWeightedSetOf
+import expo.modules.workoutworker.utils.formatSetTarget
 import kotlinx.coroutines.MainScope
 import kotlin.time.Clock
 import kotlin.time.Duration
@@ -305,8 +306,9 @@ class WorkoutUpdatedHandler(
         }
     }
 
-    // "5x60kg" for a working set; a warm-up is labelled as one ("Warm-up: 5 × 60kg"), and drops the
-    // weight when it has none - a reps-only warm-up, or one on an exercise with no resistance.
+    // "5x60kg" for a working set and "D 12x40kg" for a drop, myo or failure set; a warm-up is labelled as
+    // one ("Warm-up: 5 × 60kg"), and drops the weight when it has none - a reps-only warm-up, or one on an
+    // exercise with no resistance.
     private fun describeSet(translations: Translations, current: CurrentWeightedSet): String {
         val target = targetFor(current)
         val weight = current.slot?.weight
@@ -317,22 +319,18 @@ class WorkoutUpdatedHandler(
         return translations.workoutPersistentNotificationWarmupSetMessage.replace("\$SET$", set)
     }
 
-    private fun formatRepsTarget(min: Long, max: Long): String {
-        return if (min == max) "$max" else "$min-$max"
-    }
-
     // A warm-up's target lives on its slot. A working set's mirrors WeightedExerciseBlueprint.repsTargetForSet
     // on the JS side, including its fall back to the last target when the index runs past the planned
     // list; once every set is logged the index is -1, which reads the first set's target.
     private fun targetFor(current: CurrentWeightedSet): String {
         if (current.isWarmup) {
             val reps = current.slot?.target?.reps ?: return ""
-            return formatRepsTarget(reps.min, reps.max)
+            return formatSetTarget(current.kind, reps.min, reps.max)
         }
         val plannedSets = current.exercise.blueprint.plannedSets
         val setIndex = current.index.coerceAtLeast(0)
         val target = (plannedSets.getOrNull(setIndex) ?: plannedSets.lastOrNull())?.reps ?: return ""
-        return formatRepsTarget(target.min, target.max)
+        return formatSetTarget(current.kind, target.min, target.max)
     }
 
     private fun formatWeight(weight: Weight, truncateDecimals: Boolean = false): String {
