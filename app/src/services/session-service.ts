@@ -14,7 +14,7 @@ import {
   RecordedWeightedExercise,
   Session,
 } from '@/models/session-models';
-import { setKindCounts } from '@/models/session-models/set-kind';
+import { setKindHas } from '@/models/session-models/set-kind';
 import { ProgressRepository } from '@/services/progress-repository';
 import type { RootState } from '@/store';
 import { selectActiveSession } from '@/store/stored-sessions';
@@ -110,7 +110,7 @@ export class SessionService {
         .otherwise((x) =>
           x.potentialSets.map((ps, index) => {
             const kind = e.plannedSets[index]?.kind ?? 'working';
-            const carries = setKindCounts(ps.kind, 'carriesOver') && setKindCounts(kind, 'carriesOver');
+            const carries = setKindHas(ps.kind, 'carriesOver') && setKindHas(kind, 'carriesOver');
             return PotentialSet.of({
               weight:
                 carries || ps.kind === kind

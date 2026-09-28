@@ -19,7 +19,7 @@ import {
 } from '@/models/storage/versions/latest';
 import { Weight, WeightUnit } from '@/models/weight';
 import { isRpe, Rpe } from '@/models/session-models/rpe';
-import { setKindCounts, SetKind, SetKindRule, SetList } from '@/models/session-models/set-kind';
+import { setKindHas, SetKind, SetKindRule, SetList } from '@/models/session-models/set-kind';
 import { IndexOutOfBoundsError } from '@/utils/index-out-of-bounds';
 import { Duration, OffsetDateTime } from '@js-joda/core';
 import BigNumber from 'bignumber.js';
@@ -475,12 +475,12 @@ export class RecordedWeightedExercise {
 
   /** The sets, warm-ups included, whose kind counts towards `rule`, in order. */
   setsCountingTowards(rule: SetKindRule): PotentialSet[] {
-    return [...this.warmupSets, ...this.potentialSets].filter((set) => setKindCounts(set.kind, rule));
+    return [...this.warmupSets, ...this.potentialSets].filter((set) => setKindHas(set.kind, rule));
   }
 
   /** Indexes into the working list of the sets whose kind counts towards `rule`. */
   workingIndicesCountingTowards(rule: SetKindRule): number[] {
-    return this.potentialSets.flatMap((set, index) => (setKindCounts(set.kind, rule) ? [index] : []));
+    return this.potentialSets.flatMap((set, index) => (setKindHas(set.kind, rule) ? [index] : []));
   }
 
   /**

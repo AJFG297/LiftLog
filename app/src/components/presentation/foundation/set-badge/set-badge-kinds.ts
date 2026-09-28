@@ -1,5 +1,5 @@
 import type { TranslationKey } from '@tolgee/web';
-import { type LetteredSetKind, type SetKind, setLabel } from '@/models/session-models/set-kind';
+import { type LetteredSetKind, type SetKind, setKindLetter } from '@/models/session-models/set-kind';
 import type { ThemeTokens } from '@/utils/theme-tokens';
 
 /** Only working sets are numbered (1-based, counting working sets only); every other kind shows a letter. */
@@ -48,5 +48,5 @@ export function setBadgeText(badge: SetBadgeProps, t: Translate): { text: string
     const look = SET_BADGE_LOOK.working;
     return { text: String(badge.number), accessibilityLabel: t(look.spokenLabel, { number: badge.number }) };
   }
-  return { text: setLabel(badge.kind), accessibilityLabel: t(SET_BADGE_LOOK[badge.kind].spokenLabel) };
+  return { text: setKindLetter(badge.kind), accessibilityLabel: t(SET_BADGE_LOOK[badge.kind].spokenLabel) };
 }

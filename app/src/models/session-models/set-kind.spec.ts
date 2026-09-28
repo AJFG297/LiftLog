@@ -1,13 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { setLabel, setLabels } from '@/models/session-models/set-kind';
+import { setKindLetter, setLabels } from '@/models/session-models/set-kind';
 
-describe('setLabel', () => {
-  it('numbers a working set and letters every other kind', () => {
-    expect(setLabel('working', 3)).toBe('3');
-    expect(setLabel('warmup', 3)).toBe('W');
-    expect(setLabel('drop', 3)).toBe('D');
-    expect(setLabel('myo', 3)).toBe('M');
-    expect(setLabel('failure', 3)).toBe('F');
+describe('setKindLetter', () => {
+  it('letters every kind but a working set', () => {
+    expect((['warmup', 'drop', 'myo', 'failure'] as const).map(setKindLetter)).toEqual(['W', 'D', 'M', 'F']);
   });
 });
 

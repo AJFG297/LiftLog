@@ -10,8 +10,6 @@ export type WorkingListKind = Exclude<SetKind, 'warmup'>;
 /** Which of an exercise's two set lists a slot lives in. */
 export type SetList = 'warmup' | 'working';
 
-export type SetKindLetter = 'W' | 'D' | 'M' | 'F';
-
 export interface SetKindRules {
   countsTowardsVolume: boolean;
   countsTowardsPrs: boolean;
@@ -23,7 +21,7 @@ export interface SetKindRules {
    */
   carriesOver: boolean;
   /** What stands in for the set's number. Only working sets are numbered. */
-  letter: SetKindLetter | null;
+  letter: string | null;
 }
 
 export const SET_KIND_RULES = {
@@ -67,21 +65,21 @@ export const SET_KIND_RULES = {
 /** The kinds that show a letter rather than a number. */
 export type LetteredSetKind = Exclude<SetKind, 'working'>;
 
+export type SetKindLetter = (typeof SET_KIND_RULES)[LetteredSetKind]['letter'];
+
 export type SetKindRule = Exclude<keyof SetKindRules, 'letter'>;
 
-export function setKindCounts(kind: SetKind, rule: SetKindRule): boolean {
+export function setKindHas(kind: SetKind, rule: SetKindRule): boolean {
   return SET_KIND_RULES[kind][rule];
 }
 
-/** A working set's 1-based number among the working sets, or the letter for any other kind. */
-export function setLabel(kind: LetteredSetKind): SetKindLetter;
-export function setLabel(kind: SetKind, workingNumber: number): string;
-export function setLabel(kind: SetKind, workingNumber?: number): string {
-  return SET_KIND_RULES[kind].letter ?? `${workingNumber}`;
+/** What stands in for a set's number when it isn't a working set. */
+export function setKindLetter(kind: LetteredSetKind): SetKindLetter {
+  return SET_KIND_RULES[kind].letter;
 }
 
-/** {@link setLabel} for a whole list in order, numbering only its working sets. */
+/** Each set's label in order: its letter, or its 1-based number among the working sets. */
 export function setLabels(kinds: readonly SetKind[]): string[] {
   let working = 0;
-  return kinds.map((kind) => setLabel(kind, SET_KIND_RULES[kind].letter === null ? ++working : working));
+  return kinds.map((kind) => SET_KIND_RULES[kind].letter ?? String(++working));
 }

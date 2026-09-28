@@ -1,6 +1,6 @@
 import { spacing, useAppTheme } from '@/hooks/useAppTheme';
 import { SurfaceText } from '@/components/presentation/foundation/surface-text';
-import { LetteredSetKind, setLabel } from '@/models/session-models/set-kind';
+import { LetteredSetKind, setKindLetter } from '@/models/session-models/set-kind';
 import { StyleProp, View, ViewStyle } from 'react-native';
 
 const sizes = {
@@ -45,7 +45,7 @@ export function SetKindBadge({
         color="onSecondaryContainer"
         style={isFailure ? { color: tokens.onFailure } : undefined}
       >
-        {setLabel(kind)}
+        {setKindLetter(kind)}
       </SurfaceText>
     </View>
   );
