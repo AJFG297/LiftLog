@@ -1,15 +1,15 @@
 import { IndeterminateProgress } from '@/components/presentation/foundation/indeterminate-progress';
-import { useAppTheme, spacing, fontFamily } from '@/hooks/useAppTheme';
+import { spacing } from '@/hooks/useAppTheme';
+import { SurfaceText } from '@/components/presentation/foundation/surface-text';
 import { T } from '@tolgee/react';
 import { ReactNode } from 'react';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
 
 interface LoaderProps {
   children?: ReactNode;
   loadingText?: string;
 }
 export function Loader(props: LoaderProps) {
-  const { colors } = useAppTheme();
   return (
     <View
       style={{
@@ -21,9 +21,9 @@ export function Loader(props: LoaderProps) {
     >
       <IndeterminateProgress />
       {props.children ?? (
-        <Text style={{ fontFamily: fontFamily.text, color: colors.onSurface, textAlign: 'center' }}>
+        <SurfaceText font="text-sm" style={{ textAlign: 'center' }}>
           {props.loadingText ?? <T keyName="generic.loading.label" />}
-        </Text>
+        </SurfaceText>
       )}
     </View>
   );

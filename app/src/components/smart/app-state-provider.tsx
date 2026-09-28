@@ -1,12 +1,13 @@
 import { Loader } from '@/components/presentation/foundation/loader';
 import Button from '@/components/presentation/foundation/button';
-import { fontFamily, useAppTheme, spacing } from '@/hooks/useAppTheme';
+import { useAppTheme, spacing } from '@/hooks/useAppTheme';
+import { SurfaceText } from '@/components/presentation/foundation/surface-text';
 import { useAppSelector } from '@/store';
 import { copyLogs } from '@/store/app';
 import { T } from '@tolgee/react';
 import * as Application from 'expo-application';
 import { ReactNode, useEffect, useRef, useState } from 'react';
-import { Animated, Platform, Text, View } from 'react-native';
+import { Animated, Platform, View } from 'react-native';
 import { openUrl } from '@/utils/open-url';
 import { useDispatch } from 'react-redux';
 
@@ -49,7 +50,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 }
 
 function StuckHelp() {
-  const { colors } = useAppTheme();
   const dispatch = useDispatch();
   const [isStuck, setIsStuck] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -76,9 +76,9 @@ function StuckHelp() {
 
   return (
     <View style={{ alignItems: 'center', gap: spacing[2] }}>
-      <Text style={{ color: colors.onSurfaceVariant, fontFamily: fontFamily.text, textAlign: 'center' }}>
+      <SurfaceText font="text-sm" color="onSurfaceVariant" style={{ textAlign: 'center' }}>
         <T keyName="app.stuck_loading.message" />
-      </Text>
+      </SurfaceText>
       <Button icon="bugReport" onPress={openBugReport}>
         <T keyName="app.stuck_loading.report.button" />
       </Button>
@@ -86,9 +86,9 @@ function StuckHelp() {
         <T keyName="app.stuck_loading.copy_logs.button" />
       </Button>
       {copied && (
-        <Text style={{ color: colors.onSurfaceVariant, fontFamily: fontFamily.text, textAlign: 'center' }}>
+        <SurfaceText font="text-sm" color="onSurfaceVariant" style={{ textAlign: 'center' }}>
           <T keyName="app.stuck_loading.copied.label" />
-        </Text>
+        </SurfaceText>
       )}
     </View>
   );

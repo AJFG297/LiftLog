@@ -3,7 +3,8 @@ import { formatRepsTarget, Resistance, RepsTarget } from '@/models/blueprint-mod
 import { ReactNode } from 'react';
 import { Text, View } from 'react-native';
 import WeightFormat, { formatWeightText } from '@/components/presentation/foundation/weight-format';
-import { font, numberStyle, rounding, spacing, useAppTheme } from '@/hooks/useAppTheme';
+import { font, fontFamily, numberStyle, rounding, spacing, tabularText, useAppTheme } from '@/hooks/useAppTheme';
+import { SurfaceText } from '@/components/presentation/foundation/surface-text';
 import TouchableRipple from '@/components/presentation/foundation/touchable-ripple';
 import Icon from '@/components/presentation/foundation/icon';
 import { formatRpe, Rpe } from '@/models/session-models/rpe';
@@ -141,11 +142,18 @@ export function PotentialSetDisplay(props: PotentialSetDisplayProps) {
                 }}
               >
                 <Icon source={'history'} size={12} color={hintColor} />
-                {/* A warm-up's reps × weight can outgrow a narrow tile: shrink it rather than clip it. */}
+                {/* A warm-up's reps × weight can outgrow a narrow tile: shrink it rather than clip it. It can
+                    carry a unit, so it stays in Geist. */}
                 <Text
                   numberOfLines={1}
                   adjustsFontSizeToFit
-                  style={{ flexShrink: 1, color: hintColor, ...(warmup ? font['text-xs'] : undefined), ...numberStyle }}
+                  style={{
+                    flexShrink: 1,
+                    color: hintColor,
+                    fontFamily: fontFamily.text,
+                    ...tabularText,
+                    ...(warmup ? font['text-xs'] : undefined),
+                  }}
                 >
                   {previousHint}
                 </Text>
@@ -173,24 +181,22 @@ export function PotentialSetDisplay(props: PotentialSetDisplayProps) {
               />
             </Text>
             {warmup?.percent !== undefined && (
-              <Text style={{ color: colors.onSurfaceVariant, ...font['text-2xs'], ...numberStyle }}>
+              <SurfaceText numeric font="text-2xs" color="onSurfaceVariant">
                 {t('workout.warmup_set.percent.label', { percent: warmup.percent })}
-              </Text>
+              </SurfaceText>
             )}
           </View>
         </FooterRow>
       )}
       {showsRpe && (
         <FooterRow onPress={props.onPressRpe} testID="repcount-rpe" padding={size.footerPadding} isLast>
-          <Text
-            style={{
-              color: props.rpe === undefined ? colors.onSurfaceVariant : colors.onSurface,
-              ...size.footerFont,
-              ...numberStyle,
-            }}
+          <SurfaceText
+            numeric
+            color={props.rpe === undefined ? 'onSurfaceVariant' : 'onSurface'}
+            style={size.footerFont}
           >
             {props.rpe === undefined ? '@–' : formatRpe(props.rpe)}
-          </Text>
+          </SurfaceText>
         </FooterRow>
       )}
     </View>

@@ -1,5 +1,5 @@
-import { verticalBarChartProps } from '@/components/presentation/stats/line-graph-props';
-import { numberStyle, spacing, useAppTheme } from '@/hooks/useAppTheme';
+import { chartLabelStyles, verticalBarChartProps } from '@/components/presentation/stats/line-graph-props';
+import { spacing, useAppTheme } from '@/hooks/useAppTheme';
 import { RepsBreakdownStatistics } from '@/store/stats';
 import { useTranslate } from '@tolgee/react';
 import { useState } from 'react';
@@ -30,8 +30,8 @@ export function RepsBarChart({ statistics: { breakdown } }: { statistics: RepsBr
     <View onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
       <BarChart
         {...verticalBarChartProps(colors, width)}
-        // The x-axis labels here are rep counts, not dates.
-        xAxisLabelTextStyle={{ ...numberStyle, color: colors.onSurface }}
+        // The x-axis labels here are bare rep counts, not dates.
+        xAxisLabelTextStyle={chartLabelStyles(colors).number}
         frontColor={colors.primary + 'CC'}
         showFractionalValues={false}
         scrollToEnd={false}

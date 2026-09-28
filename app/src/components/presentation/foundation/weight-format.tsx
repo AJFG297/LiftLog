@@ -28,24 +28,16 @@ export default function WeightFormat(props: WeightFormatProps) {
     ...(props.fontSize ? { ...font[props.fontSize] } : undefined),
   } as const;
 
-  if (props.usesBodyweight) {
-    const label = t('exercise.short_bodyweight.label');
-    if (!value || value.isZero()) {
-      return <Text style={style}>{label}</Text>;
-    }
-    return (
-      <Text style={style}>
-        {bodyweightPrefix(label, value)}
-        <Text style={numberStyle}>{localeFormatBigNumber(value)}</Text>{' '}
-        <Text style={{ fontSize: 12 }}>{shortFormatWeightUnit(props.weight?.unit)}</Text>
-      </Text>
-    );
+  const label = t('exercise.short_bodyweight.label');
+  if (props.usesBodyweight && (!value || value.isZero())) {
+    return <Text style={style}>{label}</Text>;
   }
 
-  const weightDisplay = localeFormatBigNumber(value) || '-';
+  // Only the digits go in the number family; the bodyweight prefix and the unit stay in Geist.
   return (
     <Text style={style}>
-      <Text style={numberStyle}>{weightDisplay}</Text>{' '}
+      {props.usesBodyweight && value ? bodyweightPrefix(label, value) : null}
+      <Text style={numberStyle}>{localeFormatBigNumber(value) || '-'}</Text>{' '}
       <Text style={{ fontSize: 12 }}>{shortFormatWeightUnit(props.weight?.unit)}</Text>
     </Text>
   );

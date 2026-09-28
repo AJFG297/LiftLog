@@ -1,9 +1,19 @@
 import { AppThemeColors, fontFamily, numberStyle } from '@/hooks/useAppTheme';
 import { BarChartPropsType, CurveType, LineChartPropsType } from 'react-native-gifted-charts';
 
+/**
+ * The charts draw their axis labels as plain RN Text, which has no family of its own. Word labels (dates,
+ * the reference line) get Geist; bare-number labels (the value axis, rep counts) get Geist Mono.
+ */
+export const chartLabelStyles = (colors: AppThemeColors) => ({
+  text: { color: colors.onSurface, fontFamily: fontFamily.text },
+  number: { ...numberStyle, color: colors.onSurface },
+});
+
 export const lineGraphProps = (colors: AppThemeColors, width: number, numberOfPoints: number): LineChartPropsType => {
   const calculatedSpacing = numberOfPoints > 1 ? width / (numberOfPoints - 1) - 50 / numberOfPoints : 1;
   const spacing = Math.max(calculatedSpacing, 50);
+  const labels = chartLabelStyles(colors);
   return {
     focusEnabled: true,
     textColor: colors.onSurface,
@@ -27,20 +37,15 @@ export const lineGraphProps = (colors: AppThemeColors, width: number, numberOfPo
     referenceLine1Config: {
       width: width - 30,
       color: colors.tertiary,
-      labelTextStyle: { color: colors.onSurface, fontFamily: fontFamily.text },
+      labelTextStyle: labels.text,
     },
-    xAxisLabelTextStyle: {
-      color: colors.onSurface,
-      fontFamily: fontFamily.text,
-    },
-    yAxisTextStyle: {
-      ...numberStyle,
-      color: colors.onSurface,
-    },
+    xAxisLabelTextStyle: labels.text,
+    yAxisTextStyle: labels.number,
   };
 };
 
 export const verticalBarChartProps = (colors: AppThemeColors, width: number): BarChartPropsType => {
+  const labels = chartLabelStyles(colors);
   return {
     barBorderRadius: 2,
     xAxisColor: 'transparent',
@@ -54,18 +59,12 @@ export const verticalBarChartProps = (colors: AppThemeColors, width: number): Ba
     hideRules: false,
     scrollToEnd: true,
     width: width - 30,
-    xAxisLabelTextStyle: {
-      color: colors.onSurface,
-      fontFamily: fontFamily.text,
-    },
+    xAxisLabelTextStyle: labels.text,
     referenceLine1Config: {
       width: width - 30,
       color: colors.tertiary,
-      labelTextStyle: { color: colors.onSurface, fontFamily: fontFamily.text },
+      labelTextStyle: labels.text,
     },
-    yAxisTextStyle: {
-      ...numberStyle,
-      color: colors.onSurface,
-    },
+    yAxisTextStyle: labels.number,
   };
 };

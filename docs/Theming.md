@@ -78,22 +78,28 @@ Text is **Geist**; numbers are **Geist Mono**. Both come from `@expo-google-font
 `app/app.json`, so they're in the app before the first frame: there's no loading step, splash hold, or
 flash of the system font. Changing the font files or weights is a native change and needs a rebuild.
 
-Each is registered as a single family (`Geist`: 400/500/600/700; `Geist Mono`: 500/600), so `fontFamily`
-plus `fontWeight` picks the file on both platforms. Android before API 28 only tells regular from bold.
+Each is registered as a single family, so `fontFamily` plus `fontWeight` picks the file on both platforms.
+We embed Geist at 400/500/600/700 and Geist Mono at 500/600, so mono text at normal weight renders at 500
+and bold at 600. Android before API 28 only tells regular from bold.
 
 What to use, all from `useAppTheme.tsx`:
 
 | Text | Use |
 | --- | --- |
-| Words | a `font[...]` size (every size already sets `fontFamily.text`), or `SurfaceText` |
-| A number that changes in place or lines up in a column: timers, weights, reps, table cells, inputs | `SurfaceText numeric`, or spread `numberStyle` |
-| Numbers mixed into words ("1 hrs 23 mins", "Squat - 100 kg") | Geist with `tabularText`, whose digits share one width without switching to mono |
+| Words | `SurfaceText` (Geist by default) |
+| Only a number: digits and number punctuation ("7.5", "1:17", "8-12", "+5%", "@8") | `SurfaceText numeric`, or spread `numberStyle` |
+| A number with letters in it ("100kg", "1 hrs 23 mins", "3 × 5 60kg") | Geist with `tabularText`, whose digits share one width without going mono |
 | A number in a sentence | nothing special |
 
-- Paper's `fonts` and the navigation theme's `fonts` are Geist, so unconverted screens and stack headers
-  get it with their existing sizes and weights.
+To keep a unit out of mono, split it into its own span, as `WeightFormat` does.
+
+- The `font[...]` sizes carry no family. `SurfaceText` sets it, so a nested span that spreads a size keeps
+  its parent's family.
+- A raw `Text` from `react-native` has no family, so it renders in the system font. Use `SurfaceText`, or
+  set `fontFamily` yourself where a raw `Text` is unavoidable (`WeightFormat`, `LimitedHtml`, chart labels).
+- Paper's `fonts` and the navigation theme's `fonts` are Geist, so Paper `Text`, unconverted screens and
+  stack headers get it with their existing sizes and weights.
 - Paper's `TextInput` takes a font only through `contentStyle`; `style` reaches the container.
-- A raw `Text` from `react-native` with no `font[...]` or `fontFamily` renders in the system font.
 - Native chrome (tabs, menus, switches, pickers in expo-ui) keeps the system font.
 - Chart point labels drawn as SVG by `react-native-gifted-charts` have no font prop and stay in the system
   font.

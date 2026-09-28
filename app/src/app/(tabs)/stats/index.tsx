@@ -8,7 +8,7 @@ import { TimePeriodSelector } from '@/components/presentation/stats/time-period-
 import { TitledSection } from '@/components/presentation/stats/titled-section';
 import { StatisticLineChart } from '@/components/presentation/stats/statistic-line-chart';
 import { useLoadAxis } from '@/components/presentation/stats/quantity-axis';
-import { spacing, tabularText, useAppTheme } from '@/hooks/useAppTheme';
+import { spacing, useAppTheme } from '@/hooks/useAppTheme';
 import { Weight } from '@/models/weight';
 import { useAppSelector } from '@/store';
 import { fetchOverallStats, GranularStatisticView, selectOverallView, setOverallViewTime } from '@/store/stats';
@@ -144,7 +144,7 @@ function BodyweightStatValue({ stats: { bodyweightStats } }: { stats: GranularSt
     .exhaustive();
 
   return (
-    <Text style={tabularText}>
+    <Text>
       {currentValue.shortLocaleFormat(0)} ({changeDirection}
       {change.abs().shortLocaleFormat(2)})
     </Text>

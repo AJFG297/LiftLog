@@ -56,7 +56,11 @@ export const spacing = {
 /**
  * The app's two type families, embedded at build time by the expo-font plugin in `app.json` (so they're
  * there before the first frame, with no loading step). Each is registered as one family with several
- * weights, so `fontWeight` picks the file on both platforms. Geist Mono ships only 500 and 600.
+ * weights, so `fontWeight` picks the file on both platforms. We embed Geist Mono at 500 and 600 only, so
+ * normal renders at 500 and bold at 600.
+ *
+ * The `font` sizes below deliberately carry no family: `SurfaceText` sets it, and a nested span that
+ * spreads a size then still inherits its parent's family (a unit inside a mono number, say).
  */
 export const fontFamily = {
   text: 'Geist',
@@ -64,60 +68,51 @@ export const fontFamily = {
 };
 
 /**
- * Numbers that change in place or line up in columns (timers, weights, reps) use Geist Mono, whose digits
- * all share one width, so values don't shift as they change. Spread it over a `font` size.
+ * Text that is only a number (digits and number punctuation: "7.5", "1:17", "8-12") uses Geist Mono, whose
+ * digits all share one width, so values don't shift as they change.
  */
 export const numberStyle: TextStyle = { fontFamily: fontFamily.number };
 
 /**
- * For a value that mixes numbers and words ("1 hrs 23 mins", "Squat - 100 kg"): stays in Geist, where mono
- * would look odd, but with Geist's own tabular figures so the digits still keep their width.
+ * For a value that has letters in it ("100kg", "1 hrs 23 mins", "Squat - 100 kg"): stays in Geist, where
+ * mono would look odd, but with Geist's own tabular figures so the digits still keep their width.
  */
 export const tabularText: TextStyle = { fontVariant: ['tabular-nums'] };
 
 export const font = {
   'text-2xs': {
-    fontFamily: fontFamily.text,
     fontSize: 10,
     lineHeight: 14,
   },
   'text-xs': {
-    fontFamily: fontFamily.text,
     fontSize: 12,
     lineHeight: 16,
   },
   'text-sm': {
-    fontFamily: fontFamily.text,
     fontSize: 14,
     lineHeight: 20,
   },
   'text-base': {
-    fontFamily: fontFamily.text,
     fontSize: 16,
     lineHeight: 24,
   },
   'text-lg': {
-    fontFamily: fontFamily.text,
     fontSize: 18,
     lineHeight: 28,
   },
   'text-xl': {
-    fontFamily: fontFamily.text,
     fontSize: 20,
     lineHeight: 28,
   },
   'text-2xl': {
-    fontFamily: fontFamily.text,
     fontSize: 24,
     lineHeight: 32,
   },
   'text-3xl': {
-    fontFamily: fontFamily.text,
     fontSize: 30,
     lineHeight: 40,
   },
   'text-4xl': {
-    fontFamily: fontFamily.text,
     fontSize: 40,
     lineHeight: 50,
   },

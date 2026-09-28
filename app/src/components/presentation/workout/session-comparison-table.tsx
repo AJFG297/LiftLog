@@ -1,5 +1,5 @@
 import WeightFormat from '@/components/presentation/foundation/weight-format';
-import { numberStyle, useAppTheme, spacing } from '@/hooks/useAppTheme';
+import { numberStyle, tabularText, useAppTheme, spacing } from '@/hooks/useAppTheme';
 import { RecordedWeightedExercise, Session } from '@/models/session-models';
 import { MovementKey } from '@/models/blueprint-models';
 import { Weight } from '@/models/weight';
@@ -119,7 +119,7 @@ export function SessionComparisonTable(props: SessionComparisonTableProps) {
                 textAlign: 'right',
                 color: colors.primary,
                 fontWeight: 'normal',
-                ...numberStyle,
+                ...tabularText,
               }}
             >
               {(showPreviousTotalTime &&
@@ -138,7 +138,7 @@ export function SessionComparisonTable(props: SessionComparisonTableProps) {
                 textAlign: 'right',
                 color: colors.primary,
                 fontWeight: 'bold',
-                ...numberStyle,
+                ...tabularText,
               }}
             >
               {(showCurrentTotalTime &&
@@ -161,7 +161,7 @@ export function SessionComparisonTable(props: SessionComparisonTableProps) {
                   textAlign: 'right',
                   color: colors.primary,
                   fontWeight: 'bold',
-                  ...numberStyle,
+                  ...tabularText,
                 }}
               >
                 {(showCurrentTotalTime &&
