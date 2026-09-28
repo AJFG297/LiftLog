@@ -12,6 +12,7 @@ import StackWithHeader from '@/components/layout/stack-with-header';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { requireOptionalNativeModule } from 'expo';
+import { ToastProvider } from '@/components/presentation/foundation/toast';
 import { formSheetOptions } from '@/components/presentation/foundation/form-sheet-options';
 
 install();
@@ -38,9 +39,11 @@ export default function RootLayout() {
             <AppThemeProvider>
               <AppStateProvider>
                 <SnackbarProvider>
-                  {Platform.OS === 'android' && <StatusBar style="auto" />}
-                  <PlanImportGate />
-                  <Layout />
+                  <ToastProvider>
+                    {Platform.OS === 'android' && <StatusBar style="auto" />}
+                    <PlanImportGate />
+                    <Layout />
+                  </ToastProvider>
                 </SnackbarProvider>
               </AppStateProvider>
             </AppThemeProvider>
