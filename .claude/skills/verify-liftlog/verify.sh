@@ -18,7 +18,7 @@ AVD="${VERIFY_AVD:-liftlog-verify}"
 EMU_PORT="${VERIFY_EMU_PORT:-5584}"
 SERIAL="emulator-$EMU_PORT"
 METRO_PORT="${VERIFY_METRO_PORT:-8091}"
-APP_ID="com.limajuice.liftlog"
+APP_ID="com.ajfg297.liftlog"
 APK="$APP_DIR/android/app/build/outputs/apk/debugOptimized/app-debugOptimized.apk"
 DEV_URL="exp+liftlog://expo-development-client/?url=http%3A%2F%2F127.0.0.1%3A$METRO_PORT"
 

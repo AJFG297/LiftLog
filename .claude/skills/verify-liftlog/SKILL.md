@@ -82,7 +82,7 @@ Write a Maestro flow and run it against the verify device. Start from `app/.maes
 .claude/skills/verify-liftlog/verify.sh flow <path/to/flow.yaml> [label]
 ```
 
-- Every flow starts with `appId: com.limajuice.liftlog`, `---`, then `- launchApp` and `extendedWaitUntil: {visible:
+- Every flow starts with `appId: com.ajfg297.liftlog`, `---`, then `- launchApp` and `extendedWaitUntil: {visible:
   'Workout', timeout: 60000}`. Put scratch flows in the run's evidence directory, not in `app/.maestro/`, unless the
   task is to add an e2e flow.
 - **Handles**, in order of preference:
@@ -141,7 +141,7 @@ What counts as proof:
 prints `evidence kept at ...`, and `.verify-runs/<run-id>/` stays. The next `up` cold-boots, and the emulator keeps
 its userdata, so installed-app data (sessions, plans) persists across runs. Flows should clean up after themselves
 the way `app/.maestro/creating-a-plan.yaml` removes its plan. For a truly fresh install, run `adb -s
-emulator-5584 uninstall com.limajuice.liftlog` before `up`. Run `down` after a failed attempt too, so no emulator or
+emulator-5584 uninstall com.ajfg297.liftlog` before `up`. Run `down` after a failed attempt too, so no emulator or
 Metro is left running.
 
 Never delete `.verify-runs/<run-id>/` as part of cleanup. Never run `gradlew --stop`, `pkill node`, or `adb kill-server`:

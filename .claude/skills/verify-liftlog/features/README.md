@@ -15,7 +15,7 @@ before driving the app, then use the matching feature file as the recipe. Comman
 
 ## Driving conventions
 
-- Every flow: `appId: com.limajuice.liftlog`, `---`, `- launchApp`, then
+- Every flow: `appId: com.ajfg297.liftlog`, `---`, `- launchApp`, then
   `- extendedWaitUntil: {visible: 'Workout', timeout: 60000}`.
 - Prefer `id:` (React Native `testID`) over text. Text is a case-insensitive full-string regex; use `(?-i)` when a
   lowercase/uppercase variant appears elsewhere (e.g. `'(?-i)Freeform workout'` vs `Freeform Workout` cards).
