@@ -1,6 +1,6 @@
 # ADR-0002: Our own components for content, native controls for system chrome
 
-Status: proposed (2026-09-27). It's accepted when the PR that adds it merges.
+Status: accepted (2026-09-27)
 
 ## Context
 
