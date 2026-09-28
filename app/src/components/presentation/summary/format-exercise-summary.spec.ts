@@ -330,6 +330,11 @@ describe('summaries letter sets that are not working sets', () => {
   });
 
   it('previews a plan the AI planner is still streaming, whose last kind is cut off', () => {
+    // Untyped, as the stream is: the backend closes the string it stopped in.
+    const plannedSets = [
+      { reps: { min: 5, max: 5 }, kind: 'working' },
+      { reps: { min: 12, max: 12 }, kind: 'dr' },
+    ];
     const plan = aiPlanFromJSON({
       version: 4,
       name: 'PPL',
@@ -341,11 +346,7 @@ describe('summaries letter sets that are not working sets', () => {
               {
                 type: 'WeightedExerciseBlueprint',
                 name: 'Bench Press',
-                // Untyped, as the stream is: the backend closes the string it stopped in.
-                plannedSets: [
-                  { reps: { min: 5, max: 5 }, kind: 'working' },
-                  { reps: { min: 12, max: 12 }, kind: 'dr' },
-                ].map((set) => ({ ...set, kind: set.kind as string })),
+                plannedSets,
               },
             ],
           },
