@@ -11,6 +11,8 @@ export interface NumberPadField {
 export interface NumberPadBuffer {
   /** `null` while the field still shows its placeholder. The decimal separator is always `.`. */
   typed: string | null;
+  /** Set by ±, so the next digit or decimal starts a new value, as it does over the placeholder. */
+  stepped: boolean;
   placeholder: BigNumber | undefined;
   allowDecimal: boolean;
   step: BigNumber;
@@ -29,6 +31,7 @@ const MAX_DECIMAL_DIGITS = 2;
 export function openNumberPad(field: NumberPadField): NumberPadBuffer {
   return {
     typed: null,
+    stepped: false,
     placeholder: field.placeholder === undefined ? undefined : new BigNumber(field.placeholder),
     allowDecimal: field.allowDecimal,
     step: new BigNumber(field.step),
@@ -38,18 +41,26 @@ export function openNumberPad(field: NumberPadField): NumberPadBuffer {
 export function numberPadReducer(state: NumberPadBuffer, action: NumberPadAction): NumberPadBuffer {
   switch (action.type) {
     case 'digit':
-      return withTyped(state, appendDigit(state.typed ?? '', action.digit));
-    case 'decimal':
-      if (!state.allowDecimal || state.typed?.includes('.')) {
+      return withTyped(state, appendDigit(editable(state), action.digit));
+    case 'decimal': {
+      const typed = editable(state);
+      if (!state.allowDecimal || typed.includes('.')) {
         return state;
       }
-      return withTyped(state, `${state.typed || '0'}.`);
-    case 'backspace':
-      return withTyped(state, state.typed?.slice(0, -1) || null);
+      return withTyped(state, `${typed || '0'}.`);
+    }
+    case 'backspace': {
+      const typed = state.typed?.slice(0, -1) ?? '';
+      // Only a leading decimal leaves a lone 0 to delete back to, and that 0 wasn't typed.
+      return withTyped(state, typed === '' || typed === '0' ? null : typed);
+    }
     case 'step': {
+      const decimals = state.allowDecimal ? MAX_DECIMAL_DIGITS : 0;
+      const largest = new BigNumber(10).pow(MAX_WHOLE_DIGITS).minus(new BigNumber(10).pow(-decimals));
       const from = numberPadValue(state) ?? new BigNumber(0);
       const moved = action.direction === 'up' ? from.plus(state.step) : from.minus(state.step);
-      return withTyped(state, BigNumber.max(moved, 0).toFixed());
+      const typed = BigNumber.min(BigNumber.max(moved.decimalPlaces(decimals), 0), largest).toFixed();
+      return typed === state.typed && state.stepped ? state : { ...state, typed, stepped: true };
     }
     case 'reset':
       return openNumberPad(action.field);
@@ -69,6 +80,11 @@ function appendDigit(typed: string, digit: Digit): string {
   return full ? typed : typed + digit;
 }
 
+/** What typing edits: nothing over the placeholder or a stepped value, which it replaces. */
+function editable(state: NumberPadBuffer): string {
+  return state.stepped ? '' : (state.typed ?? '');
+}
+
 function withTyped(state: NumberPadBuffer, typed: string | null): NumberPadBuffer {
-  return typed === state.typed ? state : { ...state, typed };
+  return typed === state.typed && !state.stepped ? state : { ...state, typed, stepped: false };
 }

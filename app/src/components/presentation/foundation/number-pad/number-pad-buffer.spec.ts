@@ -100,6 +100,39 @@ describe('number pad buffer', () => {
     expect(press(weight, '+', '+', '+', '+', '-')).toEqual({ typed: '67.5', value: '67.5' });
   });
 
+  it('replaces a stepped value with what is typed next, as it does the placeholder', () => {
+    expect(press(weight, '+', '5')).toEqual({ typed: '5', value: '5' });
+    expect(press(weight, '+', '.', '5')).toEqual({ typed: '0.5', value: '0.5' });
+    expect(press(weight, '8', '0', '-', '7', '0')).toEqual({ typed: '70', value: '70' });
+    expect(press(weight, '+', '+', '1')).toEqual({ typed: '1', value: '1' });
+  });
+
+  it('edits a stepped value on backspace, and types onto it after that', () => {
+    expect(press(weight, '+', '⌫')).toEqual({ typed: '62.', value: '62' });
+    expect(press(weight, '+', '⌫', '7', '5')).toEqual({ typed: '62.75', value: '62.75' });
+    expect(press(weight, '+', '⌫', '⌫', '⌫', '⌫')).toEqual({ typed: null, value: '60' });
+  });
+
+  it('steps no further than typing can reach', () => {
+    const heavy: NumberPadField = { placeholder: 9999, allowDecimal: true, step: 2.5 };
+    expect(press(heavy, '+')).toEqual({ typed: '9999.99', value: '9999.99' });
+    expect(press(heavy, '+', '+')).toEqual({ typed: '9999.99', value: '9999.99' });
+    const manyReps: NumberPadField = { placeholder: 9998, allowDecimal: false, step: 5 };
+    expect(press(manyReps, '+')).toEqual({ typed: '9999', value: '9999' });
+    expect(press(weight, '1', '2', '3', '4', '+')).toEqual({ typed: '1236.5', value: '1236.5' });
+  });
+
+  it('rounds a stepped value to two decimals', () => {
+    const fine: NumberPadField = { placeholder: 10, allowDecimal: true, step: 0.125 };
+    expect(press(fine, '+')).toEqual({ typed: '10.13', value: '10.13' });
+    expect(press(fine, '-')).toEqual({ typed: '9.88', value: '9.88' });
+  });
+
+  it('shows the placeholder again after deleting a leading decimal', () => {
+    expect(press(weight, '.', '5', '⌫', '⌫')).toEqual({ typed: null, value: '60' });
+    expect(press(weight, '.', '⌫')).toEqual({ typed: null, value: '60' });
+  });
+
   it('opens the next field fresh on reset', () => {
     const typed = [actionFor('9'), actionFor('0')].reduce(numberPadReducer, openNumberPad(weight));
     const next = numberPadReducer(typed, { type: 'reset', field: reps });

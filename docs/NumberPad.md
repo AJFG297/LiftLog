@@ -13,10 +13,13 @@ actions to it.
 
 - Opening a field (`openNumberPad`, or the `reset` action for the next field) starts it empty, showing
   the placeholder: today's target.
-- Typing replaces the placeholder. Backspacing the last character shows the placeholder again.
+- Typing replaces the placeholder. Backspacing the last character shows the placeholder again, and so does
+  backspacing to the 0 that a leading `.` puts in front of itself.
 - `.` is offered only when the field allows decimals (weight, not reps). A field takes up to four whole
   digits and two decimals.
-- ± steps from what was typed, or from the placeholder if nothing was typed, and never goes below 0.
+- ± steps from what was typed, or from the placeholder if nothing was typed. It stays within what typing
+  can reach (0 to 9999.99, two decimals at most). Typing straight after ± replaces the stepped value, as it
+  replaces the placeholder; backspace edits it.
 - `numberPadValue` is what logging the field would record: what was typed, or else the placeholder.
 
 ## Steps
