@@ -475,9 +475,9 @@ export class RecordedWeightedExercise {
     return !this.potentialSets.some((x) => x.set === undefined);
   }
 
-  /** The sets, warm-ups included, whose kind counts towards `rule`, in order. */
+  /** The sets whose kind counts towards `rule`, in order. Warm-ups count towards none. */
   setsCountingTowards(rule: SetKindRule): PotentialSet[] {
-    return [...this.warmupSets, ...this.potentialSets].filter((set) => setKindHas(set.kind, rule));
+    return this.potentialSets.filter((set) => setKindHas(set.kind, rule));
   }
 
   /** Indexes into the working list of the sets whose kind counts towards `rule`. */
