@@ -190,9 +190,13 @@ export function WorkoutSummary({ sessionId, finished }: WorkoutSummaryProps) {
 
       <View style={{ gap: spacing[1], paddingHorizontal: spacing[1] }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[2] }}>
-          <MsIconSrc name="check" size={16} color={tokens.accentInk} />
-          <SurfaceText font="text-sm" weight="700" style={{ color: tokens.accentInk, letterSpacing: 1 }}>
-            {(finished ? t('finish.summary.complete.label') : t('finish.summary.in_progress.label')).toUpperCase()}
+          {finished ? <MsIconSrc name="check" size={16} color={tokens.accentInk} /> : null}
+          <SurfaceText
+            font="text-sm"
+            weight="700"
+            style={{ color: tokens.accentInk, letterSpacing: 1, textTransform: 'uppercase' }}
+          >
+            {finished ? t('finish.summary.complete.label') : t('finish.summary.in_progress.label')}
           </SurfaceText>
         </View>
         <SurfaceText font="text-3xl" weight="700" accessibilityRole="header" style={{ color: tokens.ink }}>
