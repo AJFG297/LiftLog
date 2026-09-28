@@ -6,7 +6,7 @@ import {
   useMaterial3Theme,
 } from '@pchmn/expo-material3-theme';
 import React, { createContext, ReactNode, useContext, useEffect } from 'react';
-import { Appearance, Platform, useColorScheme } from 'react-native';
+import { Appearance, AppState, Platform, useColorScheme } from 'react-native';
 import { MD3DarkTheme, MD3LightTheme, PaperProvider } from 'react-native-paper';
 import { DarkTheme, ThemeProvider as NavigationThemeProvider, DefaultTheme } from 'expo-router';
 import { MsIconSrc } from '@/components/presentation/foundation/ms-icon-source';
@@ -187,8 +187,23 @@ export const AppThemeProvider: React.FC<AppThemeProviderProps> = ({ children }) 
 
   // With no source colour this is the system (Material You) scheme on Android 12+, and a scheme built
   // from the fallback everywhere else. We only read it to follow the wallpaper.
-  const { theme: systemTheme } = useMaterial3Theme({ fallbackSourceColor: VERMILION });
+  const { theme: systemTheme, resetTheme: rereadSystemTheme } = useMaterial3Theme({ fallbackSourceColor: VERMILION });
   const matchWallpaper = colorSchemeSeed === 'default' && canMatchWallpaper;
+  // The hook reads the system scheme once, on mount. The wallpaper can change while the app is open or in
+  // the background, so read it again when matching is turned on and whenever the app comes back.
+  useEffect(() => {
+    if (!matchWallpaper) {
+      return;
+    }
+    rereadSystemTheme();
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') {
+        rereadSystemTheme();
+      }
+    });
+    return () => subscription.remove();
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
+  }, [matchWallpaper]);
   const accentSource: HexColor = matchWallpaper
     ? (systemTheme.light.primary as HexColor)
     : colorSchemeSeed === 'default'
