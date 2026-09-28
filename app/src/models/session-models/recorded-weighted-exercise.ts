@@ -34,8 +34,6 @@ import { match } from 'ts-pattern';
 
 export type WeightAppliesTo = 'thisSet' | 'uncompletedSets' | 'allSets';
 
-export type { SetKind, SetList, WorkingListKind } from '@/models/session-models/set-kind';
-
 /** A slot's place in the exercise: its list, and its index within that list. */
 export interface SetPosition {
   list: SetList;
@@ -116,7 +114,8 @@ export class RecordedWeightedExercise {
 
   /**
    * A fresh slot for one planned warm-up: a percentage of the heaviest working set, or an absolute
-   * weight converted into the session's unit, either way rounded to the exercise's increment.
+   * weight converted into the session's unit, either way rounded to the exercise's increment. It
+   * becomes a `warmup` slot when it goes into {@link warmupSets}.
    */
   warmupSlotFor(warmup: PlannedWarmupSet, fallbackUnit: WeightUnit): PotentialSet {
     const heaviest = this.heaviestWorkingWeight;
@@ -124,17 +123,13 @@ export class RecordedWeightedExercise {
     const target = { min: warmup.reps, max: warmup.reps };
     const load = this.tracksResistance ? warmup.load : undefined;
     if (!load) {
-      return PotentialSet.of({ weight: new Weight(0, unit), target, kind: 'warmup' });
+      return PotentialSet.of({ weight: new Weight(0, unit), target });
     }
     const raw =
       load.type === 'percent'
         ? (heaviest ?? new Weight(0, unit)).convertTo(unit).multipliedBy(new BigNumber(load.percent).dividedBy(100))
         : load.weight.convertTo(unit);
-    return PotentialSet.of({
-      weight: roundWarmupWeight(raw, warmupIncrementFor(this.blueprint, unit)),
-      target,
-      kind: 'warmup',
-    });
+    return PotentialSet.of({ weight: roundWarmupWeight(raw, warmupIncrementFor(this.blueprint, unit)), target });
   }
 
   private get heaviestWorkingWeight(): Weight | undefined {

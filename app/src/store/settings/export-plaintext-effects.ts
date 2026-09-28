@@ -1,5 +1,5 @@
 import { PotentialSet, RecordedCardioExercise, RecordedExercise, Session } from '@/models/session-models';
-import type { SetKind } from '@/models/session-models/recorded-weighted-exercise';
+import type { SetKind } from '@/models/session-models/set-kind';
 import { AddEffectFn } from '@/store/store';
 import { exportPlainText } from '@/store/settings';
 import Enumerable from 'linq';
