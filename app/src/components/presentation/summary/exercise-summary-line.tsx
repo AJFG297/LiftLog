@@ -1,6 +1,6 @@
 import { formatExerciseSummary } from '@/components/presentation/summary/format-exercise-summary';
 import { SurfaceText } from '@/components/presentation/foundation/surface-text';
-import { ColorChoice, spacing } from '@/hooks/useAppTheme';
+import { ColorChoice, spacing, tabularText } from '@/hooks/useAppTheme';
 import { RecordedExercise } from '@/models/session-models';
 import { useTranslate } from '@tolgee/react';
 import { View } from 'react-native';
@@ -30,7 +30,7 @@ export function ExerciseSummaryLine({
       <SurfaceText color={color} style={{ flexShrink: 1 }}>
         {exercise.blueprint.name}
       </SurfaceText>
-      <SurfaceText color={secondaryColor} style={{ maxWidth: SETS_MAX_WIDTH, textAlign: 'right' }}>
+      <SurfaceText color={secondaryColor} style={[tabularText, { maxWidth: SETS_MAX_WIDTH, textAlign: 'right' }]}>
         {formatExerciseSummary(exercise, {
           isFilled,
           showWeight,

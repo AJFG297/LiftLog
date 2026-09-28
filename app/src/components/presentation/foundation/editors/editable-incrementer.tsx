@@ -2,6 +2,7 @@ import { localeFormatBigNumber, localeParseBigNumber } from '@/utils/locale-bign
 import BigNumber from 'bignumber.js';
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
+import { numberStyle } from '@/hooks/useAppTheme';
 import { TextInput } from 'react-native-paper';
 
 interface EditableIncrementerProps {
@@ -53,6 +54,7 @@ export default function EditableIncrementer(props: EditableIncrementerProps) {
         mode="outlined"
         value={text}
         style={{ flex: 1 }}
+        contentStyle={numberStyle}
         label={props.label}
         inputMode={'decimal'}
         keyboardType={'decimal-pad'}

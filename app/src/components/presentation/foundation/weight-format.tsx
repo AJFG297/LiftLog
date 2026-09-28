@@ -1,4 +1,4 @@
-import { ColorChoice, font, FontChoice, useAppTheme } from '@/hooks/useAppTheme';
+import { ColorChoice, font, FontChoice, fontFamily, numberStyle, useAppTheme } from '@/hooks/useAppTheme';
 import { bodyweightLoadText, bodyweightPrefix, shortFormatWeightUnit, Weight } from '@/models/weight';
 import { localeFormatBigNumber } from '@/utils/locale-bignumber';
 import { useTranslate } from '@tolgee/react';
@@ -22,28 +22,23 @@ export default function WeightFormat(props: WeightFormatProps) {
     display: 'flex',
     alignItems: 'center',
     flexDirection: 'row',
+    fontFamily: fontFamily.text,
     color: colors[props.color ?? 'onSurface'],
     fontWeight: props.fontWeight,
     ...(props.fontSize ? { ...font[props.fontSize] } : undefined),
   } as const;
 
-  if (props.usesBodyweight) {
-    const label = t('exercise.short_bodyweight.label');
-    if (!value || value.isZero()) {
-      return <Text style={style}>{label}</Text>;
-    }
-    return (
-      <Text style={style}>
-        {bodyweightPrefix(label, value)}
-        {localeFormatBigNumber(value)} <Text style={{ fontSize: 12 }}>{shortFormatWeightUnit(props.weight?.unit)}</Text>
-      </Text>
-    );
+  const label = t('exercise.short_bodyweight.label');
+  if (props.usesBodyweight && (!value || value.isZero())) {
+    return <Text style={style}>{label}</Text>;
   }
 
-  const weightDisplay = localeFormatBigNumber(value) || '-';
+  // Only the digits go in the number family; the bodyweight prefix and the unit stay in Geist.
   return (
     <Text style={style}>
-      {weightDisplay} <Text style={{ fontSize: 12 }}>{shortFormatWeightUnit(props.weight?.unit)}</Text>
+      {props.usesBodyweight && value ? bodyweightPrefix(label, value) : null}
+      <Text style={numberStyle}>{localeFormatBigNumber(value) || '-'}</Text>{' '}
+      <Text style={{ fontSize: 12 }}>{shortFormatWeightUnit(props.weight?.unit)}</Text>
     </Text>
   );
 }

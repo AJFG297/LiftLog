@@ -1,4 +1,4 @@
-import { spacing } from '@/hooks/useAppTheme';
+import { numberStyle, spacing } from '@/hooks/useAppTheme';
 import { localeFormatBigNumber, localeParseBigNumber } from '@/utils/locale-bignumber';
 import { useTranslate } from '@tolgee/react';
 import BigNumber from 'bignumber.js';
@@ -110,6 +110,7 @@ export function WeightEditor(props: WeightEditorProps) {
           autoFocus
           value={text}
           onChangeText={handleTextChange}
+          contentStyle={numberStyle}
           style={{
             backgroundColor: theme.colors.elevation.level3,
             flex: 1,

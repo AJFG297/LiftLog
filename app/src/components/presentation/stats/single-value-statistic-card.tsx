@@ -1,7 +1,7 @@
 import Icon from '@/components/presentation/foundation/icon';
 import TouchableRipple from '@/components/presentation/foundation/touchable-ripple';
 import { AppIconSource } from '@/components/presentation/foundation/ms-icon-source';
-import { spacing, useAppTheme } from '@/hooks/useAppTheme';
+import { spacing, tabularText, useAppTheme } from '@/hooks/useAppTheme';
 import { ReactNode } from 'react';
 import { View } from 'react-native';
 import { Card, Text } from 'react-native-paper';
@@ -35,7 +35,7 @@ export default function SingleValueStatisticCard(props: {
               {props.title}
             </Text>
           </View>
-          <Text>{props.value}</Text>
+          <Text style={tabularText}>{props.value}</Text>
         </View>
       </Wrapper>
     </Card>

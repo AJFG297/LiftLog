@@ -17,7 +17,8 @@ work to find the docs relevant to your area, and update it whenever you add, rem
 
 - [Theming.md](./Theming.md) - the colour tokens in `useAppTheme().tokens`: fixed warm neutrals plus an
   accent family generated from the user's colour, which token to use for what, the contrast guarantees,
-  Match wallpaper, and how the Paper scheme for unconverted screens is mapped from them.
+  Match wallpaper, and how the Paper scheme for unconverted screens is mapped from them. Also the type:
+  Geist and Geist Mono embedded at build time, and when to use `numeric` / `numberStyle` / `tabularText`.
 
 ## Features
 

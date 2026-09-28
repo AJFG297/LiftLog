@@ -8,7 +8,7 @@ import { useEffect, useState } from 'react';
 
 import { View } from 'react-native';
 import IconButton from '@/components/presentation/foundation/icon-button';
-import { rounding, spacing, useAppTheme } from '@/hooks/useAppTheme';
+import { rounding, spacing, tabularText, useAppTheme } from '@/hooks/useAppTheme';
 import { Text } from 'react-native-paper';
 import Menu from '@/components/presentation/foundation/menu';
 import BigNumber from 'bignumber.js';
@@ -295,7 +295,7 @@ function CardioTargetHandler(props: { target: CardioTarget }) {
       <Text variant="bodyLarge">
         <T keyName={isDistance ? 'exercise.target_distance.label' : 'exercise.target_time.label'} />
       </Text>
-      <Text variant="bodyLarge" style={{ color: colors.primary }}>
+      <Text variant="bodyLarge" style={{ color: colors.primary, ...tabularText }}>
         {props.target.type === 'distance'
           ? localeFormatBigNumber(props.target.value.value) + getShortUnit(props.target.value.unit)
           : formatDuration(props.target.value)}

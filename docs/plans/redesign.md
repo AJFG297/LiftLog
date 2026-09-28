@@ -1,6 +1,6 @@
 # Plan: app redesign ("Clarity")
 
-Status: **in progress**. Phase 0 is done (ADR-0002); phase 1 has started with PM-18 (theme tokens, see [Theming.md](../Theming.md)). The Linear parent issue is PM-16, "Spec: App redesign (Clarity)".
+Status: **in progress**. Phase 0 is done (ADR-0002); phase 1 has started with PM-18 (theme tokens) and PM-19 (fonts), both described in [Theming.md](../Theming.md). The Linear parent issue is PM-16, "Spec: App redesign (Clarity)".
 
 The prototypes live on a private claude.ai design canvas owned by the author
 (<https://claude.ai/artifact/47zQyGzQ5NcrAP7Yw4Szwx>). It holds 28 clickable phone screens: the chosen
@@ -107,9 +107,10 @@ So this is a rebuild of screens and a few model additions, not a rewrite.
 - `themeMode` (system/light/dark) stays. `trueBlackDarkTheme` becomes a variant of the dark neutrals.
 - Routine colours are a separate, per-routine choice, and the accent never changes them.
 
-**D3. Fonts.** Geist and Geist Mono (OFL), loaded with `expo-font` from `@expo-google-fonts/geist`. Every
-number uses tabular figures. Type sizes follow the existing `font` scale in `useAppTheme`, with Geist
-weights.
+**D3. Fonts.** Geist and Geist Mono (OFL), embedded with the `expo-font` plugin from `@expo-google-fonts/geist`
+and `geist-mono`. Numbers that change or line up keep their width: Geist Mono for bare numbers, Geist's
+tabular figures where a number has letters in it. Type sizes follow the existing `font` scale in
+`useAppTheme`, with Geist weights. Details in [Theming.md](../Theming.md#type).
 
 **D4. Tabs: Home · Routines · Progress · You.**
 

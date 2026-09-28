@@ -2,7 +2,7 @@ import { StatisticOverTime } from '@/store/stats';
 import { QuantityAxis } from '@/components/presentation/stats/quantity-axis';
 import { BarChart, barDataItem } from 'react-native-gifted-charts';
 import { View } from 'react-native';
-import { useAppTheme } from '@/hooks/useAppTheme';
+import { tabularText, useAppTheme } from '@/hooks/useAppTheme';
 import { useState } from 'react';
 import { verticalBarChartProps } from '@/components/presentation/stats/line-graph-props';
 import { useFormatDate } from '@/hooks/useFormatDate';
@@ -24,9 +24,7 @@ export function StatisticBarChart<T>({
     return {
       value: axis.toNumber(stat.value),
       barWidth: charWidth * (topLabelText.length + 3),
-      topLabelComponent: () => (
-        <Text style={{ width: 200, textAlign: 'center', pointerEvents: 'none' }}>{topLabelText}</Text>
-      ),
+      topLabelComponent: () => <Text style={topLabelStyle}>{topLabelText}</Text>,
 
       label: formatDate(stat.dateTime.toLocalDate(), {
         day: 'numeric',
@@ -52,3 +50,6 @@ export function StatisticBarChart<T>({
     </View>
   );
 }
+
+// A bar's value carries its unit ("100kg"), so it stays in Geist with tabular figures.
+const topLabelStyle = { ...tabularText, width: 200, textAlign: 'center', pointerEvents: 'none' } as const;

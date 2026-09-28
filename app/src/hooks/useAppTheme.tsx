@@ -6,8 +6,8 @@ import {
   useMaterial3Theme,
 } from '@pchmn/expo-material3-theme';
 import React, { createContext, ReactNode, useContext, useEffect } from 'react';
-import { Appearance, AppState, Platform, useColorScheme } from 'react-native';
-import { MD3DarkTheme, MD3LightTheme, PaperProvider } from 'react-native-paper';
+import { Appearance, AppState, Platform, TextStyle, useColorScheme } from 'react-native';
+import { configureFonts, MD3DarkTheme, MD3LightTheme, PaperProvider } from 'react-native-paper';
 import { DarkTheme, ThemeProvider as NavigationThemeProvider, DefaultTheme } from 'expo-router';
 import { MsIconSrc } from '@/components/presentation/foundation/ms-icon-source';
 import { argbFromHex, Blend, Hct, hexFromArgb } from '@material/material-color-utilities';
@@ -52,6 +52,32 @@ export const spacing = {
   60: 240,
   64: 256,
 } as const;
+
+/**
+ * The app's two type families, embedded at build time by the expo-font plugin in `app.json` (so they're
+ * there before the first frame, with no loading step). Each is registered as one family with several
+ * weights, so `fontWeight` picks the file on both platforms. We embed Geist Mono at 500 and 600 only, so
+ * normal renders at 500 and bold at 600.
+ *
+ * The `font` sizes below deliberately carry no family: `SurfaceText` sets it, and a nested span that
+ * spreads a size then still inherits its parent's family (a unit inside a mono number, say).
+ */
+export const fontFamily = {
+  text: 'Geist',
+  number: 'Geist Mono',
+};
+
+/**
+ * Text that is only a number (digits and number punctuation: "7.5", "1:17", "8-12") uses Geist Mono, whose
+ * digits all share one width, so values don't shift as they change.
+ */
+export const numberStyle: TextStyle = { fontFamily: fontFamily.number };
+
+/**
+ * For a value that has letters in it ("100kg", "1 hrs 23 mins", "Squat - 100 kg"): stays in Geist, where
+ * mono would look odd, but with Geist's own tabular figures so the digits still keep their width.
+ */
+export const tabularText: TextStyle = { fontVariant: ['tabular-nums'] };
 
 export const font = {
   'text-2xs': {
@@ -156,6 +182,16 @@ export interface AppTheme {
   colorScheme: 'light' | 'dark';
 }
 
+// Unconverted screens read type from Paper, and headers from the navigation theme; both keep their own
+// sizes and weights but switch to Geist.
+const PAPER_FONTS = configureFonts({ config: { fontFamily: fontFamily.text } });
+const NAVIGATION_FONTS = {
+  regular: { fontFamily: fontFamily.text, fontWeight: '400' },
+  medium: { fontFamily: fontFamily.text, fontWeight: '500' },
+  bold: { fontFamily: fontFamily.text, fontWeight: '600' },
+  heavy: { fontFamily: fontFamily.text, fontWeight: '700' },
+} as const;
+
 const AppThemeContext = createContext<AppTheme | undefined>(undefined);
 
 export const useAppTheme = (): AppTheme => {
@@ -217,7 +253,7 @@ export const AppThemeProvider: React.FC<AppThemeProviderProps> = ({ children }) 
   const baseScheme = (matchWallpaper ? systemTheme : createMaterial3Theme(accentSource))[colorScheme];
   const schemedTheme = paperSchemeFromTokens(tokens, baseScheme, variant);
 
-  const paperTheme = { ...(isDark ? MD3DarkTheme : MD3LightTheme), colors: schemedTheme };
+  const paperTheme = { ...(isDark ? MD3DarkTheme : MD3LightTheme), colors: schemedTheme, fonts: PAPER_FONTS };
   /* The seedColor is passed into the expo-ui Hosts and means something different per platform.
    * On Android it seeds Compose's tonal palette, so it's the accent fill; undefined when matching the
    * wallpaper, which lets Compose use the same system palette we derived the accent from.
@@ -254,6 +290,7 @@ export const AppThemeProvider: React.FC<AppThemeProviderProps> = ({ children }) 
   const baseNavigationThem = isDark ? DarkTheme : DefaultTheme;
   const navigationTheme = {
     ...baseNavigationThem,
+    fonts: NAVIGATION_FONTS,
     colors: {
       background: paperTheme.colors.background,
       border: paperTheme.colors.outlineVariant,

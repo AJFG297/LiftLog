@@ -2,6 +2,7 @@ import { localeFormatBigNumber, localeParseBigNumber } from '@/utils/locale-bign
 import React, { useState, useEffect } from 'react';
 import { TextStyle } from 'react-native';
 import { TextInput, TextInputProps } from 'react-native-paper';
+import { numberStyle } from '@/hooks/useAppTheme';
 import BigNumber from 'bignumber.js';
 
 interface DecimalEditorProps {
@@ -13,7 +14,7 @@ interface DecimalEditorProps {
 }
 
 export function DecimalEditor(props: DecimalEditorProps & Partial<Omit<TextInputProps, keyof DecimalEditorProps>>) {
-  const { value, onChange, testID, label, style, ...rest } = props;
+  const { value, onChange, testID, label, style, contentStyle, ...rest } = props;
   const [text, setText] = useState(localeFormatBigNumber(props.value) || '-');
   const [editorValue, setEditorValue] = useState(value);
 
@@ -50,6 +51,8 @@ export function DecimalEditor(props: DecimalEditorProps & Partial<Omit<TextInput
       returnKeyType="done"
       selectTextOnFocus
       style={[style]}
+      // Paper applies a font family only through contentStyle; `style` styles the container.
+      contentStyle={[numberStyle, contentStyle]}
       onBlur={() => {
         if (text === '') {
           setText('0');

@@ -1,5 +1,5 @@
 import Button from '@/components/presentation/foundation/button';
-import { font, rounding, spacing, useAppTheme } from '@/hooks/useAppTheme';
+import { font, numberStyle, rounding, spacing, useAppTheme } from '@/hooks/useAppTheme';
 import { T } from '@tolgee/react';
 import { ReactNode, useState } from 'react';
 import { StyleSheet, View, ViewStyle } from 'react-native';
@@ -119,9 +119,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   value: {
-    fontVariant: ['tabular-nums'],
     textAlign: 'center',
     ...font['text-xl'],
+    ...numberStyle,
   },
   label: {
     textAlign: 'center',

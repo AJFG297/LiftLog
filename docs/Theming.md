@@ -1,7 +1,8 @@
 # Theming
 
 The app's colours come from one place: `app/src/utils/theme-tokens.ts`, exposed as `tokens` by
-`useAppTheme()`. It implements decision D2 of the [redesign plan](./plans/redesign.md).
+`useAppTheme()`. It implements decision D2 of the [redesign plan](./plans/redesign.md). The type (D3) is
+at the end, under [Type](#type).
 
 - **Neutrals** are fixed per variant (`light`, `dark`, `trueBlack`) and warm: `bg`, `card`, `line*`, `ink`,
   `muted`, `faint`, `placeholder`, `track`, `keypad*`, `segment`, and the `inverse*` set for dark slabs in
@@ -69,3 +70,36 @@ tokens by `paperSchemeFromTokens`, so old screens get the new palette. A few thi
 `colors.seedColor` feeds expo-ui `Host`s (see the `expo-ui-migration` skill). On Android it's the accent
 fill, or `undefined` when matching the wallpaper so Compose uses the same system palette. On iOS it's the
 tint: `accent` in light mode and `accentInk` in dark mode.
+
+## Type
+
+Text is **Geist**; numbers are **Geist Mono**. Both come from `@expo-google-fonts/geist` and
+`@expo-google-fonts/geist-mono` (OFL) and are embedded at build time by the `expo-font` plugin in
+`app/app.json`, so they're in the app before the first frame: there's no loading step, splash hold, or
+flash of the system font. Changing the font files or weights is a native change and needs a rebuild.
+
+Each is registered as a single family, so `fontFamily` plus `fontWeight` picks the file on both platforms.
+We embed Geist at 400/500/600/700 and Geist Mono at 500/600, so mono text at normal weight renders at 500
+and bold at 600. Android before API 28 only tells regular from bold.
+
+What to use, all from `useAppTheme.tsx`:
+
+| Text | Use |
+| --- | --- |
+| Words | `SurfaceText` (Geist by default) |
+| Only a number: digits and number punctuation ("7.5", "1:17", "8-12", "+5%", "@8") | `SurfaceText numeric`, or spread `numberStyle` |
+| A number with letters in it ("100kg", "1 hrs 23 mins", "3 × 5 60kg") | Geist with `tabularText`, whose digits share one width without going mono |
+| A number in a sentence | nothing special |
+
+To keep a unit out of mono, split it into its own span, as `WeightFormat` does.
+
+- The `font[...]` sizes carry no family. `SurfaceText` sets it, so a nested span that spreads a size keeps
+  its parent's family.
+- A raw `Text` from `react-native` has no family, so it renders in the system font. Use `SurfaceText`, or
+  set `fontFamily` yourself where a raw `Text` is unavoidable (`WeightFormat`, `LimitedHtml`, chart labels).
+- Paper's `fonts` and the navigation theme's `fonts` are Geist, so Paper `Text`, unconverted screens and
+  stack headers get it with their existing sizes and weights.
+- Paper's `TextInput` takes a font only through `contentStyle`; `style` reaches the container.
+- Native chrome (tabs, menus, switches, pickers in expo-ui) keeps the system font.
+- Chart point labels drawn as SVG by `react-native-gifted-charts` have no font prop and stay in the system
+  font.

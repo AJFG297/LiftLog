@@ -76,7 +76,7 @@ export function ReactionBar({ eventId, animateOnMount }: ReactionBarProps) {
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[1] }}>
               <Text style={{ fontSize: 16 }}>{emoji}</Text>
               {count > 0 && (
-                <SurfaceText font="text-sm" color="onSecondaryContainer" style={{ fontVariant: ['tabular-nums'] }}>
+                <SurfaceText font="text-sm" color="onSecondaryContainer" numeric>
                   {count.toString()}
                 </SurfaceText>
               )}

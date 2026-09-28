@@ -1,10 +1,11 @@
-import { font, spacing, useAppTheme } from '@/hooks/useAppTheme';
+import { spacing, useAppTheme } from '@/hooks/useAppTheme';
+import { SurfaceText } from '@/components/presentation/foundation/surface-text';
 import { useTranslate } from '@tolgee/react';
-import { StyleProp, Text, View, ViewStyle } from 'react-native';
+import { StyleProp, View, ViewStyle } from 'react-native';
 
 const sizes = {
-  default: { diameter: spacing[7], font: font['text-sm'] },
-  small: { diameter: spacing[4], font: font['text-2xs'] },
+  default: { diameter: spacing[7], font: 'text-sm' },
+  small: { diameter: spacing[4], font: 'text-2xs' },
 } as const;
 
 /**
@@ -30,9 +31,9 @@ export function WarmupBadge({ size = 'default', style }: { size?: keyof typeof s
         style,
       ]}
     >
-      <Text style={{ ...textFont, fontWeight: 'bold', color: colors.onSecondaryContainer }}>
+      <SurfaceText font={textFont} weight="bold" color="onSecondaryContainer">
         {t('workout.warmup_set.badge.label')}
-      </Text>
+      </SurfaceText>
     </View>
   );
 }

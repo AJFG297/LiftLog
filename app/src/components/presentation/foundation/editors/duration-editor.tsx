@@ -1,4 +1,5 @@
-import { useAppTheme, spacing, font } from '@/hooks/useAppTheme';
+import { spacing, numberStyle } from '@/hooks/useAppTheme';
+import { SurfaceText } from '@/components/presentation/foundation/surface-text';
 import {
   getDurationComponents,
   updateDurationHours,
@@ -7,7 +8,7 @@ import {
 } from '@/utils/duration-utils';
 import { Duration } from '@js-joda/core';
 import { useCallback, useEffect, useState } from 'react';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
 import { TextInput } from 'react-native-paper';
 
 interface DurationEditorProps {
@@ -19,7 +20,6 @@ interface DurationEditorProps {
 }
 
 export default function DurationEditor(props: DurationEditorProps) {
-  const { colors } = useAppTheme();
   const { duration, onDurationUpdated, readonly } = props;
 
   const initial = getDurationComponents(duration);
@@ -62,15 +62,9 @@ export default function DurationEditor(props: DurationEditorProps) {
   return (
     <>
       {props.label && (
-        <Text
-          style={{
-            ...font['text-lg'],
-            color: colors.onSurface,
-            textAlign: 'center',
-          }}
-        >
+        <SurfaceText font="text-lg" style={{ textAlign: 'center' }}>
           {props.label}
-        </Text>
+        </SurfaceText>
       )}
       <View
         style={{
@@ -81,68 +75,69 @@ export default function DurationEditor(props: DurationEditorProps) {
       >
         {props.showHours ? (
           <>
-            <TextInput
-              mode="outlined"
+            <DurationField
               testID="duration-editor-hours"
-              inputMode="numeric"
-              readOnly={readonly}
-              submitBehavior="blurAndSubmit"
-              returnKeyType="done"
-              style={{ width: spacing[24], textAlign: 'center' }}
+              unit="h"
               value={hours}
+              readOnly={readonly}
               onChangeText={updateHours}
               onBlur={resetValues}
-              right={<TextInput.Affix text="h" />}
             />
-            <Text
-              style={{
-                alignSelf: 'center',
-                ...font['text-xl'],
-                fontWeight: 'bold',
-                color: colors.onSecondaryContainer,
-              }}
-            >
-              :
-            </Text>
+            <Separator />
           </>
         ) : undefined}
-        <TextInput
-          mode="outlined"
+        <DurationField
           testID="duration-editor-minutes"
-          inputMode="numeric"
-          submitBehavior="blurAndSubmit"
-          returnKeyType="done"
-          style={{ width: spacing[24], textAlign: 'center' }}
+          unit="m"
           value={minutes}
           readOnly={readonly}
           onChangeText={updateMinutes}
           onBlur={resetValues}
-          right={<TextInput.Affix text="m" />}
         />
-        <Text
-          style={{
-            alignSelf: 'center',
-            ...font['text-xl'],
-            fontWeight: 'bold',
-            color: colors.onSecondaryContainer,
-          }}
-        >
-          :
-        </Text>
-        <TextInput
-          mode="outlined"
+        <Separator />
+        <DurationField
           testID="duration-editor-seconds"
-          inputMode="numeric"
-          submitBehavior="blurAndSubmit"
-          returnKeyType="done"
-          style={{ width: spacing[24], textAlign: 'center' }}
+          unit="s"
           value={seconds}
           readOnly={readonly}
           onChangeText={updateSeconds}
           onBlur={resetValues}
-          right={<TextInput.Affix text="s" />}
         />
       </View>
     </>
+  );
+}
+
+function DurationField(props: {
+  testID: string;
+  unit: string;
+  value: string;
+  readOnly: boolean | undefined;
+  onChangeText: (text: string) => void;
+  onBlur: () => void;
+}) {
+  return (
+    <TextInput
+      mode="outlined"
+      testID={props.testID}
+      inputMode="numeric"
+      readOnly={props.readOnly}
+      submitBehavior="blurAndSubmit"
+      returnKeyType="done"
+      style={{ width: spacing[24], textAlign: 'center' }}
+      contentStyle={numberStyle}
+      value={props.value}
+      onChangeText={props.onChangeText}
+      onBlur={props.onBlur}
+      right={<TextInput.Affix text={props.unit} />}
+    />
+  );
+}
+
+function Separator() {
+  return (
+    <SurfaceText font="text-xl" weight="bold" color="onSecondaryContainer" style={{ alignSelf: 'center' }}>
+      :
+    </SurfaceText>
   );
 }

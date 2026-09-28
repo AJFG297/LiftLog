@@ -68,7 +68,7 @@ export function TimerPane({ time, status, accent, segments, controls, jiggling, 
         />
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           <Jiggler jiggling={!!jiggling}>
-            <SurfaceText style={{ fontVariant: ['tabular-nums'] }} font="text-3xl" weight="bold" color={accent}>
+            <SurfaceText numeric font="text-3xl" weight="bold" color={accent}>
               {time}
             </SurfaceText>
           </Jiggler>

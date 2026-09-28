@@ -1,5 +1,5 @@
 import WeightFormat from '@/components/presentation/foundation/weight-format';
-import { useAppTheme, spacing } from '@/hooks/useAppTheme';
+import { numberStyle, tabularText, useAppTheme, spacing } from '@/hooks/useAppTheme';
 import { RecordedWeightedExercise, Session } from '@/models/session-models';
 import { MovementKey } from '@/models/blueprint-models';
 import { Weight } from '@/models/weight';
@@ -119,6 +119,7 @@ export function SessionComparisonTable(props: SessionComparisonTableProps) {
                 textAlign: 'right',
                 color: colors.primary,
                 fontWeight: 'normal',
+                ...tabularText,
               }}
             >
               {(showPreviousTotalTime &&
@@ -137,6 +138,7 @@ export function SessionComparisonTable(props: SessionComparisonTableProps) {
                 textAlign: 'right',
                 color: colors.primary,
                 fontWeight: 'bold',
+                ...tabularText,
               }}
             >
               {(showCurrentTotalTime &&
@@ -159,6 +161,7 @@ export function SessionComparisonTable(props: SessionComparisonTableProps) {
                   textAlign: 'right',
                   color: colors.primary,
                   fontWeight: 'bold',
+                  ...tabularText,
                 }}
               >
                 {(showCurrentTotalTime &&
@@ -396,7 +399,7 @@ function ComparisonBadge(props: { current: Weight; previous: Weight | undefined 
         style={{
           color: colors.onSecondaryContainer,
           fontWeight: '600',
-          fontVariant: ['tabular-nums'],
+          ...numberStyle,
         }}
       >
         +{localeFormatBigNumber(increasePercentage, 0)}%

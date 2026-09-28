@@ -1,5 +1,6 @@
-import { Text, TextStyle } from 'react-native';
-import { useAppTheme, font, ColorChoice } from '@/hooks/useAppTheme';
+import { TextStyle } from 'react-native';
+import { ColorChoice } from '@/hooks/useAppTheme';
+import { SurfaceText } from '@/components/presentation/foundation/surface-text';
 
 interface ItemTitleProps {
   title: string;
@@ -9,24 +10,15 @@ interface ItemTitleProps {
 }
 
 export default function ItemTitle({ title, style, testID, color = 'onSurface' }: ItemTitleProps) {
-  const { colors } = useAppTheme();
-
   return (
-    <Text
-      style={[
-        {
-          ...font['text-xl'],
-          fontWeight: 'bold',
-          flexShrink: 1,
-          minWidth: 0,
-          textAlign: 'left',
-          color: colors[color],
-        },
-        style,
-      ]}
+    <SurfaceText
+      font="text-xl"
+      weight="bold"
+      color={color}
+      style={[{ flexShrink: 1, minWidth: 0, textAlign: 'left' }, style]}
       testID={testID}
     >
       {title}
-    </Text>
+    </SurfaceText>
   );
 }
