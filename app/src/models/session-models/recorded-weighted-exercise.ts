@@ -486,6 +486,17 @@ export class RecordedWeightedExercise {
   }
 
   /**
+   * Indexes into the working list of the slots that continue `last`'s progression, which are the only ones
+   * a rule may move. A slot whose kind changed so that it started over from the plan is left there.
+   */
+  workingIndicesContinuing(last: RecordedWeightedExercise): number[] {
+    return this.potentialSets.flatMap((set, index) => {
+      const was = last.potentialSets[index];
+      return was && continuesProgression(was.kind, set.kind) ? [index] : [];
+    });
+  }
+
+  /**
    * A success once every set the progression check reads met the top of its target. A drop or myo set
    * short of its reps never holds the lift back.
    */

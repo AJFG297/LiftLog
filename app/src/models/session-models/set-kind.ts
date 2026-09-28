@@ -10,7 +10,7 @@ export type WorkingListKind = Exclude<SetKind, 'warmup'>;
 /** Which of an exercise's two set lists a slot lives in. */
 export type SetList = 'warmup' | 'working';
 
-export interface SetKindRules {
+interface SetKindFlags {
   countsTowardsVolume: boolean;
   countsTowardsPrs: boolean;
   /** Whether the set has to meet its target for the progression rules to fire, and whether they move it. */
@@ -23,6 +23,12 @@ export interface SetKindRules {
   /** What stands in for the set's number. Only working sets are numbered. */
   letter: string | null;
 }
+
+/**
+ * A kind that carries over also counts towards progression, so {@link continuesProgression} alone says
+ * which slots a rule may move.
+ */
+export type SetKindRules = SetKindFlags & ({ carriesOver: false } | { countsTowardsProgression: true });
 
 export const SET_KIND_RULES = {
   working: {
@@ -75,7 +81,8 @@ export function setKindHas(kind: SetKind, rule: SetKindRule): boolean {
 
 /**
  * Whether a slot continues last session's progression, reps and all: only when the kind it was and the
- * kind it is now both carry over. A drop set's lighter weight is never the next working set's.
+ * kind it is now both carry over. A drop set's lighter weight is never the next working set's. A slot
+ * that doesn't continue starts over from the plan, and the rules leave it there for the session.
  */
 export function continuesProgression(last: SetKind, next: SetKind): boolean {
   return setKindHas(last, 'carriesOver') && setKindHas(next, 'carriesOver');

@@ -493,13 +493,19 @@ export class ProgressionRule {
     );
   }
 
-  /** The exercise with this rule's move made, or `undefined` when the rule has nothing left to move. */
-  applyTo(exercise: RecordedWeightedExercise): RecordedWeightedExercise | undefined {
+  /**
+   * The exercise with this rule's move made, or `undefined` when the rule has nothing left to move. Only the
+   * slots that continue `carriedFrom`, the session the exercise's numbers came from, can move.
+   */
+  applyTo(
+    exercise: RecordedWeightedExercise,
+    carriedFrom: RecordedWeightedExercise,
+  ): RecordedWeightedExercise | undefined {
     // A load rule kept from before the load was turned off would climb a weight nothing displays.
     if (this.axis === 'load' && !exercise.tracksResistance) {
       return undefined;
     }
-    const indices = this.indicesToMove(exercise);
+    const indices = this.indicesToMove(exercise, carriedFrom);
     if (!indices.length) {
       return undefined;
     }
@@ -555,9 +561,12 @@ export class ProgressionRule {
     return Math.max(reachable - from, 0);
   }
 
-  /** Only the sets the progression check reads move: a drop set is neither checked nor climbed. */
-  private indicesToMove(exercise: RecordedWeightedExercise): number[] {
-    const eligible = exercise.workingIndicesCountingTowards('countsTowardsProgression');
+  /**
+   * Only the sets that continue the progression move: a drop set is neither checked nor climbed. A slot that
+   * started over is out before the ranking, or at no weight it would always be the lowest.
+   */
+  private indicesToMove(exercise: RecordedWeightedExercise, carriedFrom: RecordedWeightedExercise): number[] {
+    const eligible = exercise.workingIndicesContinuing(carriedFrom);
     if (this.scope.type === 'allSets') {
       return eligible;
     }
@@ -617,13 +626,17 @@ export function progressionEquals(a: ProgressionRule[], b: ProgressionRule[]): b
  * Ordered: the first rule that can still move is the one that moves. Every rule ahead of it has run
  * out of room, so any of those asking to `reset` gets put back to the plan on the way past - that
  * handoff is what makes double progression a ladder rather than a one-way climb.
+ *
+ * `carriedFrom` is the session the exercise was carried from. Leave it out when the exercise continues
+ * itself, as the editor's example does.
  */
 export function applyProgression(
   progression: ProgressionRule[],
   exercise: RecordedWeightedExercise,
+  carriedFrom: RecordedWeightedExercise = exercise,
 ): RecordedWeightedExercise {
   for (const [index, rule] of progression.entries()) {
-    const moved = rule.applyTo(exercise);
+    const moved = rule.applyTo(exercise, carriedFrom);
     if (moved) {
       return progression
         .slice(0, index)

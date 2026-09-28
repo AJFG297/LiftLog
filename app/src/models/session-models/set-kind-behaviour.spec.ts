@@ -189,4 +189,49 @@ describe('the next session', () => {
       (session.recordedExercises[0] as RecordedWeightedExercise).potentialSets.map((s) => s.weight.value.toNumber()),
     ).toEqual([102.5, 102.5, 60]);
   });
+
+  describe('progression: a slot that starts over is left where it started', () => {
+    /** Last session: two working sets of 10 x 100 kg and a 40 kg drop set, all on target. */
+    function nextWithThirdSetAs(kind: WorkingListKind, progression: ProgressionRule[]) {
+      const last = exerciseWith(slot('drop', 40, 10, 10, 3));
+      const blueprint = last.blueprint.with({
+        progression,
+        plannedSets: [0, 1, 2].map((i) => ({ reps: { min: 10, max: 10 }, kind: i === 2 ? kind : 'working' })),
+      });
+      const session = service().hydrateSessionFromBlueprint(new SessionBlueprint('Legs', [blueprint], ''), {
+        [blueprint.progressionKey()]: last,
+      });
+      return (session.recordedExercises[0] as RecordedWeightedExercise).potentialSets;
+    }
+
+    it.each(['working', 'failure'] as const)('a load rule does not put weight on a drop set that is now %s', (kind) => {
+      const sets = nextWithThirdSetAs(kind, [ProgressionRule.load(new BigNumber(2.5))]);
+
+      expect(sets.map((s) => [s.kind, s.weight.value.toNumber()])).toEqual([
+        ['working', 102.5],
+        ['working', 102.5],
+        [kind, 0],
+      ]);
+    });
+
+    it('a reps rule leaves a drop set that is now working on the plan target', () => {
+      const sets = nextWithThirdSetAs('working', [
+        ProgressionRule.of({ axis: 'reps', step: new BigNumber(1), ceiling: new BigNumber(15) }),
+      ]);
+
+      expect(sets.map((s) => [s.weight.value.toNumber(), s.target])).toEqual([
+        [100, { min: 11, max: 11 }],
+        [100, { min: 11, max: 11 }],
+        [0, { min: 10, max: 10 }],
+      ]);
+    });
+
+    it('a lowest-sets load rule moves the lowest working sets, not the one at no weight', () => {
+      const sets = nextWithThirdSetAs('working', [
+        ProgressionRule.load(new BigNumber(2.5), { type: 'lowestSets', pick: 'all' }),
+      ]);
+
+      expect(sets.map((s) => s.weight.value.toNumber())).toEqual([102.5, 102.5, 0]);
+    });
+  });
 });

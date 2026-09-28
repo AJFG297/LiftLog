@@ -114,7 +114,7 @@ export class SessionService {
         );
       const newExercise = new RecordedWeightedExercise(e, potentialSets, undefined);
       const progressed = weightedLastExercise?.isSuccessForProgressiveOverload
-        ? applyProgression(e.progression, newExercise)
+        ? applyProgression(e.progression, newExercise, weightedLastExercise)
         : newExercise;
       // Built from the plan rather than carried, and only now, so a percentage follows today's
       // progressed working weight.
