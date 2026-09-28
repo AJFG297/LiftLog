@@ -1,0 +1,15 @@
+diff --git a/node_modules/@expo/ui/android/src/main/java/expo/modules/ui/HostView.kt b/node_modules/@expo/ui/android/src/main/java/expo/modules/ui/HostView.kt
+--- a/node_modules/@expo/ui/android/src/main/java/expo/modules/ui/HostView.kt
++++ b/node_modules/@expo/ui/android/src/main/java/expo/modules/ui/HostView.kt
+@@ -105,6 +105,11 @@
+   @Composable
+   override fun ComposableScope.Content() {
+     val context = LocalContext.current
++    // The dynamic schemes below read the system palette from `context.resources`, which Compose doesn't
++    // track. A palette change (new wallpaper colours) arrives as a configuration change, so read
++    // LocalConfiguration here to re-resolve the scheme on it. Otherwise only `isSystemInDarkTheme()` reads
++    // it, and that's skipped whenever a `colorScheme` prop is set.
++    LocalConfiguration.current
+     val isDark = when (props.colorScheme.value) {
+       ExpoColorScheme.DARK -> true
+       ExpoColorScheme.LIGHT -> false

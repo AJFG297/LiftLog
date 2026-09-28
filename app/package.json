@@ -129,5 +129,14 @@
     "typescript": "~6.0.3",
     "vitest": "^4.1.8"
   },
-  "private": true
+  "private": true,
+  "expo": {
+    "autolinking": {
+      "android": {
+        "buildFromSource": [
+          "expo-ui"
+        ]
+      }
+    }
+  }
 }
