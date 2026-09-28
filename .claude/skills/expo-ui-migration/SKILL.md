@@ -32,10 +32,11 @@ Metro picks `.android.tsx` on Android and `.tsx` elsewhere. **Reference exemplar
 ## Theming: seedColor is (almost) the only input
 
 - On every `Host`, pass **`seedColor={colors.seedColor}`** from `useAppTheme()` - **never**
-  `colors.primary`. `seedColor` is the real source colour that seeds the whole M3/SwiftUI palette;
-  `colors.primary` is already _derived_ from it, so re-seeding from it produces the wrong ramp.
-  `seedColor` is `undefined` for the default scheme, which correctly lets Compose fall back to Material
-  You / the wallpaper palette.
+  `colors.primary`. `seedColor` is the accent built for native hosts (see `docs/Theming.md`): on Android
+  the accent fill that seeds Compose's palette, on iOS the tint (the fill in light mode, the lighter
+  accent ink in dark mode). `colors.primary` is a Paper role mapped for unconverted screens, and differs
+  from both. `seedColor` is `undefined` when the user matches the wallpaper, which lets Compose use the
+  same Material You palette the accent was derived from.
 - **Let native components own their slot colours.** Don't pass a `colors={{ containerColor, contentColor,
 checked… }}` object to a native control, and don't `tint`/`foregroundStyle` an `Icon` that sits _inside_
   a native button/toggle - the component already colours its container/content/checked slots from the

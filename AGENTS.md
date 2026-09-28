@@ -57,6 +57,18 @@ Regenerate with `npm run json-schema`; don't hand-edit.
 
 Run typecheck and lint before considering a change done.
 
+## Screenshots on UI pull requests
+
+Every PR that changes what users see embeds screenshots in its description.
+
+- Capture them on the Android emulator with the `verify-liftlog` skill, driving the real screens.
+- Show each changed screen before (`main`) and after, with the same data. Include light and dark. If the
+  change touches colour, also include a non-default accent.
+- Downscale them (for example `sips -Z 800`) and commit them to the `pr-assets` branch under a folder named
+  for the issue (`pm-18/`). Never commit them to the PR branch.
+- Embed them with `<img src="https://raw.githubusercontent.com/AJFG297/LiftLog/<pr-assets commit>/<folder>/<file>.png" width="200">`
+  in tables. Pin the URL to the commit SHA so the images don't change later.
+
 ## Announcing features ("What's New")
 
 New features are easy to ship and hard to surface - a capability like Health Connect sync or plan

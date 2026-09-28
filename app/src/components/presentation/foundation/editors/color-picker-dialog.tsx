@@ -4,7 +4,7 @@ import { SurfaceText } from '@/components/presentation/foundation/surface-text';
 import { spacing, useAppTheme } from '@/hooks/useAppTheme';
 import { ColorSchemeSeed } from '@/store/settings';
 import { type HexColor } from '@/utils/color';
-import { createMaterial3Theme } from '@pchmn/expo-material3-theme';
+import { accentTokens } from '@/utils/theme-tokens';
 import { T } from '@tolgee/react';
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
@@ -18,8 +18,8 @@ interface ColorPickerDialogProps {
 }
 
 export default function ColorPickerDialog(props: ColorPickerDialogProps) {
-  const { colors } = useAppTheme();
-  const fallback = colors.primary as HexColor;
+  const { tokens } = useAppTheme();
+  const fallback = tokens.accent;
   const [draft, setDraft] = useState<HexColor>(props.initialSeed === 'default' ? fallback : props.initialSeed);
 
   useEffect(() => {
@@ -43,7 +43,7 @@ export default function ColorPickerDialog(props: ColorPickerDialogProps) {
         <Dialog.Content>
           <View style={{ gap: spacing[5] }}>
             <ColorSliders value={draft} onChange={setDraft} />
-            <PalettePreview seed={draft} />
+            <AccentPreview seed={draft} />
           </View>
         </Dialog.Content>
         <Dialog.Actions>
@@ -65,36 +65,36 @@ export default function ColorPickerDialog(props: ColorPickerDialogProps) {
   );
 }
 
-/** Shows the palette the seed generates, so its effect is visible before committing. */
-function PalettePreview({ seed }: { seed: HexColor }) {
-  const { colors, colorScheme } = useAppTheme();
-  const scheme = createMaterial3Theme(seed)[colorScheme];
-  const swatches = [
-    scheme.primary,
-    scheme.secondary,
-    scheme.tertiary,
-    scheme.primaryContainer,
-    scheme.secondaryContainer,
-    scheme.tertiaryContainer,
-  ];
+/**
+ * Shows the accent the seed generates, so its effect is visible before committing: the fill (the same in
+ * every mode) and the tints derived from it for the current mode.
+ */
+function AccentPreview({ seed }: { seed: HexColor }) {
+  const { tokens, colorScheme } = useAppTheme();
+  const accent = accentTokens(seed, colorScheme);
+  // The tints are close to the dialog's own colour by design, so each swatch gets a hairline.
+  const swatch = { height: spacing[10], borderRadius: spacing[2], borderWidth: 1, borderColor: tokens.line2 };
 
   return (
     <View
       style={{
-        backgroundColor: colors.surfaceContainer,
+        backgroundColor: tokens.bg,
         borderRadius: spacing[3],
         padding: spacing[4],
         gap: spacing[3],
       }}
     >
-      <SurfaceText font="text-sm" weight="600" color="onSurfaceVariant">
+      <SurfaceText font="text-sm" weight="600" style={{ color: tokens.muted }}>
         <T keyName="settings.theme.custom.preview" />
       </SurfaceText>
       <View style={{ flexDirection: 'row', gap: spacing[2] }}>
-        {swatches.map((color, i) => (
-          <View key={i} style={{ flex: 1, height: spacing[10], borderRadius: spacing[2], backgroundColor: color }} />
-        ))}
+        <View style={{ ...swatch, flex: 2, backgroundColor: accent.accent }} />
+        <View style={{ ...swatch, flex: 1, backgroundColor: accent.accentSoft }} />
+        <View style={{ ...swatch, flex: 1, backgroundColor: accent.wash }} />
       </View>
+      <SurfaceText font="text-xs" style={{ color: tokens.muted }}>
+        <T keyName="settings.theme.custom.contrast.body" />
+      </SurfaceText>
     </View>
   );
 }

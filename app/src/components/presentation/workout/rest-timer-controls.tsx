@@ -4,7 +4,7 @@ import {
   restControlIconSize,
 } from '@/components/presentation/workout/rest-timer-controls-props';
 import { Button, HStack, Host, Image } from '@expo/ui/swift-ui';
-import { accessibilityLabel, buttonStyle, frame, padding } from '@expo/ui/swift-ui/modifiers';
+import { accessibilityLabel, buttonStyle, frame, padding, tint } from '@expo/ui/swift-ui/modifiers';
 import { useTranslate } from '@tolgee/react';
 
 // A button hugs its label, so without padding the puck shrink-wraps the glyph and the controls run
@@ -16,7 +16,7 @@ const controlPadding = padding({ horizontal: spacing[1], vertical: spacing[1] })
 const iconFrame = frame({ width: restControlIconSize, height: restControlIconSize });
 
 export function RestTimerControls({ paused, onRestart, onTogglePause, onDismiss }: RestTimerControlsProps) {
-  const { colors } = useAppTheme();
+  const { colors, tokens } = useAppTheme();
   const { t } = useTranslate();
 
   return (
@@ -32,6 +32,9 @@ export function RestTimerControls({ paused, onRestart, onTogglePause, onDismiss 
           onPress={onTogglePause}
           modifiers={[
             buttonStyle('glassProminent'),
+            // The Host's seedColor is the text-safe accent, which is light in dark mode. A prominent button
+            // puts a white glyph on its tint, so it needs the fill.
+            tint(tokens.accent),
             controlPadding,
             accessibilityLabel(paused ? t('rest_timer.resume') : t('rest_timer.pause')),
           ]}

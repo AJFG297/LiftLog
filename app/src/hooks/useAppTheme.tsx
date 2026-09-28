@@ -1,11 +1,18 @@
 import { useAppSelector } from '@/store';
-import { Material3Scheme, useMaterial3Theme } from '@pchmn/expo-material3-theme';
+import {
+  createMaterial3Theme,
+  isDynamicThemeSupported,
+  Material3Scheme,
+  useMaterial3Theme,
+} from '@pchmn/expo-material3-theme';
 import React, { createContext, ReactNode, useContext, useEffect } from 'react';
-import { Appearance, Platform, useColorScheme } from 'react-native';
+import { Appearance, AppState, Platform, useColorScheme } from 'react-native';
 import { MD3DarkTheme, MD3LightTheme, PaperProvider } from 'react-native-paper';
 import { DarkTheme, ThemeProvider as NavigationThemeProvider, DefaultTheme } from 'expo-router';
 import { MsIconSrc } from '@/components/presentation/foundation/ms-icon-source';
 import { argbFromHex, Blend, Hct, hexFromArgb } from '@material/material-color-utilities';
+import { paperSchemeFromTokens, themeTokens, VERMILION, type ThemeTokens } from '@/utils/theme-tokens';
+import type { HexColor } from '@/utils/color';
 
 export const rounding = {
   roundedRectangleRadius: 10,
@@ -133,7 +140,18 @@ export type ColorChoice = keyof {
   [K in keyof AppThemeColors as AppThemeColors[K] extends string ? K : never]: AppThemeColors[K];
 };
 
+/**
+ * Whether the `'default'` seed can follow the wallpaper (Material You, Android 12+). Where it can't,
+ * `'default'` is vermilion.
+ */
+export const canMatchWallpaper = Platform.OS === 'android' && isDynamicThemeSupported;
+
 export interface AppTheme {
+  /**
+   * The Clarity palette (`utils/theme-tokens.ts`). Redesigned screens use only these; `colors` is the
+   * Material 3 scheme mapped from them, kept while unconverted screens still read it.
+   */
+  tokens: ThemeTokens;
   colors: AppThemeColors;
   colorScheme: 'light' | 'dark';
 }
@@ -166,40 +184,51 @@ export const AppThemeProvider: React.FC<AppThemeProviderProps> = ({ children }) 
 
   const colorScheme = themeMode === 'system' ? (systemColorScheme === 'dark' ? 'dark' : 'light') : themeMode;
   const isDark = colorScheme === 'dark';
-  // If the device is not compatible, it will return a theme based on the fallback source color (optional, default to #6750A4)
-  const sourceColor = colorSchemeSeed === 'default' ? undefined : colorSchemeSeed;
-  const { theme, updateTheme, resetTheme } = useMaterial3Theme({
-    fallbackSourceColor: '0x005500',
-    sourceColor,
-  });
-  let newTheme = theme;
-  if (trueBlack) {
-    newTheme = {
-      ...newTheme,
-      dark: { ...theme.dark, background: '#000000', surface: '#000000' },
-    };
-  }
-  useEffect(() => {
-    if (colorSchemeSeed === 'default') {
-      resetTheme();
-    } else {
-      updateTheme(colorSchemeSeed);
-    }
-    // oxlint-disable-next-line react-hooks/exhaustive-deps
-  }, [colorSchemeSeed]);
-  const schemedTheme = colorScheme === 'dark' ? newTheme.dark : newTheme.light;
 
-  const paperTheme = isDark ? { ...MD3DarkTheme, colors: newTheme.dark } : { ...MD3LightTheme, colors: newTheme.light };
-  /* The seedColor is passed into the expo ui host to and is platform dependent
-   * On android, the seedColor is used to generate the tonal pallette, and therefore should be the same as the source color.
-   * If it is undefined, it will use the system's theme which matches our useMaterialTheme pallette in that case.
-   * On IOS we just want to use the primary color as that is what it represents.
+  // With no source colour this is the system (Material You) scheme on Android 12+, and a scheme built
+  // from the fallback everywhere else. We only read it to follow the wallpaper.
+  const { theme: systemTheme, resetTheme: rereadSystemTheme } = useMaterial3Theme({ fallbackSourceColor: VERMILION });
+  const matchWallpaper = colorSchemeSeed === 'default' && canMatchWallpaper;
+  // The hook reads the system scheme once, on mount. The wallpaper can change while the app is open or in
+  // the background, so read it again when matching is turned on and whenever the app comes back.
+  useEffect(() => {
+    if (!matchWallpaper) {
+      return;
+    }
+    rereadSystemTheme();
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') {
+        rereadSystemTheme();
+      }
+    });
+    return () => subscription.remove();
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
+  }, [matchWallpaper]);
+  const accentSource: HexColor = matchWallpaper
+    ? (systemTheme.light.primary as HexColor)
+    : colorSchemeSeed === 'default'
+      ? VERMILION
+      : colorSchemeSeed;
+
+  const variant = isDark ? (trueBlack ? 'trueBlack' : 'dark') : 'light';
+  const tokens = themeTokens(accentSource, variant);
+  // The roles the tokens don't cover (secondary, tertiary, error containers) come from a full M3 scheme on
+  // the same source: the system's own when matching the wallpaper, so those stay exact.
+  const baseScheme = (matchWallpaper ? systemTheme : createMaterial3Theme(accentSource))[colorScheme];
+  const schemedTheme = paperSchemeFromTokens(tokens, baseScheme, variant);
+
+  const paperTheme = { ...(isDark ? MD3DarkTheme : MD3LightTheme), colors: schemedTheme };
+  /* The seedColor is passed into the expo-ui Hosts and means something different per platform.
+   * On Android it seeds Compose's tonal palette, so it's the accent fill; undefined when matching the
+   * wallpaper, which lets Compose use the same system palette we derived the accent from.
+   * On iOS it is the tint, used for text as well as fills, so dark mode gets the lighter accent ink.
    */
   const seedColor = Platform.select({
-    android: sourceColor,
-    ios: schemedTheme.primary,
+    android: matchWallpaper ? undefined : tokens.accent,
+    ios: isDark ? tokens.accentInk : tokens.accent,
   });
   const appTheme = {
+    tokens,
     colors: {
       ...schemedTheme,
       ...colorPair('orange', 'ffffa500', schemedTheme.primary, isDark),
@@ -227,7 +256,7 @@ export const AppThemeProvider: React.FC<AppThemeProviderProps> = ({ children }) 
     ...baseNavigationThem,
     colors: {
       background: paperTheme.colors.background,
-      border: paperTheme.colors.outline,
+      border: paperTheme.colors.outlineVariant,
       card: paperTheme.colors.surfaceContainer,
       notification: paperTheme.colors.surface,
       primary: paperTheme.colors.primary,

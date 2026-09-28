@@ -19,7 +19,7 @@ export default function NativeButton({
   disabled,
   style,
 }: NativeButtonProps) {
-  const { colors } = useAppTheme();
+  const { colors, tokens } = useAppTheme();
 
   return (
     <Host matchContents seedColor={colors.seedColor} colorScheme={colors.scheme} style={style}>
@@ -30,7 +30,9 @@ export default function NativeButton({
         modifiers={[
           buttonStyle(styleForVariant[variant]),
           controlSize('large'),
-          tint(colors.primary),
+          // The Host's seedColor tint is the text-safe accent (lighter in dark mode). A prominent button puts
+          // a white label on its tint, so it alone needs the fill.
+          ...(variant === 'filled' ? [tint(tokens.accent)] : []),
           ...(disabled ? [disabledModifier(true)] : []),
         ]}
       />

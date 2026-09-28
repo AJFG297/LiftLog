@@ -34,13 +34,13 @@ export function ActivePlanCard({ id }: { id: string }) {
         <View
           style={{
             alignSelf: 'flex-start',
-            backgroundColor: colors.surface,
+            backgroundColor: colors.primaryContainer,
             borderRadius: rounding.roundedRectangleRadius,
             paddingHorizontal: spacing[3],
             paddingVertical: spacing[1],
           }}
         >
-          <SurfaceText font="text-xs" weight="700" style={{ letterSpacing: 1 }}>
+          <SurfaceText font="text-xs" weight="700" color="onPrimaryContainer" style={{ letterSpacing: 1 }}>
             {t('plan.active.label').toUpperCase()}
           </SurfaceText>
         </View>
