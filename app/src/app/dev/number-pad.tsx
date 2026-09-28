@@ -9,6 +9,7 @@ import {
   openNumberPad,
   weightAccessoryFor,
 } from '@/components/presentation/foundation/number-pad';
+import { Chip } from '@/components/presentation/foundation/chip';
 import SegmentedPicker from '@/components/presentation/foundation/segmented-picker';
 import { SurfaceText } from '@/components/presentation/foundation/surface-text';
 import { rounding, spacing, tabularText, useAppTheme } from '@/hooks/useAppTheme';
@@ -28,6 +29,14 @@ import { useDispatch } from 'react-redux';
 
 type FieldKind = 'weight' | 'reps';
 type DevEquipment = 'barbell' | 'dumbbell' | 'cable' | 'machine' | 'unknown';
+
+const DEV_EQUIPMENT: { value: DevEquipment; label: string }[] = [
+  { value: 'barbell', label: 'Barbell' },
+  { value: 'dumbbell', label: 'Dumbbell' },
+  { value: 'cable', label: 'Cable' },
+  { value: 'machine', label: 'Machine' },
+  { value: 'unknown', label: 'Other' },
+];
 
 const PLACEHOLDER_WEIGHT: Record<LoadUnit, number> = { kilograms: 60, pounds: 135 };
 const PLACEHOLDER_REPS = 8;
@@ -123,20 +132,19 @@ function DevNumberPad() {
           />
         </DevControl>
         <DevControl label="Equipment">
-          <SegmentedPicker
-            value={equipment}
-            options={[
-              { value: 'barbell', label: 'Barbell' },
-              { value: 'dumbbell', label: 'DB' },
-              { value: 'cable', label: 'Cable' },
-              { value: 'machine', label: 'Machine' },
-              { value: 'unknown', label: 'Other' },
-            ]}
-            onChange={(value: DevEquipment) => {
-              setEquipment(value);
-              open(fieldKind, unit, value);
-            }}
-          />
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing[2] }}>
+            {DEV_EQUIPMENT.map((option) => (
+              <Chip
+                key={option.value}
+                label={option.label}
+                selected={equipment === option.value}
+                onPress={() => {
+                  setEquipment(option.value);
+                  open(fieldKind, unit, option.value);
+                }}
+              />
+            ))}
+          </View>
         </DevControl>
         <DevControl label="Theme">
           <SegmentedPicker
@@ -243,7 +251,7 @@ function DevField(props: {
 }
 
 function isDevEquipment(value: string | undefined): value is DevEquipment {
-  return value === 'barbell' || value === 'dumbbell' || value === 'cable' || value === 'machine' || value === 'unknown';
+  return DEV_EQUIPMENT.some((option) => option.value === value);
 }
 
 function classOf(equipment: DevEquipment) {
