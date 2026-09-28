@@ -23,7 +23,7 @@ export interface SetKindRules {
   letter: SetKindLetter | null;
 }
 
-export const SET_KIND_RULES: Record<SetKind, SetKindRules> = {
+export const SET_KIND_RULES = {
   working: {
     countsTowardsVolume: true,
     countsTowardsPrs: true,
@@ -59,7 +59,10 @@ export const SET_KIND_RULES: Record<SetKind, SetKindRules> = {
     carriesOver: false,
     letter: 'M',
   },
-};
+} as const satisfies Record<SetKind, SetKindRules>;
+
+/** The kinds that show a letter rather than a number. */
+export type LetteredSetKind = Exclude<SetKind, 'working'>;
 
 export type SetKindRule = Exclude<keyof SetKindRules, 'letter'>;
 
@@ -68,7 +71,9 @@ export function setKindCounts(kind: SetKind, rule: SetKindRule): boolean {
 }
 
 /** A working set's 1-based number among the working sets, or the letter for any other kind. */
-export function setLabel(kind: SetKind, workingNumber: number): string {
+export function setLabel(kind: LetteredSetKind): SetKindLetter;
+export function setLabel(kind: SetKind, workingNumber: number): string;
+export function setLabel(kind: SetKind, workingNumber?: number): string {
   return SET_KIND_RULES[kind].letter ?? `${workingNumber}`;
 }
 

@@ -3,7 +3,7 @@ import { IntegerEditor } from '@/components/presentation/foundation/editors/inte
 import { DecimalEditor } from '@/components/presentation/foundation/editors/decimal-editor';
 import IconButton from '@/components/presentation/foundation/icon-button';
 import { SurfaceText } from '@/components/presentation/foundation/surface-text';
-import { WarmupBadge } from '@/components/presentation/workout/warmup-badge';
+import { SetKindBadge } from '@/components/presentation/workout/set-kind-badge';
 import { spacing } from '@/hooks/useAppTheme';
 import { usePreferredWeightUnit } from '@/hooks/usePreferredWeightUnit';
 import {
@@ -87,7 +87,7 @@ function WarmupSetRow({
 
   return (
     <View testID={`exercise-warmup-${index}`} style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[2] }}>
-      <WarmupBadge />
+      <SetKindBadge kind="warmup" />
 
       {loadTypes.length > 1 && (
         <IconButton
