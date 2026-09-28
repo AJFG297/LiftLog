@@ -78,16 +78,16 @@ export function applySettingsEffects(addEffect: AddEffectFn) {
       const proToken = await preferenceService.getProToken();
       dispatch(setProToken(proToken));
 
-      if (!__DEV__) {
-        if (Platform.OS === 'ios') {
-          Purchases.configure({
-            apiKey: process.env.EXPO_PUBLIC_REVENUECAT_APPLE_API_KEY!,
-          });
-        } else if (Platform.OS === 'android') {
-          Purchases.configure({
-            apiKey: process.env.EXPO_PUBLIC_REVENUECAT_GOOGLE_API_KEY!,
-          });
-        }
+      // Only builds made with a RevenueCat key set it up; configure() throws without one, which would stop
+      // the app from hydrating. A sideloaded build without the key behaves like a dev build: no purchases.
+      const revenueCatApiKey =
+        Platform.OS === 'ios'
+          ? process.env.EXPO_PUBLIC_REVENUECAT_APPLE_API_KEY
+          : Platform.OS === 'android'
+            ? process.env.EXPO_PUBLIC_REVENUECAT_GOOGLE_API_KEY
+            : undefined;
+      if (!__DEV__ && revenueCatApiKey) {
+        Purchases.configure({ apiKey: revenueCatApiKey });
       }
       // migrate pro token to a revenuecat
       if (proToken && !proToken.startsWith('$RCAnonymousID')) {
