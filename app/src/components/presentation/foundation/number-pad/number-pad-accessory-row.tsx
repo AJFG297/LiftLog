@@ -113,7 +113,7 @@ function RpeRow(props: { value: Rpe | undefined; onChange: (rpe: Rpe | undefined
       <SurfaceText font="text-sm" weight="600" style={{ color: tokens.muted }}>
         {t('number_pad.rpe.label')}
       </SurfaceText>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing[2] }}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
         {RPE_VALUES.map((rpe) => (
           <Chip
             key={rpe}

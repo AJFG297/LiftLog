@@ -133,7 +133,7 @@ function DevNumberPad() {
           />
         </DevControl>
         <DevControl label="Equipment">
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing[2] }}>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
             {DEV_EQUIPMENT.map((option) => (
               <Chip
                 key={option.label}
