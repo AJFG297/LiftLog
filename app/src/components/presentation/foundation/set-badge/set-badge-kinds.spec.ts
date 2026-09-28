@@ -1,11 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { TranslationKey } from '@tolgee/web';
 import en from '@/i18n/en.json';
-import {
-  SET_BADGE_LOOK,
-  setBadgeText,
-  type SetBadgeKind,
-} from '@/components/presentation/foundation/set-badge/set-badge-kinds';
+import { SET_BADGE_LOOK, setBadgeText } from '@/components/presentation/foundation/set-badge/set-badge-kinds';
+import type { SetKind } from '@/models/session-models/set-kind';
 import { ACCENT_PRESETS, contrastRatio, themeTokens, type ThemeVariant } from '@/utils/theme-tokens';
 
 const strings: Record<TranslationKey, string> = en;
@@ -28,7 +25,7 @@ describe('setBadgeText', () => {
 });
 
 describe('SET_BADGE_LOOK', () => {
-  const kinds = Object.keys(SET_BADGE_LOOK) as SetBadgeKind[];
+  const kinds = Object.keys(SET_BADGE_LOOK) as SetKind[];
   const variants: ThemeVariant[] = ['light', 'dark', 'trueBlack'];
 
   it('keeps every badge letter legible on its fill, for every accent and variant', () => {

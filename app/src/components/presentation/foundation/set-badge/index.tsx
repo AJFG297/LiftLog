@@ -8,7 +8,7 @@ import { useAppTheme } from '@/hooks/useAppTheme';
 import { useTranslate } from '@tolgee/react';
 import { StyleProp, View, ViewStyle } from 'react-native';
 
-export type { SetBadgeKind, SetBadgeProps } from '@/components/presentation/foundation/set-badge/set-badge-kinds';
+export type { SetBadgeProps } from '@/components/presentation/foundation/set-badge/set-badge-kinds';
 
 const DIAMETER = 36;
 

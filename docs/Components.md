@@ -44,8 +44,9 @@ out as "Set 2", "Warm-up set", "Drop set" and so on.
 
 ## Set badges
 
-One table, `SET_BADGE_LOOK` in `set-badge/set-badge-kinds.ts`, maps each `SetBadgeKind` (`working`,
-`warmup`, `drop`, `myo`, `failure`) to its fill, ink, optional ring and its letter's translation key. Failure
+One table, `SET_BADGE_LOOK` in `set-badge/set-badge-kinds.ts`, maps each `SetKind` (`working`,
+`warmup`, `drop`, `myo`, `failure`) to its fill, ink, optional ring and its spoken name. The letter comes from
+`setLabel()` in `models/session-models/set-kind.ts`, the same helper every other screen uses. Failure
 is the `failure` red. Drop and myo are ink with an accent ring. Warm-up is `accentSoft`. A working set is
 the page colour with its number in Geist Mono. The badge's props only allow a number on a working set.
 

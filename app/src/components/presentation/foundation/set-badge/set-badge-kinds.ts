@@ -1,12 +1,9 @@
 import type { TranslationKey } from '@tolgee/web';
+import { type LetteredSetKind, type SetKind, setLabel } from '@/models/session-models/set-kind';
 import type { ThemeTokens } from '@/utils/theme-tokens';
 
-export type SetBadgeKind = 'working' | 'warmup' | 'drop' | 'myo' | 'failure';
-
-type LetteredKind = Exclude<SetBadgeKind, 'working'>;
-
 /** Only working sets are numbered (1-based, counting working sets only); every other kind shows a letter. */
-export type SetBadgeProps = { kind: 'working'; number: number } | { kind: LetteredKind };
+export type SetBadgeProps = { kind: 'working'; number: number } | { kind: LetteredSetKind };
 
 type TokenName = keyof ThemeTokens;
 
@@ -18,33 +15,28 @@ interface SetBadgeLook {
   spokenLabel: TranslationKey;
 }
 
-export const SET_BADGE_LOOK: Record<'working', SetBadgeLook> &
-  Record<LetteredKind, SetBadgeLook & { letter: TranslationKey }> = {
+export const SET_BADGE_LOOK: Record<SetKind, SetBadgeLook> = {
   working: { fill: 'bg', ink: 'ink', spokenLabel: 'workout.set_badge.working.label' },
   warmup: {
     fill: 'accentSoft',
     ink: 'accentSoftInk',
-    letter: 'workout.warmup_set.badge.label',
     spokenLabel: 'workout.set_badge.warmup.label',
   },
   drop: {
     fill: 'ink',
     ink: 'bg',
     ring: 'accentInk',
-    letter: 'workout.drop_set.badge.label',
     spokenLabel: 'workout.set_badge.drop.label',
   },
   myo: {
     fill: 'ink',
     ink: 'bg',
     ring: 'accentInk',
-    letter: 'workout.myo_set.badge.label',
     spokenLabel: 'workout.set_badge.myo.label',
   },
   failure: {
     fill: 'failure',
     ink: 'onFailure',
-    letter: 'workout.failure_set.badge.label',
     spokenLabel: 'workout.set_badge.failure.label',
   },
 };
@@ -56,6 +48,5 @@ export function setBadgeText(badge: SetBadgeProps, t: Translate): { text: string
     const look = SET_BADGE_LOOK.working;
     return { text: String(badge.number), accessibilityLabel: t(look.spokenLabel, { number: badge.number }) };
   }
-  const look = SET_BADGE_LOOK[badge.kind];
-  return { text: t(look.letter), accessibilityLabel: t(look.spokenLabel) };
+  return { text: setLabel(badge.kind), accessibilityLabel: t(SET_BADGE_LOOK[badge.kind].spokenLabel) };
 }
