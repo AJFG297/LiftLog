@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { setKindLetter, setLabels } from '@/models/session-models/set-kind';
+import { continuesProgression, keepsLastWeight, setKindLetter, setLabels } from '@/models/session-models/set-kind';
 
 describe('setKindLetter', () => {
   it('letters every kind but a working set', () => {
@@ -24,4 +24,23 @@ describe('setLabels', () => {
   it('numbers a plain list 1 to n', () => {
     expect(setLabels(['working', 'working', 'working'])).toEqual(['1', '2', '3']);
   });
+});
+
+describe('carry-over between sessions', () => {
+  it.each([
+    ['working', 'working', true, true],
+    ['working', 'failure', true, true],
+    ['failure', 'working', true, true],
+    ['drop', 'drop', false, true],
+    ['myo', 'myo', false, true],
+    ['working', 'drop', false, false],
+    ['drop', 'working', false, false],
+    ['drop', 'myo', false, false],
+    ['myo', 'failure', false, false],
+  ] as const)(
+    'a %s set that is now %s continues progression: %s, keeps its weight: %s',
+    (last, next, continues, keeps) => {
+      expect([continuesProgression(last, next), keepsLastWeight(last, next)]).toEqual([continues, keeps]);
+    },
+  );
 });

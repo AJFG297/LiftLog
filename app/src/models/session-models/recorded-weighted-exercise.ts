@@ -19,7 +19,14 @@ import {
 } from '@/models/storage/versions/latest';
 import { Weight, WeightUnit } from '@/models/weight';
 import { isRpe, Rpe } from '@/models/session-models/rpe';
-import { setKindHas, SetKind, SetKindRule, SetList } from '@/models/session-models/set-kind';
+import {
+  continuesProgression,
+  keepsLastWeight,
+  setKindHas,
+  SetKind,
+  SetKindRule,
+  SetList,
+} from '@/models/session-models/set-kind';
 import { IndexOutOfBoundsError } from '@/utils/index-out-of-bounds';
 import { Duration, OffsetDateTime } from '@js-joda/core';
 import BigNumber from 'bignumber.js';
@@ -603,6 +610,21 @@ export class PotentialSet {
       isRpe(json.rpe) ? json.rpe : undefined,
       json.kind,
     );
+  }
+
+  /**
+   * This slot as the next session's slot of `kind`, before any progression rule runs. It keeps its weight
+   * and, where reps are what advances, its target only as {@link continuesProgression} and
+   * {@link keepsLastWeight} allow; otherwise it opens on the plan's reps at no weight, in its own unit.
+   */
+  carriedInto(
+    kind: SetKind,
+    next: { planTarget: RepsTarget; repsAreProgressed: boolean; fallbackUnit: WeightUnit },
+  ): PotentialSet {
+    const unit = this.weight.unit === 'nil' ? next.fallbackUnit : this.weight.unit;
+    const weight = keepsLastWeight(this.kind, kind) ? this.weight : new Weight(0, unit);
+    const target = continuesProgression(this.kind, kind) && next.repsAreProgressed ? this.target : next.planTarget;
+    return PotentialSet.of({ weight, target, kind });
   }
 
   /** The RPE to show anywhere but the live workout: one left on a set that was never logged means nothing. */

@@ -14,7 +14,6 @@ import {
   RecordedWeightedExercise,
   Session,
 } from '@/models/session-models';
-import { setKindHas } from '@/models/session-models/set-kind';
 import { ProgressRepository } from '@/services/progress-repository';
 import type { RootState } from '@/store';
 import { selectActiveSession } from '@/store/stored-sessions';
@@ -104,22 +103,14 @@ export class SessionService {
         // lineage keeps what a rule won for it. Where they are a fixed prescription it is re-seeded
         // from the plan, because the only thing that could have changed it is an edit to the plan -
         // and that edit already had its own say in the save-changes dialog.
-        // A slot continues the last one's progression only when both are kinds that carry over: a drop
-        // set's lighter weight is not the next working set's. A drop or myo set still opens on its own
-        // weight from last time, as a starting point the rules never move.
         .otherwise((x) =>
-          x.potentialSets.map((ps, index) => {
-            const kind = e.plannedSets[index]?.kind ?? 'working';
-            const carries = setKindHas(ps.kind, 'carriesOver') && setKindHas(kind, 'carriesOver');
-            return PotentialSet.of({
-              weight:
-                carries || ps.kind === kind
-                  ? ps.weight
-                  : new Weight(0, ps.weight.unit === 'nil' ? $this.getDefaultWeightUnit() : ps.weight.unit),
-              target: carries && e.repsAreProgressed ? ps.target : e.repsTargetForSet(index),
-              kind,
-            });
-          }),
+          x.potentialSets.map((ps, index) =>
+            ps.carriedInto(e.plannedSets[index]?.kind ?? 'working', {
+              planTarget: e.repsTargetForSet(index),
+              repsAreProgressed: e.repsAreProgressed,
+              fallbackUnit: $this.getDefaultWeightUnit(),
+            }),
+          ),
         );
       const newExercise = new RecordedWeightedExercise(e, potentialSets, undefined);
       const progressed = weightedLastExercise?.isSuccessForProgressiveOverload

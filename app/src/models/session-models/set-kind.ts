@@ -73,6 +73,22 @@ export function setKindHas(kind: SetKind, rule: SetKindRule): boolean {
   return SET_KIND_RULES[kind][rule];
 }
 
+/**
+ * Whether a slot continues last session's progression, reps and all: only when the kind it was and the
+ * kind it is now both carry over. A drop set's lighter weight is never the next working set's.
+ */
+export function continuesProgression(last: SetKind, next: SetKind): boolean {
+  return setKindHas(last, 'carriesOver') && setKindHas(next, 'carriesOver');
+}
+
+/**
+ * Whether a slot opens on its weight from last time: when it continues the progression, or when it is
+ * the same kind again, so a drop set starts from last week's drop.
+ */
+export function keepsLastWeight(last: SetKind, next: SetKind): boolean {
+  return last === next || continuesProgression(last, next);
+}
+
 /** What stands in for a set's number when it isn't a working set. */
 export function setKindLetter(kind: LetteredSetKind): SetKindLetter {
   return SET_KIND_RULES[kind].letter;

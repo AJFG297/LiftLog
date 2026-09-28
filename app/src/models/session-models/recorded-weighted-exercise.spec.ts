@@ -459,3 +459,42 @@ describe('RecordedWeightedExercise RPE', () => {
     ).toBe(false);
   });
 });
+
+describe('PotentialSet.carriedInto', () => {
+  const last = (kind: 'working' | 'drop', weight: Weight) =>
+    PotentialSet.of({ weight, target: { min: 12, max: 12 }, kind, set: new RecordedSet(12, tick()) });
+  const next = { planTarget: { min: 10, max: 10 }, repsAreProgressed: true, fallbackUnit: 'pounds' as const };
+
+  it('continues a working set with its weight and the target a reps rule won, unlogged', () => {
+    const carried = last('working', new Weight(100, 'kilograms')).carriedInto('failure', next);
+
+    expect([carried.kind, carried.weight, carried.target, carried.set]).toEqual([
+      'failure',
+      new Weight(100, 'kilograms'),
+      { min: 12, max: 12 },
+      undefined,
+    ]);
+  });
+
+  it("opens a drop set on last time's drop weight, but on the plan's reps", () => {
+    const carried = last('drop', new Weight(40, 'kilograms')).carriedInto('drop', next);
+
+    expect([carried.weight, carried.target]).toEqual([new Weight(40, 'kilograms'), { min: 10, max: 10 }]);
+  });
+
+  it('starts a slot that changed to or from a drop set at 0 in its own unit', () => {
+    expect(last('drop', new Weight(40, 'kilograms')).carriedInto('working', next).weight).toEqual(
+      new Weight(0, 'kilograms'),
+    );
+    expect(last('working', Weight.NIL).carriedInto('drop', next).weight).toEqual(new Weight(0, 'pounds'));
+  });
+
+  it("uses the plan's reps where reps are a fixed prescription", () => {
+    const carried = last('working', new Weight(100, 'kilograms')).carriedInto('working', {
+      ...next,
+      repsAreProgressed: false,
+    });
+
+    expect(carried.target).toEqual({ min: 10, max: 10 });
+  });
+});
