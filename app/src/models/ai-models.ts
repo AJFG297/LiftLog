@@ -135,13 +135,14 @@ function fillProgression(partial: DeepPartial<ProgressionRuleJSON>[] | undefined
  */
 function fillPlannedSets(partial: DeepPartial<PlannedSetJSON>[] | undefined): PlannedSetJSON[] {
   if (!partial?.length) {
-    return emptyWeightedExercise.plannedSets.map((s) => ({ reps: { ...s.reps } }));
+    return emptyWeightedExercise.plannedSets.map((s) => ({ reps: { ...s.reps }, kind: s.kind }));
   }
   return partial.map((set) => ({
     reps: {
       min: set?.reps?.min ?? set?.reps?.max ?? defaultRepsTarget.min,
       max: set?.reps?.max ?? set?.reps?.min ?? defaultRepsTarget.max,
     },
+    kind: set?.kind ?? 'working',
   }));
 }
 
@@ -213,7 +214,7 @@ function fillExercise(partial: DeepPartial<ExerciseBlueprintJSON> = {}): Exercis
 
 function fillSession(partial: DeepPartial<SessionBlueprintJSON> = {}): SessionBlueprintJSON {
   return {
-    version: 7,
+    version: 8,
     name: partial.name ?? emptySessionBlueprint.name,
     exercises: (partial.exercises ?? []).map(fillExercise),
     notes: partial.notes ?? emptySessionBlueprint.notes,

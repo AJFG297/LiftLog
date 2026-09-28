@@ -10,6 +10,7 @@ import { addUsesBodyweight } from '@/models/storage/versions/migrations/steps/ad
 import { repsConfigToPlannedSets } from '@/models/storage/versions/migrations/steps/reps-config-to-planned-sets';
 import { progressiveOverloadToRules } from '@/models/storage/versions/migrations/steps/progressive-overload-to-rules';
 import { addPlannedWarmupSets } from '@/models/storage/versions/migrations/steps/add-warmup-sets';
+import { addPlannedSetKinds } from '@/models/storage/versions/migrations/steps/add-set-kinds';
 
 export const sessionBlueprintMigrations = createMigrations<InitialSessionBlueprintJSON>()
   .add((value) => ({
@@ -47,6 +48,12 @@ export const sessionBlueprintMigrations = createMigrations<InitialSessionBluepri
   .add((value) => ({
     version: 7 as const,
     exercises: value.exercises.map((x) => (x.type === 'WeightedExerciseBlueprint' ? addPlannedWarmupSets(x) : x)),
+    name: value.name,
+    notes: value.notes,
+  }))
+  .add((value) => ({
+    version: 8 as const,
+    exercises: value.exercises.map((x) => (x.type === 'WeightedExerciseBlueprint' ? addPlannedSetKinds(x) : x)),
     name: value.name,
     notes: value.notes,
   }))

@@ -39,18 +39,21 @@ exports[`export-plaintext-effects > addExportPlaintextEffects - JSON > JSON outp
           "notes": "",
           "plannedSets": [
             {
+              "kind": "working",
               "reps": {
                 "max": 10,
                 "min": 10,
               },
             },
             {
+              "kind": "working",
               "reps": {
                 "max": 10,
                 "min": 10,
               },
             },
             {
+              "kind": "working",
               "reps": {
                 "max": 10,
                 "min": 10,
@@ -79,6 +82,7 @@ exports[`export-plaintext-effects > addExportPlaintextEffects - JSON > JSON outp
         },
         "potentialSets": [
           {
+            "kind": "working",
             "set": {
               "completionDateTime": "2024-01-15T10:00:00Z",
               "repsCompleted": 10,
@@ -95,6 +99,7 @@ exports[`export-plaintext-effects > addExportPlaintextEffects - JSON > JSON outp
             },
           },
           {
+            "kind": "working",
             "set": {
               "completionDateTime": "2024-01-15T10:01:00Z",
               "repsCompleted": 10,
@@ -111,6 +116,7 @@ exports[`export-plaintext-effects > addExportPlaintextEffects - JSON > JSON outp
             },
           },
           {
+            "kind": "working",
             "set": {
               "completionDateTime": "2024-01-15T10:02:00Z",
               "repsCompleted": 10,
@@ -147,18 +153,21 @@ exports[`export-plaintext-effects > addExportPlaintextEffects - JSON > JSON outp
           "notes": "",
           "plannedSets": [
             {
+              "kind": "working",
               "reps": {
                 "max": 10,
                 "min": 10,
               },
             },
             {
+              "kind": "working",
               "reps": {
                 "max": 10,
                 "min": 10,
               },
             },
             {
+              "kind": "working",
               "reps": {
                 "max": 10,
                 "min": 10,
@@ -187,6 +196,7 @@ exports[`export-plaintext-effects > addExportPlaintextEffects - JSON > JSON outp
         },
         "potentialSets": [
           {
+            "kind": "working",
             "set": {
               "completionDateTime": "2024-01-15T10:00:00Z",
               "repsCompleted": 10,
@@ -203,6 +213,7 @@ exports[`export-plaintext-effects > addExportPlaintextEffects - JSON > JSON outp
             },
           },
           {
+            "kind": "working",
             "set": {
               "completionDateTime": "2024-01-15T10:01:00Z",
               "repsCompleted": 10,
@@ -219,6 +230,7 @@ exports[`export-plaintext-effects > addExportPlaintextEffects - JSON > JSON outp
             },
           },
           {
+            "kind": "working",
             "set": {
               "completionDateTime": "2024-01-15T10:02:00Z",
               "repsCompleted": 10,

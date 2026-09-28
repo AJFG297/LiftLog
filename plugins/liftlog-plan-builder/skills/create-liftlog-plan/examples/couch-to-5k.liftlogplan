@@ -4,7 +4,7 @@
   "lastEdited": "2026-07-12",
   "sessions": [
     {
-      "version": 7,
+      "version": 8,
       "name": "Run - Intervals",
       "notes": "Alternate the jog and walk intervals. Stop early if you cannot hold a conversation.",
       "exercises": [
@@ -89,7 +89,7 @@
       ]
     },
     {
-      "version": 7,
+      "version": 8,
       "name": "Run - Distance",
       "notes": "",
       "exercises": [
@@ -116,7 +116,7 @@
       ]
     },
     {
-      "version": 7,
+      "version": 8,
       "name": "Cross Training",
       "notes": "A low impact day between runs.",
       "exercises": [
@@ -141,9 +141,9 @@
           "type": "WeightedExerciseBlueprint",
           "name": "Bodyweight Squat",
           "plannedSets": [
-            { "reps": { "min": 15, "max": 15 } },
-            { "reps": { "min": 15, "max": 15 } },
-            { "reps": { "min": 15, "max": 15 } }
+            { "reps": { "min": 15, "max": 15 }, "kind": "working" },
+            { "reps": { "min": 15, "max": 15 }, "kind": "working" },
+            { "reps": { "min": 15, "max": 15 }, "kind": "working" }
           ],
           "restBetweenSets": {
             "minRest": "PT1M",

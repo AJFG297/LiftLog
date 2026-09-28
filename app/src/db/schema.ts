@@ -31,6 +31,7 @@ import type {
   DurationJSON,
   LocalDateJSON,
   OffsetDateTimeJSON,
+  SetKindJSON,
   WeightUnitJSON,
 } from '@/models/storage/versions/latest';
 
@@ -100,6 +101,7 @@ export const weightedSetsSchema = sqliteTable(
     position: integer().notNull(),
     targetRepsMin: integer('target_reps_min').notNull(),
     targetRepsMax: integer('target_reps_max').notNull(),
+    kind: text().$type<SetKindJSON>().notNull().default('working'),
     // Exact, as the user entered it. `weight_kg` is the same weight converted, for aggregates.
     weightValue: text('weight_value').$type<BigNumberJSON>().notNull(),
     weightUnit: text('weight_unit').$type<WeightUnitJSON>().notNull(),

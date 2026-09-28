@@ -1,6 +1,6 @@
 import type { BigNumberJSON, DurationJSON, LocalDateJSON, OffsetDateTimeJSON } from '@/models/storage/versions/libs';
 import type {
-  PlannedSetJSON,
+  RepsTargetJSON,
   WeightedExerciseBlueprintJSON,
   CardioExerciseBlueprintJSON,
   DistanceJSON,
@@ -9,7 +9,7 @@ import type {
 import type { WeightJSON } from '@/models/storage/versions/libs/weight';
 
 export interface SessionJSON {
-  version: 9;
+  version: 10;
   id: string;
   blueprint: { name: string; notes: string };
   recordedExercises: RecordedExerciseJSON[];
@@ -55,7 +55,9 @@ export interface RecordedWeightedExerciseJSON {
 
 export interface PotentialSetJSON {
   /** The target this session is chasing for the set, seeded from the blueprint and then its own. */
-  target: PlannedSetJSON;
+  target: SetTargetJSON;
+  /** Always `warmup` in `warmupSets`. */
+  kind: SetKindJSON;
   set?: RecordedSetJSON | undefined;
   weight: WeightJSON;
   /**
@@ -64,6 +66,14 @@ export interface PotentialSetJSON {
    */
   rpe?: number | undefined;
 }
+
+export interface SetTargetJSON {
+  reps: RepsTargetJSON;
+}
+
+// Spelled out rather than `PlannedSetKindJSON | 'warmup'`: the worker's Kotlin codegen can't turn an anyOf of
+// two enums into one class.
+export type SetKindJSON = 'working' | 'warmup' | 'drop' | 'myo' | 'failure';
 
 export interface RecordedSetJSON {
   /**

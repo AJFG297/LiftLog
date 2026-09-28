@@ -528,7 +528,9 @@ describe('applySessionBlueprintDiff', () => {
     const result = applySessionBlueprintDiff(original, diff);
 
     const exercise = result.exercises[0]! as WeightedExerciseBlueprint;
-    expect(exercise.plannedSets).toEqual(Array.from({ length: 5 }, () => ({ reps: { min: 8, max: 8 } })));
+    expect(exercise.plannedSets).toEqual(
+      Array.from({ length: 5 }, () => ({ reps: { min: 8, max: 8 }, kind: 'working' })),
+    );
   });
 
   const createCardioSet = (

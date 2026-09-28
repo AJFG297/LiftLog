@@ -95,16 +95,21 @@ export class SessionService {
       const potentialSets: PotentialSet[] = match(weightedLastExercise)
         .returnType<PotentialSet[]>()
         .with(undefined, () =>
-          e.plannedSets.map((s) => new PotentialSet(undefined, new Weight(0, $this.getDefaultWeightUnit()), s.reps)),
+          e.plannedSets.map((s) =>
+            PotentialSet.of({ weight: new Weight(0, $this.getDefaultWeightUnit()), target: s.reps, kind: s.kind }),
+          ),
         )
         // Where reps are what advances, the target carries forward alongside the weight so the
         // lineage keeps what a rule won for it. Where they are a fixed prescription it is re-seeded
         // from the plan, because the only thing that could have changed it is an edit to the plan -
         // and that edit already had its own say in the save-changes dialog.
         .otherwise((x) =>
-          x.potentialSets.map(
-            (ps, index) =>
-              new PotentialSet(undefined, ps.weight, e.repsAreProgressed ? ps.target : e.repsTargetForSet(index)),
+          x.potentialSets.map((ps, index) =>
+            PotentialSet.of({
+              weight: ps.weight,
+              target: e.repsAreProgressed ? ps.target : e.repsTargetForSet(index),
+              kind: e.plannedSets[index]?.kind ?? 'working',
+            }),
           ),
         );
       const newExercise = new RecordedWeightedExercise(e, potentialSets, undefined);

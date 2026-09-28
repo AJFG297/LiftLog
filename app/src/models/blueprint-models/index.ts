@@ -22,6 +22,7 @@ import {
   toLocalDateJSON,
 } from '../storage/versions/latest';
 import { RecordedWeightedExercise } from '@/models/session-models';
+import type { WorkingListKind } from '@/models/session-models/set-kind';
 import { Weight, WeightUnit } from '@/models/weight';
 
 export class ProgramBlueprint {
@@ -142,7 +143,7 @@ export class SessionBlueprint {
 
   toJSON(): SessionBlueprintJSON {
     return {
-      version: 7,
+      version: 8,
       name: this.name,
       exercises: this.exercises.map((exercise) => exercise.toJSON()),
       notes: this.notes,
@@ -710,6 +711,7 @@ export interface RepsTarget {
 /** What the plan asks for on one set. */
 export interface PlannedSet {
   reps: RepsTarget;
+  kind: WorkingListKind;
 }
 
 /**
@@ -738,7 +740,7 @@ export function formatPlannedSets(plannedSets: PlannedSet[]): string {
 }
 
 /** The target every set shares, or undefined when they differ. */
-export function uniformTarget(plannedSets: PlannedSet[]): RepsTarget | undefined {
+export function uniformTarget(plannedSets: Pick<PlannedSet, 'reps'>[]): RepsTarget | undefined {
   const first = plannedSets[0]?.reps;
   if (!first) {
     return undefined;
@@ -751,7 +753,7 @@ export function repsTargetsEqual(a: RepsTarget, b: RepsTarget): boolean {
 }
 
 export function plannedSetsEqual(a: PlannedSet[], b: PlannedSet[]): boolean {
-  return a.length === b.length && a.every((s, i) => repsTargetsEqual(s.reps, b[i]!.reps));
+  return a.length === b.length && a.every((s, i) => repsTargetsEqual(s.reps, b[i]!.reps) && s.kind === b[i]!.kind);
 }
 
 /**
@@ -967,7 +969,7 @@ export class WeightedExerciseBlueprint {
   static fromJSON(json: WeightedExerciseBlueprintJSON): WeightedExerciseBlueprint {
     return new WeightedExerciseBlueprint(
       json.name,
-      json.plannedSets.map((s) => ({ reps: { min: s.reps.min, max: s.reps.max } })),
+      json.plannedSets.map((s) => ({ reps: { min: s.reps.min, max: s.reps.max }, kind: s.kind })),
       json.progression.map(ProgressionRule.fromJSON),
       Rest.fromJSON(json.restBetweenSets),
       json.supersetWithNext,
@@ -1024,7 +1026,10 @@ export class WeightedExerciseBlueprint {
     return this.with({
       plannedSets: [
         ...this.plannedSets,
-        ...Array.from({ length: sets - this.plannedSets.length }, () => ({ reps: { ...last } })),
+        ...Array.from({ length: sets - this.plannedSets.length }, () => ({
+          reps: { ...last },
+          kind: 'working' as const,
+        })),
       ],
     });
   }
@@ -1059,7 +1064,7 @@ export class WeightedExerciseBlueprint {
     return {
       type: 'WeightedExerciseBlueprint',
       name: this.name,
-      plannedSets: this.plannedSets.map((s) => ({ reps: { min: s.reps.min, max: s.reps.max } })),
+      plannedSets: this.plannedSets.map((s) => ({ reps: { min: s.reps.min, max: s.reps.max }, kind: s.kind })),
       progression: this.progression.map((rule) => rule.toJSON()),
       restBetweenSets: Rest.toJSON(this.restBetweenSets),
       supersetWithNext: this.supersetWithNext,
@@ -1075,7 +1080,10 @@ export class WeightedExerciseBlueprint {
       other.name ?? this.name,
       other.plannedSets ??
         (other.sets !== undefined || other.repsConfig !== undefined
-          ? plannedSetsOf(other.sets ?? this.plannedSets.length, other.repsConfig ?? targetsAsRepsConfig(this))
+          ? withKindsOf(
+              this.plannedSets,
+              plannedSetsOf(other.sets ?? this.plannedSets.length, other.repsConfig ?? targetsAsRepsConfig(this)),
+            )
           : this.plannedSets),
       other.progression ?? this.progression,
       other.restBetweenSets ?? this.restBetweenSets,
@@ -1098,8 +1106,13 @@ export function plannedSetsOf(sets: number, repsConfig: RepsConfig): PlannedSet[
     .exhaustive();
   return Array.from({ length: Math.max(sets, 0) }, (_, index) => {
     const { min, max } = targetAt(index);
-    return { reps: { min, max } };
+    return { reps: { min, max }, kind: 'working' };
   });
+}
+
+/** A rep layout only describes reps, so re-laying the targets keeps each set's kind where it was. */
+function withKindsOf(existing: PlannedSet[], relaid: PlannedSet[]): PlannedSet[] {
+  return relaid.map((set, index) => ({ ...set, kind: existing[index]?.kind ?? set.kind }));
 }
 
 /** Existing targets in the form `with({ sets })` can resize without changing them. */

@@ -3,8 +3,12 @@
   "type": "object",
   "properties": {
     "target": {
-      "$ref": "./PlannedSet.json",
+      "$ref": "./SetTarget.json",
       "description": "The target this session is chasing for the set, seeded from the blueprint and then its own."
+    },
+    "kind": {
+      "$ref": "./SetKind.json",
+      "description": "Always `warmup` in `warmupSets`."
     },
     "set": {
       "$ref": "./RecordedSet.json"
@@ -19,6 +23,7 @@
   },
   "required": [
     "target",
+    "kind",
     "weight"
   ]
 }

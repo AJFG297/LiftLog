@@ -226,7 +226,9 @@ describe('aiPlanFromJSON', () => {
       }) as WeightedExerciseBlueprint;
 
       expect(exercise.name).toBe('Squat');
-      expect(exercise.plannedSets).toEqual(Array.from({ length: 5 }, () => ({ reps: { min: 5, max: 5 } })));
+      expect(exercise.plannedSets).toEqual(
+        Array.from({ length: 5 }, () => ({ reps: { min: 5, max: 5 }, kind: 'working' })),
+      );
       expect(exercise.supersetWithNext).toBe(true);
       expect(exercise.notes).toBe('Go deep');
       expect(exercise.link).toBe('https://example.com');

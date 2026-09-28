@@ -149,6 +149,8 @@ A workout is stored across five tables (`db/schema.ts`), not as one payload:
   query columns, since nothing sums or ranks them. `workout_exercise.latest_time_ms` is the last working
   set too, so an exercise with only warm-ups logged never ranks as a performance; `workout.reference_time_ms`
   is the last set of any kind, as it orders workouts by when they happened.
+- **Set kinds**: `weighted_set.kind` is what the slot is for (`working`, `failure`, `drop` or `myo`, see
+  `SET_KIND_RULES`). A warm-up's kind is its table. Rows written before the column existed read as `working`.
 - **The exercise blueprint** stays a JSON column on `workout_exercise`, and `workout.blueprint_version`
   records the `SessionBlueprintJSON` version it was written at. It is migrated on read by
   `sessionBlueprintMigrations`. A cardio set's own blueprint copy is JSON too; no chain step has ever

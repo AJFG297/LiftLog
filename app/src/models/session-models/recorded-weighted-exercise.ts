@@ -19,7 +19,7 @@ import {
 } from '@/models/storage/versions/latest';
 import { Weight, WeightUnit } from '@/models/weight';
 import { isRpe, Rpe } from '@/models/session-models/rpe';
-import type { SetList } from '@/models/session-models/set-kind';
+import type { SetKind, SetList } from '@/models/session-models/set-kind';
 import { IndexOutOfBoundsError } from '@/utils/index-out-of-bounds';
 import { Duration, OffsetDateTime } from '@js-joda/core';
 import BigNumber from 'bignumber.js';
@@ -41,20 +41,27 @@ export type LoggedSlot = SetPosition & { slot: PotentialSet };
 export class RecordedWeightedExercise {
   readonly type = 'RecordedWeightedExercise';
 
+  /**
+   * One slot per planned warm-up, done before the working sets. Rebuilt from the plan at session
+   * start rather than carried over (see {@link withWarmupsFromPlan}), and never given an RPE. Every
+   * slot here is a warm-up whatever it was built as.
+   */
+  readonly warmupSets: PotentialSet[];
+
   constructor(
     readonly blueprint: WeightedExerciseBlueprint,
     /**
-     * Working sets only. Everything that counts - the success check, progression, records, volume,
-     * stats - reads this list, which is what keeps warm-ups out of all of it without a filter.
+     * The working list: every set but the warm-ups, each counting towards what its kind says (see
+     * `SET_KIND_RULES`).
      */
     readonly potentialSets: PotentialSet[],
     readonly notes: string | undefined,
-    /**
-     * One slot per planned warm-up, done before the working sets. Rebuilt from the plan at session
-     * start rather than carried over (see {@link withWarmupsFromPlan}), and never given an RPE.
-     */
-    readonly warmupSets: PotentialSet[] = [],
-  ) {}
+    warmupSets: PotentialSet[] = [],
+  ) {
+    this.warmupSets = warmupSets.every((s) => s.kind === 'warmup')
+      ? warmupSets
+      : warmupSets.map((s) => s.with({ kind: 'warmup' }));
+  }
 
   static fromJSON(json: RecordedWeightedExerciseJSON): RecordedWeightedExercise {
     return new RecordedWeightedExercise(
@@ -83,7 +90,7 @@ export class RecordedWeightedExercise {
   static empty(b: WeightedExerciseBlueprint, unit: WeightUnit): RecordedWeightedExercise {
     return new RecordedWeightedExercise(
       b,
-      b.plannedSets.map((s) => new PotentialSet(undefined, new Weight(0, unit), s.reps)),
+      b.plannedSets.map((s) => PotentialSet.of({ weight: new Weight(0, unit), target: s.reps, kind: s.kind })),
       undefined,
     ).withWarmupsFromPlan(unit);
   }
@@ -110,13 +117,17 @@ export class RecordedWeightedExercise {
     const target = { min: warmup.reps, max: warmup.reps };
     const load = this.tracksResistance ? warmup.load : undefined;
     if (!load) {
-      return new PotentialSet(undefined, new Weight(0, unit), target);
+      return PotentialSet.of({ weight: new Weight(0, unit), target, kind: 'warmup' });
     }
     const raw =
       load.type === 'percent'
         ? (heaviest ?? new Weight(0, unit)).convertTo(unit).multipliedBy(new BigNumber(load.percent).dividedBy(100))
         : load.weight.convertTo(unit);
-    return new PotentialSet(undefined, roundWarmupWeight(raw, warmupIncrementFor(this.blueprint, unit)), target);
+    return PotentialSet.of({
+      weight: roundWarmupWeight(raw, warmupIncrementFor(this.blueprint, unit)),
+      target,
+      kind: 'warmup',
+    });
   }
 
   private get heaviestWorkingWeight(): Weight | undefined {
@@ -552,6 +563,8 @@ export class PotentialSet {
      * the set is logged, and so changing the reps (which rebuilds the recorded set) keeps it.
      */
     readonly rpe?: Rpe,
+    /** Always `warmup` for a slot in `warmupSets`: the exercise makes it so. */
+    readonly kind: SetKind = 'working',
   ) {}
 
   /** Build a set from named fields; preferred over the constructor, which leads with the absent one. */
@@ -560,8 +573,9 @@ export class PotentialSet {
     weight: Weight;
     target?: RepsTarget;
     rpe?: Rpe | undefined;
+    kind?: SetKind;
   }): PotentialSet {
-    return new PotentialSet(init.set, init.weight, init.target, init.rpe);
+    return new PotentialSet(init.set, init.weight, init.target, init.rpe, init.kind);
   }
 
   static fromJSON(json: PotentialSetJSON): PotentialSet {
@@ -573,6 +587,7 @@ export class PotentialSet {
         max: json.target.reps.max,
       },
       isRpe(json.rpe) ? json.rpe : undefined,
+      json.kind,
     );
   }
 
@@ -593,7 +608,8 @@ export class PotentialSet {
       this.weight.equals(other.weight) &&
       this.target.min === other.target.min &&
       this.target.max === other.target.max &&
-      this.rpe === other.rpe
+      this.rpe === other.rpe &&
+      this.kind === other.kind
     );
   }
 
@@ -603,12 +619,14 @@ export class PotentialSet {
       'weight' in other ? other.weight! : this.weight,
       other.target ?? this.target,
       'rpe' in other ? other.rpe : this.rpe,
+      other.kind ?? this.kind,
     );
   }
 
   toJSON(): PotentialSetJSON {
     return {
       target: { reps: { min: this.target.min, max: this.target.max } },
+      kind: this.kind,
       set: this.set?.toJSON(),
       weight: this.weight.toJSON(),
       rpe: this.rpe,
