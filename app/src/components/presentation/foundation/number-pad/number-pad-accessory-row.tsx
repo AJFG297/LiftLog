@@ -22,7 +22,7 @@ export function NumberPadAccessoryRow(props: {
 }) {
   const { accessory, value, unit } = props;
   return (
-    <View style={{ height: spacing[12], justifyContent: 'center' }}>
+    <View style={{ minHeight: spacing[12], justifyContent: 'center' }}>
       {accessory?.kind === 'rpe' ? (
         <RpeRow value={accessory.value} onChange={accessory.onChange} />
       ) : accessory?.kind === 'plates' && value ? (

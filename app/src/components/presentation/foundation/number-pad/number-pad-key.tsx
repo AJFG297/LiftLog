@@ -3,7 +3,7 @@ import { MsIcon } from 'material-symbols-react-native';
 import { ComponentProps, ReactNode } from 'react';
 import { Pressable, View } from 'react-native';
 
-const KEY_HEIGHT = 52;
+const KEY_MIN_HEIGHT = 52;
 
 export function NumberPadKey(props: {
   label: string;
@@ -21,7 +21,7 @@ export function NumberPadKey(props: {
       onPress={props.onPress}
       style={({ pressed }) => ({
         flex: 1,
-        height: KEY_HEIGHT,
+        minHeight: KEY_MIN_HEIGHT,
         borderRadius: rounding.roundedRectangleRadius,
         alignItems: 'center',
         justifyContent: 'center',
@@ -35,7 +35,9 @@ export function NumberPadKey(props: {
 }
 
 export function NumberPadKeySpacer() {
-  return <View style={{ flex: 1, height: KEY_HEIGHT }} importantForAccessibility="no" accessibilityElementsHidden />;
+  return (
+    <View style={{ flex: 1, minHeight: KEY_MIN_HEIGHT }} importantForAccessibility="no" accessibilityElementsHidden />
+  );
 }
 
 export function NumberPadKeyIcon(props: { icon: ComponentProps<typeof MsIcon>['icon']; color: string }) {
