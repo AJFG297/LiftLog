@@ -19,7 +19,7 @@ import {
 } from '@/models/storage/versions/latest';
 import { Weight, WeightUnit } from '@/models/weight';
 import { isRpe, Rpe } from '@/models/session-models/rpe';
-import type { SetKind, SetList } from '@/models/session-models/set-kind';
+import { setKindCounts, SetKind, SetKindRule, SetList } from '@/models/session-models/set-kind';
 import { IndexOutOfBoundsError } from '@/utils/index-out-of-bounds';
 import { Duration, OffsetDateTime } from '@js-joda/core';
 import BigNumber from 'bignumber.js';
@@ -51,8 +51,8 @@ export class RecordedWeightedExercise {
   constructor(
     readonly blueprint: WeightedExerciseBlueprint,
     /**
-     * The working list: every set but the warm-ups, each counting towards what its kind says (see
-     * `SET_KIND_RULES`).
+     * The working list: every set but the warm-ups. What a set counts towards is its kind's, so
+     * aggregates read {@link setsCountingTowards} rather than this list.
      */
     readonly potentialSets: PotentialSet[],
     readonly notes: string | undefined,
@@ -358,7 +358,7 @@ export class RecordedWeightedExercise {
   }
 
   totalWeightLiftedWith(bodyweight: Weight | undefined): Weight {
-    return this.potentialSets.reduce(
+    return this.setsCountingTowards('countsTowardsVolume').reduce(
       (accum, set) => accum.plus(this.effectiveWeight(set, bodyweight).multipliedBy(set.set?.repsCompleted ?? 0)),
       Weight.NIL,
     );
@@ -473,11 +473,25 @@ export class RecordedWeightedExercise {
     return !this.potentialSets.some((x) => x.set === undefined);
   }
 
-  /// <summary>
-  /// An exercise is considered a success if ALL sets are successful
-  /// </summary>
+  /** The sets, warm-ups included, whose kind counts towards `rule`, in order. */
+  setsCountingTowards(rule: SetKindRule): PotentialSet[] {
+    return [...this.warmupSets, ...this.potentialSets].filter((set) => setKindCounts(set.kind, rule));
+  }
+
+  /** Indexes into the working list of the sets whose kind counts towards `rule`. */
+  workingIndicesCountingTowards(rule: SetKindRule): number[] {
+    return this.potentialSets.flatMap((set, index) => (setKindCounts(set.kind, rule) ? [index] : []));
+  }
+
+  /**
+   * A success once every set the progression check reads met the top of its target. A drop or myo set
+   * short of its reps never holds the lift back.
+   */
   get isSuccessForProgressiveOverload(): boolean {
-    return this.potentialSets.every((x, index) => x.set && x.set.repsCompleted >= this.repsTargetForSet(index).max);
+    return this.workingIndicesCountingTowards('countsTowardsProgression').every((index) => {
+      const set = this.potentialSets[index]!.set;
+      return set && set.repsCompleted >= this.repsTargetForSet(index).max;
+    });
   }
 }
 

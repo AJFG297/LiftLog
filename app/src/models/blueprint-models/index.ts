@@ -555,32 +555,34 @@ export class ProgressionRule {
     return Math.max(reachable - from, 0);
   }
 
+  /** Only the sets the progression check reads move: a drop set is neither checked nor climbed. */
   private indicesToMove(exercise: RecordedWeightedExercise): number[] {
-    const sets = exercise.potentialSets;
+    const eligible = exercise.workingIndicesCountingTowards('countsTowardsProgression');
     if (this.scope.type === 'allSets') {
-      return sets.map((_, index) => index);
+      return eligible;
     }
     // Ranked by the rule's own axis: a reps rule that sorted by load would pick a set at random.
     const matching =
       this.axis === 'load'
-        ? lowestByWeight(exercise)
-        : lowestByNumber(sets.map((_, i) => exercise.repsTargetForSet(i).max));
-    return pickFrom(matching, this.scope.pick, sets.length);
+        ? lowestByWeight(exercise, eligible)
+        : lowestByNumber(eligible, (i) => exercise.repsTargetForSet(i).max);
+    return pickFrom(matching, this.scope.pick, exercise.potentialSets.length);
   }
 }
 
-function lowestByWeight(exercise: RecordedWeightedExercise): number[] {
+function lowestByWeight(exercise: RecordedWeightedExercise, eligible: number[]): number[] {
   const sets = exercise.potentialSets;
-  const lowest = [...sets].sort((a, b) => (a.weight.isGreaterThan(b.weight) ? 1 : -1))[0];
+  const lowest = eligible.map((index) => sets[index]!).sort((a, b) => (a.weight.isGreaterThan(b.weight) ? 1 : -1))[0];
   if (!lowest) {
     return [];
   }
-  return sets.flatMap((set, index) => (set.weight.equals(lowest.weight) ? [index] : []));
+  return eligible.filter((index) => sets[index]!.weight.equals(lowest.weight));
 }
 
-function lowestByNumber(values: number[]): number[] {
+function lowestByNumber(eligible: number[], valueAt: (index: number) => number): number[] {
+  const values = eligible.map(valueAt);
   const lowest = Math.min(...values);
-  return values.flatMap((value, index) => (value === lowest ? [index] : []));
+  return eligible.filter((_, position) => values[position] === lowest);
 }
 
 /** `middle` measures from the centre of *all* sets, not the centre of the matching ones. */

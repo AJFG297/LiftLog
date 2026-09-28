@@ -58,7 +58,10 @@ export function calculateStats(
       sessionTotal +
       session.recordedExercises.reduce((exerciseTotal, exercise) => {
         if (exercise instanceof RecordedWeightedExercise) {
-          return exerciseTotal + exercise.potentialSets.filter((set) => set.set !== undefined).length;
+          return (
+            exerciseTotal +
+            exercise.setsCountingTowards('countsTowardsVolume').filter((set) => set.set !== undefined).length
+          );
         }
         return exerciseTotal + exercise.sets.filter((set) => set.completionDateTime !== undefined).length;
       }, 0),
@@ -143,8 +146,10 @@ export function calculateStats(
         continue;
       }
       const exerciseStats = exerciseStatsMap.get(key)!;
+      const recordSets = ex.setsCountingTowards('countsTowardsPrs');
+      const volumeSets = ex.setsCountingTowards('countsTowardsVolume');
       // Max weight lifted for this exercise in this session
-      const maxWeight = ex.potentialSets
+      const maxWeight = recordSets
         .filter((ps) => ps.set)
         .map((ps) => ex.effectiveWeight(ps, session.bodyweight))
         .reduce((a, b) => (a === null ? b : a.isGreaterThan(b) ? a : b), null as null | Weight);
@@ -153,7 +158,7 @@ export function calculateStats(
       }
 
       // Max 1RM for this exercise in this session
-      const max1RM = ex.potentialSets
+      const max1RM = recordSets
         .filter((ps) => ps.set)
         .filter((ps) => ps.set!.repsCompleted)
         .map((ps) => calculateOneRepMax(ps, ex.effectiveWeight(ps, session.bodyweight)))
@@ -162,7 +167,7 @@ export function calculateStats(
         continue;
       }
 
-      for (const set of ex.potentialSets) {
+      for (const set of volumeSets) {
         if (!set.set) {
           continue;
         }
@@ -185,7 +190,7 @@ export function calculateStats(
       });
       exerciseStats.maxRepsStatistics.push({
         dateTime: lastSet.set!.completionDateTime,
-        value: ex.potentialSets.reduce((most, ps) => Math.max(most, ps.set?.repsCompleted ?? 0), 0),
+        value: recordSets.reduce((most, ps) => Math.max(most, ps.set?.repsCompleted ?? 0), 0),
       });
       exerciseStats.max1RMStatistics.push({
         dateTime: lastSet.set!.completionDateTime,
@@ -193,7 +198,7 @@ export function calculateStats(
       });
       exerciseStats.totalVolumeStatistics.push({
         dateTime: lastSet.set!.completionDateTime,
-        value: ex.potentialSets
+        value: volumeSets
           .filter((x) => x.set)
           .reduce(
             (accum, set) =>
@@ -248,7 +253,8 @@ export function calculateStats(
       if (ex instanceof RecordedCardioExercise) {
         continue;
       }
-      const maxWeight = ex.potentialSets
+      const maxWeight = ex
+        .setsCountingTowards('countsTowardsPrs')
         .filter((ps) => ps.set)
         .map((ps) => ex.effectiveWeight(ps, session.bodyweight))
         .reduce((a, b) => (a.isGreaterThan(b) ? a : b), Weight.NIL);

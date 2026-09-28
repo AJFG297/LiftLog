@@ -19,7 +19,7 @@ function bestOneRepMax(session: Session): Map<MovementKey, PersonalRecord> {
     // Same key selectRecentlyCompletedExercises uses; it already guards the cardio/weighted name collision.
     const key = exercise.movementKey();
 
-    for (const potentialSet of exercise.potentialSets) {
+    for (const potentialSet of exercise.setsCountingTowards('countsTowardsPrs')) {
       if (!potentialSet.set?.repsCompleted) {
         continue;
       }

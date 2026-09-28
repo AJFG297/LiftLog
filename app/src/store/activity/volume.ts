@@ -8,7 +8,7 @@ export function sessionVolume(session: Session): number {
     if (exercise.type !== 'RecordedWeightedExercise') {
       continue;
     }
-    for (const potentialSet of exercise.potentialSets) {
+    for (const potentialSet of exercise.setsCountingTowards('countsTowardsVolume')) {
       if (!potentialSet.set) {
         continue;
       }
