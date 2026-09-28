@@ -3,6 +3,7 @@ import { useAppSelector } from '@/store';
 import { selectFollowRequestCount } from '@/store/feed';
 import { useTranslate } from '@tolgee/react';
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
+import { Platform } from 'react-native';
 
 export default function TabsLayout() {
   const { t } = useTranslate();
@@ -16,6 +17,13 @@ export default function TabsLayout() {
       backgroundColor={colors.surfaceContainer}
       labelVisibilityMode="labeled"
       iconColor={colors.onSurfaceVariant}
+      // The Android default label colours are platform colours, resolved once when the tab bar is set up,
+      // so they keep the old theme after a live light/dark switch. Passing ours re-sends them on each change.
+      labelStyle={
+        Platform.OS === 'android'
+          ? { default: { color: colors.onSurfaceVariant }, selected: { color: colors.onSurface } }
+          : undefined
+      }
     >
       <NativeTabs.Trigger name="(session)">
         <NativeTabs.Trigger.Label>{t('workout.workout.label')}</NativeTabs.Trigger.Label>
