@@ -3,7 +3,7 @@ import { Card } from '@/components/presentation/foundation/card';
 import { Chip } from '@/components/presentation/foundation/chip';
 import { haptics } from '@/components/presentation/foundation/haptics';
 import { ListRow } from '@/components/presentation/foundation/list-row';
-import { AppIcon } from '@/components/presentation/foundation/ms-icon-source';
+import { MsIconSrc } from '@/components/presentation/foundation/ms-icon-source';
 import { ProgressBar } from '@/components/presentation/foundation/progress-bar';
 import { RoundIconButton } from '@/components/presentation/foundation/round-icon-button';
 import { SegmentedControl } from '@/components/presentation/foundation/segmented-control';
@@ -230,7 +230,7 @@ function ListRowSection() {
           title="Overhead press"
           subtitle="Pressable row"
           onPress={() => toast.show({ message: 'Overhead press' })}
-          trailing={<AppIcon name="chevronRight" size={20} color={tokens.faint} />}
+          trailing={<MsIconSrc name="chevronRight" size={20} color={tokens.faint} />}
         />
       </Card>
     </Section>
@@ -266,7 +266,7 @@ function ToastAndSheetSection() {
   const { tokens } = useAppTheme();
   const toast = useToast();
   const router = useRouter();
-  const chevron = <AppIcon name="chevronRight" size={20} color={tokens.faint} />;
+  const chevron = <MsIconSrc name="chevronRight" size={20} color={tokens.faint} />;
   return (
     <Section title="Toast and sheet">
       <Card style={{ padding: 0, overflow: 'hidden' }}>
@@ -294,7 +294,7 @@ function ToastAndSheetSection() {
 
 function HapticsSection() {
   const { tokens } = useAppTheme();
-  const chevron = <AppIcon name="chevronRight" size={20} color={tokens.faint} />;
+  const chevron = <MsIconSrc name="chevronRight" size={20} color={tokens.faint} />;
   return (
     <Section title="Haptics">
       <Card style={{ padding: 0, overflow: 'hidden' }}>

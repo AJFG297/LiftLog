@@ -1,4 +1,4 @@
-import { AppIcon, AppIconName } from '@/components/presentation/foundation/ms-icon-source';
+import { AppIconName, MsIconSrc } from '@/components/presentation/foundation/ms-icon-source';
 import { MIN_TOUCH_TARGET } from '@/components/presentation/foundation/touch-target';
 import { useAppTheme } from '@/hooks/useAppTheme';
 import { Pressable, StyleProp, View, ViewStyle } from 'react-native';
@@ -61,7 +61,7 @@ export function RoundIconButton({
             backgroundColor: pressed ? tokens.track : tokens.card,
           }}
         >
-          <AppIcon name={icon} size={iconSize} color={disabled ? tokens.faint : tokens.ink} />
+          <MsIconSrc name={icon} size={iconSize} color={disabled ? tokens.faint : tokens.ink} />
         </View>
       )}
     </Pressable>
