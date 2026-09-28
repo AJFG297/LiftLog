@@ -9,7 +9,7 @@ import TouchableRipple from '@/components/presentation/foundation/touchable-ripp
 import Icon from '@/components/presentation/foundation/icon';
 import { formatRpe, Rpe } from '@/models/session-models/rpe';
 import { WarmupTile } from '@/components/presentation/workout/weighted/warmup-tile';
-import { SetKindBadge } from '@/components/presentation/workout/set-kind-badge';
+import { SetBadge } from '@/components/presentation/foundation/set-badge';
 import { useTranslate } from '@tolgee/react';
 
 export type PotentialSetSize = 'default' | 'compact';
@@ -163,7 +163,7 @@ export function PotentialSetDisplay(props: PotentialSetDisplayProps) {
         </Pressable>
         {/* Over the reps rather than inside them: a ripple takes exactly one child. */}
         {props.set.kind !== 'working' && (
-          <SetKindBadge
+          <SetBadge
             kind={props.set.kind}
             size="small"
             style={{ position: 'absolute', top: spacing[0.5], left: spacing[0.5] }}

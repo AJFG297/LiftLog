@@ -50,6 +50,10 @@ One table, `SET_BADGE_LOOK` in `set-badge/set-badge-kinds.ts`, maps each `SetKin
 is the `failure` red. Drop and myo are ink with an accent ring. Warm-up is `accentSoft`. A working set is
 the page colour with its number in Geist Mono. The badge's props only allow a number on a working set.
 
+It comes in two sizes: the default 36pt circle, and `size="small"` (16pt), which sits in the corner of a
+reps tile on the workout screen. It is the only set badge: the workout screen and the warm-up editor use it
+too, so a set looks the same wherever it appears.
+
 ## Toasts
 
 `ToastProvider` is mounted once in `app/src/app/_layout.tsx`. Call `useToast().show({ message, action })`.
