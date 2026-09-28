@@ -12,6 +12,7 @@ import {
   RepsConfig,
   WeightedExerciseBlueprint,
   cardioTargetEquals,
+  formatPlannedSets,
 } from '@/models/blueprint-models';
 import { RecordedWeightedExercise } from '@/models/session-models';
 import { LocalDate } from '@js-joda/core';
@@ -594,5 +595,31 @@ describe('WeightedExerciseBlueprint rep schemes', () => {
       expect(program.withSessionMovedUp(workoutA)).toBe(program);
       expect(program.withSessionMovedDown(workoutB)).toBe(program);
     });
+  });
+});
+
+describe('formatPlannedSets', () => {
+  const ten = { min: 10, max: 10 };
+
+  it('writes one target when every set is a working set with the same target', () => {
+    expect(
+      formatPlannedSets([
+        { reps: ten, kind: 'working' },
+        { reps: ten, kind: 'working' },
+      ]),
+    ).toBe('10');
+  });
+
+  it('letters sets that are not working sets, with the separator the caller asks for', () => {
+    expect(
+      formatPlannedSets(
+        [
+          { reps: ten, kind: 'working' },
+          { reps: ten, kind: 'failure' },
+          { reps: { min: 12, max: 15 }, kind: 'drop' },
+        ],
+        ' / ',
+      ),
+    ).toBe('10 / F 10 / D 12-15');
   });
 });

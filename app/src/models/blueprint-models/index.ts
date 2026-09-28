@@ -739,7 +739,7 @@ export function formatRepsTarget(target: RepsTarget): string {
  * How a whole list of planned sets reads: `10`, `8-12`, or `12, 10, 8` for a pyramid. A set that is not
  * a working set is spelled out with its letter, `10, 10, D 15`, so a change of kind reads as one.
  */
-export function formatPlannedSets(plannedSets: PlannedSet[]): string {
+export function formatPlannedSets(plannedSets: PlannedSet[], separator = ', '): string {
   const uniform = uniformTarget(plannedSets);
   if (uniform && plannedSets.every((s) => s.kind === 'working')) {
     return formatRepsTarget(uniform);
@@ -749,7 +749,7 @@ export function formatPlannedSets(plannedSets: PlannedSet[]): string {
     .map((s, index) =>
       s.kind === 'working' ? formatRepsTarget(s.reps) : `${labels[index]} ${formatRepsTarget(s.reps)}`,
     )
-    .join(', ');
+    .join(separator);
 }
 
 /** The target every set shares, or undefined when they differ. */
