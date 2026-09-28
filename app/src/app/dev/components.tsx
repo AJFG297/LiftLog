@@ -82,7 +82,7 @@ function ThemeSection() {
         value={colorScheme}
         onChange={(mode) => dispatch(setThemeMode(mode))}
       />
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing[2] }}>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
         {ACCENT_PRESETS.map((preset) => (
           <Chip
             key={preset.key}
@@ -127,7 +127,7 @@ function ChipSection() {
   const [rest, setRest] = useState('2:00');
   return (
     <Section title="Chip">
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing[2] }}>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
         {MUSCLES.map((muscle) => (
           <Chip
             key={muscle}
@@ -139,7 +139,7 @@ function ChipSection() {
           />
         ))}
       </View>
-      <View style={{ flexDirection: 'row', gap: spacing[2] }}>
+      <View style={{ flexDirection: 'row' }}>
         {RPE_VALUES.map((value) => (
           <Chip
             key={value}
@@ -148,11 +148,12 @@ function ChipSection() {
             accessibilityLabel={`RPE ${value}`}
             selected={rpe === value}
             onPress={() => setRpe(rpe === value ? undefined : value)}
-            style={{ flexGrow: 1, paddingHorizontal: 0 }}
+            style={{ flexGrow: 1 }}
+            contentStyle={{ paddingHorizontal: 0 }}
           />
         ))}
       </View>
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing[2] }}>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
         {REST_PRESETS.map((preset) => (
           <Chip key={preset} label={preset} numeric selected={rest === preset} onPress={() => setRest(preset)} />
         ))}

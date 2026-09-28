@@ -13,7 +13,7 @@ screen isn't linked from the app. Its theme controls change the real theme setti
 | Component | File | Use it for |
 | --- | --- | --- |
 | `Card` | `card.tsx` | A white (dark: raised) surface with a hairline border. `onPress` makes the whole card a button. |
-| `Chip` | `chip.tsx` | A toggle: filters, rest presets, RPE. `numeric` sets a number-only label in Geist Mono; `style={{ flexGrow: 1 }}` shares a row. |
+| `Chip` | `chip.tsx` | A toggle: filters, rest presets, RPE. `numeric` sets a number-only label in Geist Mono; `style={{ flexGrow: 1 }}` shares a row; `contentStyle` styles the drawn chip. |
 | `SegmentedControl` | `segmented-control.tsx` | Two to four mutually exclusive options in one row ("Last 7 days / Last 30 days"). |
 | `RoundIconButton` | `round-icon-button.tsx` | A round, outlined icon button, `regular` (44pt) or `compact` (36pt). The label is required. |
 | `ListRow` | `list-row.tsx` | Leading slot, title, subtitle, trailing slot. `onPress` makes the row a button. |
@@ -32,10 +32,11 @@ ADR-0002 makes us responsible for these, so every interactive primitive:
 
 - has a role and a label. `Chip` is a toggle button that is on or off (`togglebutton` with `checked`, what
   ARIA calls `aria-pressed`). `SegmentedControl` is a radio group. Icon-only controls require a label.
-- has a hit area of at least 44pt. A control that is drawn smaller (a 36pt chip, a compact icon button) gets
-  the difference as `hitSlop`, from `hitSlopFor` in `touch-target.ts`. Use it for new compact controls too.
-  Space compact controls at least 8pt apart (`spacing[2]`), or their padded targets overlap and a tap between
-  two can land on the wrong one.
+- has a touch target of at least 44pt (`MIN_TOUCH_TARGET` in `touch-target.ts`). A control that is drawn
+  smaller (a 36pt chip, a compact icon button) makes its `Pressable` 44pt and draws the smaller shape inside
+  it. Don't use `hitSlop` for this: React Native drops a tap outside the parent's bounds, so the slop is lost
+  in a row only 36pt tall. A chip's target is the drawn chip plus 4pt all round, so chips laid out with no gap
+  still look 8pt apart.
 - lets text grow with the system font size: heights are minimums, not fixed.
 
 `SetBadge` isn't pressable. A set row that opens the set-type sheet wraps it and provides the target. It reads

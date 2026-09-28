@@ -1,7 +1,7 @@
 import { AppIcon, AppIconName } from '@/components/presentation/foundation/ms-icon-source';
-import { hitSlopFor } from '@/components/presentation/foundation/touch-target';
+import { MIN_TOUCH_TARGET } from '@/components/presentation/foundation/touch-target';
 import { useAppTheme } from '@/hooks/useAppTheme';
-import { Pressable, StyleProp, ViewStyle } from 'react-native';
+import { Pressable, StyleProp, View, ViewStyle } from 'react-native';
 
 const SIZES = {
   regular: { diameter: 44, icon: 20 },
@@ -13,7 +13,7 @@ interface RoundIconButtonProps {
   /** Required: an icon alone says nothing to a screen reader. */
   accessibilityLabel: string;
   onPress: () => void;
-  /** `compact` draws a 36pt circle and keeps a 44pt hit area. */
+  /** `compact` draws a 36pt circle, centred in a 44pt touch target. */
   size?: keyof typeof SIZES;
   disabled?: boolean;
   style?: StyleProp<ViewStyle>;
@@ -40,25 +40,30 @@ export function RoundIconButton({
       testID={testID}
       onPress={onPress}
       disabled={disabled}
-      hitSlop={hitSlopFor({ width: diameter, height: diameter })}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
       accessibilityState={{ disabled: !!disabled }}
-      style={({ pressed }) => [
-        {
-          width: diameter,
-          height: diameter,
-          borderRadius: diameter / 2,
-          borderWidth: 1,
-          borderColor: tokens.line,
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: pressed ? tokens.track : tokens.card,
-        },
+      style={[
+        { minWidth: MIN_TOUCH_TARGET, minHeight: MIN_TOUCH_TARGET, alignItems: 'center', justifyContent: 'center' },
         style,
       ]}
     >
-      <AppIcon name={icon} size={iconSize} color={disabled ? tokens.faint : tokens.ink} />
+      {({ pressed }) => (
+        <View
+          style={{
+            width: diameter,
+            height: diameter,
+            borderRadius: diameter / 2,
+            borderWidth: 1,
+            borderColor: tokens.line,
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: pressed ? tokens.track : tokens.card,
+          }}
+        >
+          <AppIcon name={icon} size={iconSize} color={disabled ? tokens.faint : tokens.ink} />
+        </View>
+      )}
     </Pressable>
   );
 }

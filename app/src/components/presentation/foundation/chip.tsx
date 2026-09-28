@@ -1,10 +1,11 @@
 import { haptics } from '@/components/presentation/foundation/haptics';
 import { SurfaceText } from '@/components/presentation/foundation/surface-text';
-import { hitSlopFor } from '@/components/presentation/foundation/touch-target';
+import { MIN_TOUCH_TARGET } from '@/components/presentation/foundation/touch-target';
 import { spacing, useAppTheme } from '@/hooks/useAppTheme';
-import { Pressable, StyleProp, ViewStyle } from 'react-native';
+import { Pressable, StyleProp, View, ViewStyle } from 'react-native';
 
 const CHIP_SIZE = 36;
+const TARGET_INSET = (MIN_TOUCH_TARGET - CHIP_SIZE) / 2;
 
 interface ChipProps {
   label: string;
@@ -14,16 +15,28 @@ interface ChipProps {
   numeric?: boolean;
   /** Read out instead of `label`, e.g. "RPE 8" for a chip showing "8". */
   accessibilityLabel?: string;
-  /** Pass `{ flexGrow: 1 }` to share a row's width between chips. */
+  /** Places the chip's touch target in its row. Pass `{ flexGrow: 1 }` to share a row's width between chips. */
   style?: StyleProp<ViewStyle>;
+  /** Styles the drawn chip, e.g. `{ paddingHorizontal: 0 }` so eight RPE values fit one row. */
+  contentStyle?: StyleProp<ViewStyle>;
   testID?: string;
 }
 
 /**
  * A toggle for filters, rest presets and RPE. Screen readers hear it as a toggle button that is on or off.
- * At least 36pt square on screen, so eight RPE values fit a phone's width, with a 44pt hit area.
+ * At least 36pt square on screen, so eight RPE values fit a phone's width. The touch target is the drawn chip
+ * plus a 4pt inset all round, so it is at least 44pt on each axis.
  */
-export function Chip({ label, selected, onPress, numeric, accessibilityLabel, style, testID }: ChipProps) {
+export function Chip({
+  label,
+  selected,
+  onPress,
+  numeric,
+  accessibilityLabel,
+  style,
+  contentStyle,
+  testID,
+}: ChipProps) {
   const { tokens } = useAppTheme();
   return (
     <Pressable
@@ -32,34 +45,39 @@ export function Chip({ label, selected, onPress, numeric, accessibilityLabel, st
         haptics.selection();
         onPress();
       }}
-      hitSlop={hitSlopFor({ width: CHIP_SIZE, height: CHIP_SIZE })}
       accessibilityRole="togglebutton"
       accessibilityState={{ checked: selected }}
       accessibilityLabel={accessibilityLabel ?? label}
-      style={({ pressed }) => [
-        {
-          minHeight: CHIP_SIZE,
-          minWidth: CHIP_SIZE,
-          paddingHorizontal: spacing[3],
-          borderRadius: CHIP_SIZE / 2,
-          borderWidth: 1,
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: selected ? tokens.accent : pressed ? tokens.track : tokens.card,
-          borderColor: selected ? tokens.accent : tokens.line,
-        },
-        style,
-      ]}
+      style={[{ padding: TARGET_INSET }, style]}
     >
-      <SurfaceText
-        font="text-sm"
-        numeric={numeric}
-        weight="600"
-        numberOfLines={1}
-        style={{ color: selected ? tokens.onAccent : tokens.ink }}
-      >
-        {label}
-      </SurfaceText>
+      {({ pressed }) => (
+        <View
+          style={[
+            {
+              minHeight: CHIP_SIZE,
+              minWidth: CHIP_SIZE,
+              paddingHorizontal: spacing[3],
+              borderRadius: CHIP_SIZE / 2,
+              borderWidth: 1,
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: selected ? tokens.accent : pressed ? tokens.track : tokens.card,
+              borderColor: selected ? tokens.accent : tokens.line,
+            },
+            contentStyle,
+          ]}
+        >
+          <SurfaceText
+            font="text-sm"
+            numeric={numeric}
+            weight="600"
+            numberOfLines={1}
+            style={{ color: selected ? tokens.onAccent : tokens.ink }}
+          >
+            {label}
+          </SurfaceText>
+        </View>
+      )}
     </Pressable>
   );
 }
