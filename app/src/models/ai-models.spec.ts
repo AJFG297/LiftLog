@@ -12,6 +12,7 @@ import {
   WeightedExerciseBlueprint,
 } from '@/models/blueprint-models';
 import { AnyVersionAiPlanJSON } from '@/models/storage/versions/any';
+import { UnsupportedVersionError } from '@/models/storage/versions/migrations/migrator';
 import { toBigNumberJSON, toDurationJSON, toLocalDateJSON } from '@/models/storage/versions/libs';
 import { DeepPartial } from '@/utils/types';
 import { makeWeightedBlueprint } from '@/models/session-models/__test__/helpers';
@@ -71,7 +72,7 @@ describe('aiPlanFromJSON', () => {
     );
 
     const result = parse({
-      version: 3,
+      version: 4,
       name: 'Strength',
       description: 'A complete plan',
       blueprint: blueprint.toJSON(),
@@ -87,7 +88,7 @@ describe('aiPlanFromJSON', () => {
 
   describe('top-level fields', () => {
     it('fills empty description and blueprint when only a name streamed in', () => {
-      const plan = parse({ version: 3, name: 'here' });
+      const plan = parse({ version: 4, name: 'here' });
 
       expect(plan.name).toBe('here');
       expect(plan.description).toBe('');
@@ -96,14 +97,14 @@ describe('aiPlanFromJSON', () => {
     });
 
     it('always stamps the blueprint as last edited today', () => {
-      const plan = parse({ version: 3, name: 'here' });
+      const plan = parse({ version: 4, name: 'here' });
 
       expect(plan.blueprint.lastEdited.equals(LocalDate.now())).toBe(true);
     });
 
     it('keeps the provided name and description', () => {
       const plan = parse({
-        version: 3,
+        version: 4,
         name: 'PPL',
         description: 'Push pull legs',
       });
@@ -116,7 +117,7 @@ describe('aiPlanFromJSON', () => {
   describe('sessions', () => {
     it('fills missing exercises and notes on a session', () => {
       const session = firstSession({
-        version: 3,
+        version: 4,
         name: 'PPL',
         blueprint: { sessions: [{ name: 'Day 1' }] },
       });
@@ -128,7 +129,7 @@ describe('aiPlanFromJSON', () => {
 
     it('fills every session in the array', () => {
       const plan = parse({
-        version: 3,
+        version: 4,
         name: 'PPL',
         blueprint: { sessions: [{ name: 'Day 1' }, { name: 'Day 2' }] },
       });
@@ -140,7 +141,7 @@ describe('aiPlanFromJSON', () => {
   describe('weighted exercises', () => {
     it('defaults an exercise with no type to a weighted exercise', () => {
       const exercise = firstExercise({
-        version: 3,
+        version: 4,
         name: 'PPL',
         blueprint: { sessions: [{ exercises: [{ name: 'Bench' }] }] },
       });
@@ -150,7 +151,7 @@ describe('aiPlanFromJSON', () => {
 
     it('falls back to the empty weighted defaults for absent fields', () => {
       const exercise = firstExercise({
-        version: 3,
+        version: 4,
         name: 'PPL',
         blueprint: { sessions: [{ exercises: [{ name: 'Bench' }] }] },
       }) as WeightedExerciseBlueprint;
@@ -167,7 +168,7 @@ describe('aiPlanFromJSON', () => {
 
     it('fills only the missing parts of rest', () => {
       const exercise = firstExercise({
-        version: 3,
+        version: 4,
         name: 'PPL',
         blueprint: {
           sessions: [
@@ -192,7 +193,7 @@ describe('aiPlanFromJSON', () => {
 
     it('keeps every field of a fully specified weighted exercise', () => {
       const exercise = firstExercise({
-        version: 3,
+        version: 4,
         name: 'PPL',
         blueprint: {
           sessions: [
@@ -236,12 +237,67 @@ describe('aiPlanFromJSON', () => {
       expect(exercise.progression[0]!.step.toNumber()).toBe(5);
       expect(exercise.progression[0]!.scope).toEqual({ type: 'allSets' });
     });
+
+    it('reads a v3 plan, whose sets carry no kind, as working sets', () => {
+      const exercise = firstExercise({
+        version: 3,
+        name: 'PPL',
+        blueprint: {
+          sessions: [
+            {
+              exercises: [
+                {
+                  type: 'WeightedExerciseBlueprint',
+                  name: 'Curl',
+                  plannedSets: [{ reps: { min: 12, max: 12 } }, { reps: { min: 10, max: 10 } }],
+                },
+              ],
+            },
+          ],
+        },
+      }) as WeightedExerciseBlueprint;
+
+      expect(exercise.name).toBe('Curl');
+      expect(exercise.plannedSets).toEqual([
+        { reps: { min: 12, max: 12 }, kind: 'working' },
+        { reps: { min: 10, max: 10 }, kind: 'working' },
+      ]);
+    });
+
+    it('keeps the kind of each set in a v4 plan', () => {
+      const exercise = firstExercise({
+        version: 4,
+        name: 'PPL',
+        blueprint: {
+          sessions: [
+            {
+              exercises: [
+                {
+                  type: 'WeightedExerciseBlueprint',
+                  name: 'Curl',
+                  plannedSets: [
+                    { reps: { min: 12, max: 12 }, kind: 'working' },
+                    { reps: { min: 10, max: 10 }, kind: 'drop' },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      }) as WeightedExerciseBlueprint;
+
+      expect(exercise.plannedSets.map((s) => s.kind)).toEqual(['working', 'drop']);
+    });
+
+    it('rejects a plan from a contract newer than v4', () => {
+      expect(() => parse({ version: 5, name: 'PPL' })).toThrow(UnsupportedVersionError);
+    });
   });
 
   describe('progression rules', () => {
     function exerciseWithProgression(progression: unknown) {
       return firstExercise({
-        version: 3,
+        version: 4,
         name: 'PPL',
         blueprint: {
           sessions: [{ exercises: [{ type: 'WeightedExerciseBlueprint', progression }] }],
@@ -284,7 +340,7 @@ describe('aiPlanFromJSON', () => {
   describe('cardio exercises', () => {
     it('produces a default time set when none streamed in', () => {
       const exercise = firstExercise({
-        version: 3,
+        version: 4,
         name: 'PPL',
         blueprint: {
           sessions: [
@@ -303,7 +359,7 @@ describe('aiPlanFromJSON', () => {
 
     it('fills a partial distance target', () => {
       const exercise = firstExercise({
-        version: 3,
+        version: 4,
         name: 'PPL',
         blueprint: {
           sessions: [

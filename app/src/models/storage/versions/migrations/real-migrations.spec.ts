@@ -457,11 +457,22 @@ describe('real migrations', () => {
         blueprint: initialProgramBlueprint(),
       };
       const result = aiPlanMigrations.migrate(plan);
-      expect(result.version).toBe(3);
+      expect(result.version).toBe(4);
       expect(result.name).toBe('Strength');
       expect(result.description).toBe('get strong');
       expect(result.blueprint.version).toBe(3);
       expect(result.blueprint.sessions.every((s) => s.version === 8)).toBe(true);
+    });
+
+    it('stamps a v3 plan as v4, the contract the planner compares against', () => {
+      const plan = aiPlanMigrations.migrate({
+        name: 'Strength',
+        description: '',
+        blueprint: initialProgramBlueprint(),
+      });
+      const result = aiPlanMigrations.migrate({ ...plan, version: 3 });
+      expect(aiPlanMigrations.latestVersion).toBe(4);
+      expect(result).toEqual(plan);
     });
   });
 

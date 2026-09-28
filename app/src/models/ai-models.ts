@@ -241,13 +241,14 @@ export function aiPlanFromJSON(partialJson: DeepPartial<AnyVersionAiPlanJSON>): 
     throw new Error('Cannot parse partial json');
   }
   const plan = aiPlanMigrations.migrate(
-    partialJson.version === 3
+    // A v3 plan is a v4 plan whose sets carry no kind, which the fill reads as working.
+    partialJson.version === 3 || partialJson.version === 4
       ? {
-          version: 3,
+          version: partialJson.version,
           name: partialJson.name ?? '',
           description: partialJson.description ?? '',
           // The any-version plan type no longer couples the outer version to the embedded
-          // blueprint's, so `version === 3` can't narrow it - but a v3 wire plan is latest-shaped.
+          // blueprint's, so the version check can't narrow it - but a v3 or v4 wire plan is latest-shaped.
           blueprint: fillBlueprint(partialJson.blueprint as DeepPartial<ProgramBlueprintJSON>),
         }
       : (partialJson as AnyVersionAiPlanJSON),
