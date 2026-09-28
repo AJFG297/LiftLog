@@ -18,7 +18,7 @@ screen isn't linked from the app. Its theme controls change the real theme setti
 | `RoundIconButton` | `round-icon-button.tsx` | A round, outlined icon button, `regular` (44pt) or `compact` (36pt). The label is required. |
 | `ListRow` | `list-row.tsx` | Leading slot, title, subtitle, trailing slot. `onPress` makes the row a button. |
 | `SetBadge` | `set-badge/` | The circle at the start of a set row: the working set's number, or W, D, M or F. |
-| `ProgressBar` | `progress-bar.tsx` | Accent on a track, from 0 to 1. |
+| `ProgressBar` | `progress-bar.tsx` | Accent on a track, from 0 to 1. `tone="inverse"` draws it on an `inverse` slab. |
 | `ToastProvider`, `useToast` | `toast/` | One short message at a time over the app, with an optional action such as Undo. |
 | `SheetHeader`, `formSheetOptions` | `sheet-header.tsx`, `form-sheet-options.ts` | Native sheets. See below. |
 | `haptics` | `haptics.ts` | `setLogged()`, `restOver()`, `selection()`. |
