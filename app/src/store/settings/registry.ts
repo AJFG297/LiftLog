@@ -71,7 +71,8 @@ export const preferenceRegistry = {
   welcomeWizardCompleted: pref({ default: false, codec: boolCodec }),
   notesExpandedByDefault: pref({ default: true, codec: boolCodec }),
   keepScreenAwakeDuringWorkout: pref({ default: true, codec: boolCodec }),
-  showPostWorkoutSummary: pref({ default: false, codec: boolCodec }),
+  // On by default: the summary is where a finished workout shows its progress.
+  showPostWorkoutSummary: pref({ default: true, codec: boolCodec }),
   logRpe: pref({ default: false, codec: boolCodec }),
   trueBlackDarkTheme: pref({ default: false, codec: boolCodec }),
   tipToShow: pref({ default: 1, codec: intCodec }),
