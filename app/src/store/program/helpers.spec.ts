@@ -69,4 +69,25 @@ describe('getPlanDiff', () => {
     expect(warmupChange(edit([]))).toMatchObject({ oldValue: squat.warmupSets, newValue: [] });
     expect(getPlanDiff(program, edit(squat.warmupSets), 'plan-id')).toBeUndefined();
   });
+
+  it('skips the sheet when only rep targets changed', () => {
+    const squat = makeWeightedBlueprint({ name: 'Squat' });
+    const original = makeSession([squat]);
+    const edited = original.withEditedExercise(0, squat.with({ repsConfig: { type: 'fixed', reps: 12 } }), false);
+
+    expect(edited.blueprint.equals(original.blueprint)).toBe(false);
+    expect(getPlanDiff(programWith([original.blueprint]), edited, 'plan-id')).toBeUndefined();
+  });
+
+  it('asks about an added set even when its reps also changed', () => {
+    const squat = makeWeightedBlueprint({ name: 'Squat' });
+    const original = makeSession([squat]);
+    const edited = original.withEditedExercise(
+      0,
+      squat.with({ sets: 4, repsConfig: { type: 'fixed', reps: 12 } }),
+      false,
+    );
+
+    expect(getPlanDiff(programWith([original.blueprint]), edited, 'plan-id')?.type).toBe('diff');
+  });
 });

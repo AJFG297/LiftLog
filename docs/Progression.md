@@ -29,9 +29,11 @@ that case the plan's reps are just the first rung of a ladder, so LiftLog keeps 
 won for you and stops re-reading the plan. Changing the plan's starting reps then will not throw away
 progress you have already made.
 
-Why reps behave differently by default: the only way to change a rep target is to edit the plan, and
-when you finish a workout LiftLog already asks whether that edit should stick. Carrying the reps as well
-would quietly apply an edit you had just declined.
+Why reps behave differently by default: the only way to change a rep target is to edit the plan. A rep
+target changed in the middle of a workout is for that workout only: the "Update your routine?" sheet you
+see when you finish lists structural changes (exercises, set counts, set types, warm-ups, rest,
+supersets, order) and leaves weights and reps to progression. To change a routine's reps for good, edit
+the routine.
 
 ## Progressive overload
 
