@@ -31,30 +31,26 @@ export type PlateLoading =
  * When `weight` can't be made exactly, this loads the heaviest weight below it, since a lifter would rather
  * be told to load a little less than they typed than more, and `remainder` is how far short that is.
  */
-export function platesFor(
-  weight: BigNumber.Value,
-  bar: BigNumber.Value,
-  plates: readonly BigNumber.Value[],
-): PlateLoading {
-  const total = new BigNumber(weight);
-  const barWeight = new BigNumber(bar);
-  if (!total.isFinite() || !barWeight.isFinite() || total.isLessThan(barWeight)) {
+export function platesFor(weight: BigNumber, bar: BigNumber, plates: readonly BigNumber[]): PlateLoading {
+  if (!weight.isFinite() || !bar.isFinite() || weight.isLessThan(bar)) {
     return { kind: 'belowBar' };
   }
 
-  const perSide = fewestPlatesUpTo(total.minus(barWeight).dividedBy(2), plates);
-  const loaded = barWeight.plus(BigNumber.sum(0, ...perSide).multipliedBy(2));
-  const remainder = total.minus(loaded);
+  const perSide = fewestPlatesUpTo(weight.minus(bar).dividedBy(2), plates);
+  const loaded = bar.plus(BigNumber.sum(0, ...perSide).multipliedBy(2));
+  const remainder = weight.minus(loaded);
   return remainder.isZero() ? { kind: 'exact', perSide } : { kind: 'inexact', perSide, remainder };
 }
 
 // Greedy from the heaviest plate is exact for the default sets but not for every set a user can pick
 // ({15, 10} can't make 20 greedily), so this is a coin-change search over whole multiples of the plates'
-// common divisor, which keeps the table to a few hundred entries.
-function fewestPlatesUpTo(target: BigNumber, plates: readonly BigNumber.Value[]): BigNumber[] {
-  const sizes = [...new Set(plates.map((plate) => new BigNumber(plate).toString()))]
-    .map((plate) => new BigNumber(plate))
-    .filter((plate) => plate.isFinite() && plate.isGreaterThan(0))
+// common divisor. The table has one entry per multiple up to the load on a side: 44 for 130 kg with the
+// default plates, 560 for 300 kg with 0.25 kg plates, about 20,000 at the pad's 9999.99 limit.
+function fewestPlatesUpTo(target: BigNumber, plates: readonly BigNumber[]): BigNumber[] {
+  const sizes = plates
+    .filter(
+      (plate, index) => plate.isFinite() && plate.isGreaterThan(0) && plates.findIndex((p) => p.eq(plate)) === index,
+    )
     .sort((a, b) => b.comparedTo(a) ?? 0);
   if (sizes.length === 0) {
     return [];
@@ -68,7 +64,11 @@ function fewestPlatesUpTo(target: BigNumber, plates: readonly BigNumber.Value[])
   const fewest = [0];
   const fewestFor = (amount: number) => (amount < 0 ? Infinity : (fewest[amount] ?? Infinity));
   for (let amount = 1; amount <= targetSteps; amount++) {
-    fewest.push(Math.min(...plateSteps.map(({ steps }) => fewestFor(amount - steps) + 1)));
+    let best = Infinity;
+    for (const { steps } of plateSteps) {
+      best = Math.min(best, fewestFor(amount - steps) + 1);
+    }
+    fewest.push(best);
   }
 
   let amount = targetSteps;

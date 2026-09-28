@@ -1,10 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import fc from 'fast-check';
 import BigNumber from 'bignumber.js';
-import { platesFor, type PlateLoading } from '@/models/plates';
+import { platesFor as platesForBigNumbers, type PlateLoading } from '@/models/plates';
 
 const KG_PLATES = [25, 20, 15, 10, 5, 2.5, 1.25];
 const LB_PLATES = [45, 35, 25, 10, 5, 2.5];
+
+function platesFor(weight: BigNumber.Value, bar: BigNumber.Value, plates: readonly BigNumber.Value[]) {
+  return platesForBigNumbers(
+    new BigNumber(weight),
+    new BigNumber(bar),
+    plates.map((plate) => new BigNumber(plate)),
+  );
+}
 
 function readable(loading: PlateLoading) {
   switch (loading.kind) {
