@@ -433,6 +433,8 @@
   "finish.update_routine.sets_many.label": "{count} sets",
   "finish.update_routine.removed.title": "Remove {name}",
   "finish.update_routine.removed.subtitle": "You took it out today",
+  "finish.update_routine.swapped.title": "Swap {from} for {to}",
+  "finish.update_routine.swapped.subtitle": "You swapped it today",
   "finish.update_routine.order.title": "New exercise order",
   "finish.update_routine.set_count.title": "{name}: {from} → {to} sets",
   "finish.update_routine.set_count_one.title": "{name}: {from} → 1 set",

@@ -27,6 +27,11 @@ export function routineChangeCopy(t: UseTranslateResult['t'], change: RoutineCha
       title: t('finish.update_routine.removed.title', { name: c.exerciseName }),
       subtitle: t('finish.update_routine.removed.subtitle'),
     }))
+    .with({ kind: 'swapped' }, (c) => ({
+      icon: 'reload',
+      title: t('finish.update_routine.swapped.title', { from: c.from, to: c.to }),
+      subtitle: t('finish.update_routine.swapped.subtitle'),
+    }))
     .with({ kind: 'order' }, (c) => ({
       icon: 'unfoldMore',
       title: t('finish.update_routine.order.title'),

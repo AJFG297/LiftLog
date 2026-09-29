@@ -264,6 +264,8 @@ export type DiffChange = SessionChange | ExerciseStructureChange | ExerciseField
 export interface ExerciseModification {
   exerciseName: string;
   exerciseIndex: number;
+  /** Where the exercise is in the original session. A swapped exercise has a new name there. */
+  originalIndex: number;
   changes: ExerciseFieldChange[];
 }
 
@@ -347,9 +349,10 @@ interface ExerciseWithIndex {
 }
 
 /**
- * Match exercises by name. For duplicate names, fall back to position matching.
+ * Match exercises by name (duplicate names by their order), then pair an unmatched exercise that stayed
+ * in its slot with its replacement.
  */
-function matchExercisesByName(
+function matchExercises(
   oldExercises: readonly ExerciseBlueprint[],
   newExercises: readonly ExerciseBlueprint[],
 ): {
@@ -400,6 +403,31 @@ function matchExercisesByName(
       matchedNewIndices.add(newIdx);
     }
   }
+
+  // An exercise swapped during the workout keeps its slot but not its name. Pair what is left over in
+  // each gap between the name-matched exercises, so a swap reads as one renamed exercise rather than a
+  // removal and an addition that could be kept apart.
+  const nameMatchedOld = new Set(matchedOldIndices);
+  const nameMatchedNew = new Set(matchedNewIndices);
+  const gapOf = (index: number, nameMatched: Set<number>) => Array.from(nameMatched).filter((m) => m < index).length;
+  oldExercises.forEach((oldExercise, oldIdx) => {
+    if (matchedOldIndices.has(oldIdx)) {
+      return;
+    }
+    const gap = gapOf(oldIdx, nameMatchedOld);
+    const newIdx = newExercises.findIndex(
+      (newExercise, idx) =>
+        !matchedNewIndices.has(idx) &&
+        gapOf(idx, nameMatchedNew) === gap &&
+        oldExercise instanceof WeightedExerciseBlueprint === newExercise instanceof WeightedExerciseBlueprint,
+    );
+    if (newIdx === -1) {
+      return;
+    }
+    matched.push({ oldExercise, newExercise: newExercises[newIdx]!, oldIndex: oldIdx, newIndex: newIdx });
+    matchedOldIndices.add(oldIdx);
+    matchedNewIndices.add(newIdx);
+  });
 
   // Collect unmatched as removed/added
   oldExercises.forEach((ex, idx) => {
@@ -764,7 +792,7 @@ export function diffSessionBlueprints(original: SessionBlueprint, modified: Sess
   }
 
   // Match exercises
-  const { matched, added, removed } = matchExercisesByName(original.exercises, modified.exercises);
+  const { matched, added, removed } = matchExercises(original.exercises, modified.exercises);
 
   // Added exercises
   const addedExercises: ExerciseAddedChange[] = added.map(({ exercise, index }) => ({
@@ -798,12 +826,13 @@ export function diffSessionBlueprints(original: SessionBlueprint, modified: Sess
 
   // Modified exercises (field-level changes)
   const modifiedExercises: ExerciseModification[] = [];
-  for (const { oldExercise, newExercise, newIndex } of matched) {
+  for (const { oldExercise, newExercise, oldIndex, newIndex } of matched) {
     const changes = diffExercises(oldExercise, newExercise, newIndex);
     if (changes.length > 0) {
       modifiedExercises.push({
         exerciseName: newExercise.name,
         exerciseIndex: newIndex,
+        originalIndex: oldIndex,
         changes,
       });
     }
@@ -921,8 +950,13 @@ export function applySessionBlueprintDiff(original: SessionBlueprint, diff: Sess
 
   // Apply field-level modifications
   for (const mod of diff.modifiedExercises) {
-    // Find the corresponding original index
-    const originalIdx = original.exercises.findIndex((ex) => ex.name === mod.exerciseName);
+    // The routine can have been edited since the diff was computed, so trust the index only while the
+    // exercise there still has the name it had then.
+    const oldName = diff.originalSession.exercises[mod.originalIndex]?.name;
+    const originalIdx =
+      original.exercises[mod.originalIndex]?.name === oldName
+        ? mod.originalIndex
+        : original.exercises.findIndex((ex) => ex.name === oldName);
 
     if (originalIdx === -1) continue;
 

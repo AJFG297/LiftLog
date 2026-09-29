@@ -10,6 +10,7 @@ import { Duration } from '@js-joda/core';
 export type RoutineChange =
   | { id: string; kind: 'added'; exerciseName: string; sets: number; after: string | undefined }
   | { id: string; kind: 'removed'; exerciseName: string }
+  | { id: string; kind: 'swapped'; from: string; to: string }
   | { id: string; kind: 'order'; order: string[] }
   | { id: string; kind: 'setCount'; exerciseName: string; from: number; to: number }
   | { id: string; kind: 'setTypes'; exerciseName: string; from: string[]; to: string[] }
@@ -56,6 +57,9 @@ export function routineChanges(diff: SessionBlueprintDiff): RoutineChange[] {
   for (const modification of diff.modifiedExercises) {
     for (const change of modification.changes) {
       switch (change.kind) {
+        case 'exerciseName':
+          rows.push({ id: change.id, kind: 'swapped', from: change.oldValue, to: change.newValue });
+          break;
         case 'exercisePlannedSets': {
           const { oldValue, newValue } = change;
           if (oldValue.length !== newValue.length) {
