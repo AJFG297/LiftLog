@@ -29,7 +29,7 @@ nowhere: no installed build has its runtime version.
 ## Publish an update
 
 ```bash
-npx eas-cli update --channel preview --message "Live workout focus mode"
+npx eas-cli update --channel preview --environment preview --message "Live workout focus mode"
 ```
 
 The phones check for an update each time the app starts, and download it in the background. The new code
