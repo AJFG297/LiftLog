@@ -1,4 +1,5 @@
 import { ExerciseBlueprint, RepsTarget } from '@/models/blueprint-models';
+import type { RecordedExercise } from '@/models/session-models/recorded-exercise';
 import { RecordedWeightedExercise } from '@/models/session-models/recorded-weighted-exercise';
 import { setLabels } from '@/models/session-models/set-kind';
 import { Weight } from '@/models/weight';
@@ -45,6 +46,21 @@ export function carriedFrom(
   const plannedKey = planned?.progressionKey();
   const fromPlan = plannedKey === undefined ? undefined : candidates.find((c) => c.progressionKey() === plannedKey);
   return fromPlan ?? exercise.previousPerformanceIn(candidates);
+}
+
+/**
+ * The routine exercise `exercise` of the session was built from. A routine can plan a movement more than
+ * once, so it is the one at the same place among the routine's exercises of that movement. Undefined when
+ * `exercise` is not one of `sessionExercises`.
+ */
+export function plannedExerciseFor(
+  exercise: RecordedExercise,
+  sessionExercises: readonly RecordedExercise[],
+  routineExercises: readonly ExerciseBlueprint[],
+): ExerciseBlueprint | undefined {
+  const movement = exercise.movementKey();
+  const occurrence = sessionExercises.filter((e) => e.movementKey() === movement).indexOf(exercise);
+  return occurrence < 0 ? undefined : routineExercises.filter((p) => p.movementKey() === movement)[occurrence];
 }
 
 /**

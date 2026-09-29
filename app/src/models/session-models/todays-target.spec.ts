@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { Weight } from '@/models/weight';
 import { RecordedWeightedExercise } from '@/models/session-models/recorded-weighted-exercise';
-import { carriedFrom, todaysTarget } from '@/models/session-models/todays-target';
+import { carriedFrom, plannedExerciseFor, todaysTarget } from '@/models/session-models/todays-target';
 import { emptyPotentialSet, makeRecordedExercise, makeWeightedBlueprint } from './__test__/helpers';
 
 const bench = makeWeightedBlueprint({ name: 'Bench', sets: 3, repsConfig: { type: 'fixed', reps: 5 } });
@@ -138,5 +138,36 @@ describe('carriedFrom', () => {
 
     expect(carriedFrom(today([87.5, 87.5, 87.5]), [previous], undefined)).toBe(previous);
     expect(carriedFrom(today([87.5, 87.5, 87.5, 87.5], fourSets), [previous], undefined)).toBeUndefined();
+  });
+});
+
+describe('plannedExerciseFor', () => {
+  const heavyBench = bench;
+  const lightBench = bench.with({ sets: 4, repsConfig: { type: 'fixed', reps: 8 } });
+  const squat = makeWeightedBlueprint({ name: 'Squat', sets: 3 });
+  const routine = [heavyBench, squat, lightBench];
+
+  it('pairs a movement planned twice with its own place in the routine', () => {
+    const first = today([85, 85, 85]);
+    const second = today([60, 60, 60, 60, 60], lightBench.with({ sets: 5 }));
+    const session = [first, today([100, 100, 100], squat), second];
+
+    expect(plannedExerciseFor(first, session, routine)).toBe(heavyBench);
+    expect(plannedExerciseFor(second, session, routine)).toBe(lightBench);
+  });
+
+  it('finds the second bench’s own last time rather than the first’s', () => {
+    const heavyLastTime = lastTime([5, 5, 5]);
+    const lightLastTime = lastTime([8, 8, 8, 8], 60, lightBench);
+    const second = today([60, 60, 60, 60, 60], lightBench.with({ sets: 5 }));
+    const session = [today([85, 85, 85]), second];
+
+    expect(carriedFrom(second, [heavyLastTime, lightLastTime], plannedExerciseFor(second, session, routine))).toBe(
+      lightLastTime,
+    );
+  });
+
+  it('has none for an exercise outside the session', () => {
+    expect(plannedExerciseFor(today([85, 85, 85]), [], routine)).toBeUndefined();
   });
 });

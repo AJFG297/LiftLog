@@ -1,5 +1,5 @@
 import { RecordedExercise, RecordedWeightedExercise, Session } from '@/models/session-models';
-import { carriedFrom, TodaysTarget, todaysTarget } from '@/models/session-models/todays-target';
+import { carriedFrom, plannedExerciseFor, TodaysTarget, todaysTarget } from '@/models/session-models/todays-target';
 import { useAppSelector, useAppSelectorWithArg } from '@/store';
 import { selectActiveProgram } from '@/store/program';
 import { selectRecentlyCompletedExercises } from '@/store/stored-sessions';
@@ -14,7 +14,7 @@ export function usePreviousPerformance(session: Session) {
   const routine = program.sessions.find((planned) => planned.name === session.blueprint.name);
   return (exercise: RecordedWeightedExercise) => {
     const candidates = recentlyCompletedExercises(exercise.movementKey()) as RecordedWeightedExercise[];
-    const planned = routine?.exercises.find((planned) => planned.movementKey() === exercise.movementKey());
+    const planned = plannedExerciseFor(exercise, session.recordedExercises, routine?.exercises ?? []);
     return { previous: carriedFrom(exercise, candidates, planned), candidates };
   };
 }
