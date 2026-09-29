@@ -27,6 +27,11 @@ export interface NeutralTokens {
   faint: HexColor;
   /** Placeholder values (today's targets in an untouched field). */
   placeholder: HexColor;
+  /**
+   * A fall against last time (lighter, fewer reps). Warm rather than `danger` red, since doing less than
+   * last time isn't an error. ≥ 4.5:1 on `bg` and `card`.
+   */
+  warmInk: HexColor;
   /** Progress bar and slider tracks. */
   track: HexColor;
   /** Number pad background and its keys. */
@@ -105,6 +110,7 @@ const lightNeutrals: NeutralTokens = {
   muted: '#625E55',
   faint: '#9C978C',
   placeholder: '#8A857B',
+  warmInk: '#B0552F',
   track: '#EFECE6',
   keypad: '#EAE7E0',
   keypadKey: '#DDD9D0',
@@ -127,6 +133,7 @@ const darkNeutrals: NeutralTokens = {
   muted: '#A8A397',
   faint: '#6E6A61',
   placeholder: '#858074',
+  warmInk: '#F0A07E',
   track: '#2A2824',
   keypad: '#0B0A09',
   keypadKey: '#2A2824',

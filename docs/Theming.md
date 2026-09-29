@@ -5,7 +5,7 @@ The app's colours come from one place: `app/src/utils/theme-tokens.ts`, exposed 
 at the end, under [Type](#type).
 
 - **Neutrals** are fixed per variant (`light`, `dark`, `trueBlack`) and warm: `bg`, `card`, `line*`, `ink`,
-  `muted`, `faint`, `placeholder`, `track`, `keypad*`, `segment`, and the `inverse*` set for dark slabs in
+  `muted`, `faint`, `placeholder`, `warmInk`, `track`, `keypad*`, `segment`, and the `inverse*` set for dark slabs in
   light mode (toasts, the in-progress bar) and light slabs in dark mode.
 - **The accent family** is generated from the colour the user picks: `accent`, `onAccent`, `accentInk`,
   `accentSoft`, `accentSoftInk`, `wash`, `accentLine`, `accentLine2`, `invAccent`.
@@ -20,6 +20,7 @@ at the end, under [Type](#type).
 | Body text / secondary text | `ink` / `muted` |
 | Decorative text, disabled icons (not for anything that must be read) | `faint` |
 | An untouched field showing today's target | `placeholder` |
+| A fall against last time (a lighter best set, fewer reps, less volume) | `warmInk`, not `danger`: doing less than last time isn't an error |
 | Hairlines, from faintest to strongest | `line`, `line2`, `line3` |
 | A filled button, selected chip, active tab | `accent` with `onAccent` on it |
 | Accent-coloured text or icons on `bg` or `card` | `accentInk` (never `accent`: in dark mode the fill is too dark to read as text) |
@@ -37,6 +38,8 @@ fast-check):
 - `accentInk` on `card` and on `bg` ≥ 4.5:1;
 - `accentSoftInk` on `accentSoft` ≥ 4.5:1;
 - `invAccent` on `inverse` ≥ 4.5:1.
+
+`warmInk` is fixed per variant rather than generated, and clears 4.5:1 on `card` and `bg` in all three.
 
 A pick whose fill would be too light for white text is pulled darker, and a near-black one is lifted so it
 still reads as a colour. Hue and chroma are kept as far as the sRGB gamut allows. The default, vermilion
