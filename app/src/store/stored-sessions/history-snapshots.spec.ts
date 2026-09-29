@@ -91,6 +91,18 @@ function exerciseName(id: string): string {
   const { savedExercises, builtInExercises } = state().storedSessions;
   return savedExercises[id]?.name ?? builtInExercises[id]?.name ?? id;
 }
+/** `Object.fromEntries` over labelled keys, failing if two different keys would share a label. */
+function byLabel<T>(entries: [label: string, key: string, value: T][]): Record<string, T> {
+  const keysByLabel = new Map<string, string>();
+  for (const [label, key] of entries) {
+    const existing = keysByLabel.get(label);
+    if (existing !== undefined && existing !== key) {
+      throw new Error(`"${label}" labels both ${existing} and ${key}: two exercises would read as one`);
+    }
+    keysByLabel.set(label, key);
+  }
+  return Object.fromEntries(entries.map(([label, , value]) => [label, value]));
+}
 function labelMovement(key: string): string {
   const split = key.lastIndexOf('|');
   return `${normalizeExerciseName(exerciseName(key.slice(0, split)))}${key.slice(split)}`;
@@ -112,9 +124,10 @@ describe('history aggregates over the 420-session fixture', () => {
     const latest = selectLatestExercises(state());
     expect(Object.keys(latest).length).toBeGreaterThan(0);
     // Labelled by the latest exercise's own name, which is what the key held before it held an id.
-    const labelled = Object.fromEntries(
+    const labelled = byLabel(
       Object.entries(latest).map(([key, exercise]) => [
         `${exercise!.blueprint.name}${key.slice(key.search(/_(Weighted|Cardio)ExerciseBlueprint_/))}`,
+        key,
         normalize(exercise),
       ]),
     );
@@ -131,7 +144,7 @@ describe('history aggregates over the 420-session fixture', () => {
       .toArray();
     const lookup = selectRecentlyCompletedExercises(state(), undefined);
     expect(
-      Object.fromEntries(movementKeys.map((key) => [labelMovement(key), lookup(key).map(describeExercise)])),
+      byLabel(movementKeys.map((key) => [labelMovement(key), key, lookup(key).map(describeExercise)])),
     ).toMatchSnapshot();
   });
 
@@ -141,9 +154,10 @@ describe('history aggregates over the 420-session fixture', () => {
       .first();
     const lookup = selectRecentlyCompletedExercises(state(), newest.id);
     expect(
-      Object.fromEntries(
+      byLabel(
         newest.recordedExercises.map((exercise) => [
           labelMovement(exercise.movementKey()),
+          exercise.movementKey(),
           lookup(exercise.movementKey()).slice(0, 3).map(describeExercise),
         ]),
       ),

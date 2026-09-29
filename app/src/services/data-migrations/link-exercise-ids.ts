@@ -4,7 +4,7 @@ import { writeAtomically } from '@/db/helpers';
 import { dataMigrationsSchema, exercisesSchema, programsSchema } from '@/db/schema';
 import { ProgramBlueprint } from '@/models/blueprint-models';
 import { fromExerciseDescriptorJSON, toExerciseDescriptorJSON } from '@/models/exercise-models';
-import { ExerciseResolver } from '@/models/exercise-resolver';
+import { ExerciseResolver, logAmbiguousInDev } from '@/models/exercise-resolver';
 import { exerciseDescriptorMigrations, programBlueprintMigrations } from '@/models/storage/versions/migrations';
 import { loadBuiltInExerciseNames } from '@/services/exercise-catalog';
 import { WorkoutRepository } from '@/services/workout-repository';
@@ -28,10 +28,8 @@ export async function linkExerciseIds(db: ExpoSQLiteDatabase) {
   const resolver = new ExerciseResolver({
     savedExercises,
     builtInNames: await loadBuiltInExerciseNames(),
-    onAmbiguous: __DEV__
-      ? (name, candidates, chosen) =>
-          console.warn(`Exercise name "${name}" matches ${candidates.join(', ')}; linked to ${chosen}`)
-      : undefined,
+    // Runs before the store and its logger exist.
+    onAmbiguous: logAmbiguousInDev(console),
   });
 
   const workoutRepository = new WorkoutRepository(db);

@@ -433,7 +433,8 @@ function diffWeightedExercises(
   const changes: ExerciseFieldChange[] = [];
   const exerciseName = newEx.name;
 
-  if (oldEx.name !== newEx.name) {
+  // A swap to a same-named exercise changes only the id, and the plan must still follow it.
+  if (oldEx.name !== newEx.name || oldEx.exerciseId !== newEx.exerciseId) {
     changes.push({
       id: generateChangeId(),
       kind: 'exerciseName',
@@ -606,7 +607,8 @@ function diffCardioExercises(
   const changes: ExerciseFieldChange[] = [];
   const exerciseName = newEx.name;
 
-  if (oldEx.name !== newEx.name) {
+  // A swap to a same-named exercise changes only the id, and the plan must still follow it.
+  if (oldEx.name !== newEx.name || oldEx.exerciseId !== newEx.exerciseId) {
     changes.push({
       id: generateChangeId(),
       kind: 'exerciseName',

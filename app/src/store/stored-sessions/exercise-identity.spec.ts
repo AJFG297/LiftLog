@@ -23,6 +23,7 @@ import { Weight } from '@/models/weight';
 import { makeRecordedExercise, makeWeightedBlueprint } from '@/models/session-models/__test__/helpers';
 import {
   initializeStoredSessionsStateSlice,
+  putStoredSession,
   selectExerciseById,
   selectExercises,
   selectHistoryPersonalRecords,
@@ -159,10 +160,31 @@ describe('exercise identity through the store', () => {
     expect(carried.blueprint.name).toBe('Renamed');
     expect((carried as ReturnType<typeof makeRecordedExercise>).potentialSets[0]!.weight.value.toNumber()).toBe(107.5);
 
+    // A workout logged under the new name joins the same history, stats and records.
+    const week3 = LocalDate.of(2026, 3, 23);
+    const at = (index: number) => OffsetDateTime.of(2026, 3, 23, 10, 0, index, 0, ZoneOffset.UTC);
+    app.store.dispatch(
+      putStoredSession(
+        new Session(
+          'week-3',
+          new SessionBlueprint('Legs', [renamedInPlan], ''),
+          [makeRecordedExercise(renamedInPlan, [10, 10, 10], new Weight(110, 'kilograms'), at)],
+          week3,
+          undefined,
+          undefined,
+        ),
+      ),
+    );
+    await app.settle();
+    const after = whatHangsOff(app.getState(), exerciseId);
+    expect(after.history).toHaveLength(4);
+    expect(after.stats).toEqual(['110']);
+    expect(after.records.find((x) => x.startsWith('week-3'))).toContain('Renamed');
+
     // And after a restart, from what is on disk.
     const restarted = await startApp(db);
     expect(selectExerciseById(restarted.getState(), exerciseId)?.name).toBe('Renamed');
-    expect(whatHangsOff(restarted.getState(), exerciseId)).toEqual(before);
+    expect(whatHangsOff(restarted.getState(), exerciseId)).toEqual(after);
   });
 
   it('stores the key columns from the exercise id', async () => {

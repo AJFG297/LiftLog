@@ -1,5 +1,5 @@
 import { ExerciseDescriptor } from '@/models/exercise-models';
-import { ExerciseResolver } from '@/models/exercise-resolver';
+import { ExerciseResolver, logAmbiguousInDev } from '@/models/exercise-resolver';
 import { loadBuiltInExerciseNames } from '@/services/exercise-catalog';
 import { Logger } from '@/services/logger';
 import type { RootState } from '@/store';
@@ -22,18 +22,11 @@ export async function createExerciseResolver(
   if (!getState().storedSessions.isHydrated) {
     await condition((_, state) => state.storedSessions.isHydrated);
   }
+  const builtInNames = await loadBuiltInExerciseNames();
+  // Read after the catalog loads, so an exercise added meanwhile is matched rather than stubbed.
   return new ExerciseResolver({
     savedExercises: { ...getState().storedSessions.savedExercises, ...alsoSaved },
-    builtInNames: await loadBuiltInExerciseNames(),
+    builtInNames,
     onAmbiguous: logAmbiguousInDev(logger),
   });
-}
-
-export function logAmbiguousInDev(logger: Logger) {
-  return __DEV__
-    ? (name: string, candidates: string[], chosen: string) =>
-        logger.warn(`Exercise name "${name}" matches ${candidates.length} exercises; linked to ${chosen}`, {
-          candidates,
-        })
-    : undefined;
 }

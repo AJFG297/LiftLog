@@ -155,6 +155,16 @@ export function stubDescriptor(name: string): ExerciseDescriptor {
   };
 }
 
+/** Reports ambiguous matches in development builds only; release builds resolve silently. */
+export function logAmbiguousInDev(logger: { warn: (message: string, options: unknown) => void }) {
+  return __DEV__
+    ? (name: string, candidates: ExerciseId[], chosen: ExerciseId) =>
+        logger.warn(`Exercise name "${name}" matches ${candidates.length} exercises; linked to ${chosen}`, {
+          candidates,
+        })
+    : undefined;
+}
+
 function emptyIndex(): NameIndex {
   return { exact: new Map(), normalized: new Map() };
 }
@@ -163,11 +173,11 @@ function addToIndex(index: NameIndex, name: string, id: ExerciseId) {
   if (!name.trim()) {
     return;
   }
-  add(index.exact, name.trim().toLowerCase(), id);
-  add(index.normalized, normalizeExerciseName(name), id);
+  addUnique(index.exact, name.trim().toLowerCase(), id);
+  addUnique(index.normalized, normalizeExerciseName(name), id);
 }
 
-function add(map: Map<string, ExerciseId[]>, key: string, id: ExerciseId) {
+function addUnique(map: Map<string, ExerciseId[]>, key: string, id: ExerciseId) {
   const ids = map.get(key);
   if (!ids) {
     map.set(key, [id]);
