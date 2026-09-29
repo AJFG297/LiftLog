@@ -152,7 +152,42 @@ function SheetContent({ session }: { session: Session }) {
         subtitle={t('live_workout.exercises_sheet.subtitle', { done: doneSets, total: totalSets, minutes: minutesIn })}
         onClose={back}
       />
-      <ScrollView scrollEnabled={!dragging} contentContainerStyle={{ paddingBottom: spacing[4], gap: spacing[3] }}>
+      {/* Above the list, not below it: the sheet opens at its lower detent, where its bottom is off screen. */}
+      <View
+        style={{
+          flexDirection: 'row',
+          gap: spacing[2],
+          paddingBottom: spacing[3],
+        }}
+      >
+        <SheetAction
+          testID="sheet-add-exercise"
+          label={t('exercise.add.title')}
+          icon="add"
+          filled
+          onPress={() => {
+            dispatch(setLiveWorkoutFocus({ sessionId: session.id, exerciseIndex: session.recordedExercises.length }));
+            back();
+            addExercise();
+          }}
+        />
+        <SheetAction
+          testID="sheet-make-superset"
+          label={t('live_workout.make_superset.button')}
+          disabled={supersetFrom === undefined}
+          onPress={() => {
+            if (supersetFrom === undefined) {
+              return;
+            }
+            back();
+            push(getSessionExerciseEditorHref(session.id, supersetFrom));
+          }}
+        />
+      </View>
+      <ScrollView
+        scrollEnabled={!dragging}
+        contentContainerStyle={{ paddingBottom: insets.bottom + spacing[4], gap: spacing[3] }}
+      >
         {session.blueprint.notes ? (
           <SurfaceText font="text-sm" style={{ color: tokens.muted, paddingHorizontal: spacing[1] }}>
             {session.blueprint.notes}
@@ -186,38 +221,6 @@ function SheetContent({ session }: { session: Session }) {
           </View>
         ) : null}
       </ScrollView>
-      <View
-        style={{
-          flexDirection: 'row',
-          gap: spacing[2],
-          paddingTop: spacing[2],
-          paddingBottom: insets.bottom + spacing[3],
-        }}
-      >
-        <SheetAction
-          testID="sheet-add-exercise"
-          label={t('exercise.add.title')}
-          icon="add"
-          filled
-          onPress={() => {
-            dispatch(setLiveWorkoutFocus({ sessionId: session.id, exerciseIndex: session.recordedExercises.length }));
-            back();
-            addExercise();
-          }}
-        />
-        <SheetAction
-          testID="sheet-make-superset"
-          label={t('live_workout.make_superset.button')}
-          disabled={supersetFrom === undefined}
-          onPress={() => {
-            if (supersetFrom === undefined) {
-              return;
-            }
-            back();
-            push(getSessionExerciseEditorHref(session.id, supersetFrom));
-          }}
-        />
-      </View>
     </View>
   );
 }

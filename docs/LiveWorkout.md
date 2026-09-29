@@ -18,8 +18,8 @@ logging on the page and PM-30 moves rest into the header.
 - **Up next bar** (`UpNextBar`): the next unfinished page. It fills with the accent once the page on
   screen is done, and turns into Finish when nothing after it is left. The rest timer docks above it.
 - **All exercises sheet** (`session/exercises`, a `formSheet`): every exercise with its status, sets and
-  target. Tap to jump there; drag a handle to reorder. Add exercise and Make superset open the existing
-  flows.
+  target. Tap to jump there; drag a handle to reorder. Add exercise and Make superset sit above the list,
+  so they are in reach at the sheet's first detent, and open the existing flows.
 
 ## How it is worked out
 
