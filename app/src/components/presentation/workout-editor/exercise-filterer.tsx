@@ -1,12 +1,15 @@
-import { fuzzyMatchScore } from '@/components/presentation/workout-editor/exercise-fuzzy-match';
 import ExerciseSearchAndFilters from '@/components/presentation/workout-editor/exercise-search-and-filters';
+import { filterExercises } from '@/components/presentation/workout-editor/filter-exercises';
 import { ExerciseDescriptor } from '@/models/exercise-models';
 import { useAppSelector } from '@/store';
 import { selectExercises } from '@/store/stored-sessions';
-import Enumerable from 'linq';
 import { useState } from 'react';
 import { useDebouncedCallback } from 'use-debounce';
 
+/**
+ * The search field and muscle filters. It reports results only as the query or filters change, so a
+ * caller that opens it with an `exerciseName` must seed its list with `filterExercises` for that name.
+ */
 export default function ExerciseFilterer(props: {
   exerciseName: string;
   onFilteredExerciseIdsChange: (ids: string[]) => void;
@@ -18,45 +21,9 @@ export default function ExerciseFilterer(props: {
   const [searchText, setSearchText] = useState(props.exerciseName);
 
   const search = useDebouncedCallback(() => {
-    const trimmed = searchText.trim();
-    const trimmedSearchText = escapeRegExp(trimmed);
-    const fullMatchRegex = new RegExp('^' + trimmedSearchText + '$', 'i');
-    let hasExactMatch = false;
-    const newFilteredExercises = Enumerable.from(Object.entries(exercises))
-      .select((x) => ({
-        entry: { id: x[0], exercise: x[1] },
-        score: trimmedSearchText ? fuzzyMatchScore(trimmedSearchText, x[1].name) : 0,
-      }))
-      .where(
-        (x) =>
-          (!muscleFilters.length ||
-            x.entry.exercise.muscles.some((exerciseMuscle) => muscleFilters.includes(exerciseMuscle))) &&
-          (!trimmedSearchText || x.score !== null),
-      )
-      .orderByDescending((x) => x.score ?? 0)
-      .thenBy((x) => x.entry.exercise.name)
-      .doAction((x) => {
-        if (!hasExactMatch && trimmedSearchText && fullMatchRegex.test(x.entry.exercise.name)) {
-          hasExactMatch = true;
-        }
-      })
-      .select((x) => x.entry.id)
-      .toArray();
-    onFilteredExerciseIdsChange(newFilteredExercises);
-    if (!hasExactMatch && trimmedSearchText) {
-      onSuggestedNewExercise({
-        name: trimmed,
-        category: '',
-        equipment: null,
-        force: null,
-        instructions: '',
-        level: '',
-        mechanic: '',
-        muscles: muscleFilters,
-      });
-    } else {
-      onSuggestedNewExercise('NONE');
-    }
+    const result = filterExercises(exercises, searchText, muscleFilters);
+    onFilteredExerciseIdsChange(result.ids);
+    onSuggestedNewExercise(result.suggestion);
   }, 100);
 
   return (
@@ -73,7 +40,4 @@ export default function ExerciseFilterer(props: {
       }}
     />
   );
-}
-function escapeRegExp(string: string) {
-  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
