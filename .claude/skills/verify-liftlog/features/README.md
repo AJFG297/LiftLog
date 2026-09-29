@@ -10,7 +10,7 @@ before driving the app, then use the matching feature file as the recipe. Comman
 - `verify.sh flow .claude/skills/verify-liftlog/flows/ready.yaml` exited 0 in this run (welcome wizard and dev-menu
   sheet are out of the way; Workout tab shows `Freeform workout`).
 - The emulator's app data persists between runs. Check the starting state instead of assuming an empty app:
-  `verify.sh db "select count(*) from session;"`, and on the Workout tab, whether a `Current workout` card is up.
+  `verify.sh db "select count(*), sum(active) from workout;"`, and on the Workout tab, whether a `Current workout` card is up.
 - Never drive `emulator-5554` or any device that `doctor` does not report as ours.
 
 ## Driving conventions

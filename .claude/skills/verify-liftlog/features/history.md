@@ -24,7 +24,7 @@ start it again as a new workout, and add a workout on a day that has none.
 Preconditions:
 
 - Baseline from the [index](./README.md), plus at least one finished session. If
-  `verify.sh db "select count(*) from session where active=0;"` is 0, run the workout-session flow first.
+  `verify.sh db "select count(*) from workout where active=0;"` is 0, run the workout-session flow first.
 
 - **Open.** `tapOn: 'History'` → `assertVisible: {id: 'session-summary-title'}` and `assertVisible: '.*week streak'`.
 - **Summary line.** `scrollUntilVisible: {element: {text: '.*7\.5kg'}, direction: DOWN}` for the session logged by
@@ -35,7 +35,9 @@ Preconditions:
 - **Edit.** `tapOn: {id: 'history-edit-workout'}` → the editor opens with `session-date-input`; change a value, `back`,
   and the summary reflects it.
 - **Delete.** Tap the card's delete icon (tooltip `Delete`), then confirm `Delete` in `Delete Workout?`. The card is
-  gone and `verify.sh db "select count(*) from session where active=0;"` drops by one.
+  gone and `verify.sh db "select count(*) from workout where active=0;"` drops by one. Its `workout_exercise` and
+  set rows go with it: `verify.sh db "select count(*) from weighted_set where workout_id not in (select id from workout);"`
+  stays 0.
 - **Proof.** `verify.sh ui history` lists `history-list`, `session-summary`, `session-summary-title`,
   `history-edit-workout`, and the summary `text` values; pair it with a `takeScreenshot`.
 
