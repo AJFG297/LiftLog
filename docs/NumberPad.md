@@ -55,6 +55,13 @@ The bar weight and the plates a gym has are preferences, one of each per unit (`
 25, 20, 15, 10, 5, 2.5 and 1.25 kg plates, and a 45 lb bar with 45, 35, 25, 10, 5 and 2.5 lb plates. Like
 every preference, they aren't in backups (see [Storage.md](./Storage.md)).
 
+## In the live workout
+
+The workout screen mounts the pad under the page, in place of the Up next dock, and passes `bottomInset`:
+iOS keeps the bottom safe-area inset, and Android, whose screen already ends above the tab bar, keeps
+none. Plate maths shows only for a load on external resistance; bodyweight exercises get no accessory.
+See [LiveWorkout.md](./LiveWorkout.md#logging-a-set).
+
 ## Trying it
 
 In a dev build, open `liftlog://dev/number-pad`. Query parameters pick the starting state:

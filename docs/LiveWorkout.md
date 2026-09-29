@@ -1,8 +1,8 @@
 # Live workout
 
 The workout in progress (`app/src/app/(tabs)/(session)/session/index.tsx`) shows one exercise, or one
-superset, at a time. It is PM-23 of the [redesign plan](./plans/redesign.md); PM-29 replaces the set
-logging on the page and PM-30 moves rest into the header.
+superset, at a time. It is PM-23 of the [redesign plan](./plans/redesign.md); PM-29 added the set table
+and the number pad, and PM-30 moves rest into the header.
 
 ## What is on screen
 
@@ -12,11 +12,13 @@ logging on the page and PM-30 moves rest into the header.
 - **Exercise strip** (`ExerciseStrip`): one tile per exercise with its label, name, sets done out of
   planned and a progress bar. The tiles of the page on screen are drawn inverted, and the strip scrolls to
   keep them in view. The last tile adds an exercise.
-- **Focus page**: a card per exercise (`LiveExerciseCard`) with its equipment and rest, the History,
-  Warm-up, Note and Swap shortcuts, the Today target card, and the sets. A superset page starts with a
-  banner.
+- **Focus page**: a card per exercise (`LiveExerciseCard`) with a meta line (equipment, rest or its place
+  in a superset, and how many working sets), the History, Warm-up, Note and Swap shortcuts, the Today
+  target card, and the set table (see below). A superset page starts with a banner. Cardio exercises still
+  use the older set tiles.
 - **Up next bar** (`UpNextBar`): the next unfinished page. It fills with the accent once the page on
   screen is done, and turns into Finish when nothing after it is left. The rest timer docks above it.
+  While a weight or reps is being typed, the number pad takes the dock's place.
 - **All exercises sheet** (`session/exercises`, a `formSheet`): every exercise with its status, sets and
   target. Tap to jump there; drag a handle to reorder. Add exercise and Make superset sit above the list,
   so they are in reach at the sheet's first detent, and open the existing flows. The Workout summary row
@@ -47,3 +49,39 @@ Nothing on the screen is stored except which exercise is in focus. The rest come
 
 The workout worker, its notification and background behaviour are untouched: they still read
 `Session.nextExercise` and the rest timer (see [WorkoutWorker.md](./WorkoutWorker.md)).
+
+## Logging a set
+
+A weighted exercise's sets are a table (`SetTable` in `presentation/live-workout/`, wired up by
+`LiveSetTable`): the set badge, Previous, the weight (`kg`, `kg each` for dumbbells, `lb` in imperial),
+the reps, and a check. Warm-ups come first, then the working list. Previous is the same set of the
+performance Today's target compares against, or of the latest one when the set scheme changed.
+
+- **Placeholders.** An untouched weight and reps show today's target, `PotentialSet.weight` and the top of
+  `PotentialSet.target`, in the `placeholder` grey. Typed or logged values are ink and bold. The check logs
+  the set as the row shows it, so logging a set as planned is one tap. The next set is outlined.
+- **Typing.** Tapping a field opens the [number pad](./NumberPad.md) with the field empty and its value as
+  the placeholder. The pad takes the Up next dock's place, the page shrinks above it, and the screen
+  scrolls the row into view if it is underneath. On weight the arrow moves to reps; on reps the check logs
+  the set. Hiding the pad, tapping another field or leaving the page keeps what was typed.
+- **Where typed values go.** A typed weight goes straight onto the slot, and later unlogged sets of the same
+  kind that were on the same weight (and weren't typed themselves) follow it. Typed reps have no place on
+  the slot until the set is logged, so they wait in a draft (`SetDraft`), which also records that a weight
+  was typed. Drafts live in the app slice (`app.liveWorkoutDrafts`), keyed by session and by the
+  exercise's index and name: they survive minimising and the set-type sheet, and aren't persisted.
+- **Undo.** The check on a logged set undoes it and keeps its values: the draft still holds what was typed,
+  and reps that missed the target are kept even without one. Logging or undoing restarts rest from the
+  latest set, as the old set tiles did, and logging plays `haptics.setLogged()`.
+- **RPE.** With Log RPE on, the reps pad of a working set has the RPE chips; they set `PotentialSet.rpe`
+  straight away, and tapping the picked chip clears it. The reps show it as a small `@9`. Warm-ups have
+  none.
+- **Add set** adds one after the last with its weight, target and type; a warm-up or a set to failure is
+  followed by a working set. It goes into the session's plan too, so finishing offers to keep it.
+- **Set type.** Tapping the badge opens `session/set-type`, a `formSheet` with Working, Warm-up, Drop,
+  Myo-reps and To failure. The session's plan takes the change, so finishing offers it as a routine change.
+  Warm-ups have their own list, so a set that becomes one moves to the end of the warm-ups, and a warm-up
+  that stops being one becomes the first working set. The last working set can't become a warm-up.
+
+The rules are pure functions in `models/session-models/set-entry.ts` (`setRowsOf`, `withTypedValue`,
+`withSetToggled`, `withAddedSet`, `withSetKind`); `useLiveSetEntry` holds what the pad is typing into and
+applies them to the session and its drafts together.
