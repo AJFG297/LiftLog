@@ -7,7 +7,7 @@ import { SurfaceText } from '@/components/presentation/foundation/surface-text';
 import { FeelPicker } from '@/components/presentation/summary/feel-picker';
 import { RoutineUpdatedBanner } from '@/components/presentation/summary/routine-updated-banner';
 import { StatCard } from '@/components/presentation/summary/stat-card';
-import { BestSetRow, ChangeTone, RecordRow } from '@/components/presentation/summary/summary-rows';
+import { BestSetRow, ChangeTone, LoadText, RecordRow } from '@/components/presentation/summary/summary-rows';
 import { useServices } from '@/components/smart/services-provider';
 import { SHEET_OVER_SUMMARY_HREF, useUndoRoutineUpdate } from '@/components/smart/session-diff-save';
 import { useFinishWorkout } from '@/hooks/useFinishWorkout';
@@ -455,14 +455,14 @@ function recordCopy(t: UseTranslateResult['t'], record: SessionRecord, unit: Wei
     return {
       exerciseName: record.exerciseName,
       kind: t('finish.summary.record_heaviest.label'),
-      value: `${formatLoad(record.weight)} × ${record.reps}`,
+      value: loadText(record.weight, 2, record.reps),
       was: t('finish.summary.record_was.label', { value: formatLoad(record.previous) }),
     };
   }
   return {
     exerciseName: record.exerciseName,
     kind: t('finish.summary.record_one_rep_max.label'),
-    value: formatLoad(record.oneRepMax.convertTo(unit), 1),
+    value: loadText(record.oneRepMax.convertTo(unit), 1),
     was: t('finish.summary.record_was.label', { value: formatLoad(record.previous.convertTo(unit), 1) }),
   };
 }
@@ -470,21 +470,24 @@ function recordCopy(t: UseTranslateResult['t'], record: SessionRecord, unit: Wei
 function bestSetCopy(
   t: UseTranslateResult['t'],
   { best, change, tracksWeight }: BestSetComparison,
-): { best: string; change: string; changeSpoken: string; tone: ChangeTone } {
-  const bestText = tracksWeight
-    ? `${formatNumber(best.weight)} × ${best.reps}`
-    : t('finish.summary.reps.label', { count: best.reps });
+): { best: string; bestNumeric: boolean; change: string; changeSpoken: string; tone: ChangeTone } {
+  const bestCopy = {
+    best: tracksWeight
+      ? `${formatNumber(best.weight)} × ${best.reps}`
+      : t('finish.summary.reps.label', { count: best.reps }),
+    bestNumeric: tracksWeight,
+  };
   switch (change.type) {
     case 'new':
       return {
-        best: bestText,
+        ...bestCopy,
         change: t('finish.summary.change_new.label'),
         changeSpoken: t('finish.summary.change_new_spoken.label'),
         tone: 'new',
       };
     case 'same':
       return {
-        best: bestText,
+        ...bestCopy,
         change: t('finish.summary.change_same.label'),
         changeSpoken: t('finish.summary.change_same_spoken.label'),
         tone: 'same',
@@ -493,7 +496,7 @@ function bestSetCopy(
       const up = change.delta.value.isPositive();
       const amount = formatLoad(change.delta.with({ value: change.delta.value.abs() }));
       return {
-        best: bestText,
+        ...bestCopy,
         change: up
           ? t('finish.summary.change_weight_up.label', { amount })
           : t('finish.summary.change_weight_down.label', { amount }),
@@ -508,7 +511,7 @@ function bestSetCopy(
       const count = Math.abs(change.delta);
       const amount = count === 1 ? t('finish.summary.one_rep.label') : t('finish.summary.reps.label', { count });
       return {
-        best: bestText,
+        ...bestCopy,
         change: up
           ? count === 1
             ? t('finish.summary.change_rep_up.label')
@@ -528,6 +531,10 @@ function bestSetCopy(
 /** A weight's number alone, to two decimal places at most: a converted weight can carry many. */
 function formatNumber(weight: Weight, decimalPlaces = 2): string {
   return localeFormatBigNumber(weight.value.decimalPlaces(decimalPlaces));
+}
+
+function loadText(weight: Weight, decimalPlaces: number, reps?: number): LoadText {
+  return { amount: formatNumber(weight, decimalPlaces), unit: shortFormatWeightUnit(weight.unit), reps };
 }
 
 function formatLoad(weight: Weight, decimalPlaces = 2): string {
