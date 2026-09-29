@@ -8,14 +8,13 @@ import { LiveWorkoutHeader } from '@/components/presentation/live-workout/live-w
 import { SupersetBanner } from '@/components/presentation/live-workout/superset-banner';
 import { UpNextBar } from '@/components/presentation/live-workout/up-next-bar';
 import { CardioTimer } from '@/components/presentation/workout/cardio/cardio-timer';
-import RestTimer from '@/components/presentation/workout/rest-timer';
 import { LiveExerciseCard } from '@/components/smart/live-exercise-card';
-import { withCardioSetUpdate, withRestTimerAt } from '@/components/smart/recorded-exercise-view';
+import { withCardioSetUpdate } from '@/components/smart/recorded-exercise-view';
 import { getSessionWorkoutEditorHref } from '@/components/smart/session-workout-editor';
 import { useAddExercise } from '@/hooks/useAddExercise';
 import { spacing, useAppTheme } from '@/hooks/useAppTheme';
 import { useLiveWorkoutFocus } from '@/hooks/useLiveWorkoutFocus';
-import { RecordedCardioExercise, RecordedWeightedExercise, Session } from '@/models/session-models';
+import { Session } from '@/models/session-models';
 import {
   exerciseLabelOf,
   ExerciseGroup,
@@ -24,8 +23,7 @@ import {
   setProgressOf,
   upNextGroupIndexOf,
 } from '@/models/session-models/exercise-groups';
-import { useAppSelector } from '@/store';
-import { showSnackbar, setLiveWorkoutFocus } from '@/store/app';
+import { setLiveWorkoutFocus } from '@/store/app';
 import { OffsetDateTime } from '@js-joda/core';
 import { useTranslate } from '@tolgee/react';
 import { useRouter } from 'expo-router';
@@ -49,7 +47,6 @@ export function LiveWorkout({ session, updateSession, onFinish }: LiveWorkoutPro
   const { t } = useTranslate();
   const { push, dismissTo } = useRouter();
   const dispatch = useDispatch();
-  const restTimersEnabled = useAppSelector((x) => x.settings.restTimersEnabled);
   const addNewExercise = useAddExercise(session.id);
   const { groups, focusedGroupIndex, focusedGroup, focusedExerciseIndex, isPinned, focusExercise } =
     useLiveWorkoutFocus(session);
@@ -93,7 +90,7 @@ export function LiveWorkout({ session, updateSession, onFinish }: LiveWorkoutPro
     focusedGroupIndex === undefined ? undefined : upNextGroupIndexOf(session, groups, focusedGroupIndex);
   const upNextGroup = upNextIndex === undefined ? undefined : groups[upNextIndex];
 
-  const timer = useWorkoutTimer(session, updateSession, restTimersEnabled);
+  const timer = useCardioTimer(session, updateSession);
 
   return (
     <View style={{ flex: 1, backgroundColor: tokens.bg }}>
@@ -233,67 +230,21 @@ function OutlinedPill(props: {
   );
 }
 
-/**
- * The rest timer, or the running cardio clock, docked above the "Up next" bar. Unchanged from the list
- * screen; PM-30 moves rest into the header.
- */
-function useWorkoutTimer(
-  session: Session,
-  updateSession: (update: (session: Session) => Session) => void,
-  restTimersEnabled: boolean,
-) {
-  const { t } = useTranslate();
-  const dispatch = useDispatch();
-  const resetTimer = (time: OffsetDateTime | undefined) => updateSession((s) => withRestTimerAt(s, time));
-  const dismissTimer = () => {
-    const dismissedTimer = session.restTimer;
-    resetTimer(undefined);
-    dispatch(
-      showSnackbar({
-        text: t('rest_timer.dismissed.message'),
-        action: t('generic.undo.button'),
-        onAction: () => updateSession((s) => s.with({ restTimer: dismissedTimer })),
-      }),
-    );
-  };
-
+/** The running cardio clock, docked above the "Up next" bar. Rest lives in the header's pill. */
+function useCardioTimer(session: Session, updateSession: (update: (session: Session) => Session) => void) {
   const runningCardio = session.runningCardioSet;
-  if (runningCardio) {
-    const update = (updater: Parameters<typeof withCardioSetUpdate>[2]) =>
-      updateSession(
-        withCardioSetUpdate(runningCardio.exerciseIndex, runningCardio.setIndex, updater, OffsetDateTime.now()),
-      );
-    return (
-      <CardioTimer
-        set={runningCardio.set}
-        onPersist={() => update((s) => s.withTimerReanchored(OffsetDateTime.now()))}
-        onStop={() => update((s) => s.withTimerStopped(OffsetDateTime.now()))}
-      />
-    );
-  }
-
-  const lastExercise = session.lastExercise;
-  // A weighted exercise rests per exercise; cardio rests per set, and may not rest at all.
-  const rest =
-    lastExercise instanceof RecordedWeightedExercise
-      ? lastExercise.restAfterLastSet
-      : lastExercise instanceof RecordedCardioExercise
-        ? lastExercise.lastCompletedSet?.blueprint.restBetweenSets
-        : undefined;
-  if (!restTimersEnabled || !session.nextExercise || !rest || !session.restTimer) {
+  if (!runningCardio) {
     return undefined;
   }
-  // Only a weighted set can be failed - cardio has no rep count to fall short of.
-  const failed = lastExercise instanceof RecordedWeightedExercise && lastExercise.lastSetMissedTarget;
+  const update = (updater: Parameters<typeof withCardioSetUpdate>[2]) =>
+    updateSession(
+      withCardioSetUpdate(runningCardio.exerciseIndex, runningCardio.setIndex, updater, OffsetDateTime.now()),
+    );
   return (
-    <RestTimer
-      rest={rest}
-      startTime={session.restTimer.startedAt}
-      pausedAt={session.restTimer.pausedAt}
-      failed={failed}
-      onRestart={() => resetTimer(OffsetDateTime.now())}
-      onDismiss={dismissTimer}
-      onTogglePause={() => updateSession((s) => s.with({ restTimer: s.restTimer?.togglePause(OffsetDateTime.now()) }))}
+    <CardioTimer
+      set={runningCardio.set}
+      onPersist={() => update((s) => s.withTimerReanchored(OffsetDateTime.now()))}
+      onStop={() => update((s) => s.withTimerStopped(OffsetDateTime.now()))}
     />
   );
 }

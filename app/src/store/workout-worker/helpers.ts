@@ -1,4 +1,5 @@
-import { RecordedCardioExercise, RecordedExercise, RecordedWeightedExercise, Session } from '@/models/session-models';
+import { RecordedWeightedExercise, Session } from '@/models/session-models';
+import { restWindowOf } from '@/models/session-models/rest';
 import { toDurationJSON, toInstantJson } from '@/models/storage/versions/latest';
 import { CardioTimerInfo, CurrentExerciseDetails, RestTimerInfo } from '@/models/workout-worker-messages';
 import { Duration } from '@js-joda/core';
@@ -48,40 +49,15 @@ export function getCurrentExerciseDetails(session: Session): CurrentExerciseDeta
   };
 }
 
+/** The same window the rest pill counts down, so the notification and the pill agree. */
 export function getTimerInfo(session: Session): RestTimerInfo | undefined {
-  const lastExercise = session.lastExercise;
-  const nextExercise = session.nextExercise;
-  if (!session.restTimer || session.restTimer.isPaused || !lastExercise || !nextExercise) {
+  const window = restWindowOf(session);
+  if (!window) {
     return undefined;
-  }
-
-  const rest = getRestWindow(lastExercise);
-  if (!rest || rest.partialRest.equals(Duration.ZERO)) {
-    return;
   }
   return {
-    startedAt: toInstantJson(session.restTimer.startedAt.toInstant()),
-    partiallyEndAt: toInstantJson(session.restTimer.startedAt.plus(rest.partialRest).toInstant()),
-    endAt: toInstantJson(session.restTimer.startedAt.plus(rest.fullRest).toInstant()),
+    startedAt: toInstantJson(window.startedAt.toInstant()),
+    partiallyEndAt: toInstantJson(window.readyAt.toInstant()),
+    endAt: toInstantJson(window.fullAt.toInstant()),
   };
-}
-
-/** Cardio rests per set and has nothing to fail; a weighted exercise rests per exercise. */
-function getRestWindow(lastExercise: RecordedExercise) {
-  if (lastExercise instanceof RecordedCardioExercise) {
-    const rest = lastExercise.lastCompletedSet?.blueprint.restBetweenSets;
-    return rest && { partialRest: rest.minRest, fullRest: rest.maxRest };
-  }
-  if (!(lastExercise instanceof RecordedWeightedExercise)) {
-    return undefined;
-  }
-
-  if (!lastExercise.hasLoggedAnySet) {
-    return { partialRest: Duration.ZERO, fullRest: Duration.ZERO };
-  }
-
-  const { minRest, maxRest, failureRest } = lastExercise.restAfterLastSet;
-  return lastExercise.lastSetMissedTarget
-    ? { partialRest: failureRest, fullRest: failureRest }
-    : { partialRest: minRest, fullRest: maxRest };
 }

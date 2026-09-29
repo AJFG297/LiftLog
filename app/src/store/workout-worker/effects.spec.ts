@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import { OffsetDateTime, ZoneOffset } from '@js-joda/core';
+import { Duration, OffsetDateTime, ZoneOffset } from '@js-joda/core';
+import { withRestStarted, withRestStepped } from '@/models/session-models/rest';
 import {
   activeSessionUpdated,
   broadcastWorkoutEvent,
@@ -113,10 +114,10 @@ describe('workout-worker effects', () => {
       return bed.dispatchedActions.some((a) => a.type === notifySetTimer.type);
     }
 
-    it('clears the notification by dispatching notifySetTimer when the rest timer is paused', async () => {
+    it('reschedules by dispatching notifySetTimer when the rest is shortened', async () => {
       const bed = testBed();
       const before = sessionWithRestTimer(OffsetDateTime.now());
-      const after = before.with({ restTimer: before.restTimer!.pause(OffsetDateTime.now()) });
+      const after = withRestStepped(before, -1, OffsetDateTime.now());
 
       await bed.dispatchHandled(activeSessionUpdated({ before, after }));
 
@@ -133,11 +134,10 @@ describe('workout-worker effects', () => {
       expect(notifyDispatched(bed)).toBe(true);
     });
 
-    it('reschedules by dispatching notifySetTimer when the rest timer is resumed', async () => {
+    it('reschedules by dispatching notifySetTimer when a preset restarts the rest', async () => {
       const bed = testBed();
-      const running = sessionWithRestTimer(OffsetDateTime.now());
-      const before = running.with({ restTimer: running.restTimer!.pause(OffsetDateTime.now()) });
-      const after = before.with({ restTimer: before.restTimer!.resume(OffsetDateTime.now()) });
+      const before = sessionWithRestTimer(OffsetDateTime.now());
+      const after = withRestStarted(before, Duration.ofSeconds(30), OffsetDateTime.now());
 
       await bed.dispatchHandled(activeSessionUpdated({ before, after }));
 
@@ -260,19 +260,6 @@ describe('workout-worker effects', () => {
       const { testBed, scheduleNextSetNotification, clearSetTimerNotification } = notifyTestBed(
         { restNotifications: true, restTimersEnabled: true },
         undefined,
-      );
-
-      await testBed.dispatchHandled(notifySetTimer());
-
-      expect(clearSetTimerNotification).toHaveBeenCalled();
-      expect(scheduleNextSetNotification).not.toHaveBeenCalled();
-    });
-
-    it('notifySetTimer clears without scheduling when the rest timer is paused', async () => {
-      const running = sessionWithRestTimer(OffsetDateTime.now().plusHours(1));
-      const { testBed, scheduleNextSetNotification, clearSetTimerNotification } = notifyTestBed(
-        { restNotifications: true, restTimersEnabled: true },
-        running.with({ restTimer: running.restTimer!.pause(OffsetDateTime.now()) }),
       );
 
       await testBed.dispatchHandled(notifySetTimer());
