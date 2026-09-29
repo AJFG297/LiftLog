@@ -1,4 +1,5 @@
 import { AppIconName, MsIconSrc } from '@/components/presentation/foundation/ms-icon-source';
+import { SurfaceText } from '@/components/presentation/foundation/surface-text';
 import { MIN_TOUCH_TARGET } from '@/components/presentation/foundation/touch-target';
 import { useAppTheme } from '@/hooks/useAppTheme';
 import { Pressable, StyleProp, View, ViewStyle } from 'react-native';
@@ -16,6 +17,8 @@ interface RoundIconButtonProps {
   onPress: () => void;
   /** `compact` draws a 36pt circle, centred in a 44pt touch target. */
   size?: keyof typeof SIZES;
+  /** Text after the icon, which stretches the circle into a pill: the summary's Share. */
+  label?: string;
   disabled?: boolean;
   style?: StyleProp<ViewStyle>;
   testID?: string;
@@ -31,6 +34,7 @@ export function RoundIconButton({
   accessibilityHint,
   onPress,
   size = 'regular',
+  label,
   disabled,
   style,
   testID,
@@ -54,8 +58,11 @@ export function RoundIconButton({
       {({ pressed }) => (
         <View
           style={{
-            width: diameter,
             height: diameter,
+            minWidth: diameter,
+            paddingHorizontal: label ? 14 : 0,
+            flexDirection: 'row',
+            gap: 6,
             borderRadius: diameter / 2,
             borderWidth: 1,
             borderColor: tokens.line,
@@ -64,7 +71,12 @@ export function RoundIconButton({
             backgroundColor: pressed ? tokens.track : tokens.card,
           }}
         >
-          <MsIconSrc name={icon} size={iconSize} color={disabled ? tokens.faint : tokens.ink} />
+          <MsIconSrc name={icon} size={label ? iconSize - 2 : iconSize} color={disabled ? tokens.faint : tokens.ink} />
+          {label ? (
+            <SurfaceText font="text-sm" weight="600" style={{ color: disabled ? tokens.faint : tokens.ink }}>
+              {label}
+            </SurfaceText>
+          ) : null}
         </View>
       )}
     </Pressable>

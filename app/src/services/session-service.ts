@@ -101,8 +101,8 @@ export class SessionService {
         )
         // Where reps are what advances, the target carries forward alongside the weight so the
         // lineage keeps what a rule won for it. Where they are a fixed prescription it is re-seeded
-        // from the plan, because the only thing that could have changed it is an edit to the plan -
-        // and that edit already had its own say in the save-changes dialog.
+        // from the plan, because the only thing that could have changed it is an edit to the plan. A
+        // rep edit made mid-workout is for that workout only: the update-routine sheet leaves reps out.
         .otherwise((x) =>
           x.potentialSets.map((ps, index) =>
             ps.carriedInto(e.plannedSets[index]?.kind ?? 'working', {

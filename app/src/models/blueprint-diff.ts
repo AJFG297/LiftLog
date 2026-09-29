@@ -264,6 +264,8 @@ export type DiffChange = SessionChange | ExerciseStructureChange | ExerciseField
 export interface ExerciseModification {
   exerciseName: string;
   exerciseIndex: number;
+  /** Where the exercise is in the original session. */
+  originalIndex: number;
   changes: ExerciseFieldChange[];
 }
 
@@ -798,12 +800,13 @@ export function diffSessionBlueprints(original: SessionBlueprint, modified: Sess
 
   // Modified exercises (field-level changes)
   const modifiedExercises: ExerciseModification[] = [];
-  for (const { oldExercise, newExercise, newIndex } of matched) {
+  for (const { oldExercise, newExercise, oldIndex, newIndex } of matched) {
     const changes = diffExercises(oldExercise, newExercise, newIndex);
     if (changes.length > 0) {
       modifiedExercises.push({
         exerciseName: newExercise.name,
         exerciseIndex: newIndex,
+        originalIndex: oldIndex,
         changes,
       });
     }
@@ -921,8 +924,13 @@ export function applySessionBlueprintDiff(original: SessionBlueprint, diff: Sess
 
   // Apply field-level modifications
   for (const mod of diff.modifiedExercises) {
-    // Find the corresponding original index
-    const originalIdx = original.exercises.findIndex((ex) => ex.name === mod.exerciseName);
+    // The routine can have been edited since the diff was computed, so trust the index only while the
+    // exercise there still has the name it had then.
+    const oldName = diff.originalSession.exercises[mod.originalIndex]?.name;
+    const originalIdx =
+      original.exercises[mod.originalIndex]?.name === oldName
+        ? mod.originalIndex
+        : original.exercises.findIndex((ex) => ex.name === oldName);
 
     if (originalIdx === -1) continue;
 

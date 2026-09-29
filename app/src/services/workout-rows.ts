@@ -6,6 +6,7 @@ import {
   workoutsSchema,
 } from '@/db/schema';
 import { RecordedCardioExercise, RecordedWeightedExercise, Session } from '@/models/session-models';
+import { isSessionFeel, reflectionsEqual } from '@/models/session-models/reflection';
 import {
   PotentialSetJSON,
   RecordedCardioExerciseJSON,
@@ -141,6 +142,8 @@ export function toWorkoutRows(session: Session): WorkoutRows {
       bodyweightUnit: json.bodyweight?.unit ?? null,
       referenceTimeMs: epochMs(getSessionReferenceTime(session))!,
       volumeKg: sessionVolume(session),
+      feel: session.reflection?.feel ?? null,
+      reflectionNote: session.reflection?.note || null,
     },
     exercises,
     weightedSets,
@@ -183,7 +186,11 @@ export function fromWorkoutRows(rows: StoredWorkoutRows): Session {
       ),
     ),
   };
-  return Session.fromJSON(json);
+  const session = Session.fromJSON(json);
+  const feel = isSessionFeel(workout.feel) ? workout.feel : undefined;
+  return feel || workout.reflectionNote
+    ? session.with({ reflection: { feel, note: workout.reflectionNote ?? '' } })
+    : session;
 }
 
 function toRecordedExerciseJSON(
@@ -229,11 +236,14 @@ function toRecordedExerciseJSON(
 }
 
 /**
- * Whether two sessions would be stored the same. Only what `toJSON()` writes counts, so a change to the rest
- * timer or a running cardio timer is not a change to the workout.
+ * Whether two sessions would be stored the same: what `toJSON()` writes and the reflection, which is stored
+ * beside it. A change to the rest timer or a running cardio timer is not a change to the workout.
  */
 export function samePersistedContent(a: Session, b: Session): boolean {
-  return a === b || JSON.stringify(a.toJSON()) === JSON.stringify(b.toJSON());
+  return (
+    a === b ||
+    (reflectionsEqual(a.reflection, b.reflection) && JSON.stringify(a.toJSON()) === JSON.stringify(b.toJSON()))
+  );
 }
 
 /** The columns a working set and a warm-up both store: everything but the query columns and the RPE. */

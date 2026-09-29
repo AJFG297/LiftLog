@@ -396,6 +396,21 @@ export const selectPreviousComparableSession = createSelector(
   },
 );
 
+/** Every finished session that happened before `session`, in no particular order. */
+export const selectSessionsBefore = createSelector(
+  [selectSessions, (_, session: Session | undefined) => session],
+  (sessions, session) => {
+    if (!session) {
+      return [];
+    }
+    const referenceTime = getSessionReferenceTime(session).toEpochSecond();
+    return sessions.filter(
+      (storedSession) =>
+        storedSession.id !== session.id && getSessionReferenceTime(storedSession).toEpochSecond() < referenceTime,
+    );
+  },
+);
+
 /**
  * Records per session across the user's whole history. Unlike the feed, which only holds its 90-day retention
  * window, nothing here is truncated, so these are all-time bests.

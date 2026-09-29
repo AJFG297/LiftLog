@@ -1,5 +1,7 @@
 import { SessionDiffSaveEditor } from '@/components/smart/session-diff-save';
+import { useLocalSearchParams } from 'expo-router';
 
 export default function DiffSavePage() {
-  return <SessionDiffSaveEditor />;
+  const { from } = useLocalSearchParams<{ from?: 'summary' }>();
+  return <SessionDiffSaveEditor overSummary={from === 'summary'} />;
 }

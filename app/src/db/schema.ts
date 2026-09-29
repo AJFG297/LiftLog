@@ -34,6 +34,7 @@ import type {
   SetKindJSON,
   WeightUnitJSON,
 } from '@/models/storage/versions/latest';
+import type { SessionFeel } from '@/models/session-models/reflection';
 
 /**
  * A workout: the user's history and the one in progress. Its exercises and sets live in the child tables
@@ -60,6 +61,9 @@ export const workoutsSchema = sqliteTable(
     // `getSessionReferenceTime`: the latest set, or the start of the day in the writer's zone.
     referenceTimeMs: integer('reference_time_ms').notNull(),
     volumeKg: real('volume_kg').notNull(),
+    // How the workout felt and a note for next time (`SessionReflection`). Local only: not in `SessionJSON`.
+    feel: text().$type<SessionFeel>(),
+    reflectionNote: text('reflection_note'),
   },
   (table) => [
     uniqueIndex('single_active_workout')

@@ -465,6 +465,49 @@ describe('applySessionBlueprintDiff', () => {
       progression: [ProgressionRule.load(BigNumber(2.5))],
     });
 
+  it('changes the second of two exercises with the same name', () => {
+    const original = new SessionBlueprint(
+      'Workout',
+      [createWeightedExercise('Squat', 3), createWeightedExercise('Squat', 4)],
+      '',
+    );
+    const modified = new SessionBlueprint(
+      'Workout',
+      [createWeightedExercise('Squat', 3), createWeightedExercise('Squat', 5)],
+      '',
+    );
+
+    const result = applySessionBlueprintDiff(original, diffSessionBlueprints(original, modified));
+
+    expect(result.exercises).toEqual(modified.exercises);
+  });
+
+  it('finds the exercise by its name when the routine gained one above it since', () => {
+    const before = new SessionBlueprint(
+      'Workout',
+      [createWeightedExercise('Bench', 3), createWeightedExercise('Row')],
+      '',
+    );
+    const today = new SessionBlueprint(
+      'Workout',
+      [createWeightedExercise('Bench', 4), createWeightedExercise('Row')],
+      '',
+    );
+    const editedSince = new SessionBlueprint(
+      'Workout',
+      [createWeightedExercise('Curl', 3), createWeightedExercise('Bench', 3), createWeightedExercise('Row')],
+      '',
+    );
+
+    const result = applySessionBlueprintDiff(editedSince, diffSessionBlueprints(before, today));
+
+    expect(result.exercises).toEqual([
+      createWeightedExercise('Curl', 3),
+      createWeightedExercise('Bench', 4),
+      createWeightedExercise('Row'),
+    ]);
+  });
+
   it('should apply selected session name change', () => {
     const original = new SessionBlueprint('Workout A', [], '');
     const modified = new SessionBlueprint('Workout B', [], '');

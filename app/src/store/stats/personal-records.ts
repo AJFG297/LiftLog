@@ -66,3 +66,88 @@ export function findPersonalRecords(sessionsOldestFirst: Session[]): Map<string,
 
   return recordsBySession;
 }
+
+/**
+ * A record set in one workout, with the best it beat. A heavier set than ever is `heaviestWeight`;
+ * otherwise a better estimated one-rep max (more reps at a weight lifted before) is `estimatedOneRepMax`.
+ * A workout sets at most one record per movement, so `key` identifies it.
+ */
+export type SessionRecord =
+  | { kind: 'heaviestWeight'; key: MovementKey; exerciseName: string; weight: Weight; reps: number; previous: Weight }
+  | { kind: 'estimatedOneRepMax'; key: MovementKey; exerciseName: string; oneRepMax: Weight; previous: Weight };
+
+/**
+ * The records `session` sets against `earlier`, the workouts before it. As in {@link findPersonalRecords},
+ * an exercise seen for the first time sets none. Heaviest weight only counts on an exercise loaded with
+ * external weight, since a bodyweight movement's load moves with the lifter's bodyweight.
+ */
+export function sessionRecords(session: Session, earlier: readonly Session[]): SessionRecord[] {
+  const previousOneRepMax = new Map<MovementKey, Weight>();
+  const previousHeaviest = new Map<MovementKey, Weight>();
+  for (const past of earlier) {
+    for (const [key, record] of bestOneRepMax(past)) {
+      const best = previousOneRepMax.get(key);
+      if (!best || record.oneRepMax.isGreaterThan(best)) {
+        previousOneRepMax.set(key, record.oneRepMax);
+      }
+    }
+    for (const [key, heaviest] of heaviestSets(past)) {
+      const best = previousHeaviest.get(key);
+      if (!best || heaviest.weight.isGreaterThan(best)) {
+        previousHeaviest.set(key, heaviest.weight);
+      }
+    }
+  }
+
+  const heaviestToday = heaviestSets(session);
+  const records: SessionRecord[] = [];
+  for (const [key, candidate] of bestOneRepMax(session)) {
+    const heaviest = heaviestToday.get(key);
+    const heaviestBefore = previousHeaviest.get(key);
+    if (heaviest && heaviestBefore && heaviest.weight.isGreaterThan(heaviestBefore)) {
+      records.push({ kind: 'heaviestWeight', key, ...heaviest, previous: heaviestBefore });
+      continue;
+    }
+    const before = previousOneRepMax.get(key);
+    if (before && candidate.oneRepMax.isGreaterThan(before)) {
+      records.push({
+        kind: 'estimatedOneRepMax',
+        key,
+        exerciseName: candidate.exerciseName,
+        oneRepMax: candidate.oneRepMax,
+        previous: before,
+      });
+    }
+  }
+  return records;
+}
+
+interface HeaviestSet {
+  exerciseName: string;
+  weight: Weight;
+  reps: number;
+}
+
+/** The heaviest logged set per exercise that counts towards records, on externally loaded exercises only. */
+function heaviestSets(session: Session): Map<MovementKey, HeaviestSet> {
+  const heaviest = new Map<MovementKey, HeaviestSet>();
+  for (const exercise of session.recordedExercises) {
+    if (exercise.type !== 'RecordedWeightedExercise' || exercise.blueprint.resistance !== 'external') {
+      continue;
+    }
+    const key = exercise.movementKey();
+    for (const potentialSet of exercise.setsCountingTowards('countsTowardsPrs')) {
+      if (!potentialSet.set?.repsCompleted) {
+        continue;
+      }
+      const current = heaviest.get(key);
+      const { weight } = potentialSet;
+      const reps = potentialSet.set.repsCompleted;
+      const heavier = !current || weight.isGreaterThan(current.weight);
+      if (heavier || (weight.equals(current.weight, true) && reps > current.reps)) {
+        heaviest.set(key, { exerciseName: exercise.blueprint.name, weight, reps });
+      }
+    }
+  }
+  return heaviest;
+}

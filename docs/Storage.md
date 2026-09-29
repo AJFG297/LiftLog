@@ -151,6 +151,11 @@ A workout is stored across five tables (`db/schema.ts`), not as one payload:
   is the last set of any kind, as it orders workouts by when they happened.
 - **Set kinds**: `weighted_set.kind` is what the slot is for (`working`, `failure`, `drop` or `myo`, see
   `SET_KIND_RULES`). A warm-up's kind is its table. Rows written before the column existed read as `working`.
+- **Reflection**: `workout.feel` and `workout.reflection_note` hold how the workout felt (rough, ok, good,
+  great) and a note for next time, both picked on the summary (`SessionReflection`). They are the one part of
+  a workout that `Session.toJSON()` leaves out, so the feed, share links and the workout worker never carry
+  them, and a phone on an older build keeps reading every workout it is sent. An empty reflection is stored
+  as nulls.
 - **The exercise blueprint** stays a JSON column on `workout_exercise`, and `workout.blueprint_version`
   records the `SessionBlueprintJSON` version it was written at. It is migrated on read by
   `sessionBlueprintMigrations`. A cardio set's own blueprint copy is JSON too; no chain step has ever

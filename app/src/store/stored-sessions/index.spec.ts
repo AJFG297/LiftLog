@@ -8,6 +8,7 @@ import {
   selectSession,
   selectSessions,
   selectPreviousComparableSession,
+  selectSessionsBefore,
   selectRecentlyCompletedExercises,
   selectMuscles,
   selectExerciseById,
@@ -572,6 +573,16 @@ describe('storedSessions selectors', () => {
 
     expect(selectPreviousComparableSession(state, newer)).toBe(older);
     expect(selectPreviousComparableSession(state, undefined)).toBeUndefined();
+  });
+
+  it('selectSessionsBefore returns only the sessions before the given one', () => {
+    const older = squat(LocalDate.of(2026, 4, 1), OffsetDateTime.of(2026, 4, 1, 10, 0, 0, 0, ZoneOffset.UTC));
+    const middle = squat(LocalDate.of(2026, 4, 8), OffsetDateTime.of(2026, 4, 8, 10, 0, 0, 0, ZoneOffset.UTC));
+    const newer = squat(LocalDate.of(2026, 4, 15), OffsetDateTime.of(2026, 4, 15, 10, 0, 0, 0, ZoneOffset.UTC));
+    const state = { storedSessions: reduce(upsertStoredSessions([older, middle, newer])) };
+
+    expect(selectSessionsBefore(state, middle)).toEqual([older]);
+    expect(selectSessionsBefore(state, undefined)).toEqual([]);
   });
 
   it('selectRecentlyCompletedExercises returns recorded exercises for a blueprint', () => {

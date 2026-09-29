@@ -15,7 +15,8 @@ screen isn't linked from the app. Its theme controls change the real theme setti
 | `Card` | `card.tsx` | A white (dark: raised) surface with a hairline border. `onPress` makes the whole card a button. |
 | `Chip` | `chip.tsx` | A toggle: filters, rest presets, RPE. `numeric` sets a number-only label in Geist Mono; `style={{ flexGrow: 1 }}` shares a row; `contentStyle` styles the drawn chip. |
 | `SegmentedControl` | `segmented-control.tsx` | Two to four mutually exclusive options in one row ("Last 7 days / Last 30 days"). |
-| `RoundIconButton` | `round-icon-button.tsx` | A round, outlined icon button, `regular` (44pt) or `compact` (36pt). The label is required. |
+| `ActionButton` | `action-button.tsx` | The full-width button that ends a sheet or a page: `primary` is the accent fill ("Update routine", "Done"), `secondary` an outlined card ("Keep the routine as it was"). Disabled, it greys out. |
+| `RoundIconButton` | `round-icon-button.tsx` | A round, outlined icon button, `regular` (44pt) or `compact` (36pt). The label is required. A visible `label` stretches it into a pill. |
 | `ListRow` | `list-row.tsx` | Leading slot, title, subtitle, trailing slot. `onPress` makes the row a button. |
 | `SetBadge` | `set-badge/` | The circle at the start of a set row: the working set's number, or W, D, M or F. |
 | `ProgressBar` | `progress-bar.tsx` | Accent on a track, from 0 to 1. `tone="inverse"` draws it on an `inverse` slab. |
@@ -72,6 +73,10 @@ new one. `toastTimeoutMs` in the same file decides how long a toast stays up.
 
 Native sheets and modals are presented above the root view, so a toast shown while one is open is hidden
 behind it. Close the sheet first, then show the toast, as the dev sheet does.
+
+A toast sits just above the tab bar, where a screen's own bottom button would be. A screen with one, like
+the workout summary and its Done, shows the message in its content instead, so nothing covers the button:
+the summary's `RoutineUpdatedBanner` (`presentation/summary/`) is the update-routine sheet's toast there.
 
 The older Paper snackbar (`SnackbarProvider`, `setCurrentSnackbar`) still serves unconverted screens.
 

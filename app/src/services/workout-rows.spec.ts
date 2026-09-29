@@ -177,5 +177,39 @@ describe('workout rows', () => {
       const recorded = session.withCycledExerciseReps(0, 0, OffsetDateTime.parse('2026-04-10T09:30:00Z'));
       expect(samePersistedContent(session, recorded)).toBe(false);
     });
+    it('notices a feel rating', () => {
+      const session = makeSession([makeWeightedBlueprint()]);
+      const rated = session.with({ reflection: { feel: 'good', note: '' } });
+      expect(samePersistedContent(session, rated)).toBe(false);
+    });
+  });
+
+  describe('reflection', () => {
+    it('round-trips how a workout felt and its note, outside SessionJSON', () => {
+      const session = makeSession([makeWeightedBlueprint()]).with({
+        reflection: { feel: 'great', note: 'Go up on bench' },
+      });
+
+      const rows = toWorkoutRows(session);
+
+      expect(rows.workout).toMatchObject({ feel: 'great', reflectionNote: 'Go up on bench' });
+      expect(fromWorkoutRows(rows).reflection).toEqual({ feel: 'great', note: 'Go up on bench' });
+      expect(session.toJSON()).not.toHaveProperty('reflection');
+    });
+
+    it('stores an empty reflection as none', () => {
+      const session = makeSession([makeWeightedBlueprint()]).with({ reflection: { feel: undefined, note: '  ' } });
+
+      expect(toWorkoutRows(session).workout).toMatchObject({ feel: null, reflectionNote: null });
+      expect(fromWorkoutRows(toWorkoutRows(session)).reflection).toBeUndefined();
+    });
+
+    it('drops a feel it does not know', () => {
+      const rows = toWorkoutRows(makeSession([makeWeightedBlueprint()]));
+
+      const restored = fromWorkoutRows({ ...rows, workout: { ...rows.workout, feel: 'meh' as 'good' } });
+
+      expect(restored.reflection).toBeUndefined();
+    });
   });
 });

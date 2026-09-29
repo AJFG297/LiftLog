@@ -2,7 +2,7 @@ import { applySessionBlueprintDiff, PlanDiff } from '@/models/blueprint-diff';
 import { ProgramBlueprint, SessionBlueprint } from '@/models/blueprint-models';
 import { RemoteData } from '@/models/remote';
 import { EmptySession, Session } from '@/models/session-models';
-import { createAction, createSelector, createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { createAction, createSelector, createSlice, isDraft, original, PayloadAction } from '@reduxjs/toolkit';
 import Enumerable from 'linq';
 
 /** Addresses one workout of one plan, which is how the workout editor screens identify what they edit. */
@@ -23,6 +23,24 @@ function updateProgramIn(
   state.savedPrograms[programId] = update(program);
 }
 
+/** What it takes to put a routine update from the sheet back and ask again. */
+export interface RoutineUpdateUndo {
+  programId: string;
+  /** The whole program as it was before the update. */
+  before: ProgramBlueprint;
+  /** The diff the sheet showed and the rows left unticked, so it reopens as the lifter left it. */
+  planDiff: PlanDiff;
+  unticked: string[];
+  /** The sheet was opened over the workout summary, which shows the receipt inline. */
+  overSummary: boolean;
+}
+
+/** The confirmation the workout summary shows, with Undo, after its sheet updated a routine. */
+export interface RoutineUpdateReceipt {
+  message: string;
+  undo: RoutineUpdateUndo | undefined;
+}
+
 interface ProgramState {
   readonly isHydrated: boolean;
   readonly activePlanId: string;
@@ -34,6 +52,9 @@ interface ProgramState {
   readonly pendingImport?: ProgramBlueprint;
   /** How a just-finished session differs from the plan, awaiting the user's decision in /diff-save. */
   readonly pendingPlanDiff?: PlanDiff;
+  /** Rows of `pendingPlanDiff` to show unticked, when the sheet is reopened by an Undo. */
+  readonly pendingPlanDiffUnticked?: string[];
+  readonly routineUpdateReceipt?: RoutineUpdateReceipt;
 }
 
 const initialState: ProgramState = {
@@ -196,6 +217,28 @@ const programSlice = createSlice({
 
     setPendingPlanDiff(state, action: PayloadAction<PlanDiff | undefined>) {
       state.pendingPlanDiff = action.payload;
+      state.pendingPlanDiffUnticked = undefined;
+    },
+
+    reopenPendingPlanDiff(state, action: PayloadAction<{ planDiff: PlanDiff; unticked: string[] }>) {
+      state.pendingPlanDiff = action.payload.planDiff;
+      state.pendingPlanDiffUnticked = action.payload.unticked;
+    },
+
+    /**
+     * Clears the pending diff only if it is still `payload`. A sheet closing after an Undo has already
+     * reopened it must not clear the diff the new sheet shows.
+     */
+    clearPendingPlanDiff(state, action: PayloadAction<PlanDiff>) {
+      const pending = isDraft(state.pendingPlanDiff) ? original(state.pendingPlanDiff) : state.pendingPlanDiff;
+      if (pending === action.payload) {
+        state.pendingPlanDiff = undefined;
+        state.pendingPlanDiffUnticked = undefined;
+      }
+    },
+
+    setRoutineUpdateReceipt(state, action: PayloadAction<RoutineUpdateReceipt | undefined>) {
+      state.routineUpdateReceipt = action.payload;
     },
   },
   selectors: {
@@ -215,6 +258,8 @@ const programSlice = createSlice({
     selectProgram: (state: ProgramState, id: string) => state.savedPrograms[id]!,
     selectPendingImport: (state: ProgramState) => state.pendingImport,
     selectPendingPlanDiff: (state: ProgramState) => state.pendingPlanDiff,
+    selectPendingPlanDiffUnticked: (state: ProgramState) => state.pendingPlanDiffUnticked,
+    selectRoutineUpdateReceipt: (state: ProgramState) => state.routineUpdateReceipt,
     selectProgramSession: (state: ProgramState, location: ProgramSessionLocation) =>
       state.savedPrograms[location.programId]?.sessions[location.sessionIndex],
     selectProgramSessionExercise: (state: ProgramState, location: ProgramSessionLocation & { exerciseIndex: number }) =>
@@ -262,6 +307,9 @@ export const {
   setPendingImport,
   clearPendingImport,
   setPendingPlanDiff,
+  reopenPendingPlanDiff,
+  clearPendingPlanDiff,
+  setRoutineUpdateReceipt,
 } = programSlice.actions;
 
 export const {
@@ -271,6 +319,8 @@ export const {
   selectNewWorkoutName,
   selectPendingImport,
   selectPendingPlanDiff,
+  selectPendingPlanDiffUnticked,
+  selectRoutineUpdateReceipt,
   selectProgramSession,
   selectProgramSessionExercise,
 } = programSlice.selectors;
