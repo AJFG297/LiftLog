@@ -13,6 +13,7 @@ import { useFormatDate } from '@/hooks/useFormatDate';
 import { useOnDismiss } from '@/hooks/useOnDismiss';
 import { fontFamily, numberStyle, spacing, useAppTheme } from '@/hooks/useAppTheme';
 import { formatRepsTarget } from '@/models/blueprint-models';
+import { SharedSession } from '@/models/feed-models';
 import { SESSION_FEELS, SessionFeel, Session } from '@/models/session-models';
 import { shortFormatWeightUnit, Weight, WeightUnit } from '@/models/weight';
 import {
@@ -26,6 +27,7 @@ import {
   volumeVsLast,
 } from '@/models/workout-summary';
 import { useAppSelector, useAppSelectorWithArg } from '@/store';
+import { encryptAndShare } from '@/store/feed';
 import { selectActiveProgram } from '@/store/program';
 import { SessionRecord, sessionRecords } from '@/store/stats/personal-records';
 import {
@@ -139,6 +141,9 @@ export function WorkoutSummary({ sessionId, finished }: WorkoutSummaryProps) {
       }),
     );
 
+  const share = () =>
+    dispatch(encryptAndShare({ item: new SharedSession(session), title: t('workout.shared_item.title') }));
+
   const routineName = session.blueprint.name;
   const routineIndex = program.sessions.findIndex((s) => s.name === routineName);
   const routine = routineIndex >= 0 ? program.sessions[routineIndex] : undefined;
@@ -186,8 +191,16 @@ export function WorkoutSummary({ sessionId, finished }: WorkoutSummaryProps) {
         </View>
       }
     >
-      <View style={{ flexDirection: 'row' }}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
         <RoundIconButton icon="close" accessibilityLabel={t('generic.close.button')} onPress={close} />
+        {finished ? (
+          <RoundIconButton
+            icon="share"
+            label={t('generic.share.button')}
+            accessibilityLabel={t('workout.share_workout.button')}
+            onPress={share}
+          />
+        ) : null}
       </View>
 
       <View style={{ gap: spacing[1], paddingHorizontal: spacing[1] }}>

@@ -16,7 +16,7 @@ screen isn't linked from the app. Its theme controls change the real theme setti
 | `Chip` | `chip.tsx` | A toggle: filters, rest presets, RPE. `numeric` sets a number-only label in Geist Mono; `style={{ flexGrow: 1 }}` shares a row; `contentStyle` styles the drawn chip. |
 | `SegmentedControl` | `segmented-control.tsx` | Two to four mutually exclusive options in one row ("Last 7 days / Last 30 days"). |
 | `ActionButton` | `action-button.tsx` | The full-width button that ends a sheet or a page: `primary` is the accent fill ("Update routine", "Done"), `secondary` an outlined card ("Keep the routine as it was"). Disabled, it greys out. |
-| `RoundIconButton` | `round-icon-button.tsx` | A round, outlined icon button, `regular` (44pt) or `compact` (36pt). The label is required. |
+| `RoundIconButton` | `round-icon-button.tsx` | A round, outlined icon button, `regular` (44pt) or `compact` (36pt). The label is required. A visible `label` stretches it into a pill. |
 | `ListRow` | `list-row.tsx` | Leading slot, title, subtitle, trailing slot. `onPress` makes the row a button. |
 | `SetBadge` | `set-badge/` | The circle at the start of a set row: the working set's number, or W, D, M or F. |
 | `ProgressBar` | `progress-bar.tsx` | Accent on a track, from 0 to 1. |
