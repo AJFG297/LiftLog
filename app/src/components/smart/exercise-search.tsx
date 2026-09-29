@@ -3,7 +3,7 @@ import ExerciseFilterer from '@/components/presentation/workout-editor/exercise-
 import { spacing } from '@/hooks/useAppTheme';
 import { ExerciseDescriptor } from '@/models/exercise-models';
 import { useAppSelector, useAppSelectorWithArg } from '@/store';
-import { setExerciseSearchResult } from '@/store/app';
+import { PickedExercise, setExerciseSearchResult } from '@/store/app';
 import { selectExerciseById, selectExerciseIds, updateExercise } from '@/store/stored-sessions';
 import { uuid } from '@/utils/uuid';
 import { LegendList } from '@legendapp/list';
@@ -29,7 +29,7 @@ export function ExerciseSearch(props: { requestId: string; exerciseName: string 
     [filteredExerciseIds, suggestedNewExercise],
   );
 
-  const onSelect = (exercise: ExerciseDescriptor) => {
+  const onSelect = (exercise: PickedExercise) => {
     dispatch(setExerciseSearchResult({ requestId: props.requestId, exercise }));
     dismiss();
   };
@@ -74,17 +74,19 @@ export function ExerciseSearch(props: { requestId: string; exerciseName: string 
   );
 }
 
-function ExerciseIdSearchListItem(props: { exerciseId: string; onPress: (exercise: ExerciseDescriptor) => void }) {
+function ExerciseIdSearchListItem(props: { exerciseId: string; onPress: (exercise: PickedExercise) => void }) {
   const exercise = useAppSelectorWithArg(selectExerciseById, props.exerciseId);
   if (!exercise) {
     return <List.Item title={'Unknown'} />;
   }
-  return <List.Item title={exercise.name} onPress={() => props.onPress(exercise)} />;
+  return (
+    <List.Item title={exercise.name} onPress={() => props.onPress({ id: props.exerciseId, descriptor: exercise })} />
+  );
 }
 
 function SuggestedExerciseSearchListItem(props: {
   exercise: ExerciseDescriptor;
-  onPress: (exercise: ExerciseDescriptor) => void;
+  onPress: (exercise: PickedExercise) => void;
 }) {
   const dispatch = useDispatch();
   return (
@@ -93,8 +95,9 @@ function SuggestedExerciseSearchListItem(props: {
         icon={'plus'}
         mode="outlined"
         onPress={() => {
-          dispatch(updateExercise({ id: uuid(), exercise: props.exercise }));
-          props.onPress(props.exercise);
+          const id = uuid();
+          dispatch(updateExercise({ id, exercise: props.exercise }));
+          props.onPress({ id, descriptor: props.exercise });
         }}
       >
         Add {props.exercise.name}

@@ -96,6 +96,8 @@ interface ExerciseNameChange extends BaseChange {
   exerciseIndex: number;
   oldValue: string;
   newValue: string;
+  /** A new name is usually a different exercise, swapped in during the workout: the plan takes its id too. */
+  newExerciseId: string;
 }
 
 /** Set count and rep targets are one list, so they change together. */
@@ -439,6 +441,7 @@ function diffWeightedExercises(
       exerciseIndex,
       oldValue: oldEx.name,
       newValue: newEx.name,
+      newExerciseId: newEx.exerciseId,
     });
   }
 
@@ -611,6 +614,7 @@ function diffCardioExercises(
       exerciseIndex,
       oldValue: oldEx.name,
       newValue: newEx.name,
+      newExerciseId: newEx.exerciseId,
     });
   }
 
@@ -938,7 +942,7 @@ export function applySessionBlueprintDiff(original: SessionBlueprint, diff: Sess
 
     for (const change of mod.changes) {
       exercise = match(change)
-        .with({ kind: 'exerciseName' }, (c) => exercise.with({ name: c.newValue }))
+        .with({ kind: 'exerciseName' }, (c) => exercise.with({ name: c.newValue, exerciseId: c.newExerciseId }))
         .with({ kind: 'exercisePlannedSets' }, (c) =>
           exercise instanceof WeightedExerciseBlueprint ? exercise.with({ plannedSets: c.newValue }) : exercise,
         )

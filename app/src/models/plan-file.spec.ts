@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { ProgramBlueprint, WeightedExerciseBlueprint } from '@/models/blueprint-models';
 import { RecordedWeightedExercise } from '@/models/session-models';
 import { parseProgramBlueprintFile, serializeProgramBlueprint } from '@/models/plan-file';
-import type { ProgramBlueprintJSON } from '@/models/storage/versions/latest/blueprint';
+import type { ProgramBlueprintJSON, WeightedExerciseBlueprintJSON } from '@/models/storage/versions/latest/blueprint';
 import type { ProgramBlueprintJSON as InitialProgramBlueprintJSON } from '@/models/storage/versions/initial';
 import type { BigNumberJSON, DurationJSON, LocalDateJSON } from '@/models/storage/versions/libs';
 
@@ -14,13 +14,14 @@ const validBlueprint: ProgramBlueprintJSON = {
   lastEdited: '2024-01-01' as LocalDateJSON,
   sessions: [
     {
-      version: 8,
+      version: 9,
       name: 'Day 1',
       notes: '',
       exercises: [
         {
           type: 'WeightedExerciseBlueprint',
           name: 'Squat',
+          exerciseId: 'Squat',
           plannedSets: [
             { reps: { min: 5, max: 5 }, kind: 'working' },
             { reps: { min: 5, max: 5 }, kind: 'working' },
@@ -54,6 +55,19 @@ describe('plan-file', () => {
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.blueprint.toJSON()).toEqual(validBlueprint);
+    }
+  });
+
+  it('imports a plan file that names its exercises without ids, leaving them to be linked', () => {
+    const [session] = validBlueprint.sessions;
+    const { exerciseId: _, ...exercise } = session!.exercises[0] as WeightedExerciseBlueprintJSON;
+    const namesOnly: ProgramBlueprintJSON = { ...validBlueprint, sessions: [{ ...session!, exercises: [exercise] }] };
+    const parsed = parseProgramBlueprintFile(new TextEncoder().encode(JSON.stringify(namesOnly)));
+    expect(parsed.ok).toBe(true);
+    if (parsed.ok) {
+      const imported = parsed.blueprint.sessions[0]!.exercises[0]!;
+      expect(imported.name).toBe('Squat');
+      expect(imported.isLinked).toBe(false);
     }
   });
 

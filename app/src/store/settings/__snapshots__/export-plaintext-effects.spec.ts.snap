@@ -34,6 +34,7 @@ exports[`export-plaintext-effects > addExportPlaintextEffects - JSON > JSON outp
     "recordedExercises": [
       {
         "blueprint": {
+          "exerciseId": "c6660c24-caf0-5fe3-aa61-1de06802a7c2",
           "link": "",
           "name": "Bench Press",
           "notes": "",
@@ -148,6 +149,7 @@ exports[`export-plaintext-effects > addExportPlaintextEffects - JSON > JSON outp
     "recordedExercises": [
       {
         "blueprint": {
+          "exerciseId": "7653527a-1236-54e8-ad09-b24f7285d32f",
           "link": "",
           "name": "Squat",
           "notes": "",

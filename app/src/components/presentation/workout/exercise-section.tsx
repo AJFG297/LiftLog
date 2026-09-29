@@ -13,6 +13,7 @@ import RecordedExerciseNotesEditor from '@/components/presentation/workout/recor
 import IconButton from '@/components/presentation/foundation/icon-button';
 import { useRouter } from 'expo-router';
 import { getExerciseHistoryHref } from '@/components/smart/exercise-history';
+import { getExerciseStatsHref } from '@/components/smart/exercise-stats-href';
 import { Updater } from '@/utils/types';
 
 interface ExerciseSectionProps<T extends RecordedExercise> {
@@ -93,10 +94,7 @@ export default function ExerciseSection<T extends RecordedExercise>(props: Exerc
                   icon: 'analytics',
                   systemImage: 'chart.bar',
                   onPress: () =>
-                    push(
-                      `/stats/expanded-weighted-exercise?exerciseName=${encodeURIComponent(recordedExercise.blueprint.name)}`,
-                      { withAnchor: true },
-                    ),
+                    push(getExerciseStatsHref(recordedExercise.blueprint.exerciseId), { withAnchor: true }),
                 } satisfies MenuItem,
               ]
             : []),

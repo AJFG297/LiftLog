@@ -1,5 +1,5 @@
 import { AesKey } from '@/models/encryption-models';
-import { fromSharedItemJSON } from '@/models/feed-models';
+import { fromSharedItemJSON, SharedItem, SharedSession } from '@/models/feed-models';
 import { RemoteData } from '@/models/remote';
 import { AnyVersionSharedItemJSON } from '@/models/storage/versions/any';
 import { sharedItemMigrations } from '@/models/storage/versions/migrations';
@@ -7,6 +7,8 @@ import { ApiErrorType } from '@/services/api-error';
 import { fromJsonBytes, toJsonBytes } from '@/services/encryption-service';
 import { encryptAndShare, feedApiError, fetchSharedItem, setSharedItem } from '@/store/feed';
 import { AddEffectFn } from '@/store/store';
+import { Logger } from '@/services/logger';
+import { createExerciseResolver } from '@/store/stored-sessions/exercise-resolver';
 import { toUrlSafeHexString } from '@/utils/to-url-safe-hex-string';
 
 export function addSharedItemEffects(addEffect: AddEffectFn) {
@@ -72,7 +74,12 @@ export function addSharedItemEffects(addEffect: AddEffectFn) {
     },
   );
 
-  addEffect(fetchSharedItem, async (a, { dispatch, extra: { feedApiService, encryptionService }, onFail }) => {
+  addEffect(fetchSharedItem, async (a, api) => {
+    const {
+      dispatch,
+      extra: { feedApiService, encryptionService, logger },
+      onFail,
+    } = api;
     onFail(() => {
       dispatch(setSharedItem(RemoteData.error('Could not read shared item. Please update LiftLog.')));
     });
@@ -93,8 +100,24 @@ export function addSharedItemEffects(addEffect: AddEffectFn) {
     const sharedItemDao = fromJsonBytes<AnyVersionSharedItemJSON>(decryptedBytes);
     const sharedItem = fromSharedItemJSON(sharedItemMigrations.migrate(sharedItemDao));
 
-    dispatch(setSharedItem(RemoteData.success(sharedItem)));
+    dispatch(setSharedItem(RemoteData.success(await linkToOwnExercises(sharedItem, api, logger))));
   });
+}
+
+/**
+ * A friend's ids for their own exercises mean nothing here, so a shared item is linked to this user's
+ * exercises by name before it can be saved or started. Nothing is added to the user's exercises just
+ * for looking: unmatched names keep the stub id they'd get, and saving the plan adds them.
+ */
+async function linkToOwnExercises(
+  item: SharedItem,
+  store: Parameters<typeof createExerciseResolver>[0],
+  logger: Logger,
+): Promise<SharedItem> {
+  const resolver = await createExerciseResolver(store, logger);
+  return item instanceof SharedSession
+    ? item.with({ session: resolver.linkSession(item.session) })
+    : item.with({ programBlueprint: resolver.linkProgram(item.programBlueprint) });
 }
 
 function getShareUrl(sharedItemId: string, aesKey: AesKey) {

@@ -1,5 +1,5 @@
 import { PotentialSet, RecordedCardioExercise, RecordedWeightedExercise, Session } from '@/models/session-models';
-import { ExerciseBlueprint, MovementKey } from '@/models/blueprint-models';
+import { ExerciseBlueprint, ExerciseId, MovementKey } from '@/models/blueprint-models';
 import { LocalDateRange } from '@/models/time-models';
 import { Weight, WeightUnit } from '@/models/weight';
 import {
@@ -112,9 +112,11 @@ export function calculateStats(
     });
   }
 
-  // --- Exercise stats grouped by normalized exercise name ---
+  // --- Exercise stats grouped by movement ---
   interface ExerciseStatAcc {
     exerciseName: string;
+    exerciseId: ExerciseId;
+    movementKey: MovementKey;
     primary: StatAxis;
     maxWeightStatistics: TimeTrackedStatistic<Weight>[];
     maxRepsStatistics: TimeTrackedStatistic<number>[];
@@ -133,6 +135,8 @@ export function calculateStats(
       if (!exerciseStatsMap.has(key)) {
         exerciseStatsMap.set(key, {
           exerciseName: blueprint.name,
+          exerciseId: blueprint.exerciseId,
+          movementKey: key,
           primary: primaryAxisFor(blueprint),
           maxWeightStatistics: [],
           maxRepsStatistics: [],
@@ -202,6 +206,8 @@ export function calculateStats(
       const max1RMPerSessionStatistics = toStatisticOverTime(ex.max1RMStatistics, loadOps);
       return {
         exerciseName: ex.exerciseName,
+        exerciseId: ex.exerciseId,
+        movementKey: ex.movementKey,
         setsPerWeek:
           Object.values(ex.repsStatistics.breakdown).reduce((accum, entry) => accum + entry.numberOfSets, 0) /
           totalWeeks,

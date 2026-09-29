@@ -1,5 +1,11 @@
 import { useMountEffect } from '@/hooks/useMountEffect';
-import { ProgressionRule, SessionBlueprint, WeightedExerciseBlueprint } from '@/models/blueprint-models';
+import { getExerciseStatsHref } from '@/components/smart/exercise-stats-href';
+import {
+  ProgressionRule,
+  SessionBlueprint,
+  stubExerciseId,
+  WeightedExerciseBlueprint,
+} from '@/models/blueprint-models';
 import { Session, RecordedWeightedExercise, RecordedSet, RestTimer } from '@/models/session-models';
 import { Weight } from '@/models/weight';
 import { putStoredSession, setActiveSessionId } from '@/store/stored-sessions';
@@ -269,7 +275,7 @@ function PrepareStatsPage() {
 function PrepareExerciseStatsPage() {
   const dispatch = useDispatch();
   useMountEffect(() => buildStatsSessionData(dispatch));
-  return <Redirect href={'/stats/expanded-weighted-exercise?exerciseName=Bench%20Press'} />;
+  return <Redirect href={getExerciseStatsHref(stubExerciseId('Bench Press'))} />;
 }
 
 function PrepareHomePage() {

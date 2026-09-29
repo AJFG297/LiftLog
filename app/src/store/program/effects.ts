@@ -5,6 +5,7 @@ import { AddEffectFn, RootState } from '@/store/store';
 import {
   fetchUpcomingSessions,
   initializeProgramStateSlice,
+  linkPlanExercises,
   savePlan,
   selectActiveProgram,
   setActivePlan,
@@ -15,7 +16,8 @@ import {
 import { uuid } from '@/utils/uuid';
 import { AsyncStream } from 'data-async-iterators';
 import { Logger } from '@/services/logger';
-import { selectLatestExercises } from '../stored-sessions';
+import { selectLatestExercises, upsertExercises } from '../stored-sessions';
+import { createExerciseResolver } from '@/store/stored-sessions/exercise-resolver';
 import { programsSchema } from '@/db/schema';
 import { writeAtomically } from '@/db/helpers';
 import { toLocalDateJSON } from '@/models/storage/versions/latest';
@@ -58,6 +60,7 @@ export function applyProgramEffects(addEffect: AddEffectFn) {
             continue;
           }
           dispatch(savePlan({ programId: id, programBlueprint: program }));
+          dispatch(linkPlanExercises({ programId: id }));
         }
         await persistPrograms(getState(), db, logger, throwIfCancelled);
         await keyValueStore.setItem(builtInProgramsStorageKey, 'true');
@@ -73,6 +76,22 @@ export function applyProgramEffects(addEffect: AddEffectFn) {
       logger.info(`initializeProgramStateSlice effect took ${(end - start).toFixed(2)} ms`);
     },
   );
+
+  addEffect(linkPlanExercises, async ({ payload: { programId } }, api) => {
+    const resolver = await createExerciseResolver(api, api.extra.logger);
+    // Read after the wait, so an edit made meanwhile is linked rather than overwritten.
+    const program = api.getState().program.savedPrograms[programId];
+    if (!program) {
+      return;
+    }
+    const linked = resolver.linkProgram(program);
+    if (Object.keys(resolver.stubs).length) {
+      api.dispatch(upsertExercises(resolver.stubs));
+    }
+    if (!linked.equals(program)) {
+      api.dispatch(savePlan({ programId, programBlueprint: linked }));
+    }
+  });
 
   // Persist after changes
   addEffect(

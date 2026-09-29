@@ -327,6 +327,12 @@ export const {
 
 export const fetchUpcomingSessions = createAction('fetchUpcomingSessions');
 export const initializeProgramStateSlice = createAction('initializeProgramStateSlice');
+/**
+ * Links a saved plan that came from outside - a plan file, the AI planner, a share, the built-in plans -
+ * to the user's exercises by name, adding any it needs. Dispatch it after `savePlan`. See
+ * `ExerciseResolver`.
+ */
+export const linkPlanExercises = createAction<{ programId: string }>('linkPlanExercises');
 
 export const exportPlan = createAction<{ programId: string }>('exportPlan');
 export const importPlanFromPicker = createAction('importPlanFromPicker');

@@ -1,11 +1,11 @@
 import Button from '@/components/presentation/foundation/button';
 import { useExerciseSearch } from '@/hooks/useExerciseSearch';
 import { ExerciseBlueprint } from '@/models/blueprint-models';
-import { ExerciseDescriptor } from '@/models/exercise-models';
+import { PickedExercise } from '@/store/app';
 
 interface ExerciseSearcherProps {
   currentExercise: ExerciseBlueprint;
-  onSelectExercise: (e: ExerciseDescriptor) => void;
+  onSelectExercise: (e: PickedExercise) => void;
 }
 
 export function ExerciseSearcher({ currentExercise, onSelectExercise }: ExerciseSearcherProps) {

@@ -4,6 +4,7 @@ import { AddEffectFn } from '@/store/store';
 import { upsertSavedPlans } from '@/store/program';
 import { beginFeedImport, importBackupData, importData, importDataSql } from '@/store/settings';
 import { upsertExercises, upsertStoredSessions } from '@/store/stored-sessions';
+import { createExerciseResolver } from '@/store/stored-sessions/exercise-resolver';
 import { streamToUint8Array, writeInChunks } from '@/utils/stream';
 import { sleep } from '@/utils/sleep';
 import { ProgramBlueprint } from '@/models/blueprint-models';
@@ -64,13 +65,22 @@ export function addImportBackupEffects(addEffect: AddEffectFn) {
     }
   });
 
-  addEffect(importBackupData, async ({ payload }, { dispatch }) => {
+  addEffect(importBackupData, async ({ payload }, api) => {
+    const { dispatch } = api;
     const { workouts, programs, exercises, feed, successMessage } = payload;
-    dispatch(upsertStoredSessions(workouts));
-    dispatch(upsertSavedPlans(programs));
-    if (exercises) {
-      dispatch(upsertExercises(exercises));
+    // A backup's workouts point at the backup's own exercises; a CSV and anything written before exercise
+    // ids only has names. Either way, link them to the exercises they will live alongside.
+    const resolver = await createExerciseResolver(api, api.extra.logger, exercises);
+    const linkedWorkouts = workouts.map((x) => resolver.linkSession(x));
+    const linkedPrograms = Object.fromEntries(
+      Object.entries(programs).map(([id, program]) => [id, resolver.linkProgram(program)]),
+    );
+    const newExercises = { ...exercises, ...resolver.stubs };
+    if (Object.keys(newExercises).length) {
+      dispatch(upsertExercises(newExercises));
     }
+    dispatch(upsertStoredSessions(linkedWorkouts));
+    dispatch(upsertSavedPlans(linkedPrograms));
     dispatch(
       showSnackbar({
         text: successMessage,

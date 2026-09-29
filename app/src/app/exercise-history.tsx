@@ -1,11 +1,12 @@
 import { ExerciseHistory } from '@/components/smart/exercise-history';
-import { ExerciseBlueprint, movementKeyFor } from '@/models/blueprint-models';
+import { ExerciseBlueprint } from '@/models/blueprint-models';
 import { useLocalSearchParams } from 'expo-router';
 
 export default function ExerciseHistoryPage() {
-  const { name, type } = useLocalSearchParams<{
-    name: string;
+  const { exerciseId, type, name } = useLocalSearchParams<{
+    exerciseId: string;
     type: ExerciseBlueprint['type'];
+    name: string;
   }>();
-  return <ExerciseHistory exerciseName={name} movementKey={movementKeyFor(name, type)} />;
+  return <ExerciseHistory exerciseId={exerciseId} type={type} exerciseName={name} />;
 }

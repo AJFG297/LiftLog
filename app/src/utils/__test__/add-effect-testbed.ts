@@ -100,6 +100,13 @@ export function createAddEffectTestBed(options?: {
       onFail: (cb: () => void) => failureHandlers.push(cb),
       cancelActiveListeners: vi.fn(),
       throwIfCancelled: vi.fn(),
+      // Nothing dispatches in the background here, so a condition that doesn't hold yet never will.
+      condition: async (predicate: (action: UnknownAction, state: RootState) => boolean) => {
+        if (!predicate({ type: '@@testbed/condition' }, state as RootState)) {
+          throw new Error('The effect waits on a condition the test bed state never meets');
+        }
+        return true;
+      },
     };
 
     for (const entry of matching) {

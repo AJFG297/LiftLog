@@ -51,20 +51,23 @@ export function createStore(db: ExpoSQLiteDatabase, expoDb: SQLiteDatabase) {
 
   const startAppListening = listenerMiddleware.startListening;
 
-  type EffectFn<T> = (
-    action: T,
-    listenerApi: {
-      extra: Services;
-      signal: AbortSignal;
-      onFail: (cb: () => void) => void;
-      cancelActiveListeners: () => void;
-      throwIfCancelled: () => void;
-      dispatch: AppDispatch;
-      getState: () => RootState;
-      stateAfterReduce: RootState;
-      stateBeforeReduce: RootState;
-    },
-  ) => void | Promise<void>;
+  type EffectFn<T> = (action: T, listenerApi: EffectApi) => void | Promise<void>;
+  type EffectApi = {
+    extra: Services;
+    signal: AbortSignal;
+    onFail: (cb: () => void) => void;
+    cancelActiveListeners: () => void;
+    throwIfCancelled: () => void;
+    dispatch: AppDispatch;
+    getState: () => RootState;
+    stateAfterReduce: RootState;
+    stateBeforeReduce: RootState;
+    /** Resolves once `predicate` holds for a dispatched action's resulting state. */
+    condition: (
+      predicate: (action: UnknownAction, currentState: RootState) => boolean,
+      timeout?: number,
+    ) => Promise<boolean>;
+  };
 
   function addEffect(allActions: undefined, effect: EffectFn<UnknownAction>): void;
   function addEffect<TAction extends { type: string }>(action: TAction[], effect: EffectFn<UnknownAction>): void;
@@ -89,6 +92,7 @@ export function createStore(db: ExpoSQLiteDatabase, expoDb: SQLiteDatabase) {
             // oxlint-disable-next-line typescript/no-unsafe-assignment
             dispatch: listenerApi.dispatch as any,
             getState: listenerApi.getState as () => RootState,
+            condition: listenerApi.condition as EffectApi['condition'],
             onFail: (cb) => failureHandlers.push(cb),
             stateBeforeReduce,
             stateAfterReduce,

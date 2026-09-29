@@ -6,8 +6,8 @@ A `.liftlogplan` file is a single JSON object. `ProgramBlueprint.json` in this d
 
 Read these first. They are the reason most generated plans fail to import.
 
-1. **Assume every field is required.** Only four are optional - `ceiling` and `onCeiling` on a progression rule, `restBetweenSets` on a cardio set, and `load` on a warm-up set. Everything else must be present, including `notes` and `link` when empty - use `""`.
-2. **`"version": 3`** goes on the root object, and **`"version": 8`** on every session. These are not the plan's own version number; they are the format's, and they differ from each other.
+1. **Assume every field is required.** Only five are optional - `ceiling` and `onCeiling` on a progression rule, `restBetweenSets` on a cardio set, `load` on a warm-up set, and `exerciseId` on an exercise. Everything else must be present, including `notes` and `link` when empty - use `""`. Leave `exerciseId` out: the app links each exercise to the user's own by its `name`.
+2. **`"version": 3`** goes on the root object, and **`"version": 9`** on every session. These are not the plan's own version number; they are the format's, and they differ from each other.
 3. **Weights and steps are strings, not numbers.** `"step": "2.5"`, never `"step": 2.5`. Rep counts (`min`, `max`) are the exception: those are plain integers.
 4. **Rests and times are ISO-8601 durations.** `"PT3M"` is three minutes, `"PT90S"` is ninety seconds, `"PT1M30S"` also works. A bare `"90"` or `90` is invalid.
 5. **A weighted exercise has no set count.** One entry in `plannedSets` _is_ one set, so three sets of five means three identical entries. Cardio exercises use `sets`, an array, one entry per interval.
@@ -35,7 +35,7 @@ Read these first. They are the reason most generated plans fail to import.
 
 ```json
 {
-  "version": 8,
+  "version": 9,
   "name": "Push",
   "notes": "Chest, shoulders and triceps.",
   "exercises": [ ... ]
@@ -44,7 +44,7 @@ Read these first. They are the reason most generated plans fail to import.
 
 | Field       | Type   | Notes                                              |
 | ----------- | ------ | -------------------------------------------------- |
-| `version`   | number | Always `8`. Not `3` - a session versions on its own. |
+| `version`   | number | Always `9`. Not `3` - a session versions on its own. |
 | `name`      | string | e.g. `"Push"`, `"Upper A"`, `"Leg Day"`.           |
 | `notes`     | string | `""` if there's nothing to say.                    |
 | `exercises` | array  | Weighted and cardio exercises can be mixed freely. |

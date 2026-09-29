@@ -8,7 +8,7 @@ import { spacing } from '@/hooks/useAppTheme';
 import { usePreferredWeightUnit } from '@/hooks/usePreferredWeightUnit';
 import { Session } from '@/models/session-models';
 import { useAppSelector } from '@/store';
-import { clearPendingImport, savePlan, selectPendingImport } from '@/store/program';
+import { clearPendingImport, linkPlanExercises, savePlan, selectPendingImport } from '@/store/program';
 import { uuid } from '@/utils/uuid';
 import { useTranslate } from '@tolgee/react';
 import { Stack, useRouter } from 'expo-router';
@@ -32,6 +32,7 @@ export default function ImportPlan() {
     }
     const programId = uuid();
     dispatch(savePlan({ programId, programBlueprint: pending }));
+    dispatch(linkPlanExercises({ programId }));
     replace(`/settings/program-list?focusprogramId=${programId}`);
   };
 

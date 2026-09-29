@@ -5,14 +5,16 @@ import { ExerciseShortcut, FocusExerciseCard } from '@/components/presentation/l
 import { targetLabel, targetReasonText } from '@/components/presentation/live-workout/target-text';
 import RecordedExerciseNotesEditor from '@/components/presentation/workout/recorded-exercise-notes-editor';
 import { getExerciseHistoryHref } from '@/components/smart/exercise-history';
+import { getExerciseStatsHref } from '@/components/smart/exercise-stats-href';
 import { RecordedExerciseView } from '@/components/smart/recorded-exercise-view';
 import { getSessionExerciseEditorHref } from '@/components/smart/session-exercise-editor';
 import { useExerciseSearch } from '@/hooks/useExerciseSearch';
 import { usesBodyweight, useTodaysTarget } from '@/hooks/useTodaysTarget';
-import { ExerciseBlueprint, normalizeExerciseName, WeightedExerciseBlueprint } from '@/models/blueprint-models';
+import { ExerciseBlueprint, WeightedExerciseBlueprint } from '@/models/blueprint-models';
 import { RecordedExercise, RecordedWeightedExercise, Session } from '@/models/session-models';
 import { useAppSelector } from '@/store';
-import { selectEquipmentByExerciseName } from '@/store/stored-sessions';
+import { PickedExercise } from '@/store/app';
+import { selectExercises } from '@/store/stored-sessions';
 import { translateExerciseMeta } from '@/utils/exercise-meta';
 import { formatTimeSpan } from '@/utils/format-time-span';
 import { openUrl } from '@/utils/open-url';
@@ -35,7 +37,7 @@ export function LiveExerciseCard(props: LiveExerciseCardProps) {
   const { t } = useTranslate();
   const { push } = useRouter();
   const useImperialUnits = useAppSelector((x) => x.settings.useImperialUnits);
-  const equipmentByName = useAppSelector(selectEquipmentByExerciseName);
+  const exercises = useAppSelector(selectExercises);
   const targetFor = useTodaysTarget(session);
   const [notesOpen, setNotesOpen] = useState(false);
   const [removeOpen, setRemoveOpen] = useState(false);
@@ -44,9 +46,7 @@ export function LiveExerciseCard(props: LiveExerciseCardProps) {
   const openSearch = useExerciseSearch((picked) =>
     updateSession((s) => {
       const current = s.recordedExercises[exerciseIndex];
-      return current
-        ? s.withEditedExercise(exerciseIndex, renamed(current.blueprint, picked.name), useImperialUnits)
-        : s;
+      return current ? s.withEditedExercise(exerciseIndex, swapped(current.blueprint, picked), useImperialUnits) : s;
     }),
   );
 
@@ -57,7 +57,7 @@ export function LiveExerciseCard(props: LiveExerciseCardProps) {
   const isWeighted = exercise instanceof RecordedWeightedExercise;
   const openEditor = () => push(getSessionExerciseEditorHref(session.id, exerciseIndex));
 
-  const equipment = equipmentByName[normalizeExerciseName(blueprint.name)];
+  const equipment = exercises[blueprint.exerciseId]?.equipment;
   const meta = [
     equipment ? capitalise(translateExerciseMeta(t, 'equipment', equipment)) : undefined,
     exercise instanceof RecordedWeightedExercise
@@ -102,7 +102,7 @@ export function LiveExerciseCard(props: LiveExerciseCardProps) {
             icon: 'analytics',
             systemImage: 'chart.bar',
             onPress: () =>
-              push(`/stats/expanded-weighted-exercise?exerciseName=${encodeURIComponent(blueprint.name)}`, {
+              push(getExerciseStatsHref(blueprint.exerciseId), {
                 withAnchor: true,
               }),
           } satisfies MenuItem,
@@ -198,8 +198,10 @@ export function LiveExerciseCard(props: LiveExerciseCardProps) {
   );
 }
 
-function renamed(blueprint: ExerciseBlueprint, name: string): ExerciseBlueprint {
-  return blueprint instanceof WeightedExerciseBlueprint ? blueprint.with({ name }) : blueprint.with({ name });
+/** The same plan for a different exercise: the picked one's name and id, so its history follows it. */
+function swapped(blueprint: ExerciseBlueprint, picked: PickedExercise): ExerciseBlueprint {
+  const exercise = { name: picked.descriptor.name, exerciseId: picked.id };
+  return blueprint instanceof WeightedExerciseBlueprint ? blueprint.with(exercise) : blueprint.with(exercise);
 }
 
 function withNotes(exercise: RecordedExercise, notes: string): RecordedExercise {

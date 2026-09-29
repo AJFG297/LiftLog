@@ -1,6 +1,5 @@
-import { ExerciseDescriptor } from '@/models/exercise-models';
 import { useAppSelector } from '@/store';
-import { clearExerciseSearchResult } from '@/store/app';
+import { clearExerciseSearchResult, PickedExercise } from '@/store/app';
 import { uuid } from '@/utils/uuid';
 import { useRouter } from 'expo-router';
 import { useEffect, useRef } from 'react';
@@ -11,7 +10,7 @@ import { useDispatch } from 'react-redux';
  * Opens the exercise search route and hands the picked exercise to `onSelect`. The search is its own
  * route, so its result comes back through the store, tagged with this caller's request id.
  */
-export function useExerciseSearch(onSelect: (exercise: ExerciseDescriptor) => void) {
+export function useExerciseSearch(onSelect: (exercise: PickedExercise) => void) {
   const { push } = useRouter();
   const dispatch = useDispatch();
   const requestId = useRef(uuid()).current;

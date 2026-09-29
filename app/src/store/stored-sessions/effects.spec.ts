@@ -34,6 +34,7 @@ import {
   tick,
 } from '@/models/session-models/__test__/helpers';
 import type { RootState } from '@/store/store';
+import { stubDescriptor } from '@/models/exercise-resolver';
 
 async function createTestDb(): Promise<ExpoSQLiteDatabase> {
   const expoDb = await openDatabaseAsync(':memory:');
@@ -244,6 +245,33 @@ describe('stored-sessions effects', () => {
       expect(testBed.getDispatchedAction(addUnpublishedSessionId).payload).toBe(session.id);
       expect(testBed.getDispatchedAction(setStatsIsDirty).payload).toBe(true);
       expect(testBed.getDispatchedAction(setActiveSessionId).payload).toBeUndefined();
+    });
+
+    it('adds the stub exercises it logged to the exercise list, so they can be renamed', async () => {
+      const placeholder = makeWeightedBlueprint({ name: 'New Exercise' });
+      const known = makeWeightedBlueprint({ name: 'Squat', exerciseId: 'user-1' });
+      const untouched = makeWeightedBlueprint({ name: 'Skipped' });
+      const logged = (blueprint: typeof placeholder) =>
+        new RecordedWeightedExercise(blueprint, [filledPotentialSet(10, tick())], undefined);
+      const session = makeSession([placeholder, known, untouched])
+        .withExercise(0, logged(placeholder))
+        .withExercise(1, logged(known));
+      const testBed = bed({
+        state: {
+          storedSessions: {
+            sessions: { [session.id]: session },
+            activeSessionId: session.id,
+            savedExercises: { 'user-1': { ...stubDescriptor('Squat') } },
+            builtInExercises: {},
+          },
+        } as unknown as Partial<RootState>,
+      });
+
+      await testBed.dispatchHandled(sessionFinished(session.id));
+
+      expect(testBed.getDispatchedAction(upsertExercises).payload).toEqual({
+        [placeholder.exerciseId]: stubDescriptor('New Exercise'),
+      });
     });
 
     it('drops an RPE left on a set that was never logged, keeping logged ones', async () => {

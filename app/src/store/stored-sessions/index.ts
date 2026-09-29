@@ -1,5 +1,5 @@
 import { RecordedExercise, Session } from '@/models/session-models';
-import { MovementKey, normalizeExerciseName, ProgressionKey } from '@/models/blueprint-models';
+import { MovementKey, ProgressionKey } from '@/models/blueprint-models';
 import { LocalDate, OffsetDateTime, YearMonth, ZoneId } from '@js-joda/core';
 import { createAction, createSelector, createSlice, PayloadAction, WritableDraft } from '@reduxjs/toolkit';
 import { shallowEqual } from 'react-redux';
@@ -439,18 +439,6 @@ export const selectMuscles = createSelector([selectExercises], (exercises) =>
 );
 
 export const selectExerciseIds = createSelector([selectExercises], (exercises) => Object.keys(exercises));
-
-/**
- * The catalog's equipment for each exercise that names one, keyed by normalised exercise name: a
- * workout's exercises refer to the catalog only by name.
- */
-export const selectEquipmentByExerciseName = createSelector([selectExercises], (exercises) =>
-  Object.fromEntries(
-    Object.values(exercises).flatMap((exercise) =>
-      exercise.equipment ? [[normalizeExerciseName(exercise.name), exercise.equipment] as const] : [],
-    ),
-  ),
-);
 
 export const storedSessionsReducer = storedSessionsSlice.reducer;
 

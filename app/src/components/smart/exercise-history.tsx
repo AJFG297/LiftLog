@@ -1,19 +1,29 @@
 import { SurfaceText } from '@/components/presentation/foundation/surface-text';
 import { ExerciseHistoryList } from '@/components/presentation/workout/exercise-history-list';
 import { spacing } from '@/hooks/useAppTheme';
-import { ExerciseBlueprint, MovementKey } from '@/models/blueprint-models';
+import { ExerciseBlueprint, ExerciseId, movementKeyFor } from '@/models/blueprint-models';
 import { useAppSelectorWithArg } from '@/store';
-import { selectRecentlyCompletedExercises } from '@/store/stored-sessions';
+import { selectExerciseById, selectRecentlyCompletedExercises } from '@/store/stored-sessions';
 import { Href } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+/** By id, so the sheet shows the exercise's whole history whatever it was called at the time. */
 export function getExerciseHistoryHref(blueprint: ExerciseBlueprint): Href {
-  return `/exercise-history?name=${encodeURIComponent(blueprint.name)}&type=${blueprint.type}` as Href;
+  return `/exercise-history?exerciseId=${encodeURIComponent(blueprint.exerciseId)}&type=${blueprint.type}&name=${encodeURIComponent(blueprint.name)}` as Href;
 }
 
-export function ExerciseHistory(props: { movementKey: MovementKey; exerciseName: string }) {
+export function ExerciseHistory(props: {
+  exerciseId: ExerciseId;
+  type: ExerciseBlueprint['type'];
+  exerciseName: string;
+}) {
   // No session to exclude: this sheet is opened from an exercise, and shows the whole lineage.
-  const exercises = useAppSelectorWithArg(selectRecentlyCompletedExercises, undefined)(props.movementKey);
+  const exercises = useAppSelectorWithArg(
+    selectRecentlyCompletedExercises,
+    undefined,
+  )(movementKeyFor(props.exerciseId, props.type));
+  // The exercise's current name, which a rename in the exercise list may have changed.
+  const title = useAppSelectorWithArg(selectExerciseById, props.exerciseId)?.name ?? props.exerciseName;
 
   return (
     <SafeAreaView edges={{ left: 'additive', right: 'additive', top: 'off', bottom: 'off' }} style={{ flex: 1 }}>
@@ -23,7 +33,7 @@ export function ExerciseHistory(props: { movementKey: MovementKey; exerciseName:
         numberOfLines={1}
         style={{ paddingHorizontal: spacing.pageHorizontalMargin, paddingTop: spacing[3] }}
       >
-        {props.exerciseName}
+        {title}
       </SurfaceText>
       <ExerciseHistoryList
         exercises={exercises}
