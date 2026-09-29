@@ -65,7 +65,7 @@ interface BestSetRowProps {
  */
 export function BestSetRow({ exerciseName, best, change, changeSpoken, tone, first }: BestSetRowProps) {
   const { tokens } = useAppTheme();
-  const color = { up: tokens.positive, down: tokens.accentInk, same: tokens.muted, new: tokens.accentInk }[tone];
+  const color = { up: tokens.positive, down: tokens.danger, same: tokens.muted, new: tokens.accentInk }[tone];
   return (
     <View
       accessible

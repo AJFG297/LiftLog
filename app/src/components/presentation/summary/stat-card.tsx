@@ -8,8 +8,8 @@ interface StatCardProps {
   value: string;
   unit?: string;
   caption?: string;
-  /** Colours the caption, e.g. `positive` for a rise. Pair it with an arrow or words, never colour alone. */
-  captionTone?: 'muted' | 'positive' | 'accent';
+  /** Colours the caption: `positive` for a rise, `drop` for a fall. Pair it with an arrow or words, never colour alone. */
+  captionTone?: 'muted' | 'positive' | 'drop';
   /** The dark slab that makes the records card stand out. */
   inverse?: boolean;
 }
@@ -18,8 +18,7 @@ interface StatCardProps {
 export function StatCard({ label, value, unit, caption, captionTone = 'muted', inverse }: StatCardProps) {
   const { tokens } = useAppTheme();
   const muted = inverse ? tokens.inverseMuted : tokens.muted;
-  const captionColor =
-    captionTone === 'positive' ? tokens.positive : captionTone === 'accent' ? tokens.accentInk : muted;
+  const captionColor = captionTone === 'positive' ? tokens.positive : captionTone === 'drop' ? tokens.danger : muted;
   return (
     <View
       accessible

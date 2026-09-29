@@ -401,7 +401,7 @@ function StatCards({
           value={localeFormatBigNumber(volumeWeight.value, 0)}
           unit={shortFormatWeightUnit(unit)}
           caption={volumeCaption}
-          captionTone={volume.type === 'up' ? 'positive' : volume.type === 'down' ? 'accent' : 'muted'}
+          captionTone={volume.type === 'up' ? 'positive' : volume.type === 'down' ? 'drop' : 'muted'}
         />
       </View>
       <View style={{ flexDirection: 'row', gap: spacing[2] }}>
