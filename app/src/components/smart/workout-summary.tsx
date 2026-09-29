@@ -248,7 +248,7 @@ export function WorkoutSummary({ sessionId, finished }: WorkoutSummaryProps) {
         <Card style={{ gap: spacing[3] }}>
           <SectionTitle>{t('finish.summary.new_records.title')}</SectionTitle>
           {records.map((record) => (
-            <RecordRow key={record.exerciseName} {...recordCopy(t, record, unit)} />
+            <RecordRow key={record.key} {...recordCopy(t, record, unit)} />
           ))}
         </Card>
       ) : null}

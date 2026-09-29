@@ -70,10 +70,11 @@ export function findPersonalRecords(sessionsOldestFirst: Session[]): Map<string,
 /**
  * A record set in one workout, with the best it beat. A heavier set than ever is `heaviestWeight`;
  * otherwise a better estimated one-rep max (more reps at a weight lifted before) is `estimatedOneRepMax`.
+ * A workout sets at most one record per movement, so `key` identifies it.
  */
 export type SessionRecord =
-  | { kind: 'heaviestWeight'; exerciseName: string; weight: Weight; reps: number; previous: Weight }
-  | { kind: 'estimatedOneRepMax'; exerciseName: string; oneRepMax: Weight; previous: Weight };
+  | { kind: 'heaviestWeight'; key: MovementKey; exerciseName: string; weight: Weight; reps: number; previous: Weight }
+  | { kind: 'estimatedOneRepMax'; key: MovementKey; exerciseName: string; oneRepMax: Weight; previous: Weight };
 
 /**
  * The records `session` sets against `earlier`, the workouts before it. As in {@link findPersonalRecords},
@@ -104,13 +105,14 @@ export function sessionRecords(session: Session, earlier: readonly Session[]): S
     const heaviest = heaviestToday.get(key);
     const heaviestBefore = previousHeaviest.get(key);
     if (heaviest && heaviestBefore && heaviest.weight.isGreaterThan(heaviestBefore)) {
-      records.push({ kind: 'heaviestWeight', ...heaviest, previous: heaviestBefore });
+      records.push({ kind: 'heaviestWeight', key, ...heaviest, previous: heaviestBefore });
       continue;
     }
     const before = previousOneRepMax.get(key);
     if (before && candidate.oneRepMax.isGreaterThan(before)) {
       records.push({
         kind: 'estimatedOneRepMax',
+        key,
         exerciseName: candidate.exerciseName,
         oneRepMax: candidate.oneRepMax,
         previous: before,
