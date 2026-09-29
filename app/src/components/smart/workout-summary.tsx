@@ -43,9 +43,10 @@ import {
 import { localeFormatBigNumber } from '@/utils/locale-bignumber';
 import { UseTranslateResult, useTranslate } from '@tolgee/react';
 import BigNumber from 'bignumber.js';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { ImperativeRouter, useFocusEffect, useRouter } from 'expo-router';
 import { Fragment, useEffect, useRef, useState } from 'react';
-import { BackHandler, Text, TextInput, View } from 'react-native';
+import { BackHandler, Platform, Text, TextInput, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDispatch } from 'react-redux';
 
 interface WorkoutSummaryProps {
@@ -70,6 +71,7 @@ export function WorkoutSummary({ sessionId, finished }: WorkoutSummaryProps) {
   const router = useRouter();
   const { t } = useTranslate();
   const { tokens } = useAppTheme();
+  const insets = useSafeAreaInsets();
   const formatDate = useFormatDate();
   const { sessionService } = useServices();
   const session = useAppSelectorWithArg(selectSession, sessionId);
@@ -85,7 +87,7 @@ export function WorkoutSummary({ sessionId, finished }: WorkoutSummaryProps) {
   const undoUpdate = useUndoRoutineUpdate();
   const [noteDraft, setNoteDraft] = useState(session?.reflection?.note ?? '');
 
-  const close = () => (finished ? router.dismissTo('/') : router.back());
+  const close = () => (finished ? goHome(router) : router.back());
 
   // Finishing clears the active session, so this only ever finishes the workout once, even if the screen
   // is rebuilt.
@@ -106,7 +108,7 @@ export function WorkoutSummary({ sessionId, finished }: WorkoutSummaryProps) {
       return;
     }
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
-      router.dismissTo('/');
+      goHome(router);
       return true;
     });
     return () => subscription.remove();
@@ -114,7 +116,7 @@ export function WorkoutSummary({ sessionId, finished }: WorkoutSummaryProps) {
 
   useEffect(() => {
     if (!session) {
-      router.dismissTo('/');
+      goHome(router);
     }
   }, [session, router]);
 
@@ -189,7 +191,9 @@ export function WorkoutSummary({ sessionId, finished }: WorkoutSummaryProps) {
           style={{
             paddingHorizontal: spacing.pageHorizontalMargin,
             paddingTop: spacing[2],
-            paddingBottom: spacing[3],
+            // FullHeightScrollView lifts the bar above the iOS home indicator. On Android nothing does, and
+            // with no tab bar below it the bar has to clear the system navigation bar itself.
+            paddingBottom: spacing[3] + (Platform.OS === 'android' ? insets.bottom : 0),
             backgroundColor: tokens.bg,
             borderTopWidth: 1,
             borderTopColor: tokens.line,
@@ -316,6 +320,18 @@ export function WorkoutSummary({ sessionId, finished }: WorkoutSummaryProps) {
       {targets.length ? <NextTargets name={routineName} targets={targets} t={t} /> : null}
     </FullHeightScrollView>
   );
+}
+
+/**
+ * The summary sits on the root stack, above the workout tab, which still holds the finished workout's
+ * screen. Popping the summary first means '/' then pops that screen too, where on its own it would push a
+ * second Home on top of it.
+ */
+function goHome(router: ImperativeRouter) {
+  if (router.canGoBack()) {
+    router.back();
+  }
+  router.dismissTo('/');
 }
 
 function SectionTitle({ children }: { children: string }) {
