@@ -155,17 +155,11 @@ export function WorkoutSummary({ sessionId, finished }: WorkoutSummaryProps) {
     dispatch(encryptAndShare({ item: new SharedSession(session), title: t('workout.shared_item.title') }));
 
   const routineName = session.blueprint.name;
-  const routineIndex = program.sessions.findIndex((s) => s.name === routineName);
-  const routine = routineIndex >= 0 ? program.sessions[routineIndex] : undefined;
+  const routine = program.sessions.find((s) => s.name === routineName);
+  // Programs repeat with no set length, so there is no honest "session N of M" to show: just the program.
   const dateLine = [
     formatDate(session.date, { weekday: 'long', month: 'short', day: 'numeric' }),
-    routine
-      ? t('finish.summary.position.label', {
-          program: program.name,
-          position: routineIndex + 1,
-          total: program.sessions.length,
-        })
-      : undefined,
+    routine && program.name,
   ]
     .filter(Boolean)
     .join(' · ');

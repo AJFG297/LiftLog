@@ -454,7 +454,6 @@
   "finish.update_routine.exercise_field.title": "{name}: {field}",
   "finish.summary.complete.label": "Workout complete",
   "finish.summary.in_progress.label": "Workout so far",
-  "finish.summary.position.label": "{program} · workout {position} of {total}",
   "finish.summary.duration.label": "Duration",
   "finish.summary.duration_longer.body": "{minutes} min longer than usual",
   "finish.summary.duration_shorter.body": "{minutes} min shorter than usual",
