@@ -76,8 +76,9 @@ performance Today's target compares against, or of the latest one when the set s
 - **RPE.** With Log RPE on, the reps pad of a working set has the RPE chips; they set `PotentialSet.rpe`
   straight away, and tapping the picked chip clears it. The reps show it as a small `@9`. Warm-ups have
   none.
-- **Add set** adds one after the last with its weight, target and type; a warm-up or a set to failure is
-  followed by a working set. It goes into the session's plan too, so finishing offers to keep it.
+- **Add set** adds one after the last with its weight, target, reps and type; a warm-up or a set to failure
+  is followed by a working set. Reps that aren't the target (typed, or logged short of it) carry over as
+  the new row's draft, so the target stays the plan's. It goes into the session's plan too, so finishing offers to keep it.
 - **Set type.** Tapping the badge opens `session/set-type`, a `formSheet` with Working, Warm-up, Drop,
   Myo-reps and To failure. The session's plan takes the change, so finishing offers it as a routine change.
   Warm-ups have their own list, so a set that becomes one moves to the end of the warm-ups, and a warm-up

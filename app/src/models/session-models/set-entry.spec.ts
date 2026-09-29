@@ -231,6 +231,22 @@ describe('adding a set', () => {
     expect(state.exercise.blueprint.plannedSets[3]).toEqual({ reps: { min: 5, max: 5 }, kind: 'working' });
   });
 
+  it('copies the reps the last row shows when they aren’t its target', () => {
+    const missed = withSetToggled(type(bench(), third, 'reps', 4), third, at(5));
+    const state = withAddedSet(missed, 'kilograms');
+    const added = setRowAt(state, { list: 'working', index: 3 })!;
+
+    expect(added.reps).toEqual({ value: 4, entered: true });
+    expect(state.exercise.potentialSets[3]!.target).toEqual({ min: 5, max: 5 });
+  });
+
+  it('leaves the reps as the target placeholder when the last row shows its target', () => {
+    const state = withAddedSet(withSetToggled(bench(), third, at(5)), 'kilograms');
+
+    expect(setRowAt(state, { list: 'working', index: 3 })!.reps).toEqual({ value: 5, entered: false });
+    expect(state.drafts).toEqual({});
+  });
+
   it.each([
     ['working', 'working'],
     ['drop', 'drop'],

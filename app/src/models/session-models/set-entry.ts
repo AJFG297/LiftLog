@@ -188,9 +188,11 @@ function withReps(
 }
 
 /**
- * One more set after the last: the same weight, target and type, except that a warm-up or a set to
- * failure is followed by a plain working set. The session's plan gets the set too, so finishing offers
- * to keep it in the routine.
+ * One more set after the last: the same weight, target, reps and type, except that a warm-up or a set to
+ * failure is followed by a plain working set. Reps the last row shows that aren't its target (typed, or
+ * logged short of it) carry over as the new row's draft, so its target, and the progression check that
+ * reads it, stay the plan's. The session's plan gets the set too, so finishing offers to keep it in the
+ * routine.
  */
 export function withAddedSet(state: SetEntryState, fallbackUnit: LoadUnit): SetEntryState {
   const { exercise } = state;
@@ -204,9 +206,11 @@ export function withAddedSet(state: SetEntryState, fallbackUnit: LoadUnit): SetE
     { reps: potentialSets.length ? blueprint.repsTargetForSet(potentialSets.length - 1) : target, kind },
   ];
   const position: SetPosition = { list: 'working', index: potentialSets.length };
+  const lastReps = setRowsOf(state).at(-1)?.reps.value;
+  const drafts = withoutDraft(state.drafts, position);
   return {
     exercise: exercise.with({ potentialSets: [...potentialSets, added], blueprint: blueprint.with({ plannedSets }) }),
-    drafts: withoutDraft(state.drafts, position),
+    drafts: lastReps === undefined || lastReps === target.max ? drafts : withDraft(drafts, position, { reps: lastReps }),
   };
 }
 
