@@ -46,7 +46,9 @@ Nothing on the screen is stored except which exercise is in focus. The rest come
   at session start, and keeps no record of what it did, so the card compares today's top set with the
   performance it was carried from (`carriedFrom`: the latest with the key the routine gives the exercise,
   as the session was built, so a set added or moved during the workout doesn't lose it): heavier, lighter, more reps, the same after a
-  success, or the same after a miss (naming the set that fell short). See [Progression.md](./Progression.md).
+  success, or the same after a miss (naming the set that fell short). With nothing to compare against it
+  says it's the first time, or, when the movement was done with other sets or reps, that the scheme is new,
+  which is when Previous shows the latest performance instead. See [Progression.md](./Progression.md).
 
 The workout worker, its notification and background behaviour are untouched: they still read
 `Session.nextExercise` and the rest timer (see [WorkoutWorker.md](./WorkoutWorker.md)).

@@ -26,7 +26,8 @@ export function useTodaysTarget(session: Session): (exercise: RecordedExercise) 
     if (!(exercise instanceof RecordedWeightedExercise)) {
       return undefined;
     }
-    return todaysTarget(exercise, previousPerformance(exercise).previous);
+    const { previous, candidates } = previousPerformance(exercise);
+    return todaysTarget(exercise, previous, candidates.length > 0);
   };
 }
 

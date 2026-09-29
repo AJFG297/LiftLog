@@ -80,6 +80,18 @@ describe('todaysTarget', () => {
     });
   });
 
+  it('says it is new, not a first time, when only another set scheme was done before', () => {
+    expect(todaysTarget(today([60, 60, 60]), undefined, true)?.reason).toEqual({ kind: 'newScheme' });
+  });
+
+  it('says it is new when the performance carried from has no set to compare the top set with', () => {
+    const fourSets = bench.with({ sets: 4 });
+
+    expect(todaysTarget(today([85, 85, 85, 90], fourSets), lastTime([5, 5, 5]))?.reason).toEqual({
+      kind: 'newScheme',
+    });
+  });
+
   it('has no weight for a movement that carries no load', () => {
     const blueprint = makeWeightedBlueprint({ name: 'Plank', sets: 1, resistance: 'none' });
 

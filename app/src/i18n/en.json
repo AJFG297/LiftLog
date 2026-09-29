@@ -874,6 +874,7 @@
   "live_workout.set_type.myo.body": "Short rests and mini-sets at the same weight after an activation set.",
   "live_workout.set_type.failure.label": "To failure",
   "live_workout.set_type.failure.body": "Stopped only when another clean rep was not possible.",
+  "live_workout.target.new_scheme.body": "New sets or reps since last time. Start where it feels right.",
   "settings.bar_and_plates.title": "Bar and plates",
   "settings.bar_and_plates.subtitle": "The bar and plates you lift with, for working out what to load on each side",
   "settings.bar_and_plates.kilograms.subtitle": "These are in kilograms. Change units in Localisation.",

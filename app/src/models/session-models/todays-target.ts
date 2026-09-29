@@ -12,6 +12,8 @@ export interface LastTime {
 /** Why today's numbers are what they are, compared with the performance they were carried from. */
 export type TargetReason =
   | { kind: 'firstTime' }
+  /** Done before, but never with today's sets and reps, so there is nothing to measure against. */
+  | { kind: 'newScheme' }
   | { kind: 'weightUp'; by: Weight; lastTime: LastTime | undefined }
   | { kind: 'weightDown'; by: Weight }
   | { kind: 'repsUp'; by: number; lastTime: LastTime | undefined }
@@ -48,11 +50,13 @@ export function carriedFrom(
 /**
  * The top set's numbers for today, and why. Progression runs once, at session start, and keeps no record
  * of what it did, so the reason is read back from the difference with `previous`, the performance today
- * carried on from (see {@link RecordedWeightedExercise.previousPerformanceIn}).
+ * carried on from (see {@link RecordedWeightedExercise.previousPerformanceIn}). `doneBefore` says whether
+ * the movement has any recent performance at all, which `previous` misses when the set scheme changed.
  */
 export function todaysTarget(
   exercise: RecordedWeightedExercise,
   previous: RecordedWeightedExercise | undefined,
+  doneBefore = false,
 ): TodaysTarget | undefined {
   const index = topSetIndex(exercise);
   const slot = exercise.potentialSets[index];
@@ -62,7 +66,7 @@ export function todaysTarget(
   return {
     weight: showsWeight(exercise, slot.weight) ? slot.weight : undefined,
     reps: exercise.repsTargetForSet(index),
-    reason: reasonFor(exercise, index, previous),
+    reason: reasonFor(exercise, index, previous, doneBefore),
   };
 }
 
@@ -88,10 +92,11 @@ function reasonFor(
   exercise: RecordedWeightedExercise,
   index: number,
   previous: RecordedWeightedExercise | undefined,
+  doneBefore: boolean,
 ): TargetReason {
   const before = previous?.potentialSets[index];
   if (!previous || !before) {
-    return { kind: 'firstTime' };
+    return previous || doneBefore ? { kind: 'newScheme' } : { kind: 'firstTime' };
   }
   const now = exercise.potentialSets[index]!;
   const lastTime = previous.isSuccessForProgressiveOverload ? lastTimeOf(previous) : undefined;
