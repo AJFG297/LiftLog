@@ -18,7 +18,7 @@ interface StatCardProps {
 export function StatCard({ label, value, unit, caption, captionTone = 'muted', inverse }: StatCardProps) {
   const { tokens } = useAppTheme();
   const muted = inverse ? tokens.inverseMuted : tokens.muted;
-  const captionColor = captionTone === 'positive' ? tokens.positive : captionTone === 'drop' ? tokens.danger : muted;
+  const captionColor = captionTone === 'positive' ? tokens.positive : captionTone === 'drop' ? tokens.warmInk : muted;
   return (
     <View
       accessible
