@@ -265,6 +265,8 @@ cmd_down() {
   if [[ -f "$STATE_DIR/metro.pid" ]]; then
     local mpid; mpid="$(cat "$STATE_DIR/metro.pid")"
     kill -TERM -- "-$mpid" 2>/dev/null || kill -TERM "$mpid" 2>/dev/null || true
+    # Metro's cache is inside STATE_DIR, so let it exit before that dir is removed below.
+    for _ in $(seq 1 10); do kill -0 -- "-$mpid" 2>/dev/null || break; sleep 1; done
     echo "stopped metro (pgid $mpid)"
   fi
   if [[ -f "$STATE_DIR/emulator.pid" ]]; then
