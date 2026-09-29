@@ -1,7 +1,9 @@
 import WeightDisplay from '@/components/presentation/foundation/editors/weight-display';
+import { ListRow } from '@/components/presentation/foundation/list-row';
 import { MsIconSrc } from '@/components/presentation/foundation/ms-icon-source';
 import { SheetHeader } from '@/components/presentation/foundation/sheet-header';
 import { SurfaceText } from '@/components/presentation/foundation/surface-text';
+import { formatWeightText } from '@/components/presentation/foundation/weight-format';
 import { ExerciseOverviewRow, SupersetGroupHeader } from '@/components/presentation/live-workout/exercise-overview-row';
 import { ReorderableItem, ReorderableList } from '@/components/presentation/live-workout/reorderable-list';
 import { targetLabel } from '@/components/presentation/live-workout/target-text';
@@ -11,6 +13,7 @@ import { spacing, useAppTheme } from '@/hooks/useAppTheme';
 import { useLiveWorkoutFocus } from '@/hooks/useLiveWorkoutFocus';
 import { usesBodyweight, useTodaysTarget } from '@/hooks/useTodaysTarget';
 import { Session } from '@/models/session-models';
+import { Weight } from '@/models/weight';
 import {
   ExerciseGroup,
   exerciseLabelOf,
@@ -70,6 +73,13 @@ function SheetContent({ session }: { session: Session }) {
   const minutesIn = session.startTime
     ? Math.max(0, Math.floor(Duration.between(session.startTime, OffsetDateTime.now()).toMinutes()))
     : 0;
+
+  const lifted = session.totalWeightLifted;
+
+  const openSummary = () => {
+    back();
+    push(`/session/post-workout?sessionId=${encodeURIComponent(session.id)}&source=live`);
+  };
 
   const jumpTo = (exerciseIndex: number) => {
     dispatch(setLiveWorkoutFocus({ sessionId: session.id, exerciseIndex }));
@@ -188,6 +198,21 @@ function SheetContent({ session }: { session: Session }) {
         scrollEnabled={!dragging}
         contentContainerStyle={{ paddingBottom: insets.bottom + spacing[4], gap: spacing[3] }}
       >
+        <ListRow
+          testID="sheet-workout-summary"
+          title={t('workout.summary.title')}
+          subtitle={
+            // Nothing logged with a weight yet, so there is no unit to show a total in.
+            lifted.unit === 'nil'
+              ? undefined
+              : t('live_workout.summary.subtitle', {
+                  weight: formatWeightText(new Weight(lifted.value.decimalPlaces(0), lifted.unit)),
+                })
+          }
+          trailing={<MsIconSrc name="chevronRight" size={20} color={tokens.faint} />}
+          onPress={openSummary}
+          style={{ paddingHorizontal: spacing[3], borderRadius: 14, borderWidth: 1, borderColor: tokens.line }}
+        />
         {session.blueprint.notes ? (
           <SurfaceText font="text-sm" style={{ color: tokens.muted, paddingHorizontal: spacing[1] }}>
             {session.blueprint.notes}

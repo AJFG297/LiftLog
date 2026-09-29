@@ -19,7 +19,8 @@ logging on the page and PM-30 moves rest into the header.
   screen is done, and turns into Finish when nothing after it is left. The rest timer docks above it.
 - **All exercises sheet** (`session/exercises`, a `formSheet`): every exercise with its status, sets and
   target. Tap to jump there; drag a handle to reorder. Add exercise and Make superset sit above the list,
-  so they are in reach at the sheet's first detent, and open the existing flows.
+  so they are in reach at the sheet's first detent, and open the existing flows. The Workout summary row
+  at the top of the list opens the post-workout summary for the workout so far.
 
 ## How it is worked out
 

@@ -802,5 +802,6 @@
   "live_workout.reorder.move_up.button": "Move up",
   "live_workout.reorder.move_down.button": "Move down",
   "live_workout.make_superset.button": "Make superset",
+  "live_workout.summary.subtitle": "{weight} lifted so far",
   "live_workout.empty.body": "This workout has no exercises yet."
 }
