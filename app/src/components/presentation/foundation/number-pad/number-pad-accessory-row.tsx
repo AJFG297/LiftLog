@@ -3,7 +3,7 @@ import { SurfaceText } from '@/components/presentation/foundation/surface-text';
 import { formatWeightText } from '@/components/presentation/foundation/weight-format';
 import { spacing, tabularText, useAppTheme } from '@/hooks/useAppTheme';
 import { platesFor } from '@/models/plates';
-import { RPE_VALUES, type Rpe } from '@/models/session-models/rpe';
+import { RPE_VALUES, type Rpe, rpeAfterTap } from '@/models/session-models/rpe';
 import { type LoadUnit, Weight } from '@/models/weight';
 import { localeFormatBigNumber } from '@/utils/locale-bignumber';
 import { useTranslate } from '@tolgee/react';
@@ -121,7 +121,7 @@ function RpeRow(props: { value: Rpe | undefined; onChange: (rpe: Rpe | undefined
             label={localeFormatBigNumber(new BigNumber(rpe))}
             accessibilityLabel={t('number_pad.rpe_value.label', { rpe: localeFormatBigNumber(new BigNumber(rpe)) })}
             selected={props.value === rpe}
-            onPress={() => props.onChange(props.value === rpe ? undefined : rpe)}
+            onPress={() => props.onChange(rpeAfterTap(props.value, rpe))}
           />
         ))}
       </ScrollView>
