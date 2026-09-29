@@ -40,6 +40,7 @@ export function LiveWorkoutHeader(props: LiveWorkoutHeaderProps) {
         icon="expandMore"
         testID="minimise-workout"
         accessibilityLabel={t('live_workout.minimise.button')}
+        accessibilityHint={t('live_workout.minimise.hint')}
         onPress={props.onMinimise}
       />
       <Pressable
