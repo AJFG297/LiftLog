@@ -17,6 +17,7 @@ import {
   withSetToggled,
   withTypedValue,
   weightUnitOf,
+  workingNumberFor,
 } from '@/models/session-models/set-entry';
 import type { SetKind } from '@/models/session-models/set-kind';
 import { Weight } from '@/models/weight';
@@ -296,6 +297,17 @@ describe('changing a set’s type', () => {
     expect(canChangeSetKind(single.exercise, first, 'warmup')).toBe(false);
     expect(withSetKind(single, first, 'warmup')).toBe(single);
     expect(canChangeSetKind(single.exercise, first, 'drop')).toBe(true);
+  });
+});
+
+describe('workingNumberFor', () => {
+  it('numbers a set as it would be counted if it were a working set', () => {
+    const state = withSetKind(withSetKind(bench(), first, 'drop'), third, 'failure');
+
+    expect(workingNumberFor(state, first)).toBe(1);
+    expect(workingNumberFor(state, second)).toBe(1);
+    expect(workingNumberFor(state, third)).toBe(2);
+    expect(workingNumberFor(state, warmup)).toBe(1);
   });
 });
 

@@ -1,4 +1,5 @@
 import { ExerciseDescriptor } from '@/models/exercise-models';
+import type { SetDrafts } from '@/models/session-models/set-entry';
 import { createAction, createSlice, PayloadAction, UnknownAction } from '@reduxjs/toolkit';
 
 const initialState: AppState = {
@@ -6,6 +7,7 @@ const initialState: AppState = {
   currentSnackbar: undefined,
   exerciseSearchResult: undefined,
   liveWorkoutFocus: undefined,
+  liveWorkoutDrafts: undefined,
 };
 
 type AppState = {
@@ -13,6 +15,7 @@ type AppState = {
   currentSnackbar: SnackbarDescriptor | undefined;
   exerciseSearchResult: ExerciseSearchResult | undefined;
   liveWorkoutFocus: LiveWorkoutFocus | undefined;
+  liveWorkoutDrafts: LiveWorkoutDrafts | undefined;
 };
 
 // The exercise the live workout shows. Kept here rather than in the screen so it survives minimising the
@@ -20,6 +23,14 @@ type AppState = {
 export type LiveWorkoutFocus = {
   sessionId: string;
   exerciseIndex: number;
+};
+
+// What was typed into the live workout's sets that the session doesn't hold (see SetDraft). Kept in memory
+// only: it survives minimising and the set-type sheet, and a restart loses nothing but reps never logged.
+export type LiveWorkoutDrafts = {
+  sessionId: string;
+  /** Keyed by the exercise's index and name, so a reordered or swapped exercise never takes another's. */
+  exercises: Record<string, SetDrafts>;
 };
 
 // The exercise search is its own route, so it hands its result back through the store rather than a
@@ -59,6 +70,12 @@ const appSlice = createSlice({
     setLiveWorkoutFocus(state, action: PayloadAction<LiveWorkoutFocus>) {
       state.liveWorkoutFocus = action.payload;
     },
+
+    setLiveWorkoutDrafts(state, action: PayloadAction<{ sessionId: string; exerciseKey: string; drafts: SetDrafts }>) {
+      const { sessionId, exerciseKey, drafts } = action.payload;
+      const exercises = state.liveWorkoutDrafts?.sessionId === sessionId ? state.liveWorkoutDrafts.exercises : {};
+      state.liveWorkoutDrafts = { sessionId, exercises: { ...exercises, [exerciseKey]: drafts } };
+    },
   },
 });
 
@@ -94,6 +111,7 @@ export const {
   setExerciseSearchResult,
   clearExerciseSearchResult,
   setLiveWorkoutFocus,
+  setLiveWorkoutDrafts,
 } = appSlice.actions;
 
 export default appSlice.reducer;

@@ -297,6 +297,12 @@ export function withSetKind(state: SetEntryState, position: SetPosition, kind: S
   };
 }
 
+/** The number the set at `position` would have as a working set, which the set-type sheet shows. */
+export function workingNumberFor(state: SetEntryState, position: SetPosition): number {
+  const moved: SetPosition = position.list === 'warmup' ? { list: 'working', index: 0 } : position;
+  return Number(setRowAt(withSetKind(state, position, 'working'), moved)?.label ?? 1);
+}
+
 /** A set turned warm-up, as the plan's warm-up: its reps, and its weight when it has one. */
 function plannedWarmupFor(exercise: RecordedWeightedExercise, slot: PotentialSet): PlannedWarmupSet {
   const hasLoad = exercise.tracksResistance && !slot.weight.value.isZero();
