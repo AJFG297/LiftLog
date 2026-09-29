@@ -1,19 +1,20 @@
 import { haptics } from '@/components/presentation/foundation/haptics';
-import type { SetBadgeProps } from '@/components/presentation/foundation/set-badge';
+import { setBadgeText, type SetBadgeProps } from '@/components/presentation/foundation/set-badge/set-badge-kinds';
 import { SheetHeader } from '@/components/presentation/foundation/sheet-header';
 import { SetTypeOption } from '@/components/presentation/live-workout/set-type-option';
+import { setRowBadge } from '@/components/smart/live-set-table';
 import { spacing, useAppTheme } from '@/hooks/useAppTheme';
 import { useSetEntryStore } from '@/hooks/useLiveSetEntry';
 import { RecordedWeightedExercise, Session } from '@/models/session-models';
 import { SetPosition } from '@/models/session-models/recorded-weighted-exercise';
-import { canChangeSetKind, setRowsOf, withSetKind, workingNumberFor } from '@/models/session-models/set-entry';
+import { canChangeSetKind, setRowAt, withSetKind, workingNumberFor } from '@/models/session-models/set-entry';
 import type { SetKind } from '@/models/session-models/set-kind';
 import { useAppSelector } from '@/store';
 import { selectActiveSession, updateStoredSession } from '@/store/stored-sessions';
 import type { TranslationKey } from '@tolgee/web';
 import { useTranslate } from '@tolgee/react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -33,9 +34,14 @@ type SetTypeParams = { exerciseIndex?: string; list?: string; index?: string };
 
 /** The set-type sheet over the live workout: Working, Warm-up, Drop, Myo-reps or To failure for one set. */
 export function SetTypeSheet() {
-  const session = useAppSelector(selectActiveSession);
+  const live = useAppSelector(selectActiveSession);
   const params = useLocalSearchParams<SetTypeParams>();
   const { back } = useRouter();
+  // A pick can move the set to the other list, which leaves the opened position pointing at another set
+  // or none. So from the pick on, the sheet shows the session as it was while it animates away, and the
+  // guard below doesn't close it a second time.
+  const [closing, setClosing] = useState<{ session: Session; kind: SetKind }>();
+  const session = closing?.session ?? live;
   const exerciseIndex = Number(params.exerciseIndex);
   const position = positionFrom(params);
   const exercise = session?.recordedExercises[exerciseIndex];
@@ -48,12 +54,28 @@ export function SetTypeSheet() {
   }, [found, back]);
 
   return found && session && position ? (
-    <SheetContent session={session} exerciseIndex={exerciseIndex} position={position} />
+    <SheetContent
+      session={session}
+      exerciseIndex={exerciseIndex}
+      position={position}
+      picked={closing?.kind}
+      onPicked={(kind) => {
+        setClosing({ session, kind });
+        back();
+      }}
+    />
   ) : null;
 }
 
-function SheetContent(props: { session: Session; exerciseIndex: number; position: SetPosition }) {
-  const { session, exerciseIndex, position } = props;
+function SheetContent(props: {
+  session: Session;
+  exerciseIndex: number;
+  position: SetPosition;
+  /** The type already picked, while the sheet closes. */
+  picked: SetKind | undefined;
+  onPicked: (kind: SetKind) => void;
+}) {
+  const { session, exerciseIndex, position, picked, onPicked } = props;
   const { tokens } = useAppTheme();
   const { t } = useTranslate();
   const { back } = useRouter();
@@ -63,22 +85,28 @@ function SheetContent(props: { session: Session; exerciseIndex: number; position
     dispatch(updateStoredSession({ sessionId: session.id, update })),
   );
   const state = stateFor(exerciseIndex);
-  const slot = state?.exercise.slotAt(position);
-  if (!state || !slot) {
+  const row = state && setRowAt(state, position);
+  if (!state || !row) {
     return null;
   }
 
-  const rowNumber = setRowsOf(state).findIndex((row) => samePosition(row.position, position)) + 1;
   const pick = (kind: SetKind) => {
+    if (picked) {
+      return;
+    }
+    haptics.selection();
     apply(exerciseIndex, (current) => withSetKind(current, position, kind));
-    back();
+    onPicked(kind);
   };
 
   return (
     <View style={{ flex: 1, backgroundColor: tokens.card, paddingHorizontal: spacing.pageHorizontalMargin }}>
       <SheetHeader
         title={t('live_workout.set_type.title')}
-        subtitle={t('live_workout.set_type.subtitle', { name: state.exercise.blueprint.name, number: rowNumber })}
+        subtitle={t('live_workout.set_type.subtitle', {
+          name: state.exercise.blueprint.name,
+          set: setBadgeText(setRowBadge(row), t).accessibilityLabel,
+        })}
         onClose={back}
       />
       <ScrollView
@@ -96,12 +124,9 @@ function SheetContent(props: { session: Session; exerciseIndex: number; position
               badge={badge}
               name={t(SET_TYPE_COPY[kind].name)}
               description={t(allowed ? SET_TYPE_COPY[kind].body : 'live_workout.set_type.warmup_unavailable.body')}
-              selected={slot.kind === kind}
+              selected={(picked ?? row.slot.kind) === kind}
               disabled={!allowed}
-              onPress={() => {
-                haptics.selection();
-                pick(kind);
-              }}
+              onPress={() => pick(kind)}
             />
           );
         })}
@@ -116,8 +141,4 @@ function positionFrom(params: SetTypeParams): SetPosition | undefined {
     return undefined;
   }
   return { list: params.list, index };
-}
-
-function samePosition(a: SetPosition, b: SetPosition): boolean {
-  return a.list === b.list && a.index === b.index;
 }

@@ -862,7 +862,7 @@
   "live_workout.meta.working_sets.label": "{count} working sets",
   "live_workout.meta.working_sets_one.label": "1 working set",
   "live_workout.set_type.title": "Set type",
-  "live_workout.set_type.subtitle": "{name} · set {number}",
+  "live_workout.set_type.subtitle": "{name} · {set}",
   "live_workout.set_type.working.label": "Working set",
   "live_workout.set_type.working.body": "A normal set at your target weight and reps.",
   "live_workout.set_type.warmup.label": "Warm-up",

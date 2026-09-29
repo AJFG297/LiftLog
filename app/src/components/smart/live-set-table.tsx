@@ -70,7 +70,7 @@ export function LiveSetTable(props: LiveSetTableProps) {
   };
 
   const rows: SetTableRow[] = setRowsOf(state).map((row) => {
-    const badge = badgeFor(row);
+    const badge = setRowBadge(row);
     const set = setBadgeText(badge, t).accessibilityLabel;
     const rpe = row.position.list === 'working' ? row.slot.rpe : undefined;
     const spokenWeight = formatWeightText(row.weight.value, resistance === 'bodyweight', bodyweightLabel);
@@ -151,7 +151,8 @@ function weightHeaderFor(t: TranslateFn, unit: LoadUnit, perDumbbell: boolean): 
   return perDumbbell ? t('live_workout.set_table.kilograms_each.label') : t('live_workout.set_table.kilograms.label');
 }
 
-function badgeFor(row: SetRow): SetBadgeProps {
+/** The badge a row shows: its number among the working sets, or its kind's letter. */
+export function setRowBadge(row: SetRow): SetBadgeProps {
   const { kind } = row.slot;
   return kind === 'working' ? { kind, number: Number(row.label) } : { kind };
 }
