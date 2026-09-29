@@ -102,7 +102,9 @@ Write a Maestro flow and run it against the verify device. Start from `app/.maes
 
   Find testIDs with `grep -rn "testID=" app/src`. English strings live in `app/src/i18n/en.json`.
 - `verify.sh ui [label]`: prints every `text`, `resource-id` and `content-desc` on the current screen and saves the
-  XML. Use it to find a handle before writing a flow step.
+  XML. Use it to find a handle before writing a flow step. When `uiautomator` can't dump the screen (one that never
+  goes idle, like the live workout's rest timer), it saves Maestro's JSON hierarchy instead, where `content-desc` is
+  `accessibilityText`.
 - `verify.sh shot [label]`: takes an ad-hoc screenshot.
 - `verify.sh db "<sql>"`: pulls a snapshot of the app's SQLite (`files/SQLite/db.db` plus WAL, via `run-as`, which
   debug builds allow) and runs the query locally. Workouts are relational, one row per workout, exercise
@@ -172,8 +174,9 @@ all three hit other sessions' builds, Metro, and emulators.
 - **JDK 24+ breaks the native build** with `A restricted method in java.lang.System has been called` (CMake
   configure). Android Studio's bundled JBR is 25, so the helper pins `/opt/homebrew/opt/openjdk@17`. Override it with
   `VERIFY_JAVA_HOME`.
-- The dev client shows a floating grey **gear** in the top-right corner. It can sit over header actions, so tap
-  those by id or text, not by coordinates.
+- The dev client's floating grey Tools **gear** sits over header actions, and a tap by id lands on the element's
+  centre, so it opened the dev menu instead of the live workout's Finish. `up` switches the gear off in the dev
+  menu's preferences before launch. If it ever shows again, open the dev menu and turn off its Tools button.
 - `launchApp` with `clearState: true` (as in `fresh-install-onboarding.yaml`, tagged `ci-only`) strands a
   dev-client build on the Expo launcher. For a first-run state, uninstall and reinstall the app instead.
 - The dev client remembers the last Metro URL (`launchMode: most-recent`), so `launchApp` reconnects to 8091. If it
