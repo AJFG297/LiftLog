@@ -9,6 +9,7 @@ import { SupersetBanner } from '@/components/presentation/live-workout/superset-
 import { UpNextBar } from '@/components/presentation/live-workout/up-next-bar';
 import { CardioTimer } from '@/components/presentation/workout/cardio/cardio-timer';
 import { LiveExerciseCard } from '@/components/smart/live-exercise-card';
+import { LiveRestPill, LiveRestProgressLine } from '@/components/smart/live-rest';
 import { withCardioSetUpdate } from '@/components/smart/recorded-exercise-view';
 import { getSessionWorkoutEditorHref } from '@/components/smart/session-workout-editor';
 import { useAddExercise } from '@/hooks/useAddExercise';
@@ -100,6 +101,8 @@ export function LiveWorkout({ session, updateSession, onFinish }: LiveWorkoutPro
         onMinimise={() => dismissTo('/')}
         onEditWorkout={() => push(getSessionWorkoutEditorHref(session.id))}
         onFinish={onFinish}
+        restSlot={<LiveRestPill session={session} />}
+        restProgressSlot={<LiveRestProgressLine session={session} />}
       />
       <ExerciseStrip tiles={tiles} onAddExercise={addExercise} />
       <FullHeightScrollView

@@ -7,6 +7,7 @@ export default function Layout() {
     <StackWithHeader>
       <Stack.Screen name="session/index" options={{ headerShown: false }} />
       <Stack.Screen name="session/exercises" options={formSheetOptions([0.7, 0.95])} />
+      <Stack.Screen name="session/rest" options={formSheetOptions([0.75, 0.95])} />
     </StackWithHeader>
   );
 }
