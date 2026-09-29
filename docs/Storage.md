@@ -167,7 +167,9 @@ A workout is stored across five tables (`db/schema.ts`), not as one payload:
   planner, CSV import, backups, a friend's share) are turned into ids by `ExerciseResolver`
   (`models/exercise-resolver.ts`): the user's own exercise with that name, then a built-in by any of its
   names, then a new stub. A stub's id is derived from the normalised name (`stubExerciseId`), so a
-  blueprint that was never linked already keys the way it will once linked. Workouts and plans stored
+  blueprint that was never linked already keys the way it will once linked. Restoring an own-device backup
+  keeps its linked ids even when an exercise descriptor was deleted; names-only legacy rows still resolve
+  by name. Workouts and plans stored
   before ids were linked once by the `LINK_EXERCISE_IDS` data migration
   (`services/data-migrations/link-exercise-ids.ts`), which also rewrote every row's key columns.
 - **Query columns** are computed on write, for SQL to order and aggregate. They are never read back:

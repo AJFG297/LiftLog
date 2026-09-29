@@ -67,10 +67,13 @@ export function addImportBackupEffects(addEffect: AddEffectFn) {
 
   addEffect(importBackupData, async ({ payload }, api) => {
     const { dispatch } = api;
-    const { workouts, programs, exercises, feed, successMessage } = payload;
-    // A backup's workouts point at the backup's own exercises; a CSV and anything written before exercise
-    // ids only has names. Either way, link them to the exercises they will live alongside.
-    const resolver = await createExerciseResolver(api, api.extra.logger, exercises);
+    const { workouts, programs, exercises, feed, successMessage, source } = payload;
+    // Own backups keep linked ids, including references to deleted exercises. Unlinked legacy rows and
+    // external imports still resolve by name.
+    const resolver = await createExerciseResolver(api, api.extra.logger, {
+      alsoSaved: exercises,
+      preserveLinkedIds: source === 'backup',
+    });
     const linkedWorkouts = workouts.map((x) => resolver.linkSession(x));
     const linkedPrograms = Object.fromEntries(
       Object.entries(programs).map(([id, program]) => [id, resolver.linkProgram(program)]),
@@ -161,6 +164,7 @@ export function addImportBackupEffects(addEffect: AddEffectFn) {
 
       dispatch(
         importBackupData({
+          source: 'backup',
           programs,
           exercises,
           workouts,

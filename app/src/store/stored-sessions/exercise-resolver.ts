@@ -17,7 +17,7 @@ interface StoreAccess {
 export async function createExerciseResolver(
   { getState, condition }: StoreAccess,
   logger: Logger,
-  alsoSaved: Record<string, ExerciseDescriptor> = {},
+  options: { alsoSaved?: Record<string, ExerciseDescriptor>; preserveLinkedIds?: boolean } = {},
 ): Promise<ExerciseResolver> {
   if (!getState().storedSessions.isHydrated) {
     await condition((_, state) => state.storedSessions.isHydrated);
@@ -25,8 +25,9 @@ export async function createExerciseResolver(
   const builtInNames = await loadBuiltInExerciseNames();
   // Read after the catalog loads, so an exercise added meanwhile is matched rather than stubbed.
   return new ExerciseResolver({
-    savedExercises: { ...getState().storedSessions.savedExercises, ...alsoSaved },
+    savedExercises: { ...getState().storedSessions.savedExercises, ...options.alsoSaved },
     builtInNames,
+    preserveLinkedIds: options.preserveLinkedIds,
     onAmbiguous: logAmbiguousInDev(logger),
   });
 }

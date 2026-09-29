@@ -73,6 +73,14 @@ describe('ExerciseResolver', () => {
     expect(r.stubs[id]).toEqual(descriptor('Zercher Lunges'));
   });
 
+  it('reuses a renamed descriptor at its deterministic stub id without replacing it', () => {
+    const id = stubExerciseId('Original name');
+    const renamed = { ...descriptor('New name'), instructions: 'Existing instructions' };
+    const r = resolver({ [id]: renamed });
+    expect(r.resolve('Original name')).toBe(id);
+    expect(r.stubs).toEqual({});
+  });
+
   it('never lists a blank name as an exercise', () => {
     const r = resolver();
     expect(r.resolve('  ')).toBe(stubExerciseId(''));

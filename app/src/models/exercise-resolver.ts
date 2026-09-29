@@ -16,6 +16,8 @@ export interface ExerciseResolverInit {
   /** User exercises and copy-on-write overrides of built-ins, keyed by id. */
   savedExercises: Record<ExerciseId, ExerciseDescriptor>;
   builtInNames: BuiltInExerciseNames;
+  /** Linked ids in an own-device backup remain valid even if their descriptors were deleted. */
+  preserveLinkedIds?: boolean;
   /** Told about a name more than one exercise answers to, and which one won. Dev logging only. */
   onAmbiguous?: (name: string, candidates: ExerciseId[], chosen: ExerciseId) => void;
 }
@@ -52,9 +54,11 @@ export class ExerciseResolver {
   private readonly builtIn: NameIndex = emptyIndex();
   private readonly resolved = new Map<string, ExerciseId>();
   private readonly onAmbiguous: ExerciseResolverInit['onAmbiguous'];
+  private readonly preserveLinkedIds: boolean;
 
-  constructor({ savedExercises, builtInNames, onAmbiguous }: ExerciseResolverInit) {
+  constructor({ savedExercises, builtInNames, preserveLinkedIds = false, onAmbiguous }: ExerciseResolverInit) {
     this.onAmbiguous = onAmbiguous;
+    this.preserveLinkedIds = preserveLinkedIds;
     this.known = new Set([...Object.keys(builtInNames), ...Object.keys(savedExercises)]);
     for (const [id, names] of Object.entries(builtInNames)) {
       names.forEach((name) => addToIndex(this.builtIn, name, id));
@@ -80,10 +84,10 @@ export class ExerciseResolver {
   /**
    * The blueprint pointing at a local exercise. One already linked to an exercise this device knows
    * keeps its id; anything else - never linked, or carrying an id from someone else's device - is
-   * resolved by its name.
+   * resolved by its name. Own-device backups also keep linked ids whose descriptors were deleted.
    */
   link<T extends ExerciseBlueprint>(blueprint: T): T {
-    if (blueprint.isLinked && this.known.has(blueprint.exerciseId)) {
+    if (blueprint.isLinked && (this.preserveLinkedIds || this.known.has(blueprint.exerciseId))) {
       return blueprint;
     }
     return blueprint.with({ exerciseId: this.resolve(blueprint.name) }) as T;
@@ -133,7 +137,9 @@ export class ExerciseResolver {
     const id = stubExerciseId(name);
     // A blank name is a placeholder still waiting for its exercise, not one worth listing.
     if (name.trim()) {
-      this.stubs[id] = stubDescriptor(name);
+      if (!this.known.has(id)) {
+        this.stubs[id] = stubDescriptor(name);
+      }
       this.known.add(id);
       addToIndex(this.user, name, id);
     }

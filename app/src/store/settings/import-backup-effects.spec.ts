@@ -63,6 +63,7 @@ describe('import-backup-effects', () => {
     expect(Object.values(restored.exercises ?? {})).toHaveLength(962);
     expect(restored.feed).toBeDefined();
     expect(restored.successMessage).toBe('Restore complete!');
+    expect(restored.source).toBe('backup');
     // Workout ids are health-export record ids and the CSV-import dedupe key, so a restore must keep them.
     const expected = loadHistoryFixture();
     expect(restored.workouts.map((x) => x.id).toSorted()).toEqual(expected.map((x) => x.id).toSorted());
@@ -132,6 +133,7 @@ describe('import-backup-effects', () => {
 
     await testBed.dispatchHandled(
       importBackupData({
+        source: 'backup',
         workouts: mockWorkouts,
         programs: mockPrograms,
         exercises: mockExercises,
@@ -158,6 +160,7 @@ describe('import-backup-effects', () => {
 
     await testBed.dispatchHandled(
       importBackupData({
+        source: 'external',
         workouts: [],
         programs: {},
         successMessage: 'Imported 3 workout(s)',
@@ -178,6 +181,7 @@ describe('import-backup-effects', () => {
 
     await testBed.dispatchHandled(
       importBackupData({
+        source: 'backup',
         workouts: [],
         programs: {},
         feed: undefined,
@@ -243,7 +247,7 @@ describe('export then restore', () => {
     harness.store.dispatch(setIsHydrated(true));
     const workouts = loadHistoryFixture().slice(0, 20);
 
-    harness.store.dispatch(importBackupData({ workouts, programs: {}, successMessage: 'done' }));
+    harness.store.dispatch(importBackupData({ source: 'backup', workouts, programs: {}, successMessage: 'done' }));
     await harness.settle();
 
     const stored = await workoutRepository.loadAll();

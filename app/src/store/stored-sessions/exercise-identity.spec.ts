@@ -30,6 +30,7 @@ import {
   selectLatestExercises,
   selectRecentlyCompletedExercises,
   selectSessions,
+  deleteExercise,
   updateExercise,
 } from '@/store/stored-sessions';
 import { applyStoredSessionsEffects } from '@/store/stored-sessions/effects';
@@ -262,7 +263,7 @@ describe('exercise identity through the store', () => {
       })),
     );
 
-    app.store.dispatch(importBackupData({ workouts, programs: {}, successMessage: 'done' }));
+    app.store.dispatch(importBackupData({ source: 'external', workouts, programs: {}, successMessage: 'done' }));
     await app.settle();
 
     const imported = selectSessions(app.getState()).filter((x) => x.blueprint.name === 'Imported');
@@ -278,5 +279,90 @@ describe('exercise identity through the store', () => {
       [...exercisesBefore, stubExerciseId('Sissy Squat')].toSorted(),
     );
     expect(whatHangsOff(app.getState(), USER_EXERCISE).history).toHaveLength(5);
+  });
+
+  it('keeps a renamed stub descriptor when a CSV repeats its original name', async () => {
+    const { db, app } = await appWithHistory();
+    const originalName = 'Custom cable movement';
+    const id = stubExerciseId(originalName);
+    const renamed = {
+      ...stubDescriptor('Renamed cable movement'),
+      equipment: 'cable',
+      instructions: 'Keep these instructions',
+    };
+    app.store.dispatch(updateExercise({ id, exercise: renamed }));
+    await app.settle();
+
+    const workouts = sessionsFromNormalized([
+      {
+        contentDateKey: '2026-04-01',
+        date: LocalDate.of(2026, 4, 1),
+        sessionName: 'Imported',
+        exercises: [{ name: originalName, sets: [{ reps: 8, weight: 60, unit: 'kilograms' }] }],
+      },
+    ]);
+    app.store.dispatch(importBackupData({ source: 'external', workouts, programs: {}, successMessage: 'done' }));
+    await app.settle();
+
+    expect(selectExerciseById(app.getState(), id)).toEqual(renamed);
+    expect(
+      selectSessions(app.getState()).find((x) => x.blueprint.name === 'Imported')?.recordedExercises[0]?.blueprint
+        .exerciseId,
+    ).toBe(id);
+    expect(selectExerciseById((await startApp(db)).getState(), id)).toEqual(renamed);
+  });
+
+  it('restores linked ids after deleting a descriptor, while resolving old names-only rows', async () => {
+    const db = await migratedDb();
+    const app = await startApp(db);
+    app.store.dispatch(updateExercise({ id: USER_EXERCISE, exercise: stubDescriptor('Original custom lift') }));
+    await app.settle();
+    app.store.dispatch(deleteExercise(USER_EXERCISE));
+    await app.settle();
+
+    const workouts = history()
+      .slice(0, 2)
+      .map((session, index) => {
+        const blueprint = hackSquat.with({ name: index ? 'Renamed custom lift' : 'Original custom lift' });
+        return session.with({
+          blueprint: session.blueprint.with({ exercises: [blueprint] }),
+          recordedExercises: [makeRecordedExercise(blueprint, [10, 10, 10])],
+        });
+      });
+    const legacyBlueprint = WeightedExerciseBlueprint.of({ name: 'Leg Press' });
+    const legacy = history()[2]!.with({
+      id: 'legacy-row',
+      blueprint: new SessionBlueprint('Legacy', [legacyBlueprint], ''),
+      recordedExercises: [makeRecordedExercise(legacyBlueprint, [10])],
+    });
+    const plan = new ProgramBlueprint(
+      'Restored',
+      [new SessionBlueprint('Day', [hackSquat.with({ name: 'Renamed custom lift' }), legacyBlueprint], '')],
+      LocalDate.of(2026, 4, 1),
+    );
+    app.store.dispatch(
+      importBackupData({
+        source: 'backup',
+        workouts: [...workouts, legacy],
+        programs: { restored: plan },
+        exercises: {},
+        successMessage: 'done',
+      }),
+    );
+    await app.settle();
+    expect(app.getState().program.savedPrograms.restored?.sessions[0]?.exercises.map((x) => x.exerciseId)).toEqual([
+      USER_EXERCISE,
+      'Leg Press',
+    ]);
+
+    const restored = await startApp(db);
+    const sessions = selectSessions(restored.getState());
+    expect(
+      sessions
+        .filter((x) => workouts.some((workout) => workout.id === x.id))
+        .map((x) => x.recordedExercises[0]!.blueprint.exerciseId),
+    ).toEqual([USER_EXERCISE, USER_EXERCISE]);
+    expect(sessions.find((x) => x.id === legacy.id)?.recordedExercises[0]?.blueprint.exerciseId).toBe('Leg Press');
+    expect(selectExerciseById(restored.getState(), USER_EXERCISE)).toBeUndefined();
   });
 });
