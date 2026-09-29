@@ -24,6 +24,14 @@ export type RoutineChangeKind = RoutineChange['kind'];
 const ORDER_ID = 'order';
 const countId = (changeId: string) => `${changeId}:count`;
 const kindsId = (changeId: string) => `${changeId}:kinds`;
+const swapId = (removed: RemovedChange) => `${removed.id}:swap`;
+
+type AddedChange = SessionBlueprintDiff['addedExercises'][number];
+type RemovedChange = SessionBlueprintDiff['removedExercises'][number];
+interface SwapPair {
+  removed: RemovedChange;
+  added: AddedChange;
+}
 
 /** The rows the sheet lists for `diff`, in the order the diff found them. */
 export function routineChanges(diff: SessionBlueprintDiff): RoutineChange[] {
@@ -37,7 +45,15 @@ export function routineChanges(diff: SessionBlueprintDiff): RoutineChange[] {
       rows.push({ id: change.id, kind: 'other', change });
     }
   }
+  const pairs = swapPairs(diff);
+  const paired = new Set<DiffChange>(pairs.flatMap((pair) => [pair.removed, pair.added]));
+  for (const { removed, added } of pairs) {
+    rows.push({ id: swapId(removed), kind: 'swapped', from: removed.exercise.name, to: added.exercise.name });
+  }
   for (const change of diff.addedExercises) {
+    if (paired.has(change)) {
+      continue;
+    }
     const exercise = change.exercise;
     rows.push({
       id: change.id,
@@ -48,6 +64,9 @@ export function routineChanges(diff: SessionBlueprintDiff): RoutineChange[] {
     });
   }
   for (const change of diff.removedExercises) {
+    if (paired.has(change)) {
+      continue;
+    }
     rows.push({ id: change.id, kind: 'removed', exerciseName: change.exercise.name });
   }
   if (isRealReorder(diff)) {
@@ -57,9 +76,6 @@ export function routineChanges(diff: SessionBlueprintDiff): RoutineChange[] {
   for (const modification of diff.modifiedExercises) {
     for (const change of modification.changes) {
       switch (change.kind) {
-        case 'exerciseName':
-          rows.push({ id: change.id, kind: 'swapped', from: change.oldValue, to: change.newValue });
-          break;
         case 'exercisePlannedSets': {
           const { oldValue, newValue } = change;
           if (oldValue.length !== newValue.length) {
@@ -130,8 +146,13 @@ export function routineUpdateDiff(diff: SessionBlueprintDiff, selected: Readonly
   const keepOrder = selected.has(ORDER_ID) && isRealReorder(diff);
 
   const sessionChanges = diff.sessionChanges.filter((c) => c.kind === 'sessionName' || selected.has(c.id));
-  const addedExercises = diff.addedExercises.filter((c) => selected.has(c.id));
-  const removedExercises = diff.removedExercises.filter((c) => selected.has(c.id));
+  const keptSwaps = swapPairs(diff).filter((pair) => selected.has(swapId(pair.removed)));
+  const addedExercises = diff.addedExercises.filter(
+    (c) => selected.has(c.id) || keptSwaps.some((pair) => pair.added === c),
+  );
+  const removedExercises = diff.removedExercises.filter(
+    (c) => selected.has(c.id) || keptSwaps.some((pair) => pair.removed === c),
+  );
   const reorderedExercises = keepOrder ? diff.reorderedExercises : [];
   const modifiedExercises = diff.modifiedExercises
     .map((modification) => ({
@@ -179,6 +200,33 @@ export function routineUpdateDiff(diff: SessionBlueprintDiff, selected: Readonly
     originalSession: diff.originalSession,
     newSession: diff.newSession,
   };
+}
+
+/**
+ * An exercise swapped during a workout shows up as a removal plus an addition. They are paired when they
+ * sit in the same gap between the exercises both sessions share and are the same kind, so the swap is one
+ * row: keeping only half of it would leave the routine with both exercises or neither. A kept swap brings
+ * in today's exercise whole, as a kept addition does.
+ */
+function swapPairs(diff: SessionBlueprintDiff): SwapPair[] {
+  const removedAt = diff.removedExercises.map((c) => c.oldIndex);
+  const addedAt = diff.addedExercises.map((c) => c.newIndex);
+  // The number of shared exercises above an index: the index less the unshared ones above it.
+  const gap = (index: number, unshared: number[]) => index - unshared.filter((i) => i < index).length;
+  const pairs: SwapPair[] = [];
+  for (const removed of diff.removedExercises) {
+    const added = diff.addedExercises.find(
+      (candidate) =>
+        !pairs.some((pair) => pair.added === candidate) &&
+        gap(candidate.newIndex, addedAt) === gap(removed.oldIndex, removedAt) &&
+        candidate.exercise instanceof WeightedExerciseBlueprint ===
+          removed.exercise instanceof WeightedExerciseBlueprint,
+    );
+    if (added) {
+      pairs.push({ removed, added });
+    }
+  }
+  return pairs;
 }
 
 function keptPlannedSets(

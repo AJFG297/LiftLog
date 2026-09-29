@@ -482,26 +482,30 @@ describe('applySessionBlueprintDiff', () => {
     expect(result.exercises).toEqual(modified.exercises);
   });
 
-  it('finds a swapped exercise by its old name when the routine moved it since', () => {
+  it('finds the exercise by its name when the routine gained one above it since', () => {
     const before = new SessionBlueprint(
       'Workout',
-      [createWeightedExercise('Bench'), createWeightedExercise('Row')],
+      [createWeightedExercise('Bench', 3), createWeightedExercise('Row')],
       '',
     );
     const today = new SessionBlueprint(
       'Workout',
-      [createWeightedExercise('Incline'), createWeightedExercise('Row')],
+      [createWeightedExercise('Bench', 4), createWeightedExercise('Row')],
       '',
     );
     const editedSince = new SessionBlueprint(
       'Workout',
-      [createWeightedExercise('Curl'), createWeightedExercise('Bench'), createWeightedExercise('Row')],
+      [createWeightedExercise('Curl', 3), createWeightedExercise('Bench', 3), createWeightedExercise('Row')],
       '',
     );
 
     const result = applySessionBlueprintDiff(editedSince, diffSessionBlueprints(before, today));
 
-    expect(result.exercises.map((e) => e.name)).toEqual(['Curl', 'Incline', 'Row']);
+    expect(result.exercises).toEqual([
+      createWeightedExercise('Curl', 3),
+      createWeightedExercise('Bench', 4),
+      createWeightedExercise('Row'),
+    ]);
   });
 
   it('should apply selected session name change', () => {

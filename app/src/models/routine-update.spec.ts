@@ -3,7 +3,7 @@ import { Duration } from '@js-joda/core';
 import { applySessionBlueprintDiff, diffSessionBlueprints } from '@/models/blueprint-diff';
 import { nextWarmupSet, PlannedSet, Rest, SessionBlueprint } from '@/models/blueprint-models';
 import { EmptySession } from '@/models/session-models';
-import { makeWeightedBlueprint } from '@/models/session-models/__test__/helpers';
+import { makeCardioBlueprint, makeWeightedBlueprint } from '@/models/session-models/__test__/helpers';
 import { routineChanges, routineUpdateDiff } from '@/models/routine-update';
 
 const bench = makeWeightedBlueprint({ name: 'Bench Press', sets: 3, repsConfig: { type: 'fixed', reps: 5 } });
@@ -12,6 +12,8 @@ const fly = makeWeightedBlueprint({ name: 'Cable Fly', sets: 3, repsConfig: { ty
 const raise = makeWeightedBlueprint({ name: 'Lateral Raise', sets: 3, repsConfig: { type: 'fixed', reps: 12 } });
 // What the live workout's Swap leaves behind: the same slot and settings under another exercise's name.
 const incline = bench.with({ name: 'Incline Dumbbell Press' });
+const curl = makeWeightedBlueprint({ name: 'Curl', sets: 3, repsConfig: { type: 'fixed', reps: 12 } });
+const deadlift = makeWeightedBlueprint({ name: 'Deadlift', sets: 5, repsConfig: { type: 'fixed', reps: 5 } });
 
 const routine = (...exercises: ReturnType<typeof makeWeightedBlueprint>[]) =>
   new SessionBlueprint('Push', exercises, '');
@@ -59,15 +61,27 @@ describe('routineChanges', () => {
     ]);
   });
 
-  it('lists a set added to a swapped-in exercise as its own row', () => {
-    const today = routine(incline.with({ plannedSets: [planned(5), planned(5), planned(5), planned(5)] }), press);
-
-    const rows = routineChanges(diffSessionBlueprints(routine(bench, press), today));
+  it('pairs only one of two exercises removed from the slot a new one took', () => {
+    const rows = routineChanges(
+      diffSessionBlueprints(routine(bench, curl, fly, press), routine(bench, deadlift, press)),
+    );
 
     expect(rows).toEqual([
-      expect.objectContaining({ kind: 'swapped', from: 'Bench Press', to: 'Incline Dumbbell Press' }),
-      expect.objectContaining({ kind: 'setCount', exerciseName: 'Incline Dumbbell Press', from: 3, to: 4 }),
+      expect.objectContaining({ kind: 'swapped', from: 'Curl', to: 'Deadlift' }),
+      expect.objectContaining({ kind: 'removed', exerciseName: 'Cable Fly' }),
     ]);
+  });
+
+  it('does not pair a cardio exercise with a weighted one', () => {
+    const run = makeCardioBlueprint();
+    const rows = routineChanges(
+      diffSessionBlueprints(
+        new SessionBlueprint('Push', [bench, press], ''),
+        new SessionBlueprint('Push', [run, press], ''),
+      ),
+    );
+
+    expect(rows.map((row) => row.kind)).toEqual(['added', 'removed']);
   });
 
   it('keeps a removal and an addition elsewhere as two rows', () => {
@@ -136,20 +150,47 @@ describe('routineChanges', () => {
 });
 
 describe('routineUpdateDiff', () => {
-  it('swaps the exercise in its slot and keeps the sets it had', () => {
-    const kept = keep(routine(bench, press, fly), routine(incline, press, fly), ['swapped']);
+  it('swaps in today’s exercise whole, sets included', () => {
+    const today = routine(
+      incline.with({ plannedSets: [planned(10), planned(10), planned(10), planned(10)] }),
+      press,
+      fly,
+    );
 
-    expect(kept.exercises.map((e) => e.name)).toEqual(['Incline Dumbbell Press', 'Overhead Press', 'Cable Fly']);
-    expect(kept.exercises[0]).toEqual(incline);
+    const kept = keep(routine(bench, press, fly), today, ['swapped']);
+
+    expect(kept.exercises).toEqual(today.exercises);
   });
 
-  it('keeps the original exercise, with the set added today, when only the set row is kept', () => {
-    const today = routine(incline.with({ plannedSets: [planned(5), planned(5), planned(5), planned(5)] }), press);
+  it('leaves both exercises out of the change when the swap is not kept', () => {
+    expect(keep(routine(bench, press), routine(incline, press), [])).toEqual(routine(bench, press));
+  });
 
-    const kept = keep(routine(bench, press), today, ['setCount']);
+  it('gives today’s exercises back when every row is kept', () => {
+    const all = [
+      'added',
+      'removed',
+      'swapped',
+      'order',
+      'setCount',
+      'setTypes',
+      'warmups',
+      'rest',
+      'superset',
+      'other',
+    ];
+    const cases = [
+      [routine(bench, curl), routine(bench, deadlift)],
+      [routine(bench, curl, fly, press), routine(bench, deadlift, press)],
+      [
+        routine(bench, press),
+        routine(incline.with({ plannedSets: [planned(10), planned(10), planned(10), planned(10)] }), press),
+      ],
+    ];
 
-    expect(kept.exercises.map((e) => e.name)).toEqual(['Bench Press', 'Overhead Press']);
-    expect(kept.exercises[0]).toEqual(bench.with({ plannedSets: [planned(5), planned(5), planned(5), planned(5)] }));
+    for (const [original, today] of cases) {
+      expect(keep(original!, today!, all).exercises).toEqual(today!.exercises);
+    }
   });
 
   it('keeps an added set without taking the rep changes made today', () => {
