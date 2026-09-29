@@ -1,10 +1,10 @@
 import FullHeightScrollView from '@/components/layout/full-height-scroll-view';
 import { ActionButton } from '@/components/presentation/foundation/action-button';
 import { Card } from '@/components/presentation/foundation/card';
-import { Chip } from '@/components/presentation/foundation/chip';
 import { MsIconSrc } from '@/components/presentation/foundation/ms-icon-source';
 import { RoundIconButton } from '@/components/presentation/foundation/round-icon-button';
 import { SurfaceText } from '@/components/presentation/foundation/surface-text';
+import { FeelPicker } from '@/components/presentation/summary/feel-picker';
 import { RoutineUpdatedBanner } from '@/components/presentation/summary/routine-updated-banner';
 import { StatCard } from '@/components/presentation/summary/stat-card';
 import { BestSetRow, ChangeTone, RecordRow } from '@/components/presentation/summary/summary-rows';
@@ -282,17 +282,11 @@ export function WorkoutSummary({ sessionId, finished }: WorkoutSummaryProps) {
       {finished ? (
         <Card style={{ gap: spacing[3] }}>
           <SectionTitle>{t('finish.summary.feel.title')}</SectionTitle>
-          <View style={{ flexDirection: 'row', marginHorizontal: -spacing[1] }}>
-            {SESSION_FEELS.map((feel) => (
-              <Chip
-                key={feel}
-                label={t(FEEL_KEYS[feel])}
-                selected={session.reflection?.feel === feel}
-                onPress={() => pickFeel(feel)}
-                style={{ flexGrow: 1, flexBasis: 0 }}
-              />
-            ))}
-          </View>
+          <FeelPicker
+            options={SESSION_FEELS.map((feel) => ({ value: feel, label: t(FEEL_KEYS[feel]) }))}
+            selected={session.reflection?.feel}
+            onPick={pickFeel}
+          />
           <TextInput
             value={noteDraft}
             onChangeText={setNoteDraft}
