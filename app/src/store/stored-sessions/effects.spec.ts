@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { LocalDate } from '@js-joda/core';
+import { Duration, LocalDate } from '@js-joda/core';
 import { drizzle } from 'drizzle-orm/expo-sqlite';
 import type { ExpoSQLiteDatabase } from 'drizzle-orm/expo-sqlite';
 import { openDatabaseAsync } from 'expo-sqlite';
@@ -410,7 +410,7 @@ describe('stored-sessions effects', () => {
       harness.store.dispatch(
         updateStoredSession({
           sessionId: session.id,
-          update: (s) => s.with({ restTimer: new RestTimer(tick(), tick()) }),
+          update: (s) => s.with({ restTimer: new RestTimer(tick(), Duration.ofSeconds(60)) }),
         }),
       );
       await harness.settle();

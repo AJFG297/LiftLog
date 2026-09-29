@@ -21,7 +21,8 @@ export function CardioTimerControls({ onStop }: CardioTimerControlsProps) {
           onPress={onStop}
           modifiers={[
             buttonStyle('glassProminent'),
-            // White glyph on the tint: use the fill, not the Host's text-safe accent (see RestTimerControls).
+            // White glyph on the tint: use the fill, not the Host's seedColor, which is the text-safe accent and
+            // light in dark mode.
             tint(tokens.accent),
             controlPadding,
             accessibilityLabel(t('cardio_timer.stop')),

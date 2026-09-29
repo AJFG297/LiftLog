@@ -103,6 +103,14 @@ The native bridge receives a json string directly and uses generated classes for
 
 ## Message flow summary
 
+### Rest timer info
+
+`WorkoutUpdatedEvent.restTimerInfo` carries three instants: `startedAt`, `partiallyEndAt` (the end of the
+countdown the rest pill shows) and `endAt` (the end of the min to max window). They come from
+`restWindowOf` in `models/session-models/rest.ts`, the same function the pill counts down with, so a length
+picked in the rest sheet or a -15 reaches the notification as new instants and nothing on the native side
+changes. See [LiveWorkout.md](./LiveWorkout.md#rest).
+
 ### App → Worker (Events)
 
 1. The main app broadcasts a `WorkoutMessage` (event)

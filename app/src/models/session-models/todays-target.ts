@@ -1,4 +1,5 @@
-import { RepsTarget } from '@/models/blueprint-models';
+import { ExerciseBlueprint, RepsTarget } from '@/models/blueprint-models';
+import type { RecordedExercise } from '@/models/session-models/recorded-exercise';
 import { RecordedWeightedExercise } from '@/models/session-models/recorded-weighted-exercise';
 import { setLabels } from '@/models/session-models/set-kind';
 import { Weight } from '@/models/weight';
@@ -12,6 +13,8 @@ export interface LastTime {
 /** Why today's numbers are what they are, compared with the performance they were carried from. */
 export type TargetReason =
   | { kind: 'firstTime' }
+  /** Done before, but never with today's sets and reps, so there is nothing to measure against. */
+  | { kind: 'newScheme' }
   | { kind: 'weightUp'; by: Weight; lastTime: LastTime | undefined }
   | { kind: 'weightDown'; by: Weight }
   | { kind: 'repsUp'; by: number; lastTime: LastTime | undefined }
@@ -30,13 +33,46 @@ export interface TodaysTarget {
 }
 
 /**
+ * The performance `exercise` carried on from, among `candidates` (newest first): the latest with the key
+ * its routine gives it, `planned`, because that is what the session was built from. A set added or moved
+ * during the workout changes the exercise's own key, and the lineage it came from must not be lost with it.
+ * Without a routine exercise to go by, the exercise's own key decides.
+ */
+export function carriedFrom(
+  exercise: RecordedWeightedExercise,
+  candidates: readonly RecordedWeightedExercise[],
+  planned: ExerciseBlueprint | undefined,
+): RecordedWeightedExercise | undefined {
+  const plannedKey = planned?.progressionKey();
+  const fromPlan = plannedKey === undefined ? undefined : candidates.find((c) => c.progressionKey() === plannedKey);
+  return fromPlan ?? exercise.previousPerformanceIn(candidates);
+}
+
+/**
+ * The routine exercise `exercise` of the session was built from. A routine can plan a movement more than
+ * once, so it is the one at the same place among the routine's exercises of that movement. Undefined when
+ * `exercise` is not one of `sessionExercises`.
+ */
+export function plannedExerciseFor(
+  exercise: RecordedExercise,
+  sessionExercises: readonly RecordedExercise[],
+  routineExercises: readonly ExerciseBlueprint[],
+): ExerciseBlueprint | undefined {
+  const movement = exercise.movementKey();
+  const occurrence = sessionExercises.filter((e) => e.movementKey() === movement).indexOf(exercise);
+  return occurrence < 0 ? undefined : routineExercises.filter((p) => p.movementKey() === movement)[occurrence];
+}
+
+/**
  * The top set's numbers for today, and why. Progression runs once, at session start, and keeps no record
  * of what it did, so the reason is read back from the difference with `previous`, the performance today
- * carried on from (see {@link RecordedWeightedExercise.previousPerformanceIn}).
+ * carried on from (see {@link RecordedWeightedExercise.previousPerformanceIn}). `doneBefore` says whether
+ * the movement has any recent performance at all, which `previous` misses when the set scheme changed.
  */
 export function todaysTarget(
   exercise: RecordedWeightedExercise,
   previous: RecordedWeightedExercise | undefined,
+  doneBefore = false,
 ): TodaysTarget | undefined {
   const index = topSetIndex(exercise);
   const slot = exercise.potentialSets[index];
@@ -46,7 +82,7 @@ export function todaysTarget(
   return {
     weight: showsWeight(exercise, slot.weight) ? slot.weight : undefined,
     reps: exercise.repsTargetForSet(index),
-    reason: reasonFor(exercise, index, previous),
+    reason: reasonFor(exercise, index, previous, doneBefore),
   };
 }
 
@@ -72,10 +108,11 @@ function reasonFor(
   exercise: RecordedWeightedExercise,
   index: number,
   previous: RecordedWeightedExercise | undefined,
+  doneBefore: boolean,
 ): TargetReason {
   const before = previous?.potentialSets[index];
   if (!previous || !before) {
-    return { kind: 'firstTime' };
+    return previous || doneBefore ? { kind: 'newScheme' } : { kind: 'firstTime' };
   }
   const now = exercise.potentialSets[index]!;
   const lastTime = previous.isSuccessForProgressiveOverload ? lastTimeOf(previous) : undefined;
