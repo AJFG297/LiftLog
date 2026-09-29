@@ -4,6 +4,7 @@ import { SetTable, type SetTableCell, type SetTableRow } from '@/components/pres
 import ExerciseNotesDisplay from '@/components/presentation/workout/exercise-notes-display';
 import { spacing } from '@/hooks/useAppTheme';
 import { LiveSetEntry } from '@/hooks/useLiveSetEntry';
+import { usePreviousPerformance } from '@/hooks/useTodaysTarget';
 import { Resistance } from '@/models/blueprint-models';
 import { equipmentClassOf } from '@/models/equipment';
 import { PotentialSet, RecordedWeightedExercise, Session } from '@/models/session-models';
@@ -11,9 +12,9 @@ import { SetPosition } from '@/models/session-models/recorded-weighted-exercise'
 import { formatRpe } from '@/models/session-models/rpe';
 import { SetField, SetRow, setRowsOf, weightUnitOf } from '@/models/session-models/set-entry';
 import { LoadUnit, Weight } from '@/models/weight';
-import { useAppSelector, useAppSelectorWithArg } from '@/store';
+import { useAppSelector } from '@/store';
 import { selectPreferredWeightUnit } from '@/store/settings';
-import { selectExercises, selectRecentlyCompletedExercises } from '@/store/stored-sessions';
+import { selectExercises } from '@/store/stored-sessions';
 import { localeDecimalSeparator, localeFormatBigNumber } from '@/utils/locale-bignumber';
 import { useTranslate } from '@tolgee/react';
 import BigNumber from 'bignumber.js';
@@ -35,7 +36,7 @@ interface LiveSetTableProps {
 export function LiveSetTable(props: LiveSetTableProps) {
   const { session, exerciseIndex, entry } = props;
   const { t } = useTranslate();
-  const recentlyCompleted = useAppSelectorWithArg(selectRecentlyCompletedExercises, session.id);
+  const previousPerformance = usePreviousPerformance(session);
   const catalog = useAppSelector(selectExercises);
   const preferredUnit = useAppSelector(selectPreferredWeightUnit);
   const state = entry.stateFor(exerciseIndex);
@@ -47,9 +48,9 @@ export function LiveSetTable(props: LiveSetTableProps) {
   const { resistance } = exercise.blueprint;
   const unit = weightUnitOf(exercise, preferredUnit);
   const perDumbbell = equipmentClassOf(catalog[exercise.blueprint.exerciseId]?.equipment ?? null) === 'dumbbell';
-  const candidates = recentlyCompleted(exercise.movementKey()) as RecordedWeightedExercise[];
-  // A changed set scheme has no exact match, but last time's numbers are still worth seeing.
-  const previous = exercise.previousPerformanceIn(candidates) ?? candidates[0];
+  const performances = previousPerformance(exercise);
+  // A changed set scheme carries nothing on, but last time's numbers are still worth seeing.
+  const previous = performances.previous ?? performances.candidates[0];
   const next = props.toStartNext ? exercise.currentSet : undefined;
   const editing = entry.editing?.exerciseIndex === exerciseIndex ? entry.editing : undefined;
   const bodyweightLabel = t('exercise.short_bodyweight.label');
@@ -136,7 +137,7 @@ export function LiveSetTable(props: LiveSetTableProps) {
         onAddSet={() => entry.addSet(exerciseIndex)}
         editingRowRef={props.editingRowRef}
       />
-      <ExerciseNotesDisplay exercise={exercise} previousExercise={candidates[0]} />
+      <ExerciseNotesDisplay exercise={exercise} previousExercise={performances.candidates[0]} />
     </View>
   );
 }

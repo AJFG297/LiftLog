@@ -1,4 +1,4 @@
-import { RepsTarget } from '@/models/blueprint-models';
+import { ExerciseBlueprint, RepsTarget } from '@/models/blueprint-models';
 import { RecordedWeightedExercise } from '@/models/session-models/recorded-weighted-exercise';
 import { setLabels } from '@/models/session-models/set-kind';
 import { Weight } from '@/models/weight';
@@ -27,6 +27,22 @@ export interface TodaysTarget {
   weight: Weight | undefined;
   reps: RepsTarget;
   reason: TargetReason;
+}
+
+/**
+ * The performance `exercise` carried on from, among `candidates` (newest first): the latest with the key
+ * its routine gives it, `planned`, because that is what the session was built from. A set added or moved
+ * during the workout changes the exercise's own key, and the lineage it came from must not be lost with it.
+ * Without a routine exercise to go by, the exercise's own key decides.
+ */
+export function carriedFrom(
+  exercise: RecordedWeightedExercise,
+  candidates: readonly RecordedWeightedExercise[],
+  planned: ExerciseBlueprint | undefined,
+): RecordedWeightedExercise | undefined {
+  const plannedKey = planned?.progressionKey();
+  const fromPlan = plannedKey === undefined ? undefined : candidates.find((c) => c.progressionKey() === plannedKey);
+  return fromPlan ?? exercise.previousPerformanceIn(candidates);
 }
 
 /**

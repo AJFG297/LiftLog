@@ -44,7 +44,8 @@ Nothing on the screen is stored except which exercise is in focus. The rest come
   cleared once something follows it, because it would join that exercise.
 - **Today's target** is `todaysTarget` in `models/session-models/todays-target.ts`. Progression runs once,
   at session start, and keeps no record of what it did, so the card compares today's top set with the
-  performance it was carried from (`previousPerformanceIn`): heavier, lighter, more reps, the same after a
+  performance it was carried from (`carriedFrom`: the latest with the key the routine gives the exercise,
+  as the session was built, so a set added or moved during the workout doesn't lose it): heavier, lighter, more reps, the same after a
   success, or the same after a miss (naming the set that fell short). See [Progression.md](./Progression.md).
 
 The workout worker, its notification and background behaviour are untouched: they still read

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { Weight } from '@/models/weight';
 import { RecordedWeightedExercise } from '@/models/session-models/recorded-weighted-exercise';
-import { todaysTarget } from '@/models/session-models/todays-target';
+import { carriedFrom, todaysTarget } from '@/models/session-models/todays-target';
 import { emptyPotentialSet, makeRecordedExercise, makeWeightedBlueprint } from './__test__/helpers';
 
 const bench = makeWeightedBlueprint({ name: 'Bench', sets: 3, repsConfig: { type: 'fixed', reps: 5 } });
@@ -98,5 +98,33 @@ describe('todaysTarget', () => {
 
   it('has nothing to show for an exercise with no sets', () => {
     expect(todaysTarget(today([]), undefined)).toBeUndefined();
+  });
+});
+
+describe('carriedFrom', () => {
+  const fourSets = bench.with({ sets: 4 });
+
+  it('finds the performance by the routine’s key after a set is added mid-workout', () => {
+    const previous = lastTime([5, 5, 5]);
+    const withAddedSet = today([87.5, 87.5, 87.5, 87.5], fourSets);
+
+    expect(carriedFrom(withAddedSet, [previous], bench)).toBe(previous);
+    expect(withAddedSet.previousPerformanceIn([previous])).toBeUndefined();
+  });
+
+  it('prefers the routine’s lineage over a newer performance of another scheme', () => {
+    const olderThreeSets = lastTime([5, 5, 5]);
+    const newerFourSets = lastTime([5, 5, 5, 5], 80, fourSets);
+
+    expect(carriedFrom(today([87.5, 87.5, 87.5, 87.5], fourSets), [newerFourSets, olderThreeSets], bench)).toBe(
+      olderThreeSets,
+    );
+  });
+
+  it('matches on the exercise’s own key without a routine exercise', () => {
+    const previous = lastTime([5, 5, 5]);
+
+    expect(carriedFrom(today([87.5, 87.5, 87.5]), [previous], undefined)).toBe(previous);
+    expect(carriedFrom(today([87.5, 87.5, 87.5, 87.5], fourSets), [previous], undefined)).toBeUndefined();
   });
 });

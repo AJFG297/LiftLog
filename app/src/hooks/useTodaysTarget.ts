@@ -1,19 +1,32 @@
 import { RecordedExercise, RecordedWeightedExercise, Session } from '@/models/session-models';
-import { TodaysTarget, todaysTarget } from '@/models/session-models/todays-target';
-import { useAppSelectorWithArg } from '@/store';
+import { carriedFrom, TodaysTarget, todaysTarget } from '@/models/session-models/todays-target';
+import { useAppSelector, useAppSelectorWithArg } from '@/store';
+import { selectActiveProgram } from '@/store/program';
 import { selectRecentlyCompletedExercises } from '@/store/stored-sessions';
+
+/**
+ * The performance an exercise of `session` carries on from (see {@link carriedFrom}), and every recent
+ * performance of the same movement, newest first.
+ */
+export function usePreviousPerformance(session: Session) {
+  const recentlyCompletedExercises = useAppSelectorWithArg(selectRecentlyCompletedExercises, session.id);
+  const program = useAppSelector(selectActiveProgram);
+  const routine = program.sessions.find((planned) => planned.name === session.blueprint.name);
+  return (exercise: RecordedWeightedExercise) => {
+    const candidates = recentlyCompletedExercises(exercise.movementKey()) as RecordedWeightedExercise[];
+    const planned = routine?.exercises.find((planned) => planned.movementKey() === exercise.movementKey());
+    return { previous: carriedFrom(exercise, candidates, planned), candidates };
+  };
+}
 
 /** Today's target for an exercise of `session`, measured against its last performance. Cardio has none. */
 export function useTodaysTarget(session: Session): (exercise: RecordedExercise) => TodaysTarget | undefined {
-  const recentlyCompletedExercises = useAppSelectorWithArg(selectRecentlyCompletedExercises, session.id);
+  const previousPerformance = usePreviousPerformance(session);
   return (exercise) => {
     if (!(exercise instanceof RecordedWeightedExercise)) {
       return undefined;
     }
-    const previous = exercise.previousPerformanceIn(
-      recentlyCompletedExercises(exercise.movementKey()) as RecordedWeightedExercise[],
-    );
-    return todaysTarget(exercise, previous);
+    return todaysTarget(exercise, previousPerformance(exercise).previous);
   };
 }
 
