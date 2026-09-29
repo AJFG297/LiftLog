@@ -1,6 +1,6 @@
 # Plan: relational storage and stable exercise identity
 
-Status: **draft**, not started.
+Status: **in progress**. Phase 0 (PM-9) and phase 1 (PM-10, PM-11) are done: workouts live in relational tables and blueprints carry stable exercise IDs. Phase 2, reading history from SQL, is next.
 
 This plan rests on two assumptions:
 
