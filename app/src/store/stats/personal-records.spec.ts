@@ -3,7 +3,7 @@ import { LocalDate, OffsetDateTime } from '@js-joda/core';
 import BigNumber from 'bignumber.js';
 import { findPersonalRecords, sessionRecords } from '@/store/stats/personal-records';
 import { RecordedWeightedExercise, Session } from '@/models/session-models';
-import { movementKeyFor, ProgressionRule, Rest, SessionBlueprint } from '@/models/blueprint-models';
+import { movementKeyFor, ProgressionRule, Rest, SessionBlueprint, stubExerciseId } from '@/models/blueprint-models';
 import { Weight } from '@/models/weight';
 import {
   filledPotentialSet,
@@ -189,7 +189,7 @@ describe('sessionRecords', () => {
     expect(records).toEqual([
       {
         kind: 'heaviestWeight',
-        key: movementKeyFor('Bench', 'WeightedExerciseBlueprint'),
+        key: movementKeyFor(stubExerciseId('Bench'), 'WeightedExerciseBlueprint'),
         exerciseName: 'Bench',
         weight: kg(90),
         reps: 4,
@@ -207,7 +207,7 @@ describe('sessionRecords', () => {
     expect(records).toEqual([
       {
         kind: 'estimatedOneRepMax',
-        key: movementKeyFor('Squat', 'WeightedExerciseBlueprint'),
+        key: movementKeyFor(stubExerciseId('Squat'), 'WeightedExerciseBlueprint'),
         exerciseName: 'Squat',
         oneRepMax: kg(100).multipliedBy(new BigNumber(1).plus(new BigNumber(6).div(30))),
         previous: kg(100).multipliedBy(new BigNumber(1).plus(new BigNumber(5).div(30))),
