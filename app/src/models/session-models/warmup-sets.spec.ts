@@ -3,7 +3,7 @@ import { LocalDate } from '@js-joda/core';
 import { v4 as uuid } from 'uuid';
 import { PlannedWarmupSet, SessionBlueprint } from '@/models/blueprint-models';
 import { Weight } from '@/models/weight';
-import { RecordedWeightedExercise } from '@/models/session-models/recorded-weighted-exercise';
+import { PotentialSet, RecordedWeightedExercise } from '@/models/session-models/recorded-weighted-exercise';
 import { Session } from '@/models/session-models/session';
 import { RestTimer } from '@/models/session-models/rest-timer';
 import { makeRecordedExercise, makeWeightedBlueprint, tick, tickAt } from '@/models/session-models/__test__/helpers';
@@ -79,6 +79,22 @@ describe('warm-up slots', () => {
     const moved = fresh.withWeight(0, new Weight(85, 'kilograms'), 'uncompletedSets');
     // 42.5 and 59.5 on the 2.5 kg fallback step; the absolute one doesn't depend on the working weight.
     expect(weights(moved.warmupSets)).toEqual([42.5, 60, 20]);
+  });
+
+  it.each(['drop', 'myo'] as const)('take their percentage from a %s set when it is the heaviest', (kind) => {
+    const blueprint = makeWeightedBlueprint({
+      plannedSets: (['working', 'working', kind] as const).map((k) => ({ reps: { min: 8, max: 8 }, kind: k })),
+      warmupSets: [percent(50, 5), percent(70, 3)],
+    });
+    const slot = (kg: number, k: 'working' | typeof kind) =>
+      PotentialSet.of({ weight: new Weight(kg, 'kilograms'), target: { min: 8, max: 8 }, kind: k });
+    const exercise = new RecordedWeightedExercise(
+      blueprint,
+      [slot(80, 'working'), slot(80, 'working'), slot(120, kind)],
+      undefined,
+    ).withWarmupsFromPlan('kilograms');
+
+    expect(weights(exercise.warmupSets)).toEqual([60, 85]);
   });
 
   it('follow the heaviest working set when only one set changes', () => {
