@@ -25,7 +25,7 @@ sets, and an unfinished one stays on the Workout tab as `Current workout` until 
 
 Preconditions:
 
-- Baseline from the [index](./README.md). Note the starting count: `verify.sh db "select count(*), sum(active) from session;"`.
+- Baseline from the [index](./README.md). Note the starting count: `verify.sh db "select count(*), sum(active) from workout;"`.
 
 - **Whole path in one go.** The repo's e2e flow covers freeform start → add exercise → log set → weight 7.5kg → finish
   → History. Run `verify.sh flow app/.maestro/completing-a-session.yaml workout-session`. Exit 0; `maestro.log`
@@ -44,9 +44,10 @@ Preconditions:
   A freeform session then asks `Would you like to save this workout to your plan?` - `back` declines.
 - **Resume / clear.** Leave a session unfinished (`back` out of it), then on the Workout tab use
   `tapOn: {id: 'resume-workout-button'}` or `tapOn: {id: 'clear-current-workout'}` → `tapOn: 'Clear'`.
-- **Proof.** `verify.sh db "select active, json_extract(payload,'$.blueprint.name') name, json_extract(payload,'$.recordedExercises[0].potentialSets[0]') set1 from session;"`
-  shows a new row with `active=0`, name `Freeform Workout`, and `set1` containing `"repsCompleted":10` and
-  `"weight":{"unit":"kilograms","value":"7.5"}`. While a session is in progress its row has `active=1`.
+- **Proof.** `verify.sh db "select w.active, w.name, json_extract(e.blueprint,'$.name') exercise, s.position, s.reps, s.weight_value, s.weight_unit, s.completed_at from workout w join workout_exercise e on e.workout_id = w.id join weighted_set s on s.workout_id = e.workout_id and s.exercise_position = e.position where w.id = (select id from workout order by rowid desc limit 1) order by e.position, s.position;"`
+  lists the newest workout's slots: `active=0`, name `Freeform Workout`, exercise `New Exercise`, and the
+  `position=0` slot with `reps=10`, `weight_value=7.5`, `weight_unit=kilograms` and a `completed_at`. Unlogged
+  slots have `reps` and `completed_at` empty. While a workout is in progress its row has `active=1`.
 
 ## Gotchas
 
