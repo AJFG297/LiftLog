@@ -160,6 +160,16 @@ A workout is stored across five tables (`db/schema.ts`), not as one payload:
   records the `SessionBlueprintJSON` version it was written at. It is migrated on read by
   `sessionBlueprintMigrations`. A cardio set's own blueprint copy is JSON too; no chain step has ever
   changed it, so it is read as written.
+- **Exercise identity**: every exercise blueprint carries an `exerciseId`, the id of an entry in the
+  exercise list: a built-in's English catalog name, or a user exercise's uuid. `movement_key` is
+  `exerciseId|kind` and `progression_key` is the id plus the rep scheme, so renaming an exercise changes
+  only its descriptor and every workout stays attached. Names arriving from outside (plan files, the AI
+  planner, CSV import, backups, a friend's share) are turned into ids by `ExerciseResolver`
+  (`models/exercise-resolver.ts`): the user's own exercise with that name, then a built-in by any of its
+  names, then a new stub. A stub's id is derived from the normalised name (`stubExerciseId`), so a
+  blueprint that was never linked already keys the way it will once linked. Workouts and plans stored
+  before ids were linked once by the `LINK_EXERCISE_IDS` data migration
+  (`services/data-migrations/link-exercise-ids.ts`), which also rewrote every row's key columns.
 - **Query columns** are computed on write, for SQL to order and aggregate. They are never read back:
   - `workout`: `reference_time_ms` (`getSessionReferenceTime`) and `volume_kg` (`sessionVolume`)
   - `workout_exercise`: `movement_key`, `progression_key` and `latest_time_ms`

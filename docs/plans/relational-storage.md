@@ -174,6 +174,20 @@ every row, though only the columns that rebuild a `Session`. Under Node/libsql t
 migrate + hydrate step went from about 420 ms to about 750 ms, because it now reads about 89k rows
 instead of 5k payloads; phase 2 removes that read.
 
+**Steps 4–7 done in PM-11.** Settled differences from the steps below:
+- `exerciseId` is optional in the blueprint JSON (session blueprint version 9), so a hand-written plan file
+  still validates. The app always writes one.
+- The resolver takes a name only. A weighted and a cardio exercise of the same name share an id, and the
+  kind in both keys keeps them apart.
+- A stub's id is derived from the normalised name, so an unlinked blueprint (built from a bare name, or
+  stored before ids) keys the way it will once linked, and resolving a name twice never makes two
+  exercises. Placeholders ("New Exercise", "Exercise N") rely on this; finishing a workout adds any stub it
+  logged to the exercise list, so it can be renamed.
+- Data already on a device is linked once by the `LINK_EXERCISE_IDS` data migration, which also rewrites
+  every workout's key columns. Imports (plan files, AI plans, CSV, backups, shared items) link at the
+  point they come in. A friend's feed items are display-only and stay as sent.
+- There's no `exercise_id` column: `movement_key` starts with the id, which is what phase 2 queries.
+
 
 1. **Schema.** Add the tables above and drop `session` in the same migration. Consider squashing
    `app/src/drizzle/` to one baseline. Add a check that the journal (`drizzle/migrations.js`) matches the

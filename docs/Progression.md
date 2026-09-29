@@ -12,8 +12,10 @@ When an exercise is completed, the next time it is loaded into a workout, two th
 When you start a workout, LiftLog looks for the last time you did the same exercise and loads those
 numbers in.
 
-- It matches on the exercise's **name**, its **number of sets**, and usually its **rep scheme**.
-  Renaming an exercise or changing how many sets it has therefore starts over from the plan.
+- It matches on the **exercise itself**, its **number of sets**, and usually its **rep scheme**. The
+  exercise is the one in your exercise list, not its name, so renaming it there keeps your numbers, and
+  so does spelling it differently in a plan ("Squat", "squat" and "Squats" are the same exercise).
+  Swapping in a different exercise or changing how many sets it has starts over from the plan.
 - **Weight always carries over.**
 - **Reps you completed last time normally do not.** The target comes back from the plan each session.
 - A workout you opened but never logged a set in is ignored, so an abandoned session cannot become the
