@@ -158,7 +158,9 @@ export function WorkoutSummary({ sessionId, finished }: WorkoutSummaryProps) {
   const records = sessionRecords(session, earlier);
   const comparisons = bestSetComparisons(session, previous);
   const targets =
-    finished && routine ? nextTargets(sessionService.hydrateSessionFromBlueprint(routine, latestExercises)) : [];
+    finished && routine
+      ? nextTargets(sessionService.hydrateSessionFromBlueprint(routine, latestExercises), session)
+      : [];
 
   return (
     <FullHeightScrollView

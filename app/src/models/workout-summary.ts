@@ -181,18 +181,24 @@ function isBetter(candidate: BestSet, top: BestSet, tracksWeight: boolean): bool
 
 export interface NextTarget {
   name: string;
-  /** Undefined for a movement with no load. */
+  /** Undefined for a movement with no load, or one done with none. */
   weight: Weight | undefined;
   reps: RepsTarget;
 }
 
 /**
- * What the next workout of the routine opens on, one line per weighted exercise: its heaviest set that
- * progression moves, with that set's rep target.
+ * What the next workout of the routine opens on, one line per weighted exercise logged in `done`: its
+ * heaviest set that progression moves, with that set's rep target. An exercise skipped today is left
+ * out, since nothing about it changed.
  */
-export function nextTargets(next: Session): NextTarget[] {
+export function nextTargets(next: Session, done: Session): NextTarget[] {
+  const logged = new Set(
+    done.recordedExercises
+      .filter((exercise) => exercise instanceof RecordedWeightedExercise && exercise.isStarted)
+      .map((exercise) => exercise.movementKey()),
+  );
   return next.recordedExercises.flatMap((exercise) => {
-    if (!(exercise instanceof RecordedWeightedExercise)) {
+    if (!(exercise instanceof RecordedWeightedExercise) || !logged.has(exercise.movementKey())) {
       return [];
     }
     const progressed = exercise.potentialSets.filter((s) => setKindHas(s.kind, 'countsTowardsProgression'));
@@ -205,7 +211,7 @@ export function nextTargets(next: Session): NextTarget[] {
     return [
       {
         name: exercise.blueprint.name,
-        weight: exercise.tracksResistance ? top.weight : undefined,
+        weight: exercise.tracksResistance && !top.weight.value.isZero() ? top.weight : undefined,
         reps: top.target,
       },
     ];

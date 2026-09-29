@@ -175,6 +175,15 @@ describe('bestSetComparisons', () => {
 });
 
 describe('nextTargets', () => {
+  const at = OffsetDateTime.parse('2026-09-01T10:00:00Z');
+  const dips = makeWeightedBlueprint({ name: 'Dips', resistance: 'none' });
+  const fly = makeWeightedBlueprint({ name: 'Cable Fly' });
+  const done = workout('Push', [
+    new RecordedWeightedExercise(bench, [logged(kg(85), 5, at)], undefined),
+    new RecordedWeightedExercise(dips, [logged(kg(0), 10, at)], undefined),
+    new RecordedWeightedExercise(fly, [PotentialSet.of({ weight: kg(15) })], undefined),
+  ]);
+
   it('gives the heaviest progressed set of each weighted exercise with its target', () => {
     const next = workout('Push', [
       new RecordedWeightedExercise(
@@ -185,16 +194,31 @@ describe('nextTargets', () => {
         ],
         undefined,
       ),
+      new RecordedWeightedExercise(dips, [PotentialSet.of({ weight: kg(0), target: { min: 8, max: 12 } })], undefined),
+    ]);
+
+    expect(nextTargets(next, done)).toEqual([
+      { name: 'Bench Press', weight: kg(90), reps: { min: 5, max: 5 } },
+      { name: 'Dips', weight: undefined, reps: { min: 8, max: 12 } },
+    ]);
+  });
+
+  it('leaves out exercises not logged today, and the load of one done with none', () => {
+    const lateral = makeWeightedBlueprint({ name: 'Lateral Raise' });
+    const next = workout('Push', [
+      new RecordedWeightedExercise(fly, [PotentialSet.of({ weight: kg(15), target: { min: 12, max: 12 } })], undefined),
       new RecordedWeightedExercise(
-        makeWeightedBlueprint({ name: 'Dips', resistance: 'none' }),
-        [PotentialSet.of({ weight: kg(0), target: { min: 8, max: 12 } })],
+        lateral,
+        [PotentialSet.of({ weight: kg(0), target: { min: 10, max: 10 } })],
+        undefined,
+      ),
+      new RecordedWeightedExercise(
+        makeWeightedBlueprint({ name: 'Bench Press' }),
+        [PotentialSet.of({ weight: kg(0), target: { min: 5, max: 5 } })],
         undefined,
       ),
     ]);
 
-    expect(nextTargets(next)).toEqual([
-      { name: 'Bench Press', weight: kg(90), reps: { min: 5, max: 5 } },
-      { name: 'Dips', weight: undefined, reps: { min: 8, max: 12 } },
-    ]);
+    expect(nextTargets(next, done)).toEqual([{ name: 'Bench Press', weight: undefined, reps: { min: 5, max: 5 } }]);
   });
 });
