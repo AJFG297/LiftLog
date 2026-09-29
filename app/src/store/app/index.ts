@@ -27,8 +27,14 @@ export type LiveWorkoutFocus = {
 // to a searcher that did not ask for it.
 export type ExerciseSearchResult = {
   requestId: string;
-  exercise: ExerciseDescriptor;
+  exercise: PickedExercise;
 };
+
+/** An exercise picked from the list, with its id so the blueprint links to it rather than copying the name. */
+export interface PickedExercise {
+  id: string;
+  descriptor: ExerciseDescriptor;
+}
 
 const appSlice = createSlice({
   name: 'app',

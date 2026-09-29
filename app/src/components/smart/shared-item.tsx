@@ -6,7 +6,7 @@ import SplitCardControl from '@/components/presentation/foundation/split-card-co
 import { SurfaceText } from '@/components/presentation/foundation/surface-text';
 import { spacing } from '@/hooks/useAppTheme';
 import { SharedItem, SharedProgramBlueprint, SharedSession } from '@/models/feed-models';
-import { addProgramSession, savePlan } from '@/store/program';
+import { addProgramSession, linkPlanExercises, savePlan } from '@/store/program';
 import { showSnackbar } from '@/store/app';
 import { T } from '@tolgee/react';
 import { Animated, View } from 'react-native';
@@ -45,6 +45,7 @@ function SharedProgramBlueprintContent({ sharedItem }: { sharedItem: SharedProgr
         programBlueprint: program,
       }),
     );
+    dispatch(linkPlanExercises({ programId }));
     push(`/settings/program-list?focusprogramId=${programId}`, {
       withAnchor: true,
     });

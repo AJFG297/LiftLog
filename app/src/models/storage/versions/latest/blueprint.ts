@@ -12,7 +12,7 @@ export interface ProgramBlueprintJSON {
 }
 
 export interface SessionBlueprintJSON {
-  version: 8;
+  version: 9;
   name: string;
   exercises: ExerciseBlueprintJSON[];
   notes: string;
@@ -60,6 +60,14 @@ export interface CardioExerciseSetBlueprintJSON {
 export interface CardioExerciseBlueprintJSON {
   type: 'CardioExerciseBlueprint';
   name: string;
+  /**
+   * The exercise this is: an id in the exercise list - a built-in's English catalog name, or a user
+   * exercise's uuid. Everything the app writes has one. Leave it out when authoring a plan by hand:
+   * the app links the exercise by `name` on import, to one of the user's own exercises or a built-in,
+   * and only makes a new exercise when nothing matches. An id the importing device doesn't know is
+   * treated the same way.
+   */
+  exerciseId?: string | undefined;
   sets: CardioExerciseSetBlueprintJSON[];
   notes: string;
   link: string;
@@ -68,6 +76,14 @@ export interface CardioExerciseBlueprintJSON {
 export interface WeightedExerciseBlueprintJSON {
   type: 'WeightedExerciseBlueprint';
   name: string;
+  /**
+   * The exercise this is: an id in the exercise list - a built-in's English catalog name, or a user
+   * exercise's uuid. Everything the app writes has one. Leave it out when authoring a plan by hand:
+   * the app links the exercise by `name` on import, to one of the user's own exercises or a built-in,
+   * and only makes a new exercise when nothing matches. An id the importing device doesn't know is
+   * treated the same way.
+   */
+  exerciseId?: string | undefined;
   /** What the plan asks for, one entry per set. */
   plannedSets: PlannedSetJSON[];
   restBetweenSets: RestJSON;

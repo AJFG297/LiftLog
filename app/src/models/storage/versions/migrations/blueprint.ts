@@ -57,6 +57,12 @@ export const sessionBlueprintMigrations = createMigrations<InitialSessionBluepri
     name: value.name,
     notes: value.notes,
   }))
+  // `exerciseId` is optional, so older blueprints already fit. They come out unlinked, and the
+  // LINK_EXERCISE_IDS data migration or the importer that read them links them by name.
+  .add((value) => ({
+    ...value,
+    version: 9 as const,
+  }))
   .build<SessionBlueprintJSON>();
 
 export const programBlueprintMigrations = createMigrations<InitialProgramBlueprintJSON>({ pseudoMigrateUntil: 3 })

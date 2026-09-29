@@ -17,6 +17,9 @@ import {
 } from '@/store/stored-sessions';
 import { selectActivityMonth, selectStreakStats, selectVolumeScales } from '@/store/activity';
 import { calculateStats } from '@/store/stats/calculate-stats';
+import { GranularStatisticView } from '@/store/stats';
+import { normalizeExerciseName } from '@/models/blueprint-models';
+import { linkExerciseIds } from '@/services/data-migrations/link-exercise-ids';
 import { selectPreferredWeightUnit, setFirstDayOfWeek, setIsHydrated as setSettingsIsHydrated } from '@/store/settings';
 import { applyStoredSessionsEffects } from '@/store/stored-sessions/effects';
 import { DatabaseMigrationService } from '@/services/database-migration-service';
@@ -59,6 +62,8 @@ async function loadHistory(history: Session[]) {
   await new DatabaseMigrationService(db, silentLogger as never, { importOldData: async () => {} }).migrate();
   const workoutRepository = new WorkoutRepository(db);
   await workoutRepository.putMany(history);
+  // The fixture predates exercise ids, like a development install's history: startup links it by name.
+  await linkExerciseIds(db);
 
   const harness = createEffectStore({
     db,
@@ -77,6 +82,32 @@ async function loadHistory(history: Session[]) {
 
 const state = () => store.getState() as unknown as RootState;
 
+/**
+ * Keys carry exercise ids, which for anything outside the catalog are uuids. Snapshots label them by the
+ * exercise's name instead - normalised for a movement, as its key used to be - so they read, and so a diff
+ * against the name-keyed snapshots shows only real changes in grouping.
+ */
+function exerciseName(id: string): string {
+  const { savedExercises, builtInExercises } = state().storedSessions;
+  return savedExercises[id]?.name ?? builtInExercises[id]?.name ?? id;
+}
+/** `Object.fromEntries` over labelled keys, failing if two different keys would share a label. */
+function byLabel<T>(entries: [label: string, key: string, value: T][]): Record<string, T> {
+  const keysByLabel = new Map<string, string>();
+  for (const [label, key] of entries) {
+    const existing = keysByLabel.get(label);
+    if (existing !== undefined && existing !== key) {
+      throw new Error(`"${label}" labels both ${existing} and ${key}: two exercises would read as one`);
+    }
+    keysByLabel.set(label, key);
+  }
+  return Object.fromEntries(entries.map(([label, , value]) => [label, value]));
+}
+function labelMovement(key: string): string {
+  const split = key.lastIndexOf('|');
+  return `${normalizeExerciseName(exerciseName(key.slice(0, split)))}${key.slice(split)}`;
+}
+
 beforeAll(async () => {
   sessions = loadHistoryFixture();
   store = await loadHistory(sessions);
@@ -92,28 +123,40 @@ describe('history aggregates over the 420-session fixture', () => {
   it('latest recorded exercise per progression key', () => {
     const latest = selectLatestExercises(state());
     expect(Object.keys(latest).length).toBeGreaterThan(0);
-    expect(normalize(latest)).toMatchSnapshot();
+    // Labelled by the latest exercise's own name, which is what the key held before it held an id.
+    const labelled = byLabel(
+      Object.entries(latest).map(([key, exercise]) => [
+        `${exercise!.blueprint.name}${key.slice(key.search(/_(Weighted|Cardio)ExerciseBlueprint_/))}`,
+        key,
+        normalize(exercise),
+      ]),
+    );
+    expect(labelled).toMatchSnapshot();
   });
 
   it('recently completed exercises per movement', () => {
-    const movementKeys = Enumerable.from(sessions)
+    // From the stored sessions, whose exercises startup linked; the fixture's own are still unlinked.
+    const movementKeys = Enumerable.from(selectSessions(state()))
       .selectMany((x) => x.recordedExercises)
       .select((x) => x.movementKey())
       .distinct()
       .orderBy((x) => x)
       .toArray();
     const lookup = selectRecentlyCompletedExercises(state(), undefined);
-    expect(Object.fromEntries(movementKeys.map((key) => [key, lookup(key).map(describeExercise)]))).toMatchSnapshot();
+    expect(
+      byLabel(movementKeys.map((key) => [labelMovement(key), key, lookup(key).map(describeExercise)])),
+    ).toMatchSnapshot();
   });
 
   it('recently completed exercises leave out the session being viewed', () => {
-    const newest = Enumerable.from(sessions)
+    const newest = Enumerable.from(selectSessions(state()))
       .orderByDescending((x) => getSessionReferenceTime(x).toEpochSecond())
       .first();
     const lookup = selectRecentlyCompletedExercises(state(), newest.id);
     expect(
-      Object.fromEntries(
+      byLabel(
         newest.recordedExercises.map((exercise) => [
+          labelMovement(exercise.movementKey()),
           exercise.movementKey(),
           lookup(exercise.movementKey()).slice(0, 3).map(describeExercise),
         ]),
@@ -212,11 +255,19 @@ describe('history aggregates over the 420-session fixture', () => {
     const stats = Object.fromEntries(
       Object.entries(ranges).map(([name, range]) => [
         name,
-        normalize(calculateStats(selectSessionsBy(state(), range.from, range.to), unit, range)),
+        normalize(withoutIds(calculateStats(selectSessionsBy(state(), range.from, range.to), unit, range))),
       ]),
     );
     expect(stats).toMatchSnapshot();
   });
+
+  // The ids a stat row carries are what `exerciseName` already labels it by.
+  function withoutIds(stats: GranularStatisticView) {
+    return {
+      ...stats,
+      weightedExerciseStats: stats.weightedExerciseStats.map(({ exerciseId: _, movementKey: __, ...rest }) => rest),
+    };
+  }
 
   it('ordered sessions for plaintext export', () => {
     const ordered = new ProgressRepository(state).getOrderedSessions().select(describeSession).toArray();

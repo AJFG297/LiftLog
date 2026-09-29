@@ -10,6 +10,7 @@ import { StatisticLineChart } from '@/components/presentation/stats/statistic-li
 import { useLoadAxis, useRepsAxis } from '@/components/presentation/stats/quantity-axis';
 import { spacing, useAppTheme } from '@/hooks/useAppTheme';
 import { useAppSelector, useAppSelectorWithArg } from '@/store';
+import { selectExerciseById } from '@/store/stored-sessions';
 import { fetchOverallStats, selectExerciseView, setOverallViewTime, WeightedExerciseStatistics } from '@/store/stats';
 import { T, useTranslate } from '@tolgee/react';
 import { Stack, useFocusEffect } from 'expo-router';
@@ -22,17 +23,22 @@ import { useDispatch } from 'react-redux';
 export default function ExpandedExercisePage() {
   const dispatch = useDispatch();
   const timePeriod = useAppSelector((x) => x.stats.overallViewTime);
-  const { exerciseName } = useLocalSearchParams<{ exerciseName: string }>();
+  const { exerciseId } = useLocalSearchParams<{ exerciseId: string }>();
   const { dismissTo } = useRouter();
   useFocusEffect(() => {
     dispatch(fetchOverallStats());
   });
   useEffect(() => {
-    if (!exerciseName) {
+    if (!exerciseId) {
       dismissTo('/stats');
     }
-  }, [exerciseName, dismissTo]);
-  const stats = useAppSelectorWithArg(selectExerciseView, exerciseName);
+  }, [exerciseId, dismissTo]);
+  const stats = useAppSelectorWithArg(selectExerciseView, exerciseId);
+  // The exercise's name now; stats only know the name it was last logged under.
+  const exerciseName =
+    useAppSelectorWithArg(selectExerciseById, exerciseId)?.name ??
+    (stats.isSuccess() ? stats.data?.exerciseName : undefined) ??
+    '';
   return (
     <FullHeightScrollView contentContainerStyle={{ gap: spacing[2] }}>
       <Stack.Screen

@@ -1,4 +1,5 @@
 import { ExerciseDescriptor } from '@/models/exercise-models';
+import type { BuiltInExerciseNames } from '@/models/exercise-resolver';
 import { detectLanguageFromDateLocale } from '@/utils/language-detector';
 import { supportedLanguages } from '@/services/tolgee';
 
@@ -137,4 +138,33 @@ export async function loadBuiltInExercises(
 export async function loadCanonicalBuiltInExercises(): Promise<Record<string, ExerciseDescriptor>> {
   const [base, english] = await Promise.all([loadBaseCatalog(), loadEnglishOverlay()]);
   return resolveCatalog(base, english);
+}
+
+let builtInNames: Promise<BuiltInExerciseNames> | undefined;
+
+/**
+ * Every name each built-in goes by - its English id first, then each locale's translation - for the
+ * exercise resolver. Names arriving from elsewhere may be in any language: a plan written on a phone
+ * set to Russian, or history logged before the user switched language. Loaded once and kept.
+ */
+export function loadBuiltInExerciseNames(): Promise<BuiltInExerciseNames> {
+  builtInNames ??= (async () => {
+    const [base, english, ...locales] = await Promise.all([
+      loadBaseCatalog(),
+      loadEnglishOverlay(),
+      ...Object.values(localeLoaders).map((load) => load().then((m) => m.default)),
+    ]);
+    const result: Record<string, string[]> = {};
+    for (const { name: id } of base) {
+      const names = [id, english[id]?.name, ...locales.map((locale) => locale[id]?.name)].filter(
+        (name): name is string => !!name,
+      );
+      result[id] = [...new Set(names)];
+    }
+    return result;
+  })().catch((e: unknown) => {
+    builtInNames = undefined;
+    throw e;
+  });
+  return builtInNames;
 }

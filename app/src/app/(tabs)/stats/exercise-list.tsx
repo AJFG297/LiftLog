@@ -1,4 +1,5 @@
 import { Remote } from '@/components/presentation/foundation/remote';
+import { getExerciseStatsHref } from '@/components/smart/exercise-stats-href';
 import { WeightedExerciseListSearcher } from '@/components/presentation/stats/weighted-exercise-list-searcher';
 import { useAppSelector } from '@/store';
 import { fetchOverallStats, selectOverallView, WeightedExerciseStatistics } from '@/store/stats';
@@ -21,7 +22,7 @@ export default function ExerciseListPage() {
 
   const onItemPress = (item: WeightedExerciseStatistics) => {
     dismiss();
-    push(`/stats/expanded-weighted-exercise?exerciseName=${encodeURIComponent(item.exerciseName)}`);
+    push(getExerciseStatsHref(item.exerciseId));
   };
 
   const headerHeight = useContext(HeaderHeightContext); // Intentionally don't use useHeaderHeight as it might not be in a stack

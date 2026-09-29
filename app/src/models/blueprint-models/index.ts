@@ -24,6 +24,7 @@ import {
 import { RecordedWeightedExercise } from '@/models/session-models';
 import { setLabels, type SetKind, type WorkingListKind } from '@/models/session-models/set-kind';
 import { Weight, WeightUnit } from '@/models/weight';
+import { uuidFromName } from '@/utils/uuid';
 
 export class ProgramBlueprint {
   constructor(
@@ -143,7 +144,7 @@ export class SessionBlueprint {
 
   toJSON(): SessionBlueprintJSON {
     return {
-      version: 8,
+      version: 9,
       name: this.name,
       exercises: this.exercises.map((exercise) => exercise.toJSON()),
       notes: this.notes,
@@ -323,6 +324,8 @@ export class CardioExerciseBlueprint {
     readonly sets: CardioExerciseSetBlueprint[],
     readonly notes: string,
     readonly link: string,
+    /** See {@link exerciseId}. Undefined until the blueprint is linked to an exercise. */
+    private readonly linkedExerciseId?: string,
   ) {
     if (!sets.length) {
       throw new Error('Must have at least one set in cardio exercise');
@@ -339,17 +342,28 @@ export class CardioExerciseBlueprint {
       json.sets.map((x) => CardioExerciseSetBlueprint.fromJSON(x)),
       json.notes,
       json.link,
+      json.exerciseId,
     );
+  }
+
+  /** See {@link ExerciseId}. */
+  get exerciseId(): string {
+    return this.linkedExerciseId ?? stubExerciseId(this.name);
+  }
+
+  /** False while the id is still derived from the name. See {@link ExerciseId}. */
+  get isLinked(): boolean {
+    return this.linkedExerciseId !== undefined;
   }
 
   /** See {@link MovementKey}. */
   movementKey(): MovementKey {
-    return movementKeyFor(this.name, this.type);
+    return movementKeyFor(this.exerciseId, this.type);
   }
 
   /** See {@link ProgressionKey}. Distance and time work are separate lineages. */
   progressionKey(): ProgressionKey {
-    return `${this.name}_${this.type}_${this.sets[0]?.target.type ?? 'distance'}` as ProgressionKey;
+    return `${this.exerciseId}_${this.type}_${this.sets[0]?.target.type ?? 'distance'}` as ProgressionKey;
   }
 
   equals(other: ExerciseBlueprint | undefined) {
@@ -364,6 +378,7 @@ export class CardioExerciseBlueprint {
     }
     return (
       this.name === other.name &&
+      this.exerciseId === other.exerciseId &&
       this.sets.length === other.sets.length &&
       this.sets.every((set, index) => set.equals(other.sets[index])) &&
       this.notes === other.notes &&
@@ -375,6 +390,7 @@ export class CardioExerciseBlueprint {
     return {
       type: 'CardioExerciseBlueprint',
       name: this.name,
+      exerciseId: this.exerciseId,
       sets: this.sets.map((x) => x.toJSON()),
       notes: this.notes,
       link: this.link,
@@ -387,6 +403,7 @@ export class CardioExerciseBlueprint {
       other.sets ?? this.sets,
       other.notes ?? this.notes,
       other.link ?? this.link,
+      other.exerciseId ?? this.linkedExerciseId,
     );
   }
 }
@@ -946,6 +963,8 @@ function plannedWarmupSetToJSON(warmup: PlannedWarmupSet): PlannedWarmupSetJSON 
  */
 export interface WeightedExerciseBlueprintInit {
   name?: string;
+  /** See {@link ExerciseId}. Left out, the blueprint is unlinked and its id follows its name. */
+  exerciseId?: string;
   plannedSets?: PlannedSet[];
   progression?: ProgressionRule[];
   restBetweenSets?: Rest;
@@ -978,6 +997,8 @@ export class WeightedExerciseBlueprint {
     readonly link: string,
     readonly resistance: Resistance = 'external',
     warmupSets: PlannedWarmupSet[] = [],
+    /** See {@link exerciseId}. Undefined until the blueprint is linked to an exercise. */
+    private readonly linkedExerciseId?: string,
   ) {
     this.warmupSets = warmupSets.map((w) => warmupSetFor(resistance, w));
   }
@@ -994,6 +1015,7 @@ export class WeightedExerciseBlueprint {
       init.link ?? '',
       init.resistance ?? 'external',
       init.warmupSets ?? [],
+      init.exerciseId,
     );
   }
 
@@ -1012,7 +1034,18 @@ export class WeightedExerciseBlueprint {
       json.link,
       json.resistance,
       json.warmupSets.map(plannedWarmupSetFromJSON),
+      json.exerciseId,
     );
+  }
+
+  /** See {@link ExerciseId}. */
+  get exerciseId(): string {
+    return this.linkedExerciseId ?? stubExerciseId(this.name);
+  }
+
+  /** False while the id is still derived from the name. See {@link ExerciseId}. */
+  get isLinked(): boolean {
+    return this.linkedExerciseId !== undefined;
   }
 
   /** See {@link weightIncrementFor}. */
@@ -1022,7 +1055,7 @@ export class WeightedExerciseBlueprint {
 
   /** See {@link MovementKey}. */
   movementKey(): MovementKey {
-    return movementKeyFor(this.name, this.type);
+    return movementKeyFor(this.exerciseId, this.type);
   }
 
   /**
@@ -1043,7 +1076,7 @@ export class WeightedExerciseBlueprint {
    * them never strands a lineage's carry-over.
    */
   progressionKey(): ProgressionKey {
-    const base = `${this.name}_${this.type}_${this.plannedSets.length}`;
+    const base = `${this.exerciseId}_${this.type}_${this.plannedSets.length}`;
     return (this.repsAreProgressed ? base : `${base}_${plannedSetsKey(this.plannedSets)}`) as ProgressionKey;
   }
 
@@ -1082,6 +1115,7 @@ export class WeightedExerciseBlueprint {
 
     return (
       this.name === other.name &&
+      this.exerciseId === other.exerciseId &&
       plannedSetsEqual(this.plannedSets, other.plannedSets) &&
       progressionEquals(this.progression, other.progression) &&
       this.restBetweenSets.minRest.equals(other.restBetweenSets.minRest) &&
@@ -1099,6 +1133,7 @@ export class WeightedExerciseBlueprint {
     return {
       type: 'WeightedExerciseBlueprint',
       name: this.name,
+      exerciseId: this.exerciseId,
       plannedSets: this.plannedSets.map((s) => ({ reps: { min: s.reps.min, max: s.reps.max }, kind: s.kind })),
       progression: this.progression.map((rule) => rule.toJSON()),
       restBetweenSets: Rest.toJSON(this.restBetweenSets),
@@ -1127,6 +1162,7 @@ export class WeightedExerciseBlueprint {
       other.link ?? this.link,
       other.resistance ?? this.resistance,
       other.warmupSets ?? this.warmupSets,
+      other.exerciseId ?? this.linkedExerciseId,
     );
   }
 }
@@ -1177,27 +1213,51 @@ function plannedSetsKey(plannedSets: PlannedSet[]): string {
  */
 
 /**
- * Identifies a movement across everything the user has ever logged. Blind to how the exercise is
- * programmed, and deliberately fuzzy about spelling - `Cable Flye`, `cable flies` and `Cable Flys`
- * all key alike - because stats, personal records and "recently completed" want one row per
- * movement however the user typed it that day.
+ * Which exercise a blueprint is: an id in the user's exercise list, so renaming the exercise there keeps
+ * every workout that did it. A built-in's id is its English catalog name, and a user exercise's is a
+ * uuid. Names coming in from outside - a plan file, the AI planner, a CSV, a friend's share - are turned
+ * into ids by the `ExerciseResolver` (`models/exercise-resolver.ts`).
  *
- * Weighted and cardio are separate movements even under the same name: a rowing machine and a barbell
- * row share a word and nothing else, and their numbers are not comparable.
+ * A blueprint that was never linked - built from a bare name, or stored before ids existed - answers
+ * with {@link stubExerciseId} of its name, which is the id the resolver gives a name nothing else claims.
+ * So an unlinked blueprint already groups the way it will once linked, unless the name turns out to be
+ * a built-in or one of the user's exercises.
+ */
+export type ExerciseId = string;
+
+/**
+ * The id the resolver gives a name that matches no exercise. It is derived from the normalised name
+ * alone, so `Lunges` and `lunge` get the same stub, every device agrees on it, and resolving the same
+ * name twice never makes two exercises.
+ */
+export function stubExerciseId(name: string): ExerciseId {
+  return uuidFromName(normalizeExerciseName(name), STUB_EXERCISE_NAMESPACE);
+}
+
+const STUB_EXERCISE_NAMESPACE = '4d6c8a1e-2f3b-5c7d-9e0f-1a2b3c4d5e6f';
+
+/**
+ * Identifies a movement across everything the user has ever logged: the exercise and its kind. Blind
+ * to how the exercise is programmed, and blind to its name, so stats, personal records and "recently
+ * completed" stay one row per exercise across a rename. Fuzzy spelling - `Cable Flye`, `cable flies`
+ * and `Cable Flys` - is folded when the names are resolved to one id.
+ *
+ * Weighted and cardio are separate movements even for the same exercise: a rowing machine and a
+ * barbell row share a word and nothing else, and their numbers are not comparable.
  */
 export type MovementKey = string & { readonly __brand: 'MovementKey' };
 
 /**
  * Identifies one exercise slot in a program, so that its weights and rep targets carry from session
- * to session. Sensitive to the rep scheme, which is what lets a plan run Squats 5x5 on two days as a
- * single progressing lineage while Squats 3x8 on a third day climbs on its own. Split by type for the
- * same reason as {@link MovementKey}.
+ * to session: the exercise plus its rep scheme. Sensitive to the rep scheme, which is what lets a plan
+ * run Squats 5x5 on two days as a single progressing lineage while Squats 3x8 on a third day climbs on
+ * its own. Split by type for the same reason as {@link MovementKey}.
  */
 export type ProgressionKey = string & { readonly __brand: 'ProgressionKey' };
 
 /**
- * The fuzzy half of {@link MovementKey}, for the callers that compare names alone - a stat row, a saved
- * exercise descriptor, neither of which knows whether it is weighted or cardio.
+ * The fuzzy spelling fold the resolver matches names with, for the callers that compare names alone -
+ * a saved exercise descriptor, say. Blueprints are compared by id instead.
  */
 export function normalizeExerciseName(name: string): string {
   if (!name) {
@@ -1214,11 +1274,11 @@ export function normalizeExerciseName(name: string): string {
 }
 
 /**
- * For callers holding a name and a type but no blueprint - a route param, say. Prefer
+ * For callers holding an exercise id and a type but no blueprint - a route param, say. Prefer
  * `blueprint.movementKey()` wherever a blueprint is available.
  */
-export function movementKeyFor(name: string, type: ExerciseBlueprint['type']): MovementKey {
-  return `${normalizeExerciseName(name)}|${type}` as MovementKey;
+export function movementKeyFor(exerciseId: ExerciseId, type: ExerciseBlueprint['type']): MovementKey {
+  return `${exerciseId}|${type}` as MovementKey;
 }
 
 export interface Rest {

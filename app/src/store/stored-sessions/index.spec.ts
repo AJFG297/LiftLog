@@ -689,9 +689,9 @@ describe('storedSessions selectors', () => {
     expect(lookup(weightedBlueprint.movementKey())).toEqual([]);
     expect(lookup(cardioBlueprint.movementKey())).toEqual([cardioExercise]);
 
-    // The sheet route only carries a name and a type, so the same lookup has to work without a blueprint.
-    expect(lookup(movementKeyFor('New Exercise', 'CardioExerciseBlueprint'))).toEqual([cardioExercise]);
-    expect(lookup(movementKeyFor('New Exercise', 'WeightedExerciseBlueprint'))).toEqual([]);
+    // The sheet route only carries an id and a type, so the same lookup has to work without a blueprint.
+    expect(lookup(movementKeyFor(cardioBlueprint.exerciseId, 'CardioExerciseBlueprint'))).toEqual([cardioExercise]);
+    expect(lookup(movementKeyFor(cardioBlueprint.exerciseId, 'WeightedExerciseBlueprint'))).toEqual([]);
   });
 
   it('selectMuscles returns sorted distinct muscles and selectExerciseById reads one', () => {

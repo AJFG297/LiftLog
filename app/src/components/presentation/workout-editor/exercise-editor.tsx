@@ -8,7 +8,7 @@ import DirectionsRunIcon from '@expo/material-symbols/directions_run.xml';
 import FitnessCenterIcon from '@expo/material-symbols/fitness_center.xml';
 import { spacing } from '@/hooks/useAppTheme';
 import { CardioExerciseBlueprint, ExerciseBlueprint, WeightedExerciseBlueprint } from '@/models/blueprint-models';
-import { ExerciseDescriptor } from '@/models/exercise-models';
+import { PickedExercise } from '@/store/app';
 import { useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 import { match, P } from 'ts-pattern';
@@ -19,8 +19,8 @@ interface ExerciseEditorProps {
 }
 
 export function ExerciseEditor(props: ExerciseEditorProps) {
-  const selectExerciseFromSearch = (ex: ExerciseDescriptor) => {
-    updateExercise({ name: ex.name });
+  const selectExerciseFromSearch = (picked: PickedExercise) => {
+    updateExercise({ name: picked.descriptor.name, exerciseId: picked.id });
   };
   const { exercise: propsExercise, updateExercise: updatePropsExercise } = props;
   const [exercise, setExercise] = useState(propsExercise);
@@ -46,12 +46,14 @@ export function ExerciseEditor(props: ExerciseEditorProps) {
     if (type === 'weighted') {
       newExercise = WeightedExerciseBlueprint.empty().with({
         name: current.name,
+        exerciseId: current.isLinked ? current.exerciseId : undefined,
         notes: current.notes,
         link: current.link,
       });
     } else {
       newExercise = CardioExerciseBlueprint.empty().with({
         name: current.name,
+        exerciseId: current.isLinked ? current.exerciseId : undefined,
         notes: current.notes,
         link: current.link,
       });

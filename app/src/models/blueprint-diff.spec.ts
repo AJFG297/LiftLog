@@ -993,3 +993,32 @@ describe('warm-up changes', () => {
     expect(getChangeLabelKey(change!)).toEqual({ key: 'plan.diff.warmup_sets.label' });
   });
 });
+
+describe('exercise identity in the plan diff', () => {
+  const session = (exercise: WeightedExerciseBlueprint) => new SessionBlueprint('Day', [exercise], '');
+
+  it('carries a swap to a same-named exercise into the plan', () => {
+    const planned = makeWeightedBlueprint({ name: 'Row', exerciseId: 'user-row' });
+    const swapped = planned.with({ exerciseId: 'Row' });
+
+    const updated = applySessionBlueprintDiff(
+      session(planned),
+      diffSessionBlueprints(session(planned), session(swapped)),
+    );
+
+    expect(updated.exercises[0]!.exerciseId).toBe('Row');
+  });
+
+  it('carries the new id along with a new name', () => {
+    const planned = makeWeightedBlueprint({ name: 'Row', exerciseId: 'user-row' });
+    const swapped = planned.with({ name: 'Pendlay Row', exerciseId: 'Pendlay Row' });
+
+    const updated = applySessionBlueprintDiff(
+      session(planned),
+      diffSessionBlueprints(session(planned), session(swapped)),
+    );
+
+    expect(updated.exercises[0]!.name).toBe('Pendlay Row');
+    expect(updated.exercises[0]!.exerciseId).toBe('Pendlay Row');
+  });
+});

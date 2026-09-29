@@ -8,6 +8,7 @@ import {
   dedupeBuiltInExercisesDataMigration,
 } from '@/services/data-migrations/dedupe-builtin-exercises';
 import { importBackends, importBackendsDataMigration } from '@/services/data-migrations/import-backends';
+import { linkExerciseIds, linkExerciseIdsDataMigration } from '@/services/data-migrations/link-exercise-ids';
 import {
   seedBackendAssignments,
   seedBackendAssignmentsDataMigration,
@@ -37,6 +38,10 @@ export class DatabaseImportService implements DatabaseImporter {
     }
     if (!dataMigrationsRun.includes(seedBackendAssignmentsDataMigration)) {
       await seedBackendAssignments(this.db);
+    }
+    // After the built-in de-dup, so names match the exercises that are left.
+    if (!dataMigrationsRun.includes(linkExerciseIdsDataMigration)) {
+      await linkExerciseIds(this.db);
     }
 
     console.info('Imported old data to DB in ' + (performance.now() - now) + 'ms');

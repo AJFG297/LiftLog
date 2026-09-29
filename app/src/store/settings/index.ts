@@ -56,6 +56,7 @@ export type PlaintextExportFormat = 'CSV' | 'JSON';
 export const importData = createAction('importData');
 export const importDataSql = createAction<{ db: SQLiteDatabase }>('importDataSql');
 export type ImportBackupDataPayload = BackupData & {
+  source: 'backup' | 'external';
   successMessage: string;
 };
 export const importBackupData = createAction<ImportBackupDataPayload>('importBackupData');

@@ -29,6 +29,9 @@ there, LiftLog tells you nothing new was added.
 - Every imported set is a working set. Neither export marks drop, myo or failure sets (a StrongLifts
   `0` is an unused or missed slot, not a set taken to failure), so there is nothing to map.
 - Comments and notes from the file become exercise notes. 
+- Exercises are matched to the ones you already have by name - your own first, then the built-in
+  catalog in any language - so imported history joins your existing history. A name that matches
+  nothing becomes one new exercise in your list, however many workouts use it.
 
 ## Supported formats
 

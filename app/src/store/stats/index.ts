@@ -3,7 +3,7 @@ import { Duration, LocalDate, OffsetDateTime } from '@js-joda/core';
 import { Weight } from '@/models/weight';
 import { LocalDateRange } from '@/models/time-models';
 import { RemoteData } from '@/models/remote';
-import { normalizeExerciseName } from '@/models/blueprint-models';
+import { ExerciseId, MovementKey, movementKeyFor } from '@/models/blueprint-models';
 import { StatAxis } from '@/store/stats/quantity';
 
 export type { StatAxis };
@@ -42,7 +42,10 @@ export interface ExerciseSeries {
 }
 
 export interface WeightedExerciseStatistics {
+  /** The name it was last logged under. */
   exerciseName: string;
+  exerciseId: ExerciseId;
+  movementKey: MovementKey;
   setsPerWeek: number;
   /** Which axis this exercise is tracked on, and therefore how its chart is labelled. */
   primary: StatAxis;
@@ -120,15 +123,14 @@ const statsSlice = createSlice({
 export const { setOverallStats, setStatsIsDirty, setOverallViewTime } = statsSlice.actions;
 
 export const { selectOverallView } = statsSlice.selectors;
+/** One weighted exercise's stats, by id: the same exercise under any name, and never a cardio one. */
 export const selectExerciseView = createSelector(
   selectOverallView,
-  (_, exercise: string) => exercise,
-  (state: RemoteData<GranularStatisticView>, exerciseName: string) =>
-    state.map((x) =>
-      x.weightedExerciseStats.find(
-        (ex) => normalizeExerciseName(ex.exerciseName) === normalizeExerciseName(exerciseName),
-      ),
-    ),
+  (_, exerciseId: ExerciseId) => exerciseId,
+  (state: RemoteData<GranularStatisticView>, exerciseId: ExerciseId) => {
+    const key = movementKeyFor(exerciseId, 'WeightedExerciseBlueprint');
+    return state.map((x) => x.weightedExerciseStats.find((ex) => ex.movementKey === key));
+  },
 );
 
 export const fetchOverallStats = createAction('fetchOverallStats');

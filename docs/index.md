@@ -7,8 +7,9 @@ work to find the docs relevant to your area, and update it whenever you add, rem
 
 - [Storage.md](./Storage.md) - the two on-device storage layers: preferences (`PreferenceService`, one
   file per key) and user data (SQLite via Drizzle). Both are injected into Redux effects via `extra`.
-  Covers which to use, how to add to each, the relational workout tables behind `WorkoutRepository`, the
-  startup hydration order, and the history snapshots and startup benchmark that guard it.
+  Covers which to use, how to add to each, the relational workout tables behind `WorkoutRepository`, how
+  workouts reference exercises by id (the `ExerciseResolver` and the key columns), the startup hydration
+  order, and the history snapshots and startup benchmark that guard it.
 - [Migrations.md](./Migrations.md) - the `createMigrations()` chain in `app/src/models/storage/versions/`
   that brings previously-persisted JSON up to the shape the app expects. Read alongside `Storage.md`.
 - [WorkoutWorker.md](./WorkoutWorker.md) - the platform-specific, message-driven execution environment
@@ -39,7 +40,8 @@ work to find the docs relevant to your area, and update it whenever you add, rem
   behaves (placeholder, typing, ± steps), the step per equipment and unit, the accessory row (plate
   maths, per dumbbell, on the stack, RPE chips), and the bar and plate preferences behind plate maths.
 - [PlanFileFormat.md](./PlanFileFormat.md) - the `.liftlogplan` file format, how plans are imported and
-  exported, and the Claude skill that authors plan files against the schema.
+  exported (exercises linked by name, `exerciseId` optional), and the Claude skill that authors plan files
+  against the schema.
 - [PlaintextExport.md](./PlaintextExport.md) — CSV/JSON export of workout data, including which fields
   are included. Explicitly _not_ a backup mechanism; LiftLog cannot read these files back.
 - [CsvImport.md](./CsvImport.md) — user guide for Import from other apps (FitNotes-style and

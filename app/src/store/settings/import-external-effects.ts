@@ -33,6 +33,7 @@ export function addImportExternalEffects(addEffect: AddEffectFn) {
 
         dispatch(
           importBackupData({
+            source: 'external',
             workouts: newWorkouts,
             programs: backupData.programs,
             feed: backupData.feed,

@@ -11,7 +11,7 @@ import SessionSummary from '@/components/presentation/summary/session-summary';
 import SessionSummaryTitle from '@/components/presentation/summary/session-summary-title';
 import { AiChatPlanResponseV2 } from '@/models/ai-models';
 import { ChatMessage } from '@/store/ai-planner';
-import { savePlan } from '@/store/program';
+import { linkPlanExercises, savePlan } from '@/store/program';
 import { Session } from '@/models/session-models';
 import { usePreferredWeightUnit } from '@/hooks/usePreferredWeightUnit';
 
@@ -28,6 +28,7 @@ export function PlanMessage({ message, isUser }: { message: AiChatPlanResponseV2
         programBlueprint: blueprint,
       }),
     );
+    dispatch(linkPlanExercises({ programId }));
     push(`/settings/program-list?focusprogramId=${programId}`);
   };
   return (

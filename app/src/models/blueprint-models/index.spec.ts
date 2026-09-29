@@ -185,6 +185,7 @@ describe('blueprint models', () => {
     it('weighted exercise key encodes sets and repsPerSet', () => {
       const blueprint = WeightedExerciseBlueprint.empty().with({
         name: 'Squat',
+        exerciseId: 'Squat',
         sets: 4,
         repsConfig: { type: 'fixed', reps: 8 },
       });
@@ -272,7 +273,11 @@ describe('blueprint models', () => {
     ];
 
     it.each(cases)('%s', (_label, repsConfig, sets, key) => {
-      expect(WeightedExerciseBlueprint.empty().with({ name: 'Squat', sets, repsConfig }).progressionKey()).toBe(key);
+      expect(
+        WeightedExerciseBlueprint.empty()
+          .with({ name: 'Squat', exerciseId: 'Squat', sets, repsConfig })
+          .progressionKey(),
+      ).toBe(key);
     });
 
     it('bands in a perSet key use the same separator as a range key', () => {
@@ -306,7 +311,12 @@ describe('blueprint models', () => {
     });
 
     it('an exercise that tracks no load keys without its rep scheme', () => {
-      const crunch = WeightedExerciseBlueprint.of({ name: 'Crunch', sets: 3, resistance: 'none' });
+      const crunch = WeightedExerciseBlueprint.of({
+        name: 'Crunch',
+        exerciseId: 'Crunch',
+        sets: 3,
+        resistance: 'none',
+      });
       expect(crunch.progressionKey()).toBe('Crunch_WeightedExerciseBlueprint_3');
       expect(crunch.with({ repsConfig: { type: 'fixed', reps: 25 } }).progressionKey()).toBe(crunch.progressionKey());
       expect(crunch.withSets(4).progressionKey()).not.toBe(crunch.progressionKey());
@@ -315,6 +325,7 @@ describe('blueprint models', () => {
     it('a loaded exercise whose reps a rule moves also keys without its rep scheme', () => {
       const doubleProgression = WeightedExerciseBlueprint.of({
         name: 'Chin Up',
+        exerciseId: 'Chin Up',
         sets: 3,
         repsConfig: { type: 'fixed', reps: 8 },
         progression: [
@@ -333,6 +344,7 @@ describe('blueprint models', () => {
     it('a loaded exercise with only a load rule still keys on its rep scheme', () => {
       const linear = WeightedExerciseBlueprint.of({
         name: 'Squat',
+        exerciseId: 'Squat',
         sets: 3,
         repsConfig: { type: 'fixed', reps: 5 },
         progression: [ProgressionRule.load(bn(2.5))],
@@ -379,10 +391,26 @@ describe('blueprint models', () => {
       expect(fiveByFive.progressionKey()).not.toBe(threeByEight.progressionKey());
     });
 
-    it('a differently-spelled name is the same movement but a different progression', () => {
-      const singular = fiveByFive.with({ name: 'Squat' });
+    it('an unlinked name spelled differently is the same exercise, so one movement and one progression', () => {
+      // Letter case and plurals used to split the progression; the stub id folds them like the movement did.
+      const singular = fiveByFive.with({ name: 'squat' });
+      expect(singular.exerciseId).toBe(fiveByFive.exerciseId);
       expect(singular.movementKey()).toBe(fiveByFive.movementKey());
-      expect(singular.progressionKey()).not.toBe(fiveByFive.progressionKey());
+      expect(singular.progressionKey()).toBe(fiveByFive.progressionKey());
+    });
+
+    it('a linked exercise keeps both keys when it is renamed', () => {
+      const linked = fiveByFive.with({ exerciseId: 'a-user-exercise' });
+      const renamed = linked.with({ name: 'Back Squat' });
+      expect(renamed.exerciseId).toBe('a-user-exercise');
+      expect(renamed.movementKey()).toBe(linked.movementKey());
+      expect(renamed.progressionKey()).toBe(linked.progressionKey());
+    });
+
+    it('two exercises of the same name are different movements once linked apart', () => {
+      const other = fiveByFive.with({ exerciseId: 'another-exercise' });
+      expect(other.movementKey()).not.toBe(fiveByFive.movementKey());
+      expect(other.progressionKey()).not.toBe(fiveByFive.progressionKey());
     });
 
     it('a recorded exercise keys the same as the blueprint it was built from', () => {

@@ -4,6 +4,7 @@ import { AddEffectFn } from '@/store/store';
 import { upsertSavedPlans } from '@/store/program';
 import { beginFeedImport, importBackupData, importData, importDataSql } from '@/store/settings';
 import { upsertExercises, upsertStoredSessions } from '@/store/stored-sessions';
+import { createExerciseResolver } from '@/store/stored-sessions/exercise-resolver';
 import { streamToUint8Array, writeInChunks } from '@/utils/stream';
 import { sleep } from '@/utils/sleep';
 import { ProgramBlueprint } from '@/models/blueprint-models';
@@ -64,13 +65,25 @@ export function addImportBackupEffects(addEffect: AddEffectFn) {
     }
   });
 
-  addEffect(importBackupData, async ({ payload }, { dispatch }) => {
-    const { workouts, programs, exercises, feed, successMessage } = payload;
-    dispatch(upsertStoredSessions(workouts));
-    dispatch(upsertSavedPlans(programs));
-    if (exercises) {
-      dispatch(upsertExercises(exercises));
+  addEffect(importBackupData, async ({ payload }, api) => {
+    const { dispatch } = api;
+    const { workouts, programs, exercises, feed, successMessage, source } = payload;
+    // Own backups keep linked ids, including references to deleted exercises. Unlinked legacy rows and
+    // external imports still resolve by name.
+    const resolver = await createExerciseResolver(api, api.extra.logger, {
+      alsoSaved: exercises,
+      preserveLinkedIds: source === 'backup',
+    });
+    const linkedWorkouts = workouts.map((x) => resolver.linkSession(x));
+    const linkedPrograms = Object.fromEntries(
+      Object.entries(programs).map(([id, program]) => [id, resolver.linkProgram(program)]),
+    );
+    const newExercises = { ...exercises, ...resolver.stubs };
+    if (Object.keys(newExercises).length) {
+      dispatch(upsertExercises(newExercises));
     }
+    dispatch(upsertStoredSessions(linkedWorkouts));
+    dispatch(upsertSavedPlans(linkedPrograms));
     dispatch(
       showSnackbar({
         text: successMessage,
@@ -151,6 +164,7 @@ export function addImportBackupEffects(addEffect: AddEffectFn) {
 
       dispatch(
         importBackupData({
+          source: 'backup',
           programs,
           exercises,
           workouts,

@@ -55,7 +55,7 @@ Nothing about the format is Claude-specific. To use ChatGPT, Gemini, or anything
 > Rules that are easy to get wrong:
 >
 > - Treat every field in the schema as required, apart from the handful marked optional. Empty strings for `notes` and `link`.
-> - `"version": 3` on the root object, `"version": 8` on every session.
+> - `"version": 3` on the root object, `"version": 9` on every session.
 > - Weights, distances and progression steps are decimal **strings**: `"2.5"`, not `2.5`. Rep counts are plain integers.
 > - Rests and cardio times are ISO-8601 durations: `"PT3M"`, `"PT90S"`.
 > - A weighted exercise has no set count: one entry in `plannedSets` is one set, and each has a `kind` (`"working"` for a plain set). Cardio uses `sets`, an array of set objects.
@@ -77,7 +77,7 @@ A plan file is one JSON object: a name, a date, and a list of sessions. Each ses
   "lastEdited": "2026-07-12",
   "sessions": [
     {
-      "version": 8,
+      "version": 9,
       "name": "Push",
       "notes": "Chest, shoulders and triceps.",
       "exercises": [
@@ -119,6 +119,8 @@ Complete examples live in [`plugins/liftlog-plan-builder/skills/create-liftlog-p
 ### Exercises
 
 An exercise is either a `WeightedExerciseBlueprint` or a `CardioExerciseBlueprint`, chosen by its `type`. The two can be mixed within a session.
+
+`exerciseId` is optional, and a hand-written plan should leave it out. On import the app links each exercise by its `name`: to one of the user's own exercises with that name, otherwise to a built-in (by its English name, its name in any language, or the name the user renamed it to), and only when nothing matches does it add a new exercise. That is what keeps the plan's history joined to the user's existing history, and lets them rename the exercise later without losing it. A plan exported from the app carries the ids; an id the importing device doesn't know - a friend's own exercise, say - is linked by name the same way.
 
 **Weighted exercises** have a list of planned sets, rest times, a resistance, and a list of progression rules. `plannedSets` holds one entry per set, each with that set's rep target as a `min`/`max` band - `min === max` is a plain "five reps" - and its `kind`, which says what the set is for (see [Set kinds](#set-kinds)). `restBetweenSets` needs all three of `minRest`, `maxRest`, and `failureRest` (the last being the rest taken after missing a rep target). `link` is a URL explaining the movement, and should stay `""` unless you have a real one.
 

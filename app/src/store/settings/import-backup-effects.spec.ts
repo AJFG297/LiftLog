@@ -10,7 +10,7 @@ import { FeedIdentity } from '@/models/feed-models';
 import { ProgramBlueprint } from '@/models/blueprint-models';
 import { EmptySession, Session } from '@/models/session-models';
 import { uuid } from '@/utils/uuid';
-import { upsertExercises, upsertStoredSessions } from '@/store/stored-sessions';
+import { setIsHydrated, upsertExercises, upsertStoredSessions } from '@/store/stored-sessions';
 import { applyStoredSessionsEffects } from '@/store/stored-sessions/effects';
 import { createEffectStore } from '@/utils/__test__/effect-store';
 import { openDatabaseAsync } from 'expo-sqlite';
@@ -63,6 +63,7 @@ describe('import-backup-effects', () => {
     expect(Object.values(restored.exercises ?? {})).toHaveLength(962);
     expect(restored.feed).toBeDefined();
     expect(restored.successMessage).toBe('Restore complete!');
+    expect(restored.source).toBe('backup');
     // Workout ids are health-export record ids and the CSV-import dedupe key, so a restore must keep them.
     const expected = loadHistoryFixture();
     expect(restored.workouts.map((x) => x.id).toSorted()).toEqual(expected.map((x) => x.id).toSorted());
@@ -101,7 +102,7 @@ describe('import-backup-effects', () => {
 
   it('dispatches the appropriate actions when importing', async () => {
     const testBed = createAddEffectTestBed({
-      initialState: { settings: { useImperialUnits: false } },
+      initialState: { settings: { useImperialUnits: false }, storedSessions: { isHydrated: true } },
       services: {
         tolgee: { t: (s: string) => s },
       },
@@ -132,6 +133,7 @@ describe('import-backup-effects', () => {
 
     await testBed.dispatchHandled(
       importBackupData({
+        source: 'backup',
         workouts: mockWorkouts,
         programs: mockPrograms,
         exercises: mockExercises,
@@ -141,15 +143,15 @@ describe('import-backup-effects', () => {
     );
 
     expect(testBed.getDispatchedAction(upsertStoredSessions).payload).toEqual(mockWorkouts);
-    expect(testBed.getDispatchedAction(upsertSavedPlans).payload).toBe(mockPrograms);
-    expect(testBed.getDispatchedAction(upsertExercises).payload).toBe(mockExercises);
+    expect(testBed.getDispatchedAction(upsertSavedPlans).payload).toEqual(mockPrograms);
+    expect(testBed.getDispatchedAction(upsertExercises).payload).toEqual(mockExercises);
     expect(testBed.getDispatchedAction(showSnackbar).payload.text).toBe('Restore complete!');
     expect(testBed.getDispatchedAction(beginFeedImport).payload).toBe(mockFeed);
   });
 
   it('shows the provided successMessage', async () => {
     const testBed = createAddEffectTestBed({
-      initialState: { settings: { useImperialUnits: false } },
+      initialState: { settings: { useImperialUnits: false }, storedSessions: { isHydrated: true } },
       services: {
         tolgee: { t: (s: string) => s },
       },
@@ -158,6 +160,7 @@ describe('import-backup-effects', () => {
 
     await testBed.dispatchHandled(
       importBackupData({
+        source: 'external',
         workouts: [],
         programs: {},
         successMessage: 'Imported 3 workout(s)',
@@ -169,7 +172,7 @@ describe('import-backup-effects', () => {
 
   it('does not dispatch beginFeedImport when feed is absent', async () => {
     const testBed = createAddEffectTestBed({
-      initialState: { settings: { useImperialUnits: false } },
+      initialState: { settings: { useImperialUnits: false }, storedSessions: { isHydrated: true } },
       services: {
         tolgee: { t: (s: string) => s },
       },
@@ -178,6 +181,7 @@ describe('import-backup-effects', () => {
 
     await testBed.dispatchHandled(
       importBackupData({
+        source: 'backup',
         workouts: [],
         programs: {},
         feed: undefined,
@@ -240,9 +244,10 @@ describe('export then restore', () => {
     });
     applyStoredSessionsEffects(harness.addEffect);
     addImportBackupEffects(harness.addEffect);
+    harness.store.dispatch(setIsHydrated(true));
     const workouts = loadHistoryFixture().slice(0, 20);
 
-    harness.store.dispatch(importBackupData({ workouts, programs: {}, successMessage: 'done' }));
+    harness.store.dispatch(importBackupData({ source: 'backup', workouts, programs: {}, successMessage: 'done' }));
     await harness.settle();
 
     const stored = await workoutRepository.loadAll();

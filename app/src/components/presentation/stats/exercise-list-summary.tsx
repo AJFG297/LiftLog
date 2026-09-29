@@ -1,4 +1,5 @@
 import Button from '@/components/presentation/foundation/button';
+import { getExerciseStatsHref } from '@/components/smart/exercise-stats-href';
 import { SegmentedList } from '@/components/presentation/foundation/segmented-list';
 import { TitledSection } from '@/components/presentation/stats/titled-section';
 import { WeightedExerciseStatSummary } from '@/components/presentation/stats/weighted-exercise-stat-summary';
@@ -12,7 +13,7 @@ export function ExerciseListSummary(props: { stats: GranularStatisticView }) {
   const { t } = useTranslate();
   const topWeightedExercises = Enumerable.from(props.stats.weightedExerciseStats).take(5).toArray();
   const onItemPress = (item: WeightedExerciseStatistics) => {
-    push(`/stats/expanded-weighted-exercise?exerciseName=${encodeURIComponent(item.exerciseName)}`);
+    push(getExerciseStatsHref(item.exerciseId));
   };
   return (
     <TitledSection

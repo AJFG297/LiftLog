@@ -29,6 +29,7 @@ import { eq, sql } from 'drizzle-orm';
 import { toRecord } from '@/utils/reduce';
 import { fromExerciseDescriptorJSON, toExerciseDescriptorJSON } from '@/models/exercise-models';
 import { loadBuiltInExercises } from '@/services/exercise-catalog';
+import { missingStubs } from '@/models/exercise-resolver';
 
 // Built-ins the user deleted, so they stay hidden across restarts and locale switches.
 const hiddenBuiltInExerciseIdsStorageKey = 'HiddenBuiltInExerciseIdList';
@@ -97,6 +98,14 @@ export function applyStoredSessionsEffects(addEffect: AddEffectFn) {
 
     if (state.storedSessions.activeSessionId === workout.id) {
       dispatch(setActiveSessionId(undefined));
+    }
+    const { builtInExercises, savedExercises } = state.storedSessions;
+    const stubs = missingStubs(
+      workout.recordedExercises.filter((x) => x.isStarted).map((x) => x.blueprint),
+      (id) => id in builtInExercises || id in savedExercises,
+    );
+    if (Object.keys(stubs).length) {
+      dispatch(upsertExercises(stubs));
     }
     dispatch(addUnpublishedSessionId(workout.id));
     dispatch(setStatsIsDirty(true));
