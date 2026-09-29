@@ -39,16 +39,16 @@ describe('routineChangeCopy', () => {
 
   it('names both exercises of a swap', () => {
     expect(copyFor([bench, press], [bench.with({ name: 'Incline Dumbbell Press' }), press])).toEqual([
-      { icon: 'reload', title: 'Swap Bench Press for Incline Dumbbell Press', subtitle: 'You swapped it today' },
+      { icon: 'swapHoriz', title: 'Swap Bench Press for Incline Dumbbell Press', subtitle: 'You swapped it today' },
     ]);
   });
 
   it('gives a set count change with how many sets moved', () => {
     expect(copyFor([press], [press.with({ sets: 4 })])).toEqual([
-      { icon: 'fitnessCenter', title: 'Overhead Press: 3 → 4 sets', subtitle: 'You added a set today' },
+      { icon: 'notes', title: 'Overhead Press: 3 → 4 sets', subtitle: 'You added a set today' },
     ]);
     expect(copyFor([press], [press.with({ sets: 1 })])).toEqual([
-      { icon: 'fitnessCenter', title: 'Overhead Press: 3 → 1 set', subtitle: 'You removed 2 sets today' },
+      { icon: 'notes', title: 'Overhead Press: 3 → 1 set', subtitle: 'You removed 2 sets today' },
     ]);
   });
 

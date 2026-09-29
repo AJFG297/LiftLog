@@ -32,7 +32,7 @@ export function RecordRow({ exerciseName, kind, value, was }: RecordRowProps) {
           justifyContent: 'center',
         }}
       >
-        <MsIconSrc name="socialLeaderboard" size={22} color={tokens.accentSoftInk} />
+        <MsIconSrc name="emojiEvents" size={22} color={tokens.accentSoftInk} />
       </View>
       <View style={{ flex: 1, gap: 1 }}>
         <SurfaceText font="text-base" weight="600" style={{ color: tokens.ink }}>
