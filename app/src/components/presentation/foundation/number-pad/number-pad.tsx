@@ -22,6 +22,8 @@ export interface NumberPadProps {
   primary: 'next' | 'log';
   onPrimary: () => void;
   onHide: () => void;
+  /** Space kept clear under the keys. Defaults to the bottom safe-area inset. */
+  bottomInset?: number;
 }
 
 const DIGIT_ROWS: Digit[][] = [
@@ -55,7 +57,7 @@ export function NumberPad(props: NumberPadProps) {
       style={{
         backgroundColor: tokens.keypad,
         paddingHorizontal: spacing[2],
-        paddingBottom: spacing[2] + insets.bottom,
+        paddingBottom: spacing[2] + (props.bottomInset ?? insets.bottom),
         gap: spacing[1],
       }}
     >

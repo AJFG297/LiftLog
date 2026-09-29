@@ -1,5 +1,6 @@
 import FullHeightScrollView from '@/components/layout/full-height-scroll-view';
 import { MsIconSrc } from '@/components/presentation/foundation/ms-icon-source';
+import { NumberPad } from '@/components/presentation/foundation/number-pad';
 import { PageActionsAccessory } from '@/components/presentation/foundation/page-actions/page-actions-accessory';
 import { SurfaceText } from '@/components/presentation/foundation/surface-text';
 import { MIN_TOUCH_TARGET } from '@/components/presentation/foundation/touch-target';
@@ -14,6 +15,7 @@ import { withCardioSetUpdate } from '@/components/smart/recorded-exercise-view';
 import { getSessionWorkoutEditorHref } from '@/components/smart/session-workout-editor';
 import { useAddExercise } from '@/hooks/useAddExercise';
 import { spacing, useAppTheme } from '@/hooks/useAppTheme';
+import { useLiveSetEntry } from '@/hooks/useLiveSetEntry';
 import { useLiveWorkoutFocus } from '@/hooks/useLiveWorkoutFocus';
 import { Session } from '@/models/session-models';
 import {
@@ -29,9 +31,14 @@ import { OffsetDateTime } from '@js-joda/core';
 import { useTranslate } from '@tolgee/react';
 import { useRouter } from 'expo-router';
 import { useEffect, useRef } from 'react';
-import { Pressable, View } from 'react-native';
+import { Platform, Pressable, View } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDispatch } from 'react-redux';
+
+const PAGE_PADDING_TOP = spacing[2];
+/** How far a row being typed into stays clear of the edges of the page above the number pad. */
+const EDITED_ROW_MARGIN = spacing[3];
 
 interface LiveWorkoutProps {
   session: Session;
@@ -41,7 +48,8 @@ interface LiveWorkoutProps {
 
 /**
  * The workout in progress, one exercise (or one superset) at a time: the strip of exercises across the top,
- * the focused page, and the "Up next" bar. Logging a set still uses the older set tiles.
+ * the focused page with its set tables, the "Up next" bar, and the number pad, which takes the bar's place
+ * while a weight or reps is being typed.
  */
 export function LiveWorkout({ session, updateSession, onFinish }: LiveWorkoutProps) {
   const { tokens } = useAppTheme();
@@ -52,6 +60,10 @@ export function LiveWorkout({ session, updateSession, onFinish }: LiveWorkoutPro
   const { groups, focusedGroupIndex, focusedGroup, focusedExerciseIndex, isPinned, focusExercise } =
     useLiveWorkoutFocus(session);
   const scrollRef = useRef<ScrollView>(null);
+  const pageRef = useRef<View>(null);
+  const editingRowRef = useRef<View>(null);
+  const insets = useSafeAreaInsets();
+  const entry = useLiveSetEntry(session, updateSession, focusedGroup?.indices ?? []);
   // An exercise added mid-workout is usually the one to do now, so the screen moves to it.
   const addExercise = () => {
     focusExercise(session.recordedExercises.length);
@@ -93,6 +105,31 @@ export function LiveWorkout({ session, updateSession, onFinish }: LiveWorkoutPro
 
   const timer = useCardioTimer(session, updateSession);
 
+  // The page shrinks above the number pad, which can leave the row being typed into underneath it.
+  const keepEditedRowInView = () => {
+    const scroll = scrollRef.current;
+    const viewport = scroll?.getNativeScrollRef();
+    const page = pageRef.current;
+    const row = editingRowRef.current;
+    if (!scroll || !viewport || !page || !row) {
+      return;
+    }
+    viewport.measureInWindow((_viewX, viewTop, _viewWidth, viewHeight) =>
+      page.measureInWindow((_pageX, pageTop) =>
+        row.measureInWindow((_rowX, rowTop, _rowWidth, rowHeight) => {
+          const offset = viewTop + PAGE_PADDING_TOP - pageTop;
+          const below = rowTop + rowHeight + EDITED_ROW_MARGIN - (viewTop + viewHeight);
+          const above = viewTop + EDITED_ROW_MARGIN - rowTop;
+          if (below > 0) {
+            scroll.scrollTo({ y: offset + below, animated: true });
+          } else if (above > 0) {
+            scroll.scrollTo({ y: Math.max(0, offset - above), animated: true });
+          }
+        }),
+      ),
+    );
+  };
+
   return (
     <View style={{ flex: 1, backgroundColor: tokens.bg }}>
       <LiveWorkoutHeader
@@ -110,13 +147,15 @@ export function LiveWorkout({ session, updateSession, onFinish }: LiveWorkoutPro
         scrollStyle={{ backgroundColor: tokens.bg }}
         contentContainerStyle={{
           paddingHorizontal: spacing.pageHorizontalMargin,
-          paddingTop: spacing[2],
+          paddingTop: PAGE_PADDING_TOP,
           paddingBottom: spacing[10],
           gap: spacing[3],
         }}
         floatingChildren={
           <View
             style={{
+              // Hidden rather than unmounted while the number pad has its place, so it comes back as it was.
+              display: entry.editing ? 'none' : 'flex',
               gap: spacing[2],
               paddingHorizontal: spacing.pageHorizontalMargin,
               paddingTop: spacing[2],
@@ -141,7 +180,7 @@ export function LiveWorkout({ session, updateSession, onFinish }: LiveWorkoutPro
         }
       >
         {focusedGroup ? (
-          <>
+          <View ref={pageRef} style={{ gap: spacing[3] }}>
             <View
               style={{
                 flexDirection: 'row',
@@ -157,7 +196,10 @@ export function LiveWorkout({ session, updateSession, onFinish }: LiveWorkoutPro
                 testID="all-exercises"
                 icon="formatListBulleted"
                 label={t('live_workout.all_exercises.button')}
-                onPress={() => push('/session/exercises')}
+                onPress={() => {
+                  entry.close();
+                  push('/session/exercises');
+                }}
               />
             </View>
             {focusedGroup.supersetLetter ? <SupersetBanner /> : null}
@@ -169,9 +211,11 @@ export function LiveWorkout({ session, updateSession, onFinish }: LiveWorkoutPro
                 updateSession={updateSession}
                 toStartNext={nextInGroup === index}
                 compact={focusedGroup.indices.length > 1}
+                entry={entry}
+                editingRowRef={editingRowRef}
               />
             ))}
-          </>
+          </View>
         ) : (
           <View style={{ alignItems: 'center', gap: spacing[4], paddingVertical: spacing[8] }}>
             <SurfaceText style={{ color: tokens.muted, textAlign: 'center' }}>
@@ -181,6 +225,10 @@ export function LiveWorkout({ session, updateSession, onFinish }: LiveWorkoutPro
           </View>
         )}
       </FullHeightScrollView>
+      <View onLayout={keepEditedRowInView}>
+        {/* Android lays the screen out above the tab bar, so only iOS keeps a bottom inset (as the dock does). */}
+        <NumberPad {...entry.pad} bottomInset={Platform.select({ ios: insets.bottom, default: 0 })} />
+      </View>
     </View>
   );
 }

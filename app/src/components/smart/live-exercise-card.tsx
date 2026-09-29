@@ -6,12 +6,15 @@ import { targetLabel, targetReasonText } from '@/components/presentation/live-wo
 import RecordedExerciseNotesEditor from '@/components/presentation/workout/recorded-exercise-notes-editor';
 import { getExerciseHistoryHref } from '@/components/smart/exercise-history';
 import { getExerciseStatsHref } from '@/components/smart/exercise-stats-href';
+import { LiveSetTable } from '@/components/smart/live-set-table';
 import { RecordedExerciseView } from '@/components/smart/recorded-exercise-view';
 import { getSessionExerciseEditorHref } from '@/components/smart/session-exercise-editor';
 import { useExerciseSearch } from '@/hooks/useExerciseSearch';
+import { LiveSetEntry } from '@/hooks/useLiveSetEntry';
 import { usesBodyweight, useTodaysTarget } from '@/hooks/useTodaysTarget';
 import { ExerciseBlueprint, WeightedExerciseBlueprint } from '@/models/blueprint-models';
 import { RecordedExercise, RecordedWeightedExercise, Session } from '@/models/session-models';
+import { exerciseGroupsOf, exerciseLabelOf } from '@/models/session-models/exercise-groups';
 import { useAppSelector } from '@/store';
 import { PickedExercise } from '@/store/app';
 import { selectExercises } from '@/store/stored-sessions';
@@ -20,7 +23,8 @@ import { formatTimeSpan } from '@/utils/format-time-span';
 import { openUrl } from '@/utils/open-url';
 import { useTranslate } from '@tolgee/react';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { type Ref, useState } from 'react';
+import { View } from 'react-native';
 
 interface LiveExerciseCardProps {
   session: Session;
@@ -29,6 +33,8 @@ interface LiveExerciseCardProps {
   toStartNext: boolean;
   /** On a superset page, next to the other members. */
   compact: boolean;
+  entry: LiveSetEntry;
+  editingRowRef: Ref<View>;
 }
 
 /** One exercise of the live workout: its title, shortcuts, today's target and its sets. */
@@ -58,14 +64,22 @@ export function LiveExerciseCard(props: LiveExerciseCardProps) {
   const openEditor = () => push(getSessionExerciseEditorHref(session.id, exerciseIndex));
 
   const equipment = exercises[blueprint.exerciseId]?.equipment;
-  const meta = [
-    equipment ? capitalise(translateExerciseMeta(t, 'equipment', equipment)) : undefined,
-    exercise instanceof RecordedWeightedExercise
-      ? t('live_workout.meta.rest.label', { rest: formatTimeSpan(exercise.blueprint.restBetweenSets.minRest) })
-      : undefined,
-  ]
-    .filter((part) => part !== undefined)
-    .join(' · ');
+  const groups = exerciseGroupsOf(session.recordedExercises);
+  const inSuperset = groups.some((group) => group.supersetLetter && group.indices.includes(exerciseIndex));
+  // A superset rests after each round rather than after this exercise, so its place in the round says more.
+  const meta = capitalise(
+    [
+      equipment ? translateExerciseMeta(t, 'equipment', equipment) : undefined,
+      inSuperset
+        ? t('live_workout.meta.superset.label', { label: exerciseLabelOf(groups, exerciseIndex) })
+        : exercise instanceof RecordedWeightedExercise
+          ? t('live_workout.meta.rest.label', { rest: formatTimeSpan(exercise.blueprint.restBetweenSets.minRest) })
+          : undefined,
+      exercise instanceof RecordedWeightedExercise ? workingSetsText(t, exercise.potentialSets.length) : undefined,
+    ]
+      .filter((part) => part !== undefined)
+      .join(' · '),
+  );
 
   const shortcuts: ExerciseShortcut[] = [
     {
@@ -161,14 +175,24 @@ export function LiveExerciseCard(props: LiveExerciseCardProps) {
             : undefined
         }
       >
-        <RecordedExerciseView
-          session={session}
-          exerciseIndex={exerciseIndex}
-          updateSession={updateSession}
-          isActiveWorkout
-          toStartNext={props.toStartNext}
-          variant="focus"
-        />
+        {isWeighted ? (
+          <LiveSetTable
+            session={session}
+            exerciseIndex={exerciseIndex}
+            entry={props.entry}
+            toStartNext={props.toStartNext}
+            editingRowRef={props.editingRowRef}
+          />
+        ) : (
+          <RecordedExerciseView
+            session={session}
+            exerciseIndex={exerciseIndex}
+            updateSession={updateSession}
+            isActiveWorkout
+            toStartNext={props.toStartNext}
+            variant="focus"
+          />
+        )}
       </FocusExerciseCard>
       <RecordedExerciseNotesEditor
         exerciseName={blueprint.name}
@@ -210,4 +234,10 @@ function withNotes(exercise: RecordedExercise, notes: string): RecordedExercise 
 
 function capitalise(text: string): string {
   return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+function workingSetsText(t: ReturnType<typeof useTranslate>['t'], count: number): string {
+  return count === 1
+    ? t('live_workout.meta.working_sets_one.label')
+    : t('live_workout.meta.working_sets.label', { count });
 }

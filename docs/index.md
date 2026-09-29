@@ -30,7 +30,8 @@ work to find the docs relevant to your area, and update it whenever you add, rem
 - [LiveWorkout.md](./LiveWorkout.md) - the workout in progress: focus mode one exercise or superset at a
   time, the exercise strip, the Up next bar and the All exercises sheet, the rest pill and rest sheet
   (steps, presets, saving a rest to the routine), and how pages, the next set, focus, reordering and the
-  Today target are worked out from the session.
+  Today target are worked out from the session. Also logging a set: the set table's placeholders, typing
+  on the number pad, drafts, undo, RPE, Add set and the set-type sheet.
 - [FeedProcess.md](./FeedProcess.md) - the opt-in social feed: the follow/accept flow, what is and isn't
   visible to the server, and the end-to-end encryption model (AES-CBC payloads, RSA-PSS signatures).
 - [Progression.md](./Progression.md) - how last session's
