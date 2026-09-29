@@ -10,6 +10,8 @@
 // oxlint-disable-next-line typescript/no-unsafe-member-access
 const keepNativeVersionExpressions = process.env.GITHUB_ACTIONS === 'true';
 
+const projectId = '9afe290c-7b5c-40d9-b867-72c891d69c88';
+
 /** @param {{ config: import('expo/config').ExpoConfig }} context */
 module.exports = ({ config }) => {
   const linked = {
@@ -20,9 +22,14 @@ module.exports = ({ config }) => {
       ...config.extra,
       eas: {
         .../** @type {Record<string, unknown> | undefined} */ (config.extra?.eas),
-        projectId: '9afe290c-7b5c-40d9-b867-72c891d69c88',
+        projectId,
       },
     },
+    // EAS Update. The version fields below are pinned outside GitHub Actions, so an appVersion runtime
+    // would never change; the fingerprint changes with the native code, so an update only reaches builds
+    // that can run it.
+    updates: { ...config.updates, url: `https://u.expo.dev/${projectId}` },
+    runtimeVersion: { policy: 'fingerprint' },
   };
   if (keepNativeVersionExpressions) {
     return linked;
