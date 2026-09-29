@@ -101,9 +101,10 @@ So this is a rebuild of screens and a few model additions, not a rewrite.
 - An arbitrary colour, including a very light one like yellow, still gives a legible theme. Bright hues
   get pulled darker for the fill and lighter for dark-mode text, so they may look duller than picked.
 - Keep the existing `colorSchemeSeed` preference and `theme-chooser.tsx`. Swap Material's presets for a
-  curated set (vermilion default, forest, blue, violet, rose, teal, amber) and keep the custom wheel.
-- The seed's `'default'` value means **Match wallpaper** on Android: Material You's primary becomes the
-  accent source.
+  curated set (vermilion, forest, blue, violet, rose, teal, amber) and keep the custom wheel.
+- A fresh install follows the wallpaper. The seed's default value, `'default'`, means **Match wallpaper**:
+  Material You's primary becomes the accent source. Vermilion is the fallback on devices that can't match
+  the wallpaper (before Android 12, and iOS).
 - `themeMode` (system/light/dark) stays. `trueBlackDarkTheme` becomes a variant of the dark neutrals.
 - Routine colours are a separate, per-routine choice, and the accent never changes them.
 
