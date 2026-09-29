@@ -210,7 +210,8 @@ export function withAddedSet(state: SetEntryState, fallbackUnit: LoadUnit): SetE
   const drafts = withoutDraft(state.drafts, position);
   return {
     exercise: exercise.with({ potentialSets: [...potentialSets, added], blueprint: blueprint.with({ plannedSets }) }),
-    drafts: lastReps === undefined || lastReps === target.max ? drafts : withDraft(drafts, position, { reps: lastReps }),
+    drafts:
+      lastReps === undefined || lastReps === target.max ? drafts : withDraft(drafts, position, { reps: lastReps }),
   };
 }
 
