@@ -74,6 +74,10 @@ new one. `toastTimeoutMs` in the same file decides how long a toast stays up.
 Native sheets and modals are presented above the root view, so a toast shown while one is open is hidden
 behind it. Close the sheet first, then show the toast, as the dev sheet does.
 
+A toast sits just above the tab bar, where a screen's own bottom button would be. A screen with one, like
+the workout summary and its Done, shows the message in its content instead, so nothing covers the button:
+the summary's `RoutineUpdatedBanner` (`presentation/summary/`) is the update-routine sheet's toast there.
+
 The older Paper snackbar (`SnackbarProvider`, `setCurrentSnackbar`) still serves unconverted screens.
 
 ## Sheets

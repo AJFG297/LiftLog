@@ -10,8 +10,6 @@ export default function PostWorkoutPage() {
 
   return (
     <>
-      {/* Pushed rather than presented as a modal: an iOS modal sits above the root view, which would hide
-          the toast the update-routine sheet leaves on this screen. */}
       <Stack.Screen options={{ headerShown: false, gestureEnabled: !finished }} />
       <WorkoutSummary sessionId={sessionId ?? ''} finished={finished} />
     </>

@@ -15,16 +15,20 @@ import { EmptySession } from '@/models/session-models';
 import { useAppSelector, useAppSelectorWithArg } from '@/store';
 import {
   applyDiffToPlan,
+  clearPendingPlanDiff,
   fetchUpcomingSessions,
+  reopenPendingPlanDiff,
+  RoutineUpdateUndo,
   savePlan,
   selectNewWorkoutName,
   selectPendingPlanDiff,
+  selectPendingPlanDiffUnticked,
   selectProgram,
-  setPendingPlanDiff,
+  setRoutineUpdateReceipt,
 } from '@/store/program';
 import { useTranslate } from '@tolgee/react';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDispatch } from 'react-redux';
@@ -34,11 +38,40 @@ function saveAsNewRoutineDiff(planDiff: PlanDiff, name: string): SessionBlueprin
   return diffSessionBlueprints(EmptySession.blueprint, planDiff.diff.newSession.with({ name }));
 }
 
+function sheetHref(overSummary: boolean) {
+  return overSummary ? '/diff-save?from=summary' : '/diff-save';
+}
+
+/** Opens the sheet over the workout summary, which then shows the update's receipt instead of a toast. */
+export const SHEET_OVER_SUMMARY_HREF = sheetHref(true);
+
+/**
+ * Puts the program back as it was before a routine update and reopens the sheet with the same rows
+ * ticked, so the lifter can pick again. Safe to call after the sheet is gone.
+ */
+export function useUndoRoutineUpdate() {
+  const dispatch = useDispatch();
+  const router = useRouter();
+  return (undo: RoutineUpdateUndo) => {
+    dispatch(savePlan({ programId: undo.programId, programBlueprint: undo.before }));
+    dispatch(fetchUpcomingSessions());
+    dispatch(setRoutineUpdateReceipt(undefined));
+    // A fresh object, so the sheet still closing from the update can't clear it on its way out.
+    dispatch(reopenPendingPlanDiff({ planDiff: { ...undo.planDiff }, unticked: undo.unticked }));
+    router.push(sheetHref(undo.overSummary));
+  };
+}
+
+interface SessionDiffSaveEditorProps {
+  /** Opened over the workout summary, which shows the result inline, clear of its Done button. */
+  overSummary: boolean;
+}
+
 /**
  * The "Update your routine?" sheet: the structural changes made during a finished workout, each kept for
  * next time while it is ticked. Opened over the summary (or Home) with the diff in `pendingPlanDiff`.
  */
-export function SessionDiffSaveEditor() {
+export function SessionDiffSaveEditor({ overSummary }: SessionDiffSaveEditorProps) {
   const dispatch = useDispatch();
   const { t } = useTranslate();
   const { tokens } = useAppTheme();
@@ -49,11 +82,19 @@ export function SessionDiffSaveEditor() {
   const programId = planDiff?.programId ?? '';
   const program: ProgramBlueprint | undefined = useAppSelectorWithArg(selectProgram, programId);
   const newRoutineName = useAppSelectorWithArg(selectNewWorkoutName, programId);
-  // Rows start ticked: each one is something the lifter chose to do today.
-  const [unticked, setUnticked] = useState<ReadonlySet<string>>(new Set());
+  const initiallyUnticked = useAppSelector(selectPendingPlanDiffUnticked);
+  const undoUpdate = useUndoRoutineUpdate();
+  // Rows start ticked, since each one is something the lifter chose to do today, unless an Undo
+  // reopened the sheet with their earlier picks.
+  const [unticked, setUnticked] = useState<ReadonlySet<string>>(() => new Set(initiallyUnticked));
 
   // Clear the diff on any exit so the next finished workout can open the sheet again.
-  useOnDismiss(() => dispatch(setPendingPlanDiff(undefined)));
+  const shown = useRef(planDiff);
+  useOnDismiss(() => {
+    if (shown.current) {
+      dispatch(clearPendingPlanDiff(shown.current));
+    }
+  });
 
   if (!planDiff) {
     return <View style={{ flex: 1, backgroundColor: tokens.card }} />;
@@ -74,22 +115,20 @@ export function SessionDiffSaveEditor() {
     });
 
   const applyAndClose = (diff: PlanDiff, message: string) => {
-    const before = program;
+    const undo: RoutineUpdateUndo | undefined = program
+      ? { programId, before: program, planDiff, unticked: [...unticked], overSummary }
+      : undefined;
     dispatch(applyDiffToPlan(diff));
     dispatch(fetchUpcomingSessions());
     // A native sheet covers the toast, so it closes first.
     router.back();
+    if (overSummary) {
+      dispatch(setRoutineUpdateReceipt({ message, undo }));
+      return;
+    }
     toast.show({
       message,
-      action: before
-        ? {
-            label: t('generic.undo.button'),
-            onPress: () => {
-              dispatch(savePlan({ programId, programBlueprint: before }));
-              dispatch(fetchUpcomingSessions());
-            },
-          }
-        : undefined,
+      action: undo ? { label: t('generic.undo.button'), onPress: () => undoUpdate(undo) } : undefined,
     });
   };
 

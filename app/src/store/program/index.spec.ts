@@ -3,8 +3,13 @@ import { LocalDate } from '@js-joda/core';
 import { configureStore } from '@reduxjs/toolkit';
 import { ProgramBlueprint, SessionBlueprint } from '@/models/blueprint-models';
 import { makeWeightedBlueprint } from '@/models/session-models/__test__/helpers';
+import { diffSessionBlueprints, PlanDiff } from '@/models/blueprint-diff';
+import { EmptySession } from '@/models/session-models';
 import programReducer, {
+  clearPendingPlanDiff,
+  reopenPendingPlanDiff,
   savePlan,
+  setPendingPlanDiff,
   selectProgramSession,
   selectProgramSessionExercise,
   updateProgram,
@@ -130,5 +135,42 @@ describe('selectProgramSession', () => {
 
     expect(selectProgramSessionExercise(store.getState(), { ...location, exerciseIndex: 1 })?.name).toBe('Bench');
     expect(selectProgramSessionExercise(store.getState(), { ...location, exerciseIndex: 2 })).toBeUndefined();
+  });
+});
+
+describe('pending plan diff', () => {
+  const planDiff = (): PlanDiff => ({
+    type: 'add',
+    programId: PLAN_A,
+    diff: diffSessionBlueprints(
+      EmptySession.blueprint,
+      new SessionBlueprint('Push', [makeWeightedBlueprint({ name: 'Bench' })], ''),
+    ),
+  });
+
+  it('keeps the unticked rows of a reopened diff until a new one is set', () => {
+    const store = makeStore();
+    const diff = planDiff();
+
+    store.dispatch(reopenPendingPlanDiff({ planDiff: diff, unticked: ['a'] }));
+    expect(store.getState().program.pendingPlanDiffUnticked).toEqual(['a']);
+
+    store.dispatch(setPendingPlanDiff(planDiff()));
+    expect(store.getState().program.pendingPlanDiffUnticked).toBeUndefined();
+  });
+
+  // Undo reopens the sheet while the one it replaces may still be closing.
+  it('is cleared only by the sheet that showed it', () => {
+    const store = makeStore();
+    const closing = planDiff();
+    const reopened = { ...closing };
+    store.dispatch(setPendingPlanDiff(closing));
+    store.dispatch(reopenPendingPlanDiff({ planDiff: reopened, unticked: [] }));
+
+    store.dispatch(clearPendingPlanDiff(closing));
+    expect(store.getState().program.pendingPlanDiff).toBe(reopened);
+
+    store.dispatch(clearPendingPlanDiff(reopened));
+    expect(store.getState().program.pendingPlanDiff).toBeUndefined();
   });
 });

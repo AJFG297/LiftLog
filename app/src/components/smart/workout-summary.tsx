@@ -5,9 +5,11 @@ import { Chip } from '@/components/presentation/foundation/chip';
 import { MsIconSrc } from '@/components/presentation/foundation/ms-icon-source';
 import { RoundIconButton } from '@/components/presentation/foundation/round-icon-button';
 import { SurfaceText } from '@/components/presentation/foundation/surface-text';
+import { RoutineUpdatedBanner } from '@/components/presentation/summary/routine-updated-banner';
 import { StatCard } from '@/components/presentation/summary/stat-card';
 import { BestSetRow, ChangeTone, RecordRow } from '@/components/presentation/summary/summary-rows';
 import { useServices } from '@/components/smart/services-provider';
+import { SHEET_OVER_SUMMARY_HREF, useUndoRoutineUpdate } from '@/components/smart/session-diff-save';
 import { useFinishWorkout } from '@/hooks/useFinishWorkout';
 import { useFormatDate } from '@/hooks/useFormatDate';
 import { useOnDismiss } from '@/hooks/useOnDismiss';
@@ -28,7 +30,7 @@ import {
 } from '@/models/workout-summary';
 import { useAppSelector, useAppSelectorWithArg } from '@/store';
 import { encryptAndShare } from '@/store/feed';
-import { selectActiveProgram } from '@/store/program';
+import { selectActiveProgram, selectRoutineUpdateReceipt, setRoutineUpdateReceipt } from '@/store/program';
 import { SessionRecord, sessionRecords } from '@/store/stats/personal-records';
 import {
   selectActiveSessionId,
@@ -78,6 +80,9 @@ export function WorkoutSummary({ sessionId, finished }: WorkoutSummaryProps) {
   const latestExercises = useAppSelector(selectLatestExercises);
   const unit: WeightUnit = useAppSelector((x) => x.settings.useImperialUnits) ? 'pounds' : 'kilograms';
   const finishWorkout = useFinishWorkout(sessionId);
+  const receipt = useAppSelector(selectRoutineUpdateReceipt);
+  const receiptUndo = receipt?.undo;
+  const undoUpdate = useUndoRoutineUpdate();
   const [noteDraft, setNoteDraft] = useState(session?.reflection?.note ?? '');
 
   const close = () => (finished ? router.dismissTo('/') : router.back());
@@ -91,7 +96,7 @@ export function WorkoutSummary({ sessionId, finished }: WorkoutSummaryProps) {
     }
     finishing.current = true;
     if (finishWorkout()) {
-      router.push('/diff-save');
+      router.push(SHEET_OVER_SUMMARY_HREF);
     }
   }, [finished, activeSessionId, sessionId, finishWorkout, router]);
 
@@ -124,7 +129,10 @@ export function WorkoutSummary({ sessionId, finished }: WorkoutSummaryProps) {
       }),
     );
   };
-  useOnDismiss(saveNote);
+  useOnDismiss(() => {
+    saveNote();
+    dispatch(setRoutineUpdateReceipt(undefined));
+  });
 
   if (!session) {
     return null;
@@ -202,6 +210,14 @@ export function WorkoutSummary({ sessionId, finished }: WorkoutSummaryProps) {
           />
         ) : null}
       </View>
+
+      {receipt ? (
+        <RoutineUpdatedBanner
+          message={receipt.message}
+          undoLabel={t('generic.undo.button')}
+          onUndo={receiptUndo ? () => undoUpdate(receiptUndo) : undefined}
+        />
+      ) : null}
 
       <View style={{ gap: spacing[1], paddingHorizontal: spacing[1] }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[2] }}>
