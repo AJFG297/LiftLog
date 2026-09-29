@@ -248,3 +248,7 @@ Answered:
 Still open:
 
 - Does Progress (step 15) need its own round of prototypes before it's built? Probably yes.
+- The summary's date line names the program but not the canvas's "session 13 of 18". Programs repeat with
+  no set length, and a session doesn't record its program or cycle, so showing progress needs a model change.
+- The live workout's All exercises sheet keeps its always-visible drag handles instead of the canvas's
+  Reorder button. Mid-workout that's one drag, not a tap into reorder mode and then a drag.
