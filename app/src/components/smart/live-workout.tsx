@@ -135,9 +135,18 @@ export function LiveWorkout({ session, updateSession, onFinish }: LiveWorkoutPro
       <LiveWorkoutHeader
         workoutName={session.blueprint.name}
         startTime={session.startTime}
-        onMinimise={() => dismissTo('/')}
-        onEditWorkout={() => push(getSessionWorkoutEditorHref(session.id))}
-        onFinish={onFinish}
+        onMinimise={() => {
+          entry.close();
+          dismissTo('/');
+        }}
+        onEditWorkout={() => {
+          entry.close();
+          push(getSessionWorkoutEditorHref(session.id));
+        }}
+        onFinish={() => {
+          entry.close();
+          onFinish();
+        }}
         restSlot={<LiveRestPill session={session} />}
         restProgressSlot={<LiveRestProgressLine session={session} />}
       />
