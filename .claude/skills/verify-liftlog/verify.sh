@@ -22,9 +22,15 @@ APP_ID="com.ajfg297.liftlog"
 APK="$APP_DIR/android/app/build/outputs/apk/debugOptimized/app-debugOptimized.apk"
 DEV_URL="exp+liftlog://expo-development-client/?url=http%3A%2F%2F127.0.0.1%3A$METRO_PORT"
 
-# Evidence survives `down`; only STATE_DIR (pids, logs of the live instance) is removed.
+# Evidence survives `down`; only STATE_DIR (pids, logs and Metro cache of the live instance) is removed.
 RUNS_DIR="$REPO_ROOT/.verify-runs"
 STATE_DIR="$RUNS_DIR/.state"
+# Metro keeps its transform cache under os.tmpdir(), which every checkout shares. Cache keys use paths
+# relative to the project root, so sibling worktrees (.claude/worktrees/<name>/) that symlink the same
+# node_modules get the same key for expo-router's _ctx file, which bakes in the app root: one checkout's
+# Metro then serves another's routes. Metro gets a TMPDIR of its own inside STATE_DIR instead, so every
+# `up` also starts from a cold cache.
+METRO_TMPDIR="$STATE_DIR/tmp"
 
 ADB="$ANDROID_HOME/platform-tools/adb"
 EMULATOR="$ANDROID_HOME/emulator/emulator"
@@ -147,8 +153,9 @@ cmd_up() {
     echo "metro already up on $METRO_PORT (ours)"
   else
     # Job control gives Metro its own process group, so `down` can stop npx and its node children together.
+    mkdir -p "$METRO_TMPDIR"
     set -m
-    (cd "$APP_DIR" && CI=1 nohup npx expo start --dev-client --port "$METRO_PORT" > "$STATE_DIR/metro.log" 2>&1) &
+    (cd "$APP_DIR" && CI=1 TMPDIR="$METRO_TMPDIR" nohup npx expo start --dev-client --port "$METRO_PORT" > "$STATE_DIR/metro.log" 2>&1) &
     echo $! > "$STATE_DIR/metro.pid"
     set +m
     echo "starting metro on $METRO_PORT..."
@@ -187,6 +194,17 @@ cmd_doctor() {
     lpid="$(lsof -nP -tiTCP:"$METRO_PORT" -sTCP:LISTEN | head -1)"
     cwd="$(lsof -a -p "$lpid" -d cwd -Fn 2>/dev/null | sed -n 's/^n//p')"
     if [[ "$cwd" == "$APP_DIR" ]]; then echo "ok   metro serves $APP_DIR"; else echo "FAIL metro (pid $lpid) serves ${cwd:-?}, not $APP_DIR"; ok=0; fi
+    # A shared cache can serve another checkout's code even when the cwd is right, so read the TMPDIR
+    # the listener actually runs with (ps can show the environment of our own processes).
+    local tmp
+    tmp="$(ps eww -o command= -p "$lpid" 2>/dev/null | tr ' ' '\n' | sed -n 's/^TMPDIR=//p' | head -1)"
+    tmp="${tmp%/}"
+    if [[ "$tmp" == "$METRO_TMPDIR" ]]; then
+      echo "ok   metro cache in $METRO_TMPDIR/metro-cache"
+    else
+      echo "FAIL metro cache in ${tmp:-${TMPDIR:-/tmp}}/metro-cache (shared), not $METRO_TMPDIR/metro-cache; run down then up"
+      ok=0
+    fi
   fi
   if [[ -f "$STATE_DIR/run-id" ]]; then echo "info run $(cat "$STATE_DIR/run-id") -> $RUNS_DIR/$(cat "$STATE_DIR/run-id")"; fi
   [[ $ok == 1 ]] && echo "doctor: healthy" || { echo "doctor: NOT healthy"; return 1; }
