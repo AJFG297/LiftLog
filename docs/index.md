@@ -26,6 +26,9 @@ work to find the docs relevant to your area, and update it whenever you add, rem
 
 ## Features
 
+- [LiveWorkout.md](./LiveWorkout.md) - the workout in progress: focus mode one exercise or superset at a
+  time, the exercise strip, the Up next bar and the All exercises sheet, and how pages, the next set,
+  focus, reordering and the Today target are worked out from the session.
 - [FeedProcess.md](./FeedProcess.md) - the opt-in social feed: the follow/accept flow, what is and isn't
   visible to the server, and the end-to-end encryption model (AES-CBC payloads, RSA-PSS signatures).
 - [Progression.md](./Progression.md) - how last session's

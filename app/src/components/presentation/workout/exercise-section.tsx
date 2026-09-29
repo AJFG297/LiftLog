@@ -21,6 +21,11 @@ interface ExerciseSectionProps<T extends RecordedExercise> {
   toStartNext: boolean;
   isReadonly: boolean;
   showPreviousButton: boolean;
+  /**
+   * `focus` leaves out the title row and its actions, for the live workout, whose exercise card draws
+   * its own. The exercise's notes still show under the sets.
+   */
+  variant?: 'list' | 'focus';
 
   children: ReactNode;
 
@@ -115,6 +120,18 @@ export default function ExerciseSection<T extends RecordedExercise>(props: Exerc
       />
     </View>
   );
+  if (props.variant === 'focus') {
+    return (
+      <View style={{ width: '100%' }} testID="weighted-exercise">
+        {props.children}
+        <ExerciseNotesDisplay
+          exercise={props.recordedExercise}
+          previousExercise={props.previousRecordedExercises.at(0)}
+        />
+      </View>
+    );
+  }
+
   return (
     <View
       style={{

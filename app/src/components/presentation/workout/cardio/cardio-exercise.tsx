@@ -31,6 +31,8 @@ interface CardioExerciseProps {
   toStartNext: boolean;
   isReadonly: boolean;
   showPreviousButton: boolean;
+  /** See {@link ExerciseSection}'s `variant`. */
+  variant?: 'list' | 'focus';
 
   updateExercise: (update: Updater<RecordedCardioExercise>) => void;
   updateSet: (setIndex: number, update: Updater<RecordedCardioExerciseSet>) => void;
@@ -49,6 +51,7 @@ export function CardioExercise(props: CardioExerciseProps) {
       toStartNext={props.toStartNext}
       isReadonly={props.isReadonly}
       showPreviousButton={props.showPreviousButton}
+      variant={props.variant}
       updateExercise={updateExercise}
       onEditExercise={props.onEditExercise}
       onRemoveExercise={props.onRemoveExercise}

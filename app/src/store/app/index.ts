@@ -5,12 +5,21 @@ const initialState: AppState = {
   isHydrated: false,
   currentSnackbar: undefined,
   exerciseSearchResult: undefined,
+  liveWorkoutFocus: undefined,
 };
 
 type AppState = {
   isHydrated: boolean;
   currentSnackbar: SnackbarDescriptor | undefined;
   exerciseSearchResult: ExerciseSearchResult | undefined;
+  liveWorkoutFocus: LiveWorkoutFocus | undefined;
+};
+
+// The exercise the live workout shows. Kept here rather than in the screen so it survives minimising the
+// workout, and so the "All exercises" sheet, a route of its own, can jump the screen to an exercise.
+export type LiveWorkoutFocus = {
+  sessionId: string;
+  exerciseIndex: number;
 };
 
 // The exercise search is its own route, so it hands its result back through the store rather than a
@@ -39,6 +48,10 @@ const appSlice = createSlice({
 
     clearExerciseSearchResult(state) {
       state.exerciseSearchResult = undefined;
+    },
+
+    setLiveWorkoutFocus(state, action: PayloadAction<LiveWorkoutFocus>) {
+      state.liveWorkoutFocus = action.payload;
     },
   },
 });
@@ -69,7 +82,12 @@ export type SnackbarDescriptor =
     };
 export const showSnackbar = createAction<SnackbarDescriptor & { duration?: number }>('snackBarWithAction');
 
-export const { setIsHydrated, setCurrentSnackbar, setExerciseSearchResult, clearExerciseSearchResult } =
-  appSlice.actions;
+export const {
+  setIsHydrated,
+  setCurrentSnackbar,
+  setExerciseSearchResult,
+  clearExerciseSearchResult,
+  setLiveWorkoutFocus,
+} = appSlice.actions;
 
 export default appSlice.reducer;

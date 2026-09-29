@@ -12,6 +12,7 @@ interface RoundIconButtonProps {
   icon: AppIconName;
   /** Required: an icon alone says nothing to a screen reader. */
   accessibilityLabel: string;
+  accessibilityHint?: string;
   onPress: () => void;
   /** `compact` draws a 36pt circle, centred in a 44pt touch target. */
   size?: keyof typeof SIZES;
@@ -27,6 +28,7 @@ interface RoundIconButtonProps {
 export function RoundIconButton({
   icon,
   accessibilityLabel,
+  accessibilityHint,
   onPress,
   size = 'regular',
   disabled,
@@ -42,6 +44,7 @@ export function RoundIconButton({
       disabled={disabled}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
+      accessibilityHint={accessibilityHint}
       accessibilityState={{ disabled: !!disabled }}
       style={[
         { minWidth: MIN_TOUCH_TARGET, minHeight: MIN_TOUCH_TARGET, alignItems: 'center', justifyContent: 'center' },
