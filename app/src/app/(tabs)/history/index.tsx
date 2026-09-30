@@ -141,7 +141,7 @@ export default function History() {
           </View>
         }
         renderItem={({ item: session }) => (
-          <Card mode="contained">
+          <Card mode="contained" onPress={() => push(`/workout-detail?sessionId=${encodeURIComponent(session.id)}`)}>
             <Card.Content>
               <SplitCardControl
                 titleContent={<SessionSummaryTitle showDate session={session} />}
