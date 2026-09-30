@@ -241,7 +241,7 @@
   "feed.shared_item.title": "Shared Item",
   "feed.shared_plan.title": "Shared Plan",
   "feed.show_feed.label": "Show feed",
-  "feed.show_feed.subtitle": "Display the feed in the navigation bar",
+  "feed.show_feed.you.subtitle": "Show the feed on the You tab",
   "feed.start_following_someone.message": "Start following someone!",
   "feed.start_publishing.button": "Start publishing",
   "feed.unfollow.button": "Unfollow",
