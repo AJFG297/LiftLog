@@ -4,6 +4,10 @@ The screen for choosing exercises (PM-32, step 13 of the [redesign plan](./plans
 route, `app/exercise-search.tsx`, drawn by `components/smart/exercise-search.tsx` (`ExerciseSearch`), with
 its pure logic in `components/presentation/workout-editor/exercise-picker.ts`.
 
+It is a `presentation: 'modal'` route rather than a form sheet (the one exception to D7): a page sheet on
+iOS and a full-screen page on Android. It hides the native header and draws Cancel / title / New itself.
+On iOS the page sheet already starts below the status bar, so the header adds no top inset there.
+
 ## Where it opens
 
 | From | Mode | Hook |

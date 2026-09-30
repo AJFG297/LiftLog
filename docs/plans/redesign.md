@@ -150,8 +150,12 @@ counts towards:
 
 **D7. Sheets.**
 
-- Navigational sheets (the exercise list, set type, rest, update routine, the exercise picker) use
-  expo-router `presentation: 'formSheet'` with detents, so they're native.
+- Navigational sheets (the exercise list, set type, rest, update routine) use expo-router
+  `presentation: 'formSheet'` with detents, so they're native.
+- The exercise picker is the exception (PM-32): a `presentation: 'modal'` route with its own Cancel /
+  title / New header. That is still native, a page sheet on iOS and a full-screen page on Android. It needs
+  the whole height for the search, two chip rows, a long list and the Add bar, and a keyboard-driven list in
+  an Android form sheet risks the keyboard covering the Add bar and the list fighting the sheet's drag.
 - The number pad is an in-screen panel animated with Reanimated, not a sheet, so the set being edited
   stays visible.
 - Avoid a sheet library unless formSheet can't handle a case.
