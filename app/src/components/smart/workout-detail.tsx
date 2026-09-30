@@ -23,7 +23,7 @@ import {
   sessionSetRows,
   uniqueRoutineName,
 } from '@/models/workout-detail';
-import { useAppSelector, useAppSelectorWithArg } from '@/store';
+import { useAppSelector, useAppSelectorWhenFocusedWithArg } from '@/store';
 import { addUnpublishedSessionId, encryptAndShare } from '@/store/feed';
 import {
   addProgramSession,
@@ -63,9 +63,11 @@ export function WorkoutDetail({ sessionId }: { sessionId: string }) {
   const locale = useAppSelector((x) => x.settings.preferredLanguage);
   const showFeed = useAppSelector((x) => x.settings.showFeed);
   const unit: WeightUnit = useAppSelector((x) => x.settings.useImperialUnits) ? 'pounds' : 'kilograms';
-  const session = useAppSelectorWithArg(selectSession, sessionId);
-  const previous = useAppSelectorWithArg(selectPreviousComparableSession, session);
-  const earlier = useAppSelectorWithArg(selectSessionsBefore, session);
+  // Edit workout opens on top of this screen, and the records sweep the whole history, so an edit there must
+  // not recompute them here.
+  const session = useAppSelectorWhenFocusedWithArg(selectSession, sessionId);
+  const previous = useAppSelectorWhenFocusedWithArg(selectPreviousComparableSession, session);
+  const earlier = useAppSelectorWhenFocusedWithArg(selectSessionsBefore, session);
   const program = useAppSelector(selectActiveProgram);
   const programId = useAppSelector((x) => x.program.activePlanId);
   const { start, confirmationDialog } = useStartWorkoutWithConfirmation();
@@ -178,7 +180,7 @@ export function WorkoutDetail({ sessionId }: { sessionId: string }) {
             label: t('workout.edit.button'),
             icon: 'edit',
             systemImage: 'pencil',
-            onPress: () => router.push(`/history/edit?sessionId=${encodeURIComponent(session.id)}`),
+            onPress: () => router.push(`/workout-detail/edit?sessionId=${encodeURIComponent(session.id)}`),
           },
           ...(showFeed
             ? [
