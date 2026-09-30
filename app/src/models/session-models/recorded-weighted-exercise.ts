@@ -574,8 +574,7 @@ export class RecordedWeightedExercise {
       const planTarget = plan.repsTargetForSet(index);
       if (best && setKindHas(planned.kind, 'carriesOver')) {
         const from = carried[carryingBefore++];
-        const weight =
-          straight || !from ? best.weight : delta!.value.isZero() ? from.weight : from.weight.plus(delta!);
+        const weight = straight || !from ? best.weight : delta!.value.isZero() ? from.weight : from.weight.plus(delta!);
         const target = plan.repsAreProgressed ? (from ?? best).target : planTarget;
         return PotentialSet.of({ weight, target, kind: planned.kind });
       }
