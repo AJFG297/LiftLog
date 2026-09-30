@@ -18,8 +18,11 @@ export default function HistoryEditPage() {
   const dispatch = useDispatch();
   const { sessionId } = useLocalSearchParams<{ sessionId: string }>();
   const session = useAppSelectorWithArg(selectSession, sessionId);
-  const { dismissTo, push } = useRouter();
+  const { back, canDismiss, dismissTo, push } = useRouter();
   const finishWorkout = useFinishWorkout(sessionId);
+  // Back to whichever screen opened the editor (Home or All history). A deep link opens it alone in its
+  // stack, so then it falls back to All history.
+  const leave = () => (canDismiss() ? back() : dismissTo('/history'));
 
   // Resuming hands the session back to the workout in progress, so leaving this screen must not also
   // finish it - that would immediately clear it as the active workout again.
@@ -32,13 +35,13 @@ export default function HistoryEditPage() {
   const { start: resume, confirmationDialog } = useStartWorkoutWithConfirmation({
     onStarted: () => {
       resumed.current = true;
-      dismissTo('/history');
+      leave();
     },
   });
 
   const save = () => {
     const hasDiff = finishWorkout();
-    dismissTo('/history');
+    leave();
     if (hasDiff) {
       push('/diff-save');
     }
