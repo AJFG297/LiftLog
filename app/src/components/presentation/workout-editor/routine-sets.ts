@@ -43,6 +43,14 @@ export function routineSetRowsOf(exercise: WeightedExerciseBlueprint): RoutineSe
   ];
 }
 
+/**
+ * Where the set at `position` sits among `rows`, or -1. Rows are rebuilt on every call to
+ * `routineSetRowsOf`, so they have to be matched by position, not by identity.
+ */
+export function routineSetIndexOf(rows: readonly RoutineSetRow[], position: RoutineSetPosition): number {
+  return rows.findIndex((row) => row.position.list === position.list && row.position.index === position.index);
+}
+
 /** An exercise keeps at least one working set, so the last one can be neither removed nor made a warm-up. */
 function isLastWorkingSet(exercise: WeightedExerciseBlueprint, position: RoutineSetPosition): boolean {
   return position.list === 'working' && exercise.plannedSets.length <= 1;

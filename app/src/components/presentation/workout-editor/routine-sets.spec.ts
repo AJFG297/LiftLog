@@ -3,6 +3,7 @@ import { Duration, LocalDate } from '@js-joda/core';
 import { Rest, SessionBlueprint } from '@/models/blueprint-models';
 import {
   canRemoveRoutineSet,
+  routineSetIndexOf,
   routineSetRowsOf,
   withRoutineSetAdded,
   withRoutineSetKind,
@@ -40,6 +41,13 @@ describe('routine set rows', () => {
       ['working', 1, 'working', 5],
       ['working', 2, 'working', 5],
     ]);
+  });
+
+  it('finds a set among freshly built rows by its position', () => {
+    const rows = routineSetRowsOf(bench());
+    expect(routineSetIndexOf(rows, { list: 'working', index: 0 })).toBe(1);
+    expect(routineSetIndexOf(rows, { list: 'warmup', index: 0 })).toBe(0);
+    expect(routineSetIndexOf(rows, { list: 'working', index: 3 })).toBe(-1);
   });
 
   it('turns a working set into a warm-up at the end of the warm-ups', () => {

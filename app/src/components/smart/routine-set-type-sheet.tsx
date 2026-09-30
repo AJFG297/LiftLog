@@ -5,6 +5,7 @@ import { SetTypeOption } from '@/components/presentation/live-workout/set-type-o
 import {
   canChangeRoutineSetKind,
   type RoutineSetPosition,
+  routineSetIndexOf,
   routineSetRowsOf,
   withRoutineSetKind,
 } from '@/components/presentation/workout-editor/routine-sets';
@@ -53,10 +54,9 @@ export function RoutineSetTypeSheet() {
   const [picked, setPicked] = useState<SetKind>();
   const [shown] = useState(() => draft?.routine.exercises[exerciseIndex]);
   const exercise = picked ? shown : draft?.routine.exercises[exerciseIndex];
-  const row =
-    exercise instanceof WeightedExerciseBlueprint && position
-      ? routineSetRowsOf(exercise).find((r) => r.position.list === position.list && r.position.index === position.index)
-      : undefined;
+  const rows = exercise instanceof WeightedExerciseBlueprint ? routineSetRowsOf(exercise) : [];
+  const rowIndex = position ? routineSetIndexOf(rows, position) : -1;
+  const row = rows[rowIndex];
   const found = !!row;
 
   useEffect(() => {
@@ -69,9 +69,7 @@ export function RoutineSetTypeSheet() {
     return null;
   }
 
-  const rows = routineSetRowsOf(exercise);
   const labels = setLabels(rows.map((r) => r.kind));
-  const rowIndex = rows.indexOf(row);
   const badgeOf = (kind: SetKind): SetBadgeProps => {
     if (kind !== 'working') {
       return { kind };
