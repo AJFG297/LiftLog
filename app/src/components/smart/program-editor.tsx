@@ -4,6 +4,7 @@ import { RoundIconButton } from '@/components/presentation/foundation/round-icon
 import { SurfaceText } from '@/components/presentation/foundation/surface-text';
 import { useToast } from '@/components/presentation/foundation/toast';
 import { MIN_TOUCH_TARGET } from '@/components/presentation/foundation/touch-target';
+import { RoutineColorDot } from '@/components/presentation/workout-editor/routine-color-swatches';
 import { estimatedMinutesOf } from '@/components/presentation/workout-editor/routine-summary';
 import CopyWorkoutDialog from '@/components/smart/copy-workout-dialog';
 import { ItemMenu, programSummary, useSwitchActiveProgram } from '@/components/smart/program-list-item';
@@ -242,9 +243,12 @@ function ProgramRoutineCard(props: {
           backgroundColor: pressed ? tokens.track : undefined,
         })}
       >
-        <SurfaceText font="text-base" weight="600" style={{ color: tokens.ink }}>
-          {routine.name}
-        </SurfaceText>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[2] }}>
+          <RoutineColorDot color={routine.color} index={props.index} />
+          <SurfaceText font="text-base" weight="600" style={{ flexShrink: 1, color: tokens.ink }}>
+            {routine.name}
+          </SurfaceText>
+        </View>
         <SurfaceText font="text-sm" numberOfLines={1} style={{ color: tokens.ink }}>
           {routine.exercises.map((e) => e.name).join(' · ') || t('routines.routine.no_exercises.label')}
         </SurfaceText>

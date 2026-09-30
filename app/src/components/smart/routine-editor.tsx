@@ -15,6 +15,7 @@ import { useToast } from '@/components/presentation/foundation/toast';
 import { MIN_TOUCH_TARGET } from '@/components/presentation/foundation/touch-target';
 import { ASK_AI_BAR_ENABLED, AskAiBar } from '@/components/presentation/workout-editor/ask-ai-bar';
 import { formatCardioTarget } from '@/utils/format-cardio-target';
+import { RoutineColorSwatches } from '@/components/presentation/workout-editor/routine-color-swatches';
 import { RoutineExerciseActions } from '@/components/presentation/workout-editor/routine-exercise-actions';
 import {
   RoutineExerciseCard,
@@ -74,6 +75,7 @@ import {
   WeightedExerciseBlueprint,
 } from '@/models/blueprint-models';
 import { equipmentClassOf, weightStepFor } from '@/models/equipment';
+import { routineColorOf, type RoutineColor } from '@/models/routine-color';
 import { RecordedWeightedExercise } from '@/models/session-models';
 import { setLabels } from '@/models/session-models/set-kind';
 import { type LoadUnit, Weight } from '@/models/weight';
@@ -772,6 +774,15 @@ export function RoutineEditor({ programId, sessionIndex, isNew }: RoutineEditorP
               minHeight: MIN_TOUCH_TARGET,
             }}
           />
+          <RoutineColorSwatches
+            value={routineColorOf(routine.color, sessionIndex)}
+            onChange={(color) => {
+              closePad();
+              updateRoutineDraft(location, (r) => r.with({ color }));
+            }}
+            label={t('routine_editor.color.label')}
+            colorLabel={(color) => colorLabelOf(t, color)}
+          />
           <TextInput
             testID="routine-notes"
             value={routine.notes}
@@ -920,6 +931,23 @@ function MoreOptionsRow({ onPress }: { onPress: () => void }) {
       <MsIconSrc name="chevronRight" size={20} color={tokens.muted} />
     </Pressable>
   );
+}
+
+function colorLabelOf(t: TranslateFn, color: RoutineColor): string {
+  switch (color) {
+    case 'vermilion':
+      return t('routine_editor.color.vermilion.label');
+    case 'green':
+      return t('routine_editor.color.green.label');
+    case 'blue':
+      return t('routine_editor.color.blue.label');
+    case 'ochre':
+      return t('routine_editor.color.ochre.label');
+    case 'purple':
+      return t('routine_editor.color.purple.label');
+    case 'stone':
+      return t('routine_editor.color.stone.label');
+  }
 }
 
 function loadUnitOf(unit: Weight['unit'], fallback: LoadUnit): LoadUnit {
