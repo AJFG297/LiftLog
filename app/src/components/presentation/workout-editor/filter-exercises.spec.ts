@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ExerciseDescriptor } from '@/models/exercise-models';
-import { filterExercises } from './filter-exercises';
+import { filterExercises, searchSeedFor } from './filter-exercises';
 
 function exercise(name: string, muscles: string[] = []): ExerciseDescriptor {
   return { name, muscles, force: null, level: '', mechanic: null, equipment: null, instructions: '', category: '' };
@@ -37,5 +37,18 @@ describe('filterExercises', () => {
     const result = filterExercises(exercises, '  Cable Fly ', ['chest']);
 
     expect(result.suggestion).toMatchObject({ name: 'Cable Fly', muscles: ['chest'] });
+  });
+});
+
+describe('searchSeedFor', () => {
+  it('opens on the name of an exercise in the list, whatever its case', () => {
+    expect(searchSeedFor(exercises, 'Incline Dumbbell Press')).toBe('Incline Dumbbell Press');
+    expect(searchSeedFor(exercises, 'bench press')).toBe('bench press');
+  });
+
+  it('opens empty for a placeholder name that names no exercise', () => {
+    expect(searchSeedFor(exercises, 'New Exercise')).toBe('');
+    expect(searchSeedFor(exercises, 'Exercise 4')).toBe('');
+    expect(searchSeedFor(exercises, '')).toBe('');
   });
 });

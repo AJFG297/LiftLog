@@ -1,6 +1,6 @@
 import Button from '@/components/presentation/foundation/button';
 import ExerciseFilterer from '@/components/presentation/workout-editor/exercise-filterer';
-import { filterExercises } from '@/components/presentation/workout-editor/filter-exercises';
+import { filterExercises, searchSeedFor } from '@/components/presentation/workout-editor/filter-exercises';
 import { spacing } from '@/hooks/useAppTheme';
 import { ExerciseDescriptor } from '@/models/exercise-models';
 import { useAppSelector, useAppSelectorWithArg } from '@/store';
@@ -22,8 +22,9 @@ export function ExerciseSearch(props: { requestId: string; exerciseName: string 
   const dispatch = useDispatch();
   const { dismiss } = useRouter();
   const exercises = useAppSelector(selectExercises);
-  // The search opens with the current exercise's name in the field, so the list must start filtered by it.
-  const [initialResult] = useState(() => filterExercises(exercises, props.exerciseName, []));
+  // The field opens with the exercise's name when it names one, so the list must start filtered by it.
+  const [seed] = useState(() => searchSeedFor(exercises, props.exerciseName));
+  const [initialResult] = useState(() => filterExercises(exercises, seed, []));
   const [filteredExerciseIds, setFilteredExerciseIds] = useState(initialResult.ids);
   const [suggestedNewExercise, setSuggestedNewExercise] = useState(initialResult.suggestion);
 
@@ -59,7 +60,7 @@ export function ExerciseSearch(props: { requestId: string; exerciseName: string 
           if (i.index === 0) {
             return (
               <ExerciseFilterer
-                exerciseName={props.exerciseName}
+                exerciseName={seed}
                 onSuggestedNewExercise={setSuggestedNewExercise}
                 onFilteredExerciseIdsChange={setFilteredExerciseIds}
               />

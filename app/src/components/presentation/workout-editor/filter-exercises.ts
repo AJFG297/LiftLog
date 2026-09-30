@@ -55,6 +55,18 @@ export function filterExercises(
   return { ids, suggestion };
 }
 
+/**
+ * What the search opens with for the exercise being picked: its name when that names an exercise in the
+ * list, as when swapping one out, so the list starts on it. A placeholder name like "New Exercise" names
+ * nothing, so the search starts empty with every exercise listed.
+ */
+export function searchSeedFor(exercises: Record<string, ExerciseDescriptor>, exerciseName: string): string {
+  const name = exerciseName.trim().toLowerCase();
+  return name && Object.values(exercises).some((exercise) => exercise.name.trim().toLowerCase() === name)
+    ? exerciseName
+    : '';
+}
+
 function escapeRegExp(string: string) {
   return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
