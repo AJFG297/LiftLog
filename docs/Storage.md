@@ -164,7 +164,8 @@ A workout is stored across five tables (`db/schema.ts`), not as one payload:
   changed it, so it is read as written.
 - **Exercise identity**: every exercise blueprint carries an `exerciseId`, the id of an entry in the
   exercise list: a built-in's English catalog name, or a user exercise's uuid. `movement_key` is
-  `exerciseId|kind` and `progression_key` is the id plus the rep scheme, so renaming an exercise changes
+  `exerciseId|kind` and `progression_key` is `exerciseId_kind` (plus the target type for cardio; set count
+  and rep scheme dropped out with `REKEY_PROGRESSION_BY_EXERCISE`), so renaming an exercise changes
   only its descriptor and every workout stays attached. Names arriving from outside (plan files, the AI
   planner, CSV import, backups, a friend's share) are turned into ids by `ExerciseResolver`
   (`models/exercise-resolver.ts`): the user's own exercise with that name, then a built-in by any of its
