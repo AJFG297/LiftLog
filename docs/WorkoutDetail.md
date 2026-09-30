@@ -28,9 +28,11 @@ card's summary (the summary is the button, so the card's own buttons stay reacha
 - **Do again** starts a new workout with the same exercises and sets, nothing logged, through the usual start path
   (`useStartWorkoutWithConfirmation`), which asks first when another workout is in progress. `repeatSession` makes
   it: the logged weights become the new workout's placeholders.
-- **Save as routine** adds the workout's structure (`routineFromSession`, which is `session.blueprint`: the
+- **Save as routine** adds the workout's structure (`routineFromSession`, built from `session.blueprint`: the
   exercises as they ended up that day) to the **active plan**, named after the workout, or "Push 2" and so on when
-  the name is taken (`uniqueRoutineName`). A toast offers Undo.
+  the name is taken (`uniqueRoutineName`). A toast offers Undo. Editing a warm-up's weight during a workout leaves
+  the session's plan alone, so a warm-up logged at a weight of its own is planned at that weight (a percentage
+  warm-up stays a percentage). Do again and Save as routine then agree on every warm-up's load.
 - **The overflow menu** (native, `PageMenu`) offers Edit workout, Share workout when the feed is
   on, and Delete workout. Delete goes back to the list at once and shows a toast with Undo, which puts the session
   back. Both queue the session for the feed, which publishes a queued session that exists and unpublishes one that

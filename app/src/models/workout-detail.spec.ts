@@ -110,6 +110,40 @@ describe('routineFromSession', () => {
     ]);
   });
 
+  it('plans a warm-up at the weight it was logged at, not the one the plan kept', () => {
+    // Set 3 was turned into a warm-up at 40 kg, which the plan keeps, then lightened to 20 kg and logged.
+    const turned = withSetKind(
+      { exercise: exercise(bench, [slot(40, 5), slot(40, 5), slot(40, undefined)]), drafts: {} },
+      { list: 'working', index: 2 },
+      'warmup',
+    ).exercise;
+    const done = turned.withWarmupWeight(0, kg(20)).withWarmupRepCount(0, 8, at);
+    const routine = routineFromSession(workout('turned', 23, [done]), 'Push 2');
+
+    expect(turned.blueprint.warmupSets[0]?.load).toEqual({ type: 'absolute', weight: kg(40) });
+    expect((routine.exercises[0] as WeightedExerciseBlueprint).warmupSets.map((w) => w.load)).toEqual([
+      { type: 'absolute', weight: kg(20) },
+    ]);
+  });
+
+  it('keeps a warm-up done as planned, one not logged, and a percentage', () => {
+    const planned = bench.with({
+      warmupSets: [
+        { load: { type: 'absolute', weight: kg(40) }, reps: 8 },
+        { load: { type: 'absolute', weight: kg(50) }, reps: 5 },
+        { load: { type: 'percent', percent: 80 }, reps: 3 },
+      ],
+    });
+    const done = exercise(
+      planned,
+      [slot(100, 5)],
+      [slot(40, 8, 'warmup'), slot(30, undefined, 'warmup'), slot(70, 3, 'warmup')],
+    );
+    const routine = routineFromSession(workout('as-planned', 23, [done]), 'Push 2');
+
+    expect((routine.exercises[0] as WeightedExerciseBlueprint).warmupSets).toEqual(planned.warmupSets);
+  });
+
   it('leaves out an exercise removed during the workout', () => {
     const routine = routineFromSession(today.withRemovedExercise(1), 'Push 2');
 

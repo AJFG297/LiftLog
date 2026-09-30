@@ -1,4 +1,4 @@
-import { MovementKey, SessionBlueprint } from '@/models/blueprint-models';
+import { MovementKey, PlannedWarmupSet, SessionBlueprint, WeightedExerciseBlueprint } from '@/models/blueprint-models';
 import { PotentialSet, RecordedWeightedExercise, Session } from '@/models/session-models';
 import { Rpe } from '@/models/session-models/rpe';
 import { LetteredSetKind, setKindHas } from '@/models/session-models/set-kind';
@@ -10,9 +10,39 @@ import { LocalDate } from '@js-joda/core';
 /**
  * A past workout's structure as a new routine: its exercises as they ended up that day, including any
  * added, removed or edited during it, under `name`. The notes stay, since they describe the routine.
+ * A warm-up logged at a weight of its own is planned at that weight (see {@link warmupAsDone}).
  */
 export function routineFromSession(session: Session, name: string): SessionBlueprint {
-  return session.blueprint.with({ name });
+  return session.blueprint.with({
+    name,
+    exercises: session.blueprint.exercises.map((planned, index) => {
+      const recorded = session.recordedExercises[index];
+      return planned instanceof WeightedExerciseBlueprint && recorded instanceof RecordedWeightedExercise
+        ? planned.with({ warmupSets: planned.warmupSets.map((warmup, i) => warmupAsDone(recorded, warmup, i)) })
+        : planned;
+    }),
+  });
+}
+
+/**
+ * The warm-up at `index` as it was done. Editing a warm-up's weight during a workout leaves the plan alone,
+ * so a set turned warm-up keeps the weight it had when it was turned, and a warm-up planned without a load
+ * has none. One logged at another weight than the plan gives it takes that weight. A percentage stays a
+ * percentage, because it follows the working weight wherever that goes next time.
+ */
+function warmupAsDone(exercise: RecordedWeightedExercise, planned: PlannedWarmupSet, index: number): PlannedWarmupSet {
+  const slot = exercise.warmupSets[index];
+  if (!slot?.set || !exercise.tracksResistance || planned.load?.type === 'percent') {
+    return planned;
+  }
+  const unit = slot.weight.unit === 'pounds' ? 'pounds' : 'kilograms';
+  if (slot.weight.equals(exercise.warmupSlotFor(planned, unit).weight, true)) {
+    return planned;
+  }
+  return {
+    reps: planned.reps,
+    load: slot.weight.value.isZero() ? undefined : { type: 'absolute', weight: slot.weight },
+  };
 }
 
 /**
