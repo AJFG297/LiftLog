@@ -1,4 +1,4 @@
-import { ExerciseBlueprint, RepsTarget } from '@/models/blueprint-models';
+import { ExerciseBlueprint, latestInLineage, lineageKeys, ProgressionKey, RepsTarget } from '@/models/blueprint-models';
 import type { RecordedExercise } from '@/models/session-models/recorded-exercise';
 import { RecordedWeightedExercise } from '@/models/session-models/recorded-weighted-exercise';
 import { setLabels } from '@/models/session-models/set-kind';
@@ -33,19 +33,20 @@ export interface TodaysTarget {
 }
 
 /**
- * The performance `exercise` carried on from, among `candidates` (newest first): the latest with the key
- * its routine gives it, `planned`, because that is what the session was built from. An exercise swapped
- * during the workout has a key of its own, and the lineage it came from must not be lost with it. Without
- * a routine exercise to go by, the exercise's own key decides.
+ * The performance `exercise` carried on from: the latest of the lineage its routine gives it, `planned`
+ * (see {@link plannedLineageFor}), in `previousByLineage`, because that is what the session was built from.
+ * An exercise swapped during the workout has a key of its own, and the lineage it came from must not be
+ * lost with it. Without a routine exercise to go by, the exercise's own key decides among `candidates`
+ * (newest first).
  */
 export function carriedFrom(
   exercise: RecordedWeightedExercise,
   candidates: readonly RecordedWeightedExercise[],
-  planned: ExerciseBlueprint | undefined,
+  planned: ProgressionKey | undefined,
+  previousByLineage: Readonly<Record<ProgressionKey, RecordedExercise | undefined>>,
 ): RecordedWeightedExercise | undefined {
-  const plannedKey = planned?.progressionKey();
-  const fromPlan = plannedKey === undefined ? undefined : candidates.find((c) => c.progressionKey() === plannedKey);
-  return fromPlan ?? exercise.previousPerformanceIn(candidates);
+  const fromPlan = planned === undefined ? undefined : latestInLineage(previousByLineage, planned);
+  return fromPlan instanceof RecordedWeightedExercise ? fromPlan : exercise.previousPerformanceIn(candidates);
 }
 
 /**
@@ -61,6 +62,16 @@ export function plannedExerciseFor(
   const movement = exercise.movementKey();
   const occurrence = sessionExercises.filter((e) => e.movementKey() === movement).indexOf(exercise);
   return occurrence < 0 ? undefined : routineExercises.filter((p) => p.movementKey() === movement)[occurrence];
+}
+
+/** The lineage (see {@link lineageKeys}) of the routine exercise `exercise` was built from, if any. */
+export function plannedLineageFor(
+  exercise: RecordedExercise,
+  sessionExercises: readonly RecordedExercise[],
+  routineExercises: readonly ExerciseBlueprint[],
+): ProgressionKey | undefined {
+  const planned = plannedExerciseFor(exercise, sessionExercises, routineExercises);
+  return planned && lineageKeys(routineExercises)[routineExercises.indexOf(planned)];
 }
 
 /**

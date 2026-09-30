@@ -4,6 +4,8 @@ import {
   ExerciseBlueprint,
   CardioExerciseBlueprint,
   applyEarnedProgression,
+  latestInLineage,
+  lineageKeys,
 } from '@/models/blueprint-models';
 import { Weight, WeightUnit } from '@/models/weight';
 import {
@@ -73,12 +75,14 @@ export class SessionService {
 
   private createNewSession(
     sessionBlueprint: SessionBlueprint,
+    // Keyed by lineage (see `lineageKeys`), as the store's `latestExercises` is.
     latestRecordedExercises: Record<ProgressionKey, RecordedExercise | undefined>,
   ): Session {
     // oxlint-disable-next-line typescript/no-this-alias
     const $this = this;
-    function getNextExercise(e: ExerciseBlueprint): RecordedExercise {
-      const lastExercise = latestRecordedExercises[e.progressionKey()];
+    const lineages = lineageKeys(sessionBlueprint.exercises);
+    function getNextExercise(e: ExerciseBlueprint, index: number): RecordedExercise {
+      const lastExercise = latestInLineage(latestRecordedExercises, lineages[index]!);
       if (e instanceof CardioExerciseBlueprint) {
         const cardioLastExercise = lastExercise instanceof RecordedCardioExercise ? lastExercise : undefined;
         return RecordedCardioExercise.empty(e).with({

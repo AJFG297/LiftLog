@@ -88,9 +88,10 @@ Nothing on the screen is stored except which exercise is in focus. The rest come
   cleared once something follows it, because it would join that exercise.
 - **Today's target** is `todaysTarget` in `models/session-models/todays-target.ts`. Progression runs once,
   at session start, and keeps no record of what it did, so the card compares today's top set with the
-  best set of the performance it was carried from (`carriedFrom`: the latest with the key the routine
+  best set of the performance it was carried from (`carriedFrom`: the latest of the lineage the routine
   gives the exercise, whatever its set count). A routine can plan a movement twice, so
-  `plannedExerciseFor` pairs each with the routine exercise at the same place among that movement's. The
+  `plannedExerciseFor` pairs each with the routine exercise at the same place among that movement's, and
+  `plannedLineageFor` gives each place its own lineage (see [Progression.md](./Progression.md)). The
   comparison reads: heavier, lighter, more reps, the same after a success, or the same after a miss
   (naming the set that fell short). With nothing to compare against it says it's the first time, or,
   when last time had only drop or myo sets, that the scheme is new. See [Progression.md](./Progression.md).

@@ -38,8 +38,11 @@ numbers in.
   plan each session rather than carried, and the rules ignore them: a skipped or short warm-up never
   fails a session, and a light one is never picked as the "lowest set". A drop or myo set opens on the
   weight of the same drop or myo set last time, and the rules never move it.
-- **One exercise is one lineage.** If a routine has the same exercise twice, or you run it heavy one day
-  and light another, the next session carries from whichever you did last.
+- **Across sessions, one exercise is one lineage.** If you run it heavy one day and light another (Squat
+  5x5 on Monday, 3x8 on Friday), the next session carries from whichever you did last.
+- **Within a session, each place is its own lineage.** If a routine has the same exercise twice (a heavy
+  single, then back-off sets), each carries from the same place last time, so the single never opens on
+  the back-off weight. The first time a routine has it twice, the second place starts from the first.
 
 **Reps carry over too when reps are what you are progressing on** - either the exercise's Resistance is
 set to None (there is nothing else to advance on), or you have given it a rule that increases reps. In
@@ -110,8 +113,10 @@ move and does nothing at all.
 
 ---
 
-For the code behind this: `progressionKey()`, `applyProgression`, `applyEarnedProgression` and
-`ProgressionRule.isEarnedBy` in `app/src/models/blueprint-models/index.ts`; the best set
+For the code behind this: `progressionKey()`, `lineageKeys` and `latestInLineage` (a repeat within a
+session), `applyProgression`, `applyEarnedProgression` and `ProgressionRule.isEarnedBy` in
+`app/src/models/blueprint-models/index.ts`; the store's `latestExercises` and `selectPreviousLineages`,
+keyed by lineage, in `app/src/store/stored-sessions/index.ts`; the best set
 (`bestSetIndex`, `bestSetMetTarget`) and fitting last time onto today's sets
 (`RecordedWeightedExercise.carriedInto`) in `app/src/models/session-models/recorded-weighted-exercise.ts`;
 what each set kind carries in `app/src/models/session-models/set-kind.ts`; session start in

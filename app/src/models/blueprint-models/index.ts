@@ -1278,8 +1278,35 @@ export type MovementKey = string & { readonly __brand: 'MovementKey' };
  * weighted exercise is one lineage whatever its set count or rep scheme: the next session carries from
  * the latest one, wherever that was planned (see {@link RecordedWeightedExercise.carriedInto}). A cardio
  * exercise splits on distance and time work. Split by type for the same reason as {@link MovementKey}.
+ * The same exercise twice in one session is two lineages, told apart by {@link lineageKeys}.
  */
 export type ProgressionKey = string & { readonly __brand: 'ProgressionKey' };
+
+/**
+ * The lineage of each of `exercises`, a session's or a routine's, in order: its progression key, or for a
+ * repeat of that key in the same list, the key with the repeat's number (`<key>#2`). A routine that plans
+ * an exercise twice, a heavy single then back-off sets say, has each progress on its own, paired by place.
+ */
+export function lineageKeys(exercises: readonly { progressionKey(): ProgressionKey }[]): ProgressionKey[] {
+  const seen = new Map<ProgressionKey, number>();
+  return exercises.map((exercise) => {
+    const key = exercise.progressionKey();
+    const repeat = (seen.get(key) ?? 0) + 1;
+    seen.set(key, repeat);
+    return repeat === 1 ? key : (`${key}#${repeat}` as ProgressionKey);
+  });
+}
+
+/**
+ * The latest performance of `lineage` in `latest` (keyed by {@link lineageKeys}). A repeat never done as a
+ * repeat yet, the first time a routine plans the exercise twice, carries from the exercise's first lineage.
+ */
+export function latestInLineage<T>(
+  latest: Readonly<Record<ProgressionKey, T | undefined>>,
+  lineage: ProgressionKey,
+): T | undefined {
+  return latest[lineage] ?? latest[lineage.replace(/#\d+$/, '') as ProgressionKey];
+}
 
 /**
  * The fuzzy spelling fold the resolver matches names with, for the callers that compare names alone -

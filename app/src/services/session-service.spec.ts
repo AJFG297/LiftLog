@@ -520,6 +520,41 @@ describe('SessionService carry over from the best set', () => {
     ]);
   });
 
+  it('progresses the same exercise planned twice in a routine as two lineages, paired by place', () => {
+    const topSingle = press({ sets: 1, repsConfig: { type: 'fixed', reps: 3 } });
+    const backOff = press({ sets: 3 });
+    const routine = new SessionBlueprint('Push', [topSingle, backOff], '');
+    // The back-off sets are logged after the single, so one lineage would open both on 60 kg.
+    const single = performed(topSingle, [[100, 3]]);
+    const backOffs = performed(backOff, [
+      [60, 10],
+      [60, 10],
+      [60, 10],
+    ]).withAllSets((set) => set.with({ set: set.set?.with({ completionDateTime: at(29, 30) }) }));
+    const lastWeek = new Session(uuid(), routine, [single, backOffs], LocalDate.of(2026, 9, 29), undefined, undefined);
+    const { latestExercises } = storedSessionsReducer(undefined, upsertStoredSessions([lastWeek]));
+
+    const nextPush = makeService(makeState()).hydrateSessionFromBlueprint(routine, latestExercises);
+
+    expect(nextPush.recordedExercises.map((e) => weights(e as RecordedWeightedExercise))).toEqual([
+      [100],
+      [60, 60, 60],
+    ]);
+  });
+
+  it('opens a repeat the routine has never had from the exercise’s first lineage', () => {
+    const last = performed(press({ sets: 3 }), [
+      [60, 10],
+      [60, 10],
+      [60, 10],
+    ]);
+    const routine = new SessionBlueprint('Push', [press({ sets: 1 }), press({ sets: 3 })], '');
+
+    const nextPush = makeService(makeState()).hydrateSessionFromBlueprint(routine, { [last.progressionKey()]: last });
+
+    expect(nextPush.recordedExercises.map((e) => weights(e as RecordedWeightedExercise))).toEqual([[60], [60, 60, 60]]);
+  });
+
   it('keeps the numbers when the routine has fewer sets than last time', () => {
     const last = performed(press({ sets: 4 }), [
       [40, 10],

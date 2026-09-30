@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { Weight } from '@/models/weight';
 import { RecordedWeightedExercise } from '@/models/session-models/recorded-weighted-exercise';
-import { carriedFrom, plannedExerciseFor, todaysTarget } from '@/models/session-models/todays-target';
+import {
+  carriedFrom,
+  plannedExerciseFor,
+  plannedLineageFor,
+  todaysTarget,
+} from '@/models/session-models/todays-target';
 import { emptyPotentialSet, makeRecordedExercise, makeWeightedBlueprint } from './__test__/helpers';
 
 const bench = makeWeightedBlueprint({ name: 'Bench', sets: 3, repsConfig: { type: 'fixed', reps: 5 } });
@@ -137,28 +142,29 @@ describe('todaysTarget', () => {
 
 describe('carriedFrom', () => {
   const fourSets = bench.with({ sets: 4 });
+  const key = bench.progressionKey();
 
   it('finds last time after a set is added mid-workout', () => {
     const previous = lastTime([5, 5, 5]);
     const withAddedSet = today([87.5, 87.5, 87.5, 87.5], fourSets);
 
-    expect(carriedFrom(withAddedSet, [previous], bench)).toBe(previous);
+    expect(carriedFrom(withAddedSet, [previous], key, { [key]: previous })).toBe(previous);
     expect(withAddedSet.previousPerformanceIn([previous])).toBe(previous);
   });
 
-  it('takes the newest performance whatever its set count', () => {
-    const olderThreeSets = lastTime([5, 5, 5]);
-    const newerFourSets = lastTime([5, 5, 5, 5], 80, fourSets);
+  it('keeps the lineage the routine gave an exercise swapped during the workout', () => {
+    const previous = lastTime([5, 5, 5]);
+    const swapped = today([100, 100, 100], makeWeightedBlueprint({ name: 'Squat', sets: 3 }));
 
-    expect(carriedFrom(today([87.5, 87.5, 87.5]), [newerFourSets, olderThreeSets], bench)).toBe(newerFourSets);
+    expect(carriedFrom(swapped, [], key, { [key]: previous })).toBe(previous);
   });
 
   it('matches on the exercise’s own key without a routine exercise', () => {
     const previous = lastTime([5, 5, 5]);
     const squat = makeWeightedBlueprint({ name: 'Squat', sets: 3 });
 
-    expect(carriedFrom(today([87.5, 87.5, 87.5, 87.5], fourSets), [previous], undefined)).toBe(previous);
-    expect(carriedFrom(today([100, 100, 100], squat), [previous], undefined)).toBeUndefined();
+    expect(carriedFrom(today([87.5, 87.5, 87.5, 87.5], fourSets), [previous], undefined, {})).toBe(previous);
+    expect(carriedFrom(today([100, 100, 100], squat), [previous], undefined, {})).toBeUndefined();
   });
 });
 
@@ -167,6 +173,7 @@ describe('plannedExerciseFor', () => {
   const lightBench = bench.with({ sets: 4, repsConfig: { type: 'fixed', reps: 8 } });
   const squat = makeWeightedBlueprint({ name: 'Squat', sets: 3 });
   const routine = [heavyBench, squat, lightBench];
+  const key = bench.progressionKey();
 
   it('pairs a movement planned twice with its own place in the routine', () => {
     const first = today([85, 85, 85]);
@@ -177,18 +184,29 @@ describe('plannedExerciseFor', () => {
     expect(plannedExerciseFor(second, session, routine)).toBe(lightBench);
   });
 
-  it('gives a movement planned twice one lineage: both carry from the newest performance', () => {
+  it('gives a movement planned twice a lineage for each place', () => {
     const heavyLastTime = lastTime([5, 5, 5]);
     const lightLastTime = lastTime([8, 8, 8, 8], 60, lightBench);
+    const first = today([85, 85, 85]);
     const second = today([60, 60, 60, 60, 60], lightBench.with({ sets: 5 }));
-    const session = [today([85, 85, 85]), second];
+    const session = [first, second];
+    const previous = { [key]: heavyLastTime, [`${key}#2`]: lightLastTime };
 
-    expect(carriedFrom(second, [heavyLastTime, lightLastTime], plannedExerciseFor(second, session, routine))).toBe(
-      heavyLastTime,
-    );
+    expect(plannedLineageFor(first, session, routine)).toBe(key);
+    expect(plannedLineageFor(second, session, routine)).toBe(`${key}#2`);
+    expect(carriedFrom(first, [lightLastTime, heavyLastTime], key, previous)).toBe(heavyLastTime);
+    expect(carriedFrom(second, [heavyLastTime, lightLastTime], `${key}#2` as typeof key, previous)).toBe(lightLastTime);
+  });
+
+  it('carries a repeat never done as one from the first place', () => {
+    const heavyLastTime = lastTime([5, 5, 5]);
+    const second = today([60, 60, 60, 60], lightBench);
+
+    expect(carriedFrom(second, [], `${key}#2` as typeof key, { [key]: heavyLastTime })).toBe(heavyLastTime);
   });
 
   it('has none for an exercise outside the session', () => {
     expect(plannedExerciseFor(today([85, 85, 85]), [], routine)).toBeUndefined();
+    expect(plannedLineageFor(today([85, 85, 85]), [], routine)).toBeUndefined();
   });
 });
