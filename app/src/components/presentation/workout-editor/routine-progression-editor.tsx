@@ -10,7 +10,7 @@ import {
   type ProgressionChoice,
   progressionChoiceOf,
   rulesForPreset,
-  topPlannedReps,
+  sharedWorkingTopReps,
 } from '@/components/presentation/workout-editor/routine-progression';
 import { spacing, useAppTheme } from '@/hooks/useAppTheme';
 import { ProgressionRule, WeightedExerciseBlueprint } from '@/models/blueprint-models';
@@ -105,13 +105,17 @@ function explanation(
 ): string {
   const load = exercise.progression.find((rule) => rule.axis === 'load')?.step ?? props.fallbackStep;
   const step = props.formatStep(load);
-  const reps = topPlannedReps(exercise);
+  const reps = sharedWorkingTopReps(exercise);
   switch (choice) {
     case 'weight':
-      return t('routine_editor.progression.weight.body', { reps, step });
+      return reps === undefined
+        ? t('routine_editor.progression.weight.per_set_body', { step })
+        : t('routine_editor.progression.weight.body', { reps, step });
     case 'double': {
       const to = ladderCeilingFor(exercise).toNumber();
-      return t('routine_editor.progression.double.body', { from: reps, to, step });
+      return reps === undefined
+        ? t('routine_editor.progression.double.per_set_body', { to, step })
+        : t('routine_editor.progression.double.body', { from: reps, to, step });
     }
     case 'off':
       return t('routine_editor.progression.off.body');

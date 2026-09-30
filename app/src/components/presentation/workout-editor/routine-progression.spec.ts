@@ -4,6 +4,7 @@ import { ProgressionRule } from '@/models/blueprint-models';
 import {
   progressionChoiceOf,
   rulesForPreset,
+  sharedWorkingTopReps,
   withLadderKeptClimbable,
 } from '@/components/presentation/workout-editor/routine-progression';
 import { makeWeightedBlueprint } from '@/models/session-models/__test__/helpers';
@@ -92,5 +93,34 @@ describe('withLadderKeptClimbable', () => {
       repsConfig: { type: 'fixed', reps: 10 },
     });
     expect(withLadderKeptClimbable(climbing).progression[0]!.ceiling?.toNumber()).toBe(12);
+  });
+});
+
+describe('sharedWorkingTopReps', () => {
+  it('is the top reps when every working set shares them', () => {
+    expect(sharedWorkingTopReps(bench())).toBe(8);
+  });
+
+  it('is undefined when the working sets have their own targets', () => {
+    const perSet = makeWeightedBlueprint({
+      name: 'Pull up',
+      plannedSets: [
+        { reps: { min: 6, max: 6 }, kind: 'working' },
+        { reps: { min: 5, max: 5 }, kind: 'working' },
+      ],
+    });
+    expect(sharedWorkingTopReps(perSet)).toBeUndefined();
+  });
+
+  it('ignores a drop set, which the rules never check', () => {
+    const withDrop = makeWeightedBlueprint({
+      name: 'Curl',
+      plannedSets: [
+        { reps: { min: 10, max: 10 }, kind: 'working' },
+        { reps: { min: 10, max: 10 }, kind: 'working' },
+        { reps: { min: 15, max: 15 }, kind: 'drop' },
+      ],
+    });
+    expect(sharedWorkingTopReps(withDrop)).toBe(10);
   });
 });

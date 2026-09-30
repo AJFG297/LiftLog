@@ -1,4 +1,5 @@
 import { defaultCeilingFor, ProgressionRule, WeightedExerciseBlueprint } from '@/models/blueprint-models';
+import { setKindHas } from '@/models/session-models/set-kind';
 import BigNumber from 'bignumber.js';
 
 /**
@@ -117,6 +118,18 @@ export function withLadderKeptClimbable(exercise: WeightedExerciseBlueprint): We
 /** The top of the plan's rep targets, which is what a set has to reach to count as a success. */
 export function topPlannedReps(exercise: WeightedExerciseBlueprint): number {
   return exercise.plannedSets.reduce((highest, set) => Math.max(highest, set.reps.max), 0);
+}
+
+/**
+ * The top reps every set the progression check reads shares, or undefined when their targets differ.
+ * Each set is checked against its own target, so one number only describes the rule when they all agree.
+ */
+export function sharedWorkingTopReps(exercise: WeightedExerciseBlueprint): number | undefined {
+  const tops = exercise.plannedSets
+    .filter((set) => setKindHas(set.kind, 'countsTowardsProgression'))
+    .map((set) => set.reps.max);
+  const [first] = tops;
+  return first !== undefined && tops.every((top) => top === first) ? first : undefined;
 }
 
 /**
