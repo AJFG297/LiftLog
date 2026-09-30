@@ -1,12 +1,15 @@
 import { MsIconSrc, type AppIconName } from '@/components/presentation/foundation/ms-icon-source';
+import { ProgressBar } from '@/components/presentation/foundation/progress-bar';
 import { RoundIconButton } from '@/components/presentation/foundation/round-icon-button';
 import SelectPicker from '@/components/presentation/foundation/select-picker';
 import { SurfaceText } from '@/components/presentation/foundation/surface-text';
 import { MIN_TOUCH_TARGET } from '@/components/presentation/foundation/touch-target';
+import { RoutineColorDot } from '@/components/presentation/workout-editor/routine-color-swatches';
 import {
   daysAgoOf,
   estimatedMinutesOf,
   lastDoneByRoutineName,
+  workoutsDoneOf,
 } from '@/components/presentation/workout-editor/routine-summary';
 import { programHref, ProgramListItem, programSummary } from '@/components/smart/program-list-item';
 import { useServices } from '@/components/smart/services-provider';
@@ -156,6 +159,10 @@ export function RoutinesScreen({ focusProgramId }: { focusProgramId?: string }) 
             program={active}
             next={nextSession}
             lastDone={lastDone}
+            workoutsDone={workoutsDoneOf(
+              sessions,
+              active.sessions.map((routine) => routine.name),
+            )}
             onStart={() => nextSession && start(nextSession)}
             onAddRoutine={newRoutine}
           />
@@ -170,6 +177,7 @@ export function RoutinesScreen({ focusProgramId }: { focusProgramId?: string }) 
               <RoutineRow
                 key={`${index}-${routine.name}`}
                 routine={routine}
+                index={index}
                 lastDone={lastDone.get(routine.name)}
                 onEdit={() => router.push(routineEditorHref(activePlanId, index))}
                 onStart={() => startRoutine(routine)}
@@ -248,6 +256,7 @@ function ActiveProgramCard(props: {
   program: ProgramBlueprint;
   next: Session | undefined;
   lastDone: Map<string, LocalDate>;
+  workoutsDone: number;
   onStart: () => void;
   onAddRoutine: () => void;
 }) {
@@ -257,6 +266,24 @@ function ActiveProgramCard(props: {
   const formatDate = useFormatDate();
   const { program, next } = props;
   const nextIndex = next ? program.sessions.findIndex((s) => s.equals(next.blueprint)) : -1;
+  const count = program.sessions.length;
+  // Programs repeat with no set length, so progress is the place in the current round of routines.
+  const progress =
+    nextIndex >= 0
+      ? [
+          t('routines.active_program.day.label', { day: nextIndex + 1, count }),
+          ...(props.workoutsDone
+            ? [
+                t(
+                  props.workoutsDone === 1
+                    ? 'routines.active_program.done_one.label'
+                    : 'routines.active_program.done_many.label',
+                  { count: props.workoutsDone },
+                ),
+              ]
+            : []),
+        ].join(' · ')
+      : undefined;
 
   return (
     <View
@@ -275,8 +302,8 @@ function ActiveProgramCard(props: {
           <SurfaceText font="text-xl" weight="700" style={{ color: tokens.inverseInk }}>
             {program.name}
           </SurfaceText>
-          <SurfaceText font="text-sm" style={{ color: tokens.inverseMuted }}>
-            {programSummary(t, program)}
+          <SurfaceText testID="active-program-progress" font="text-sm" style={{ color: tokens.inverseMuted }}>
+            {progress ?? programSummary(t, program)}
           </SurfaceText>
         </View>
         <Pressable
@@ -304,6 +331,15 @@ function ActiveProgramCard(props: {
           )}
         </Pressable>
       </View>
+
+      {progress ? (
+        <ProgressBar
+          tone="inverse"
+          height={6}
+          progress={nextIndex / count}
+          accessibilityLabel={t('routines.active_program.round.label')}
+        />
+      ) : null}
 
       {program.sessions.length ? (
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing[2] }}>
@@ -403,6 +439,7 @@ function ActiveProgramCard(props: {
 
 function RoutineRow(props: {
   routine: SessionBlueprint;
+  index: number;
   lastDone: LocalDate | undefined;
   onEdit: () => void;
   onStart: () => void;
@@ -447,9 +484,12 @@ function RoutineRow(props: {
           backgroundColor: pressed ? tokens.track : undefined,
         })}
       >
-        <SurfaceText font="text-base" weight="600" style={{ color: tokens.ink }}>
-          {routine.name}
-        </SurfaceText>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[2] }}>
+          <RoutineColorDot color={routine.color} index={props.index} />
+          <SurfaceText font="text-base" weight="600" style={{ flexShrink: 1, color: tokens.ink }}>
+            {routine.name}
+          </SurfaceText>
+        </View>
         <SurfaceText font="text-sm" numberOfLines={1} style={{ color: tokens.ink }}>
           {exercises || t('routines.routine.no_exercises.label')}
         </SurfaceText>

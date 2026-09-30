@@ -67,6 +67,17 @@ export function lastDoneByRoutineName(sessions: readonly Session[]): Map<string,
   return lastDone;
 }
 
+/**
+ * How many workouts of `routineNames` were done, counted the way {@link lastDoneByRoutineName} counts them:
+ * by name, with at least one set logged, and never a freeform one.
+ */
+export function workoutsDoneOf(sessions: readonly Session[], routineNames: readonly string[]): number {
+  const names = new Set(routineNames);
+  return sessions.filter(
+    (session) => !session.isFreeform && session.hasLoggedAnySet && names.has(session.blueprint.name),
+  ).length;
+}
+
 /** How long ago `date` was, in the unit a person would say it in. */
 export type DaysAgo =
   | { unit: 'today' }
