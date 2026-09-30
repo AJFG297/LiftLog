@@ -21,6 +21,7 @@ import {
   setRowAt,
   withAddedSet,
   withSetLogged,
+  withSetRemoved,
   withSetRpe,
   withSetToggled,
   withTypedValue,
@@ -217,6 +218,11 @@ export function useLiveSetEntry(session: Session, updateSession: UpdateSession, 
     setEditing(undefined);
   };
 
+  const removeSet = (exerciseIndex: number, position: SetPosition) => {
+    applyAfterTyping(exerciseIndex, (state) => withSetRemoved(state, position));
+    setEditing(undefined);
+  };
+
   const openSetType = (exerciseIndex: number, position: SetPosition) => {
     close();
     push({
@@ -272,7 +278,7 @@ export function useLiveSetEntry(session: Session, updateSession: UpdateSession, 
     };
   })();
 
-  return { editing, buffer, stateFor, open, toggle, addSet, openSetType, close, pad };
+  return { editing, buffer, stateFor, open, toggle, addSet, removeSet, openSetType, close, pad };
 }
 
 export type LiveSetEntry = ReturnType<typeof useLiveSetEntry>;
