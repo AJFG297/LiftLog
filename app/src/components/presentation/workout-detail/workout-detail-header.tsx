@@ -19,9 +19,7 @@ export function WorkoutDetailHeader({ routineLine, routineColor, name, dateLine 
     <View style={{ gap: 6, paddingHorizontal: spacing[1] }}>
       {routineLine ? (
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[2] }}>
-          <View
-            style={{ width: 10, height: 10, borderRadius: 3, backgroundColor: routineColor ?? tokens.accent }}
-          />
+          <View style={{ width: 10, height: 10, borderRadius: 3, backgroundColor: routineColor ?? tokens.accent }} />
           <SurfaceText font="text-sm" weight="600" style={{ color: tokens.muted }}>
             {routineLine}
           </SurfaceText>
