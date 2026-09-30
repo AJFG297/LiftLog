@@ -1,5 +1,6 @@
 import { MovementKey, SessionBlueprint } from '@/models/blueprint-models';
 import { PotentialSet, RecordedWeightedExercise, Session } from '@/models/session-models';
+import { Rpe } from '@/models/session-models/rpe';
 import { LetteredSetKind, setKindHas } from '@/models/session-models/set-kind';
 import { Weight } from '@/models/weight';
 import { calculateOneRepMax } from '@/store/stats/calculate-stats';
@@ -45,6 +46,8 @@ export interface DetailSetRow {
   /** What was entered, before any bodyweight, as the workout screen shows it. */
   weight: Weight;
   reps: number;
+  /** As rated during the workout. Warm-ups aren't rated. */
+  rpe: Rpe | undefined;
   /** Undefined where a set can't set a record (warm-up, drop, myo) or the exercise carries no load. */
   oneRepMax: Weight | undefined;
   /** The set that set this workout's record for the movement. */
@@ -81,6 +84,7 @@ function setRows(
         label: { kind: 'warmup' },
         weight: slot.weight,
         reps: slot.set.repsCompleted,
+        rpe: undefined,
         oneRepMax: undefined,
         pr: false,
       });
@@ -109,6 +113,7 @@ function setRows(
       label: slot.kind === 'working' ? { kind: 'working', number: working } : { kind: slot.kind },
       weight: slot.weight,
       reps: slot.set.repsCompleted,
+      rpe: slot.rpe,
       oneRepMax,
       pr,
     });

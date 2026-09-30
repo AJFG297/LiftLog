@@ -15,7 +15,7 @@ phase 3 step 14). It isn't focus mode, because looking back needs the whole sess
   from `models/workout-summary.ts` and `sessionRecords`, the same as the workout summary, so the two screens agree.
 - **One card per exercise.** The logged sets in the order the workout screen shows them, warm-ups first. Set labels
   are the `SetBadge` labels (`setBadgeText`): the working set's number, or W, D, M or F. Each set shows its weight,
-  reps and estimated one-rep max (Epley, `calculateOneRepMax`), or "–" for a set that can't set a record (warm-up,
+  reps (with its RPE after them, "8 @8", when the set was rated) and estimated one-rep max (Epley, `calculateOneRepMax`), or "–" for a set that can't set a record (warm-up,
   drop, myo, or no load). A **PR** tag marks the first set that reached the workout's record for that movement.
   The line beside the name compares the best set with the last workout of the same routine ("+2.5 kg vs last").
   An exercise with nothing logged says "Not done"; a cardio exercise shows its one-line summary.

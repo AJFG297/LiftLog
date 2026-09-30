@@ -973,6 +973,7 @@
   "workout_detail.vs_last_reps_down.label": "−{count} reps vs last",
   "workout_detail.vs_last_same.label": "Same as last",
   "workout_detail.set_row.spoken": "{set}, {weight}, {reps} reps",
+  "workout_detail.set_row_rpe.spoken": "RPE {rpe}",
   "workout_detail.set_row_e1rm.spoken": "estimated one-rep max {value}",
   "workout_detail.set_row_pr.spoken": "personal record",
   "workout_detail.do_again.button": "Do again",

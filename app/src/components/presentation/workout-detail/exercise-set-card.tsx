@@ -12,10 +12,12 @@ export interface SetRowCopy {
   labelText: string;
   weight: string;
   reps: string;
+  /** "@8", shown after the reps when the set was rated. */
+  rpe: string | undefined;
   /** "–" where the set can't set a record. */
   oneRepMax: string;
   pr: boolean;
-  /** The whole row read out as one: "Set 1, 90 kg, 5 reps, e1RM 105, personal record". */
+  /** The whole row read out as one: "Set 1, 90 kg, 5 reps, RPE 8, e1RM 105, personal record". */
   spoken: string;
 }
 
@@ -91,9 +93,16 @@ export function ExerciseSetCard({ name, note, headings, prLabel, rows, fallbackT
               <SurfaceText font="text-base" numeric weight="500" style={{ flex: 1, color: tokens.ink }}>
                 {row.weight}
               </SurfaceText>
-              <SurfaceText font="text-base" numeric weight="500" style={{ flex: 1, color: tokens.ink }}>
-                {row.reps}
-              </SurfaceText>
+              <View style={{ flex: 1, flexDirection: 'row', alignItems: 'baseline', gap: 6 }}>
+                <SurfaceText font="text-base" numeric weight="500" style={{ color: tokens.ink }}>
+                  {row.reps}
+                </SurfaceText>
+                {row.rpe ? (
+                  <SurfaceText font="text-sm" numeric weight="500" style={{ color: tokens.muted }}>
+                    {row.rpe}
+                  </SurfaceText>
+                ) : null}
+              </View>
               <View
                 style={{
                   width: ONE_REP_MAX_COLUMN,

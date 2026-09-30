@@ -3,6 +3,7 @@ import { LocalDate, OffsetDateTime } from '@js-joda/core';
 import { SessionBlueprint, WeightedExerciseBlueprint } from '@/models/blueprint-models';
 import { PotentialSet, RecordedSet, RecordedWeightedExercise, Session } from '@/models/session-models';
 import { makeWeightedBlueprint } from '@/models/session-models/__test__/helpers';
+import { Rpe } from '@/models/session-models/rpe';
 import { withSetKind } from '@/models/session-models/set-entry';
 import { Weight } from '@/models/weight';
 import {
@@ -32,10 +33,11 @@ const press = makeWeightedBlueprint({
 const benchWithWarmup = bench.with({ warmupSets: [{ load: undefined, reps: 8 }] });
 const fly = makeWeightedBlueprint({ name: 'Cable Fly', exerciseId: 'cable-fly', sets: 1 });
 
-function slot(weight: number, reps: number | undefined, kind: PotentialSet['kind'] = 'working') {
+function slot(weight: number, reps: number | undefined, kind: PotentialSet['kind'] = 'working', rpe?: Rpe) {
   return PotentialSet.of({
     weight: kg(weight),
     kind,
+    rpe,
     set: reps === undefined ? undefined : RecordedSet.of({ repsCompleted: reps, completionDateTime: at }),
   });
 }
@@ -72,16 +74,17 @@ const benchWithDrop = withSetKind(
   { list: 'working', index: 2 },
   'drop',
 ).exercise;
-const today = workout('today', 23, [benchWithDrop, exercise(press, [slot(50, 8), slot(50, 7)])]).withAddedExercise(
-  fly,
-  false,
-);
+const today = workout('today', 23, [
+  benchWithDrop,
+  exercise(press, [slot(50, 8, 'working', 8), slot(50, 7, 'working', 9.5)]),
+]).withAddedExercise(fly, false);
 
 function describeRows(rows: DetailSetRow[] | undefined) {
   return rows?.map((row) => ({
     label: row.label.kind === 'working' ? String(row.label.number) : row.label.kind,
     weight: row.weight.value.toNumber(),
     reps: row.reps,
+    rpe: row.rpe,
     oneRepMax: row.oneRepMax?.value.decimalPlaces(2).toNumber(),
     pr: row.pr,
   }));
@@ -139,21 +142,21 @@ describe('uniqueRoutineName', () => {
 });
 
 describe('sessionSetRows', () => {
-  it('lists logged sets with labels, e1RM and the set that set each record', () => {
+  it('lists logged sets with labels, RPE, e1RM and the set that set each record', () => {
     const rows = sessionSetRows(today, sessionRecords(today, [lastWeek]));
 
     expect(rows.map(describeRows)).toEqual([
       [
-        { label: 'warmup', weight: 60, reps: 8, oneRepMax: undefined, pr: false },
+        { label: 'warmup', weight: 60, reps: 8, rpe: undefined, oneRepMax: undefined, pr: false },
         // Heavier than last week's 80: a heaviest-weight record, tagged on the first set to reach it.
-        { label: '1', weight: 90, reps: 5, oneRepMax: 105, pr: true },
-        { label: '2', weight: 90, reps: 5, oneRepMax: 105, pr: false },
-        { label: 'drop', weight: 70, reps: 8, oneRepMax: undefined, pr: false },
+        { label: '1', weight: 90, reps: 5, rpe: undefined, oneRepMax: 105, pr: true },
+        { label: '2', weight: 90, reps: 5, rpe: undefined, oneRepMax: 105, pr: false },
+        { label: 'drop', weight: 70, reps: 8, rpe: undefined, oneRepMax: undefined, pr: false },
       ],
       [
         // Same weight, more reps: an estimated one-rep max record.
-        { label: '1', weight: 50, reps: 8, oneRepMax: 63.33, pr: true },
-        { label: '2', weight: 50, reps: 7, oneRepMax: 61.67, pr: false },
+        { label: '1', weight: 50, reps: 8, rpe: 8, oneRepMax: 63.33, pr: true },
+        { label: '2', weight: 50, reps: 7, rpe: 9.5, oneRepMax: 61.67, pr: false },
       ],
       [],
     ]);
