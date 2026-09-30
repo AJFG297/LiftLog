@@ -18,6 +18,7 @@ import {
 } from '@/models/rest-default';
 import { RecordedWeightedExercise, Session } from '@/models/session-models';
 import {
+  isRestPreset,
   REST_PRESETS,
   REST_STEP,
   restPhaseOf,
@@ -102,7 +103,12 @@ function RestSheetContent({ session }: { session: Session }) {
       : undefined;
   const savedHere = saved && saved.ownerIndex === rest.ownerIndex ? saved : undefined;
   const offerSave =
-    !savedHere && owner && location && picked && !picked.equals(owner.blueprint.restBetweenSets.minRest);
+    !savedHere &&
+    owner &&
+    location &&
+    picked &&
+    isRestPreset(picked) &&
+    !picked.equals(owner.blueprint.restBetweenSets.minRest);
 
   const pickPreset = (length: Duration) => {
     setSaved(undefined);

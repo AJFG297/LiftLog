@@ -5,6 +5,7 @@ import { RecordedWeightedExercise } from '@/models/session-models/recorded-weigh
 import {
   exerciseRestOf,
   isRestCue,
+  isRestPreset,
   restOwnerIndexOf,
   restPhaseAt,
   restWindowOf,
@@ -17,6 +18,7 @@ import { Session } from '@/models/session-models/session';
 import {
   emptyPotentialSet,
   filledPotentialSet,
+  makeCardioBlueprint,
   makeSession,
   makeWeightedBlueprint,
 } from '@/models/session-models/__test__/helpers';
@@ -96,6 +98,32 @@ describe('restWindowOf', () => {
     const window = restWindowOf(session)!;
     expect(window.readyAt.toString()).toBe('2026-09-29T10:01Z');
     expect(window.fullAt.toString()).toBe('2026-09-29T10:01Z');
+  });
+});
+
+describe('rest during a cardio set', () => {
+  it('has nothing to count down while a cardio clock is running', () => {
+    const session = makeSession([benchBlueprint(), makeCardioBlueprint(2)]).with({
+      restTimer: new RestTimer(loggedAt, Duration.ofSeconds(60)),
+    });
+    expect(seconds(restWindowOf(session)?.length)).toBe(60);
+
+    const running = session.withCardioTimerStarted(1, 0, at(30));
+
+    expect(restWindowOf(running)).toBeUndefined();
+    expect(running.restTimerEndTime).toBeUndefined();
+    expect(restPhaseAt(running, at(60)).kind).toBe('idle');
+  });
+});
+
+describe('isRestPreset', () => {
+  it('offers to keep only a preset, not a length +15 made', () => {
+    expect(isRestPreset(Duration.ofSeconds(120))).toBe(true);
+    expect(isRestPreset(Duration.ofSeconds(135))).toBe(false);
+    // A missed set rests 4:00; +15 early on makes 4:15, which is no rest the lifter picked.
+    const stepped = withRestStepped(resting(8), 1, at(5));
+    expect(seconds(stepped.restTimer?.length)).toBe(255);
+    expect(isRestPreset(stepped.restTimer!.length!)).toBe(false);
   });
 });
 

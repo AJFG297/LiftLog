@@ -48,7 +48,8 @@ function earnedRestOf(exercise: RecordedExercise | undefined): { first: Duration
 
 export function restWindowOf(session: Session): RestWindow | undefined {
   const timer = session.restTimer;
-  if (!timer || !session.nextExercise) {
+  // A running cardio clock is the next set under way, so there is no rest to count down or buzz for.
+  if (!timer || !session.nextExercise || session.runningCardioSet) {
     return undefined;
   }
   const earned = earnedRestOf(session.lastExercise);
@@ -134,6 +135,15 @@ export function withRestStepped(session: Session, direction: -1 | 1, now: Offset
 /** A preset: restarts the timer at that length, or starts one when nothing is running. */
 export function withRestStarted(session: Session, length: Duration, now: OffsetDateTime): Session {
   return session.with({ restTimer: new RestTimer(now, length) });
+}
+
+/**
+ * Whether a length is one of the sheet's presets, the only lengths it offers to keep as the exercise's rest.
+ * +15 can make any length, including a lengthened failure rest after a missed set, which isn't a rest the
+ * lifter chose for the exercise.
+ */
+export function isRestPreset(length: Duration): boolean {
+  return REST_PRESETS.some((preset) => preset.equals(length));
 }
 
 export function withRestSkipped(session: Session): Session {
