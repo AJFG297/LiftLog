@@ -2,7 +2,7 @@ import { haptics } from '@/components/presentation/foundation/haptics';
 import { MsIconSrc } from '@/components/presentation/foundation/ms-icon-source';
 import { SurfaceText } from '@/components/presentation/foundation/surface-text';
 import { spacing, useAppTheme } from '@/hooks/useAppTheme';
-import { type ReactNode, useEffect, useState } from 'react';
+import { type ReactNode, useLayoutEffect, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
@@ -52,7 +52,8 @@ export function SwipeToDelete(props: SwipeToDeleteProps) {
   const [open, setOpen] = useState(false);
   const { onDelete } = props;
 
-  useEffect(() => {
+  // Before paint, so the row that moved up is never drawn swiped away for a frame.
+  useLayoutEffect(() => {
     offset.set(0);
     setOpen(false);
   }, [props.resetKey, offset]);

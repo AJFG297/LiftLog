@@ -1,4 +1,5 @@
 import { haptics } from '@/components/presentation/foundation/haptics';
+import { useToast } from '@/components/presentation/foundation/toast';
 import {
   type NumberPadAccessory,
   type NumberPadField,
@@ -14,6 +15,7 @@ import { RecordedExercise, RecordedWeightedExercise, Session } from '@/models/se
 import { SetPosition } from '@/models/session-models/recorded-weighted-exercise';
 import { Rpe } from '@/models/session-models/rpe';
 import {
+  RemovedSet,
   SetDrafts,
   SetEntryState,
   SetField,
@@ -22,6 +24,7 @@ import {
   withAddedSet,
   withSetLogged,
   withSetRemoved,
+  withSetRestored,
   withSetRpe,
   withSetToggled,
   withTypedValue,
@@ -32,12 +35,18 @@ import { setLiveWorkoutDrafts } from '@/store/app';
 import { selectPreferredWeightUnit } from '@/store/settings';
 import { selectExercises } from '@/store/stored-sessions';
 import { OffsetDateTime } from '@js-joda/core';
+import { useTranslate } from '@tolgee/react';
 import { useRouter } from 'expo-router';
 import { useEffect, useEffectEvent, useReducer, useState } from 'react';
 import { useDispatch } from 'react-redux';
 
 type UpdateSession = (update: (session: Session) => Session) => void;
 type SetEntryChange = (state: SetEntryState) => SetEntryState;
+
+interface ApplyOptions {
+  /** Leaves rest as it is, for a change that only takes a set away or puts one back. */
+  keepsRest?: boolean;
+}
 
 /** The field the number pad is typing into. */
 export interface SetEditing {
@@ -80,7 +89,11 @@ export function useSetEntryStore(session: Session, updateSession: UpdateSession)
    * Applies `change` to the exercise as the store holds it, and to its drafts. Logging or undoing a set
    * restarts rest from the latest set, as the old set tiles did.
    */
-  const apply = (exerciseIndex: number, change: SetEntryChange): SetEntryState | undefined => {
+  const apply = (
+    exerciseIndex: number,
+    change: SetEntryChange,
+    options: ApplyOptions = {},
+  ): SetEntryState | undefined => {
     const current = stateFor(exerciseIndex);
     if (!current) {
       return undefined;
@@ -94,11 +107,11 @@ export function useSetEntryStore(session: Session, updateSession: UpdateSession)
         }
         const changed = change({ exercise, drafts: current.drafts }).exercise;
         const updated = s.withExercise(exerciseIndex, changed);
-        return loggedCount(changed) === loggedCount(exercise)
+        return options.keepsRest || loggedCount(changed) === loggedCount(exercise)
           ? updated
           : withRestTimerAt(updated, updated.lastExercise?.lastActivityTime);
       });
-      if (loggedCount(next.exercise) > loggedCount(current.exercise)) {
+      if (!options.keepsRest && loggedCount(next.exercise) > loggedCount(current.exercise)) {
         haptics.setLogged();
       }
     }
@@ -125,6 +138,8 @@ export function useSetEntryStore(session: Session, updateSession: UpdateSession)
 export function useLiveSetEntry(session: Session, updateSession: UpdateSession, pageIndices: readonly number[]) {
   const { stateFor, apply } = useSetEntryStore(session, updateSession);
   const { push } = useRouter();
+  const { t } = useTranslate();
+  const toast = useToast();
   const preferredUnit = useAppSelector(selectPreferredWeightUnit);
   const logRpe = useAppSelector((x) => x.settings.logRpe);
   const barWeight = useAppSelector((x) => x.settings.barWeight);
@@ -155,12 +170,12 @@ export function useLiveSetEntry(session: Session, updateSession: UpdateSession, 
     };
 
   /** Applies `change` after whatever is being typed, in one step when it is the same exercise. */
-  const applyAfterTyping = (exerciseIndex: number, change: SetEntryChange) => {
+  const applyAfterTyping = (exerciseIndex: number, change: SetEntryChange, options?: ApplyOptions) => {
     if (editing && editing.exerciseIndex !== exerciseIndex) {
       apply(editing.exerciseIndex, typedInto(editing));
     }
     const edit = editing?.exerciseIndex === exerciseIndex ? editing : undefined;
-    return apply(exerciseIndex, (state) => change(typedInto(edit)(state)));
+    return apply(exerciseIndex, (state) => change(typedInto(edit)(state)), options);
   };
 
   const close = () => {
@@ -218,9 +233,35 @@ export function useLiveSetEntry(session: Session, updateSession: UpdateSession, 
     setEditing(undefined);
   };
 
-  const removeSet = (exerciseIndex: number, position: SetPosition) => {
-    applyAfterTyping(exerciseIndex, (state) => withSetRemoved(state, position));
+  /** Deletes a set, with an Undo toast. `setLabel` names it in the toast, as the table does ("Set 2"). */
+  const removeSet = (exerciseIndex: number, position: SetPosition, setLabel: string) => {
+    let removed: RemovedSet | undefined;
+    const remove: SetEntryChange = (state) => {
+      const result = withSetRemoved(state, position);
+      removed ??= result.removed;
+      return result.state;
+    };
+    // What's being typed into the set that goes is dropped with it, so a typed weight can't move the sets after it.
+    const typingIntoIt =
+      editing?.exerciseIndex === exerciseIndex &&
+      editing.position.list === position.list &&
+      editing.position.index === position.index;
+    if (typingIntoIt) {
+      apply(exerciseIndex, remove, { keepsRest: true });
+    } else {
+      applyAfterTyping(exerciseIndex, remove, { keepsRest: true });
+    }
     setEditing(undefined);
+    const undo = removed;
+    if (undo) {
+      toast.show({
+        message: t('live_workout.set_table.deleted.message', { set: setLabel }),
+        action: {
+          label: t('generic.undo.button'),
+          onPress: () => apply(exerciseIndex, (state) => withSetRestored(state, undo), { keepsRest: true }),
+        },
+      });
+    }
   };
 
   const openSetType = (exerciseIndex: number, position: SetPosition) => {

@@ -15,6 +15,7 @@ import {
   withSetKind,
   withSetLogged,
   withSetRemoved,
+  withSetRestored,
   withSetRpe,
   withSetToggled,
   withTypedValue,
@@ -319,8 +320,10 @@ describe('changing a set’s type', () => {
 });
 
 describe('removing a set', () => {
+  const remove = (state: SetEntryState, position: SetPosition) => withSetRemoved(state, position).state;
+
   it('removes a working set from the session and its plan, and later sets move up', () => {
-    const state = withSetRemoved(bench([slot(80, 5), slot(85, 5), slot(90, 5)]), second);
+    const state = remove(bench([slot(80, 5), slot(85, 5), slot(90, 5)]), second);
 
     expect(state.exercise.potentialSets.map((s) => s.weight.value.toNumber())).toEqual([80, 90]);
     expect(state.exercise.blueprint.plannedSets).toHaveLength(2);
@@ -328,7 +331,7 @@ describe('removing a set', () => {
   });
 
   it('removes a logged set with what was logged', () => {
-    const state = withSetRemoved(bench([slot(80, 5, { logged: 5 }), slot(85, 5), slot(90, 5)]), first);
+    const state = remove(bench([slot(80, 5, { logged: 5 }), slot(85, 5), slot(90, 5)]), first);
 
     expect(state.exercise.potentialSets.map((s) => s.weight.value.toNumber())).toEqual([85, 90]);
     expect(state.exercise.potentialSets.some((s) => s.set)).toBe(false);
@@ -336,14 +339,14 @@ describe('removing a set', () => {
 
   it('moves the drafts of later sets with them and drops the removed set’s draft', () => {
     const typed = type(type(bench(), second, 'reps', 3), third, 'reps', 4);
-    const state = withSetRemoved(typed, second);
+    const state = remove(typed, second);
 
     expect(setRowAt(state, second)!.reps).toEqual({ value: 4, entered: true });
     expect(state.drafts).toEqual({ 'working:1': { reps: 4 } });
   });
 
   it('removes a warm-up from the session and its plan', () => {
-    const state = withSetRemoved(bench(), warmup);
+    const state = remove(bench(), warmup);
 
     expect(state.exercise.warmupSets).toHaveLength(0);
     expect(state.exercise.blueprint.warmupSets).toHaveLength(0);
@@ -355,7 +358,37 @@ describe('removing a set', () => {
 
     expect(canRemoveSet(single.exercise, first)).toBe(false);
     expect(canRemoveSet(single.exercise, warmup)).toBe(true);
-    expect(withSetRemoved(single, first)).toBe(single);
+    expect(withSetRemoved(single, first)).toEqual({ state: single, removed: undefined });
+  });
+
+  it('moves a percentage warm-up to the heaviest working set that is left', () => {
+    const blueprint = makeWeightedBlueprint({
+      name: 'Squat',
+      plannedSets: [
+        { reps: { min: 5, max: 5 }, kind: 'working' },
+        { reps: { min: 5, max: 5 }, kind: 'working' },
+      ],
+      warmupSets: [{ reps: 5, load: { type: 'percent', percent: 50 } }],
+    });
+    const planned = new RecordedWeightedExercise(blueprint, [slot(100, 5), slot(80, 5)], undefined, []);
+    const exercise = planned.with({ warmupSets: [planned.warmupSlotFor(blueprint.warmupSets[0]!, 'kilograms')] });
+    expect(exercise.warmupSets[0]!.weight.value.toNumber()).toBe(50);
+
+    const state = remove({ exercise, drafts: {} }, first);
+
+    expect(state.exercise.warmupSets[0]!.weight.value.toNumber()).toBe(40);
+  });
+
+  it('puts a removed set back where it was, with its plan entry and draft', () => {
+    const before = type(bench([slot(80, 5), slot(85, 5, { logged: 4 }), slot(90, 5)]), third, 'reps', 3);
+    const { state, removed } = withSetRemoved(before, second);
+
+    const restored = withSetRestored(state, removed!);
+
+    expect(restored.exercise.potentialSets.map((s) => s.weight.value.toNumber())).toEqual([80, 85, 90]);
+    expect(restored.exercise.potentialSets[1]!.set?.repsCompleted).toBe(4);
+    expect(restored.exercise.blueprint.plannedSets).toHaveLength(3);
+    expect(restored.drafts).toEqual(before.drafts);
   });
 });
 
