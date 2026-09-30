@@ -261,14 +261,17 @@ export function withSetKind(state: SetEntryState, position: SetPosition, kind: S
   if (position.list === 'working') {
     const moved = exercise.warmupSets.length;
     return {
-      exercise: exercise.with({
-        potentialSets: exercise.potentialSets.filter((_, index) => index !== position.index),
-        warmupSets: [...exercise.warmupSets, slot.with({ kind: 'warmup', rpe: undefined })],
-        blueprint: blueprint.with({
-          plannedSets: blueprint.plannedSets.filter((_, index) => index !== position.index),
-          warmupSets: [...blueprint.warmupSets, plannedWarmupFor(exercise, slot)],
+      exercise: withWarmupsFollowing(
+        exercise.with({
+          potentialSets: exercise.potentialSets.filter((_, index) => index !== position.index),
+          warmupSets: [...exercise.warmupSets, slot.with({ kind: 'warmup', rpe: undefined })],
+          blueprint: blueprint.with({
+            plannedSets: blueprint.plannedSets.filter((_, index) => index !== position.index),
+            warmupSets: [...blueprint.warmupSets, plannedWarmupFor(exercise, slot)],
+          }),
         }),
-      }),
+        exercise,
+      ),
       drafts: remapDrafts(state.drafts, (p) => {
         if (p.list === 'warmup') {
           return p;
@@ -282,14 +285,17 @@ export function withSetKind(state: SetEntryState, position: SetPosition, kind: S
   }
   const workingKind = workingListKindOf(kind);
   return {
-    exercise: exercise.with({
-      warmupSets: exercise.warmupSets.filter((_, index) => index !== position.index),
-      potentialSets: [slot.with({ kind: workingKind }), ...exercise.potentialSets],
-      blueprint: blueprint.with({
-        warmupSets: blueprint.warmupSets.filter((_, index) => index !== position.index),
-        plannedSets: [{ reps: slot.target, kind: workingKind }, ...blueprint.plannedSets],
+    exercise: withWarmupsFollowing(
+      exercise.with({
+        warmupSets: exercise.warmupSets.filter((_, index) => index !== position.index),
+        potentialSets: [slot.with({ kind: workingKind }), ...exercise.potentialSets],
+        blueprint: blueprint.with({
+          warmupSets: blueprint.warmupSets.filter((_, index) => index !== position.index),
+          plannedSets: [{ reps: slot.target, kind: workingKind }, ...blueprint.plannedSets],
+        }),
       }),
-    }),
+      exercise,
+    ),
     drafts: remapDrafts(state.drafts, (p) => {
       if (p.list === 'working') {
         return { list: 'working', index: p.index + 1 };
@@ -307,32 +313,89 @@ export function canRemoveSet(exercise: RecordedWeightedExercise, position: SetPo
   return !!exercise.slotAt(position) && !(position.list === 'working' && exercise.potentialSets.length <= 1);
 }
 
+/** A set taken out by {@link withSetRemoved}, with what it takes to put it back. */
+export interface RemovedSet {
+  position: SetPosition;
+  slot: PotentialSet;
+  planned: PlannedSet | PlannedWarmupSet | undefined;
+  draft: SetDraft | undefined;
+}
+
 /**
  * The exercise without the set at `position`, logged or not, in the session and its plan, so finishing
  * offers the lower set count as a routine change. Later sets in the same list move up, and their drafts
- * with them.
+ * with them. Percentage warm-ups follow the working weight that is left. `removed` puts it back.
  */
-export function withSetRemoved(state: SetEntryState, position: SetPosition): SetEntryState {
+export function withSetRemoved(
+  state: SetEntryState,
+  position: SetPosition,
+): { state: SetEntryState; removed: RemovedSet | undefined } {
   const { exercise } = state;
-  if (!canRemoveSet(exercise, position)) {
-    return state;
+  const slot = exercise.slotAt(position);
+  if (!slot || !canRemoveSet(exercise, position)) {
+    return { state, removed: undefined };
   }
   const { blueprint } = exercise;
+  const working = position.list === 'working';
+  const removed: RemovedSet = {
+    position,
+    slot,
+    planned: working ? blueprint.plannedSets[position.index] : blueprint.warmupSets[position.index],
+    draft: state.drafts[setDraftKey(position)],
+  };
   const without = <T>(items: readonly T[]) => items.filter((_, index) => index !== position.index);
-  const changed =
-    position.list === 'working'
-      ? exercise.with({
-          potentialSets: without(exercise.potentialSets),
-          blueprint: blueprint.with({ plannedSets: without(blueprint.plannedSets) }),
-        })
-      : exercise.with({
-          warmupSets: without(exercise.warmupSets),
-          blueprint: blueprint.with({ warmupSets: without(blueprint.warmupSets) }),
-        });
+  const changed = working
+    ? exercise.with({
+        potentialSets: without(exercise.potentialSets),
+        blueprint: blueprint.with({ plannedSets: without(blueprint.plannedSets) }),
+      })
+    : exercise.with({
+        warmupSets: without(exercise.warmupSets),
+        blueprint: blueprint.with({ warmupSets: without(blueprint.warmupSets) }),
+      });
   const drafts = remapDrafts(withoutDraft(state.drafts, position), (p) =>
     p.list === position.list && p.index > position.index ? { list: p.list, index: p.index - 1 } : p,
   );
-  return { exercise: changed, drafts };
+  return { state: { exercise: withWarmupsFollowing(changed, exercise), drafts }, removed };
+}
+
+/** Undoes {@link withSetRemoved}: the set goes back where it was, with its plan entry and draft. */
+export function withSetRestored(state: SetEntryState, removed: RemovedSet): SetEntryState {
+  const { exercise } = state;
+  const { position } = removed;
+  const { blueprint } = exercise;
+  const working = position.list === 'working';
+  if (position.index > (working ? exercise.potentialSets : exercise.warmupSets).length) {
+    return state;
+  }
+  const insert = <T>(items: readonly T[], item: T | undefined): T[] =>
+    item === undefined ? [...items] : [...items.slice(0, position.index), item, ...items.slice(position.index)];
+  const changed = working
+    ? exercise.with({
+        potentialSets: insert(exercise.potentialSets, removed.slot),
+        blueprint: blueprint.with({ plannedSets: insert(blueprint.plannedSets, removed.planned as PlannedSet) }),
+      })
+    : exercise.with({
+        warmupSets: insert(exercise.warmupSets, removed.slot),
+        blueprint: blueprint.with({
+          warmupSets: insert(blueprint.warmupSets, removed.planned as PlannedWarmupSet),
+        }),
+      });
+  const shifted = remapDrafts(state.drafts, (p) =>
+    p.list === position.list && p.index >= position.index ? { list: p.list, index: p.index + 1 } : p,
+  );
+  return {
+    exercise: withWarmupsFollowing(changed, exercise),
+    drafts: removed.draft ? withDraft(shifted, position, removed.draft) : shifted,
+  };
+}
+
+/** Percentage warm-ups follow the heaviest working set (D6), so they move when the working list changes. */
+function withWarmupsFollowing(
+  changed: RecordedWeightedExercise,
+  before: RecordedWeightedExercise,
+): RecordedWeightedExercise {
+  return changed.withPercentWarmupsFollowing(before, weightUnitOf(before, 'kilograms'));
 }
 
 /** The number the set at `position` would have as a working set, which the set-type sheet shows. */

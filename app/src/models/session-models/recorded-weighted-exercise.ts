@@ -297,7 +297,7 @@ export class RecordedWeightedExercise {
    * exercise's first session it starts at zero, so they would otherwise stay at zero. A warm-up whose
    * weight no longer matches what the plan made of `before` was given one of its own, and keeps it.
    */
-  private withPercentWarmupsFollowing(before: RecordedWeightedExercise, fallbackUnit: WeightUnit) {
+  withPercentWarmupsFollowing(before: RecordedWeightedExercise, fallbackUnit: WeightUnit) {
     return this.with({
       warmupSets: this.warmupSets.map((slot, index) => {
         const planned = this.blueprint.warmupSets[index];

@@ -89,9 +89,11 @@ performance Today's target compares against, or of the latest one when the set s
   that stops being one becomes the first working set. The last working set can't become a warm-up.
 - **Deleting a set.** Swipe a row left (`SwipeToDelete`): a short swipe shows Delete, and a long swipe or a
   hard fling deletes it on release. Logged sets can go too. Later sets move up with their drafts, and the
-  session's plan loses the set, so finishing offers the lower count as a routine change. The last working
-  set can't be deleted. Screen readers get a delete action on the set's badge.
+  session's plan loses the set, so finishing offers the lower count as a routine change. Percentage
+  warm-ups follow the working weight that is left. A toast offers Undo, which puts the set back with what
+  was logged and typed. Deleting doesn't restart rest, and whatever was being typed into the set goes with
+  it. The last working set can't be deleted. Screen readers get a delete action on the set's badge.
 
 The rules are pure functions in `models/session-models/set-entry.ts` (`setRowsOf`, `withTypedValue`,
-`withSetToggled`, `withAddedSet`, `withSetKind`, `withSetRemoved`); `useLiveSetEntry` holds what the pad is typing into and
+`withSetToggled`, `withAddedSet`, `withSetKind`, `withSetRemoved`, `withSetRestored`); `useLiveSetEntry` holds what the pad is typing into and
 applies them to the session and its drafts together.

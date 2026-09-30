@@ -128,7 +128,7 @@ export function LiveSetTable(props: LiveSetTableProps) {
       remove: canRemoveSet(state.exercise, row.position)
         ? {
             accessibilityLabel: t('live_workout.set_table.delete.button', { set }),
-            onRemove: () => entry.removeSet(exerciseIndex, row.position),
+            onRemove: () => entry.removeSet(exerciseIndex, row.position, set),
           }
         : undefined,
     };
