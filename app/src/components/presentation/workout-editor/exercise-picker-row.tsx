@@ -183,24 +183,7 @@ export function ExercisePickerNoMatch({ title, body, actions }: ExercisePickerNo
         {body}
       </SurfaceText>
       {main ? (
-        <Pressable testID={main.testID} onPress={main.onPress} accessibilityRole="button">
-          {({ pressed }) => (
-            <View
-              style={{
-                minHeight: 46,
-                paddingHorizontal: 18,
-                borderRadius: 14,
-                justifyContent: 'center',
-                backgroundColor: tokens.ink,
-                opacity: pressed ? 0.85 : 1,
-              }}
-            >
-              <SurfaceText font="text-base" weight="600" style={{ color: tokens.bg }}>
-                {main.label}
-              </SurfaceText>
-            </View>
-          )}
-        </Pressable>
+        <ActionButton testID={main.testID} variant="ink" label={main.label} onPress={main.onPress} />
       ) : null}
       {rest.map((action) => (
         <ActionButton
