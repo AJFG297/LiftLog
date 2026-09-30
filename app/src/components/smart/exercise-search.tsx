@@ -475,25 +475,9 @@ function muscleGroupLabel(t: TranslateFn, group: MuscleGroup): string {
   }
 }
 
+/** From the same keys as a row's equipment meta, so a chip and the rows it filters use one word. */
 export function equipmentLabel(t: TranslateFn, choice: EquipmentChoice): string {
-  switch (choice) {
-    case 'barbell':
-      return t('exercise_picker.equipment.barbell');
-    case 'dumbbell':
-      return t('exercise_picker.equipment.dumbbell');
-    case 'cable':
-      return t('exercise_picker.equipment.cable');
-    case 'machine':
-      return t('exercise_picker.equipment.machine');
-    case 'body only':
-      return t('exercise_picker.equipment.body_only');
-    case 'kettlebells':
-      return t('exercise_picker.equipment.kettlebells');
-    case 'bands':
-      return t('exercise_picker.equipment.bands');
-    case 'other':
-      return t('exercise_picker.equipment.other');
-  }
+  return capitalise(translateExerciseMeta(t, 'equipment', choice));
 }
 
 function capitalise(text: string): string {

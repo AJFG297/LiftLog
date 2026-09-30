@@ -50,8 +50,9 @@ The routine or workout's name and exercise ids travel as route params, so a row 
 - **Muscle chips** (All, Chest, Back, Shoulders, Arms, Legs, Core) group the catalog's muscles. An exercise
   files under its first muscle, which the catalog lists first among the primary ones. Filtering on any muscle
   would put every press and row under Arms, through their secondary muscles. Neck is under All only.
-- **Equipment chips** use the catalog's own words. An E-Z bar counts as a barbell, and anything outside the
-  list (foam roll, medicine ball, none) as Other.
+- **Equipment chips** use the catalog's own words, labelled from the same `exercise.equipment.*` keys as
+  each row's meta, so a chip and its rows read alike ("Bodyweight" for `body only`). An E-Z bar counts as a
+  barbell, and anything outside the list (foam roll, medicine ball, none) as Other.
 
 ## New exercises
 
