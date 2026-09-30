@@ -10,7 +10,7 @@ import { equipmentClassOf } from '@/models/equipment';
 import { PotentialSet, RecordedWeightedExercise, Session } from '@/models/session-models';
 import { SetPosition } from '@/models/session-models/recorded-weighted-exercise';
 import { formatRpe } from '@/models/session-models/rpe';
-import { SetField, SetRow, setRowsOf, weightUnitOf } from '@/models/session-models/set-entry';
+import { canRemoveSet, SetField, SetRow, setRowsOf, weightUnitOf } from '@/models/session-models/set-entry';
 import { LoadUnit, Weight } from '@/models/weight';
 import { useAppSelector } from '@/store';
 import { selectPreferredWeightUnit } from '@/store/settings';
@@ -125,6 +125,12 @@ export function LiveSetTable(props: LiveSetTableProps) {
         },
       ),
       onToggle: () => entry.toggle(exerciseIndex, row.position),
+      remove: canRemoveSet(state.exercise, row.position)
+        ? {
+            accessibilityLabel: t('live_workout.set_table.delete.button', { set }),
+            onRemove: () => entry.removeSet(exerciseIndex, row.position),
+          }
+        : undefined,
     };
   });
 

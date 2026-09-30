@@ -883,6 +883,7 @@
   "live_workout.set_table.rpe.label": "RPE {rpe}",
   "live_workout.set_table.log.button": "Log {set}",
   "live_workout.set_table.undo.button": "Undo {set}",
+  "live_workout.set_table.delete.button": "Delete {set}",
   "live_workout.add_set.button": "Add set",
   "live_workout.meta.superset.label": "superset {label}",
   "live_workout.meta.working_sets.label": "{count} working sets",

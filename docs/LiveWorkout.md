@@ -131,7 +131,11 @@ performance Today's target compares against, or of the latest one when the set s
   Myo-reps and To failure. The session's plan takes the change, so finishing offers it as a routine change.
   Warm-ups have their own list, so a set that becomes one moves to the end of the warm-ups, and a warm-up
   that stops being one becomes the first working set. The last working set can't become a warm-up.
+- **Deleting a set.** Swipe a row left (`SwipeToDelete`): a short swipe shows Delete, and a long swipe or a
+  hard fling deletes it on release. Logged sets can go too. Later sets move up with their drafts, and the
+  session's plan loses the set, so finishing offers the lower count as a routine change. The last working
+  set can't be deleted. Screen readers get a delete action on the set's badge.
 
 The rules are pure functions in `models/session-models/set-entry.ts` (`setRowsOf`, `withTypedValue`,
-`withSetToggled`, `withAddedSet`, `withSetKind`); `useLiveSetEntry` holds what the pad is typing into and
+`withSetToggled`, `withAddedSet`, `withSetKind`, `withSetRemoved`); `useLiveSetEntry` holds what the pad is typing into and
 applies them to the session and its drafts together.

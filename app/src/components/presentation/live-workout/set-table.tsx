@@ -1,6 +1,7 @@
 import { MsIconSrc } from '@/components/presentation/foundation/ms-icon-source';
 import { SetBadge, type SetBadgeProps } from '@/components/presentation/foundation/set-badge';
 import { SurfaceText } from '@/components/presentation/foundation/surface-text';
+import { SwipeToDelete } from '@/components/presentation/foundation/swipe-to-delete';
 import { MIN_TOUCH_TARGET } from '@/components/presentation/foundation/touch-target';
 import { font, spacing, useAppTheme } from '@/hooks/useAppTheme';
 import { useTranslate } from '@tolgee/react';
@@ -49,6 +50,8 @@ export interface SetTableRow {
   isNext: boolean;
   checkAccessibilityLabel: string;
   onToggle: () => void;
+  /** Swiping the row left deletes it. Undefined for a set that can't go, the exercise's last working set. */
+  remove: { accessibilityLabel: string; onRemove: () => void } | undefined;
 }
 
 interface SetTableProps {
@@ -88,13 +91,20 @@ export function SetTable(props: SetTableProps) {
           <View style={{ width: COLUMN.check }} />
         </View>
         {props.rows.map((row) => (
-          <SetTableRowView
+          <SwipeToDelete
             key={row.key}
-            row={row}
-            showsWeight={props.showsWeight}
-            outlined={row.isNext}
-            rowRef={row.weight?.editing || row.reps.editing ? props.editingRowRef : undefined}
-          />
+            onDelete={row.remove?.onRemove}
+            label={t('generic.delete.button')}
+            accessibilityLabel={row.remove?.accessibilityLabel ?? ''}
+            resetKey={props.rows.length}
+          >
+            <SetTableRowView
+              row={row}
+              showsWeight={props.showsWeight}
+              outlined={row.isNext}
+              rowRef={row.weight?.editing || row.reps.editing ? props.editingRowRef : undefined}
+            />
+          </SwipeToDelete>
         ))}
       </View>
       <Pressable
@@ -171,6 +181,13 @@ function SetTableRowView(props: {
         accessibilityRole="button"
         accessibilityLabel={row.badgeAccessibilityLabel}
         onPress={row.onPressBadge}
+        // Screen readers can't swipe a row away, so deleting is an action on the set's badge.
+        accessibilityActions={row.remove ? [{ name: 'delete', label: row.remove.accessibilityLabel }] : undefined}
+        onAccessibilityAction={(event) => {
+          if (event.nativeEvent.actionName === 'delete') {
+            row.remove?.onRemove();
+          }
+        }}
         // The 36pt badge column, with a 44pt target that spills into the gaps either side.
         style={{
           width: MIN_TOUCH_TARGET,
