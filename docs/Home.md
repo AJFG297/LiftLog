@@ -78,7 +78,7 @@ It shows the workout's name, the time since the first set, the next set and, whi
 from `restWindowOf(session)`, which turns to Go when the rest is over (nothing with rest timers off).
 `workoutInProgressNextOf` reads the next set the way the rest pill does, from the page on screen
 (`app.liveWorkoutFocus`), and adds the working-set count: "Bench Press · set 3 of 5 next". Tapping the bar
-opens the workout on that same page. Its menu has Resume and Clear current workout, which discards the
+opens the workout on that same page, which is kept across a relaunch too. Its menu has Resume and Clear current workout, which discards the
 workout after a confirmation.
 
 ## Code

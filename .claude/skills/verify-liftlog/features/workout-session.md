@@ -55,8 +55,8 @@ Preconditions:
 - A workout in progress hides Home's Up next card and `Freeform workout`; clear it before starting a new one.
 - The rest pill is in the header whether or not a rest is running (idle it shows the exercise's rest), so prove a
   running rest from its `content-desc`, not from its presence.
-- The bar's next set follows the page the workout is open on, which is not kept across an app restart; after one,
-  the bar and the reopened workout both fall back to the page of the workout's next exercise.
+- The bar's next set follows the page the workout is open on. That page is kept across an app restart (key
+  `LiveWorkoutFocus`), so after one the bar and the reopened workout still show the page left open.
 - All history's summary line is `10 @ 7.5kg`; Maestro `text` is a full-string match, so use `'.*7\.5kg'`.
 - Rest-timer notifications may raise an Android notification-permission dialog on some images; if a flow stalls,
   `verify.sh ui` and look for `Allow`.

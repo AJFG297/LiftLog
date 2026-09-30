@@ -3,9 +3,16 @@ import {
   initializeAppStateSlice,
   setCurrentSnackbar,
   setIsHydrated,
+  setLiveWorkoutFocus,
   shareString,
   showSnackbar,
 } from '@/store/app';
+import {
+  decodeLiveWorkoutFocus,
+  encodeLiveWorkoutFocus,
+  LIVE_WORKOUT_FOCUS_KEY,
+} from '@/store/app/live-workout-focus-storage';
+import { selectActiveSession, setIsHydrated as setStoredSessionsIsHydrated } from '@/store/stored-sessions';
 import { AddEffectFn } from '@/store/store';
 import { sleep } from '@/utils/sleep';
 import { initializeSettingsStateSlice } from '../settings';
@@ -25,6 +32,23 @@ export function applyAppEffects(addEffect: AddEffectFn) {
       dispatch(setIsHydrated(true));
     },
   );
+
+  // Mirrored to disk so a relaunch reopens the workout, and the in-progress bar, on the page left open.
+  addEffect(setLiveWorkoutFocus, async (action, { extra: { keyValueStore } }) => {
+    await keyValueStore.setItem(LIVE_WORKOUT_FOCUS_KEY, encodeLiveWorkoutFocus(action.payload));
+  });
+
+  addEffect(setStoredSessionsIsHydrated, async (action, { getState, dispatch, extra: { keyValueStore } }) => {
+    const session = selectActiveSession(getState());
+    if (!action.payload || !session || getState().app.liveWorkoutFocus) {
+      return;
+    }
+    const focus = decodeLiveWorkoutFocus(await keyValueStore.getItem(LIVE_WORKOUT_FOCUS_KEY), session.id);
+    // A page picked while the key was being read wins over the stored one.
+    if (focus && !getState().app.liveWorkoutFocus) {
+      dispatch(setLiveWorkoutFocus(focus));
+    }
+  });
 
   addEffect(showSnackbar, async (action, { dispatch, getState }) => {
     dispatch(setCurrentSnackbar(action.payload));
