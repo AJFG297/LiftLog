@@ -39,7 +39,7 @@ import { LegendList } from '@legendapp/list';
 import { useTranslate } from '@tolgee/react';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { BackHandler, Pressable, ScrollView, View } from 'react-native';
+import { BackHandler, Platform, Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDispatch } from 'react-redux';
 
@@ -71,6 +71,9 @@ export function ExerciseSearch({ requestId, mode, exerciseName, context }: Exerc
   const dispatch = useDispatch();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  // On iOS the modal route is a page sheet that starts below the status bar, yet the hook still reports the
+  // window's inset. native-stack drops it for iOS modals the same way.
+  const topInset = Platform.OS === 'ios' ? 0 : insets.top;
   const exercises = useAppSelector(selectExercises);
   const latestExercises = useAppSelector(selectLatestExercises);
   const catalogMuscles = useAppSelector(selectMuscles);
@@ -248,7 +251,7 @@ export function ExerciseSearch({ requestId, mode, exerciseName, context }: Exerc
     <View style={{ flex: 1, backgroundColor: tokens.bg, paddingLeft: insets.left, paddingRight: insets.right }}>
       <View
         style={{
-          paddingTop: insets.top + spacing[2],
+          paddingTop: topInset + spacing[2],
           paddingHorizontal: spacing.pageHorizontalMargin,
           paddingBottom: creating ? spacing[2] : 10,
           gap: spacing[2],
@@ -294,7 +297,7 @@ export function ExerciseSearch({ requestId, mode, exerciseName, context }: Exerc
         >
           <ExerciseCreateForm
             name={creating.name}
-            onNameChange={(name) => setCreating({ ...creating, name })}
+            onNameChange={(name) => setCreating((now) => now && { ...now, name })}
             nameLabel={t('exercise.name.label')}
             namePlaceholder={t('exercise.name.placeholder')}
             musclesLabel={t('exercise_picker.create.muscles.label')}
@@ -304,13 +307,13 @@ export function ExerciseSearch({ requestId, mode, exerciseName, context }: Exerc
               label: capitalise(translateExerciseMeta(t, 'muscle', value)),
             }))}
             muscles={creating.muscles}
-            onMusclesChange={(muscles) => setCreating({ ...creating, muscles })}
+            onMusclesChange={(muscles) => setCreating((now) => now && { ...now, muscles })}
             equipment={{
               label: t('exercise_picker.equipment.label'),
               noneLabel: t('exercise_picker.create.equipment.none'),
               options: equipmentOptions,
               value: creating.equipment,
-              onChange: (value) => setCreating({ ...creating, equipment: value }),
+              onChange: (value) => setCreating((now) => now && { ...now, equipment: value }),
             }}
           />
         </ScrollView>
