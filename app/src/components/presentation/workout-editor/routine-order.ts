@@ -87,17 +87,31 @@ export function withExerciseMoved(
     return [...exercises];
   }
   const blocks = routineBlocksOf(exercises);
+  const endsBlock = new Set(blocks.map((block) => block.indices.at(-1)!));
+  return orderAfterMove(exercises, exerciseIndex, direction).map((oldIndex) => {
+    const exercise = exercises[oldIndex]!;
+    return endsBlock.has(oldIndex) ? withoutSupersetFlag(exercise) : exercise;
+  });
+}
+
+/**
+ * The routine's exercise indexes after {@link withExerciseMoved}: entry `i` is the old index of the exercise
+ * that ends up at `i`, so anything kept alongside the exercises can follow them.
+ */
+export function orderAfterMove(
+  exercises: readonly ExerciseBlueprint[],
+  exerciseIndex: number,
+  direction: MoveDirection,
+): number[] {
+  const blocks = routineBlocksOf(exercises);
+  if (!canMoveExercise(exercises, exerciseIndex, direction)) {
+    return blocks.flatMap((block) => block.indices);
+  }
   const from = blockIndexOf(blocks, exerciseIndex);
   const to = direction === 'up' ? from - 1 : from + 1;
   const reordered = [...blocks];
   [reordered[from], reordered[to]] = [reordered[to]!, reordered[from]!];
-  return reordered.flatMap((block) =>
-    block.indices.map((oldIndex, position) => {
-      const exercise = exercises[oldIndex]!;
-      const endsBlock = position === block.indices.length - 1;
-      return endsBlock ? withoutSupersetFlag(exercise) : exercise;
-    }),
-  );
+  return reordered.flatMap((block) => block.indices);
 }
 
 /** Whether Superset/Unlink does anything: unlinking a superset, or linking a weighted exercise to the next. */
