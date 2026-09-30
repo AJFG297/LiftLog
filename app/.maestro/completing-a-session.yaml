@@ -49,8 +49,8 @@ appId: com.ajfg297.liftlog
     commands:
       - back
 
-# It shows up in History with the logged weight, below the streak card and the calendar
-- tapOn: 'History'
+# It shows up in All history (opened from Home) with the logged weight, below the streak card and the calendar
+- tapOn: 'All history'
 - assertVisible:
     id: 'session-summary-title'
 # Summaries read "10 @ 7.5kg", and `text` is a full-string match, so anchor on the tail
