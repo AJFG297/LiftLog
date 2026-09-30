@@ -53,6 +53,7 @@ import { estimatedMinutesOf, totalSetsOf } from '@/components/presentation/worko
 import { RoutineStartOptions } from '@/components/presentation/workout-editor/routine-start-options';
 import {
   isRoutineDraftChanged,
+  markRoutineDraftSaved,
   newExerciseKey,
   openRoutineDraft,
   routineDraftAt,
@@ -459,6 +460,7 @@ export function RoutineEditor({ programId, sessionIndex, isNew }: RoutineEditorP
           }),
       }),
     );
+    markRoutineDraftSaved(location, toSave);
     setEditing(undefined);
     setLeaving(true);
   };

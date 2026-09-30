@@ -58,6 +58,9 @@ editor opens edit the same draft:
   directly, as it always has.
 - The **set-type sheet** (`app/routine-set-type.tsx`, a root form sheet) changes one set's type.
 
+Two editors can be open on one routine, one from Routines and one from the Workout tab's upcoming card. They
+share the draft, it lasts until the last of them closes, and Save in one leaves nothing unsaved in the other.
+
 The draft also keeps one key per exercise, so an open card stays open while exercises move.
 
 ### The screen
