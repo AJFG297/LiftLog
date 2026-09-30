@@ -68,6 +68,9 @@ interface SetTableProps {
 export function SetTable(props: SetTableProps) {
   const { t } = useTranslate();
   const { tokens } = useAppTheme();
+  // Rows are keyed by position, so a delete or a set moving between the warm-ups and the working list
+  // gives a row another set. Any change to the list of keys snaps every row shut.
+  const rowKeys = props.rows.map((row) => row.key).join(',');
   return (
     <View style={{ gap: spacing[3] }}>
       <View style={{ gap: spacing[1] }}>
@@ -96,7 +99,7 @@ export function SetTable(props: SetTableProps) {
             onDelete={row.remove?.onRemove}
             label={t('generic.delete.button')}
             accessibilityLabel={row.remove?.accessibilityLabel ?? ''}
-            resetKey={props.rows.length}
+            resetKey={rowKeys}
           >
             <SetTableRowView
               row={row}
