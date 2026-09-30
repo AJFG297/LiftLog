@@ -302,6 +302,39 @@ export function withSetKind(state: SetEntryState, position: SetPosition, kind: S
   };
 }
 
+/** Whether the set at `position` may be removed. Like a kind change, it can't take the last working set. */
+export function canRemoveSet(exercise: RecordedWeightedExercise, position: SetPosition): boolean {
+  return !!exercise.slotAt(position) && !(position.list === 'working' && exercise.potentialSets.length <= 1);
+}
+
+/**
+ * The exercise without the set at `position`, logged or not, in the session and its plan, so finishing
+ * offers the lower set count as a routine change. Later sets in the same list move up, and their drafts
+ * with them.
+ */
+export function withSetRemoved(state: SetEntryState, position: SetPosition): SetEntryState {
+  const { exercise } = state;
+  if (!canRemoveSet(exercise, position)) {
+    return state;
+  }
+  const { blueprint } = exercise;
+  const without = <T>(items: readonly T[]) => items.filter((_, index) => index !== position.index);
+  const changed =
+    position.list === 'working'
+      ? exercise.with({
+          potentialSets: without(exercise.potentialSets),
+          blueprint: blueprint.with({ plannedSets: without(blueprint.plannedSets) }),
+        })
+      : exercise.with({
+          warmupSets: without(exercise.warmupSets),
+          blueprint: blueprint.with({ warmupSets: without(blueprint.warmupSets) }),
+        });
+  const drafts = remapDrafts(withoutDraft(state.drafts, position), (p) =>
+    p.list === position.list && p.index > position.index ? { list: p.list, index: p.index - 1 } : p,
+  );
+  return { exercise: changed, drafts };
+}
+
 /** The number the set at `position` would have as a working set, which the set-type sheet shows. */
 export function workingNumberFor(state: SetEntryState, position: SetPosition): number {
   const moved: SetPosition = position.list === 'warmup' ? { list: 'working', index: 0 } : position;
