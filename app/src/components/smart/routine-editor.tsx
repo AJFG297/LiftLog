@@ -15,6 +15,7 @@ import { useToast } from '@/components/presentation/foundation/toast';
 import { MIN_TOUCH_TARGET } from '@/components/presentation/foundation/touch-target';
 import { ASK_AI_BAR_ENABLED, AskAiBar } from '@/components/presentation/workout-editor/ask-ai-bar';
 import { formatCardioTarget } from '@/utils/format-cardio-target';
+import { withPickAppended } from '@/components/presentation/workout-editor/exercise-picker';
 import { RoutineColorSwatches } from '@/components/presentation/workout-editor/routine-color-swatches';
 import { RoutineExerciseActions } from '@/components/presentation/workout-editor/routine-exercise-actions';
 import {
@@ -65,13 +66,12 @@ import {
 } from '@/components/smart/routine-draft';
 import { useServices } from '@/components/smart/services-provider';
 import { fontFamily, spacing, useAppTheme } from '@/hooks/useAppTheme';
-import { useExerciseSearch } from '@/hooks/useExerciseSearch';
+import { type ExercisePick, useExercisePicker } from '@/hooks/useExerciseSearch';
 import {
   CardioExerciseBlueprint,
   ExerciseBlueprint,
   formatPlannedSets,
   formatRepsTarget,
-  Rest,
   WeightedExerciseBlueprint,
 } from '@/models/blueprint-models';
 import { equipmentClassOf, weightStepFor } from '@/models/equipment';
@@ -80,7 +80,6 @@ import { RecordedWeightedExercise } from '@/models/session-models';
 import { setLabels } from '@/models/session-models/set-kind';
 import { type LoadUnit, Weight } from '@/models/weight';
 import { useAppSelector } from '@/store';
-import { PickedExercise } from '@/store/app';
 import { updateProgram } from '@/store/program';
 import { selectPreferredWeightUnit } from '@/store/settings';
 import { selectExercises, selectLatestExercises } from '@/store/stored-sessions';
@@ -371,29 +370,30 @@ export function RoutineEditor({ programId, sessionIndex, isNew }: RoutineEditorP
 
   // Structure ---------------------------------------------------------------------------------------------
 
-  const addPicked = (picked: PickedExercise) => {
+  const addPicked = ({ exercises: picked, asSuperset }: ExercisePick) => {
+    if (!picked.length) {
+      return;
+    }
     const { routine: now, keys: nowKeys } = current();
-    const key = newExerciseKey();
+    const added = picked.map(() => newExerciseKey());
     setRoutineDraftExercises(
       location,
-      [
-        ...now.exercises,
-        WeightedExerciseBlueprint.of({
-          name: picked.descriptor.name,
-          exerciseId: picked.id,
-          sets: 3,
-          repsConfig: { type: 'fixed', reps: 10 },
-          restBetweenSets: Rest.medium,
-        }),
-      ],
-      [...nowKeys, key],
+      withPickAppended(
+        now.exercises,
+        picked.map((exercise) => ({ id: exercise.id, name: exercise.descriptor.name })),
+        asSuperset,
+      ),
+      [...nowKeys, ...added],
     );
-    setExpandedKey(key);
+    setExpandedKey(added[0]);
   };
-  const openSearch = useExerciseSearch(addPicked);
+  const openPicker = useExercisePicker(addPicked);
   const addExercise = () => {
     closePad();
-    openSearch('');
+    openPicker({
+      mode: 'add',
+      context: { name: routine.name, exerciseIds: routine.exercises.map((exercise) => exercise.exerciseId) },
+    });
   };
 
   const move = (index: number, direction: MoveDirection) => {

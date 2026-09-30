@@ -56,19 +56,15 @@ export function LiveWorkout({ session, updateSession, onFinish }: LiveWorkoutPro
   const { t } = useTranslate();
   const { push, dismissTo } = useRouter();
   const dispatch = useDispatch();
-  const addNewExercise = useAddExercise(session.id);
   const { groups, focusedGroupIndex, focusedGroup, focusedExerciseIndex, isPinned, focusExercise } =
     useLiveWorkoutFocus(session);
+  // An exercise added mid-workout is usually the one to do now, so the screen moves to it.
+  const addExercise = useAddExercise(session.id, { onAdded: focusExercise });
   const scrollRef = useRef<ScrollView>(null);
   const pageRef = useRef<View>(null);
   const editingRowRef = useRef<View>(null);
   const insets = useSafeAreaInsets();
   const entry = useLiveSetEntry(session, updateSession, focusedGroup?.indices ?? []);
-  // An exercise added mid-workout is usually the one to do now, so the screen moves to it.
-  const addExercise = () => {
-    focusExercise(session.recordedExercises.length);
-    addNewExercise();
-  };
 
   // The page the workout opens on is inferred from where it is up to. Pin it, so logging the page's last
   // set doesn't move the screen on before the user asks to with "Up next".

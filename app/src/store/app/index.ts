@@ -33,12 +33,14 @@ export type LiveWorkoutDrafts = {
   exercises: Record<string, SetDrafts>;
 };
 
-// The exercise search is its own route, so it hands its result back through the store rather than a
-// callback. The requestId ties a result to the searcher that opened it, so a result is never applied
-// to a searcher that did not ask for it.
+// The exercise picker is its own route, so it hands its result back through the store rather than a
+// callback. The requestId ties a result to the picker's caller, so a result is never applied to a caller
+// that did not ask for it.
 export type ExerciseSearchResult = {
   requestId: string;
-  exercise: PickedExercise;
+  /** In the order they were tapped. One exercise when the picker was opened to swap. */
+  exercises: PickedExercise[];
+  asSuperset: boolean;
 };
 
 /** An exercise picked from the list, with its id so the blueprint links to it rather than copying the name. */

@@ -58,7 +58,7 @@ function Layout() {
   return (
     <StackWithHeader>
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen name="exercise-search" options={{ presentation: 'modal' }} />
+      <Stack.Screen name="exercise-search" options={{ presentation: 'modal', headerShown: false }} />
       <Stack.Screen name="exercise-editor" />
       <Stack.Screen name="exercise-history" options={formSheetOptions([0.6, 0.95])} />
       <Stack.Screen name="workout-editor" />

@@ -181,7 +181,6 @@ function SheetContent({ session }: { session: Session }) {
           icon="add"
           filled
           onPress={() => {
-            dispatch(setLiveWorkoutFocus({ sessionId: session.id, exerciseIndex: session.recordedExercises.length }));
             back();
             addExercise();
           }}
