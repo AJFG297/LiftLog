@@ -24,7 +24,7 @@ import { uuid } from '@/utils/uuid';
 import { LocalDate } from '@js-joda/core';
 import { useTranslate } from '@tolgee/react';
 import { type Href, Stack, useFocusEffect, useRouter } from 'expo-router';
-import { type ReactNode } from 'react';
+import { type ReactNode, useEffect } from 'react';
 import { Pressable, View } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -63,6 +63,10 @@ export function RoutinesScreen({ focusProgramId }: { focusProgramId?: string }) 
   useFocusEffect(() => {
     dispatch(fetchUpcomingSessions());
   });
+  // Switching or editing the active program here changes what's next without the screen losing focus.
+  useEffect(() => {
+    dispatch(fetchUpcomingSessions());
+  }, [active, dispatch]);
 
   const lastDone = lastDoneByRoutineName(sessions);
   const nextSession = upcoming.isSuccess() ? upcoming.data[0] : undefined;

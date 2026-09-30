@@ -158,13 +158,6 @@ export function RoutineEditor({ programId, sessionIndex, isNew }: RoutineEditorP
     }
   }, [missing, router]);
 
-  // Save and Cancel-after-asking both leave through here, so the prompt can't come up a second time.
-  useEffect(() => {
-    if (leaving) {
-      router.back();
-    }
-  }, [leaving, router]);
-
   usePreventRemove(changed && !leaving, ({ data }) => {
     Alert.alert(t('routine_editor.discard.title'), t('routine_editor.discard.body'), [
       { text: t('routine_editor.discard.keep.button'), style: 'cancel' },
@@ -175,6 +168,13 @@ export function RoutineEditor({ programId, sessionIndex, isNew }: RoutineEditorP
       },
     ]);
   });
+
+  // Save leaves through here, once the prompt above has stood down for it.
+  useEffect(() => {
+    if (leaving) {
+      router.back();
+    }
+  }, [leaving, router]);
 
   const nextSession = sessionService.hydrateSessionFromBlueprint(routine, latestExercises);
   const current = () => routineDraftAt(location) ?? draft;
