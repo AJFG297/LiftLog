@@ -13,7 +13,8 @@ import { deleteStoredSession, selectActiveSession } from '@/store/stored-session
 import { useTranslate } from '@tolgee/react';
 import { usePathname, useRouter } from 'expo-router';
 import { ReactNode } from 'react';
-import { Alert, Pressable, View } from 'react-native';
+import { Alert, Platform, Pressable, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDispatch } from 'react-redux';
 
 type TranslateFn = ReturnType<typeof useTranslate>['t'];
@@ -50,6 +51,9 @@ function Bar({ session }: { session: Session }) {
   const dispatch = useDispatch();
   const restTimersEnabled = useAppSelector((x) => x.settings.restTimersEnabled);
   const { groups, focusedGroupIndex } = useLiveWorkoutFocus(session);
+  // iOS tab content runs under the translucent tab bar, and each tab has its own safe-area provider whose
+  // bottom inset is the tab bar's height. Android lays the tab bar out below the content instead.
+  const insets = useSafeAreaInsets();
 
   // The page on screen is kept in the store, so the workout opens where it was left.
   const resume = () => push('/(tabs)/(session)/session', { withAnchor: true });
@@ -74,6 +78,7 @@ function Bar({ session }: { session: Session }) {
       restWindow={restTimersEnabled ? restWindowOf(session) : undefined}
       restOverText={t('in_progress_bar.rest_over.button')}
       onResume={resume}
+      bottomInset={Platform.OS === 'ios' ? insets.bottom : 0}
       menu={
         <Menu
           size={MIN_TOUCH_TARGET}

@@ -27,6 +27,8 @@ interface WorkoutInProgressBarProps {
   onResume: () => void;
   /** The trailing menu (Resume, Clear current workout). */
   menu: ReactNode;
+  /** Space kept below the bar, for a tab bar the content runs under. */
+  bottomInset?: number;
 }
 
 /**
@@ -41,7 +43,7 @@ export function WorkoutInProgressBar(props: WorkoutInProgressBarProps) {
       style={{
         paddingHorizontal: spacing[3],
         paddingTop: spacing[2],
-        paddingBottom: spacing[2] + 2,
+        paddingBottom: spacing[2] + 2 + (props.bottomInset ?? 0),
         backgroundColor: tokens.bg,
       }}
     >
