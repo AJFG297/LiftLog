@@ -11,12 +11,14 @@ issue PM-26). For how numbers move between workouts, see [Progression.md](./Prog
 The Routines tab renders that route's default export too. From the top:
 
 - **Title row** with **New routine** (+), which opens an empty routine at the end of the active program.
-- **Active program**, a dark card: the program's size, a tile per routine showing **Next** or the day it was
-  last done, **Edit** (the program page) and **Start {next routine}**. "Next" is the first of the upcoming
-  sessions Home also uses. A day counts as done only if a set was logged, and freeform workouts don't count.
-  Programs repeat with no set length, so there is no "week 4 of 6".
-- **My routines**: the active program's routines, each with its exercises, set count, estimated time and last
-  done. Tap to edit, ▶ to start that routine now (asking first if another workout is in progress).
+- **Active program**, a dark card: its progress, a tile per routine showing **Next** or the day it was last
+  done, **Edit** (the program page) and **Start {next routine}**. "Next" is the first of the upcoming sessions
+  Home also uses. A day counts as done only if a set was logged, and freeform workouts don't count.
+- Programs repeat with no set length, so there is no "week 4 of 6". Progress is the place in the current
+  round instead: "Day 2 of 3 · 12 workouts done", with a bar for the routines done this round. Workouts are
+  counted by routine name, like the last-done dates (`workoutsDoneOf`).
+- **My routines**: the active program's routines, each with its colour, exercises, set count, estimated time
+  and last done. Tap to edit, ▶ to start that routine now (asking first if another workout is in progress).
 - **Start an empty workout**: a freeform workout.
 - **Your programs**: the other saved programs, sortable by name or most recent, plus **New program** and
   **Import a plan**. Tapping a program opens it. Its menu has Edit, Use this program, Duplicate, Share, Export
@@ -34,8 +36,8 @@ Two rules keep a tap from doing something big by accident (PM-35):
 ## The program page
 
 `components/smart/program-editor.tsx`, at `settings/manage-workouts/[programId]`: the program's name (saved
-as you type), Use this program or a note that it's the one in use, and its routines in order with move up and
-down, Duplicate, Copy to another program and Remove (with Undo). **New routine** at the end opens the routine
+as you type), Use this program or a note that it's the one in use, and its routines in order, each with its colour, with
+move up and down, Duplicate, Copy to another program and Remove (with Undo). **New routine** at the end opens the routine
 editor on a new routine.
 
 ## The routine editor
@@ -65,7 +67,7 @@ The draft also keeps one key per exercise, so an open card stays open while exer
 
 ### The screen
 
-- A **name and notes** card with a live summary: "Day 2 of Push Pull Legs · 5 exercises · 16 sets · ~50 min".
+- A **name and notes** card with the routine's **colour** and a live summary: "Day 2 of Push Pull Legs · 5 exercises · 16 sets · ~50 min".
   The estimate is 45 seconds per set plus its rest, rounded to 5 minutes.
 - With no exercises, **four starts**: Pick exercises (the exercise picker), Describe it (the AI planner),
   Import (plan import) and Start from a program (the Routines screen). The last three build whole programs
@@ -76,6 +78,14 @@ The draft also keeps one key per exercise, so an open card stays open while exer
   Superset or Unlink, and Remove (with an Undo toast).
 - The **Ask AI to change this routine** bar is built but hidden (`ASK_AI_BAR_ENABLED` in `ask-ai-bar.tsx`)
   until the AI routine builder (PM-33) lands.
+
+### Colour
+
+Six swatches from the canvas: vermilion, green, blue, ochre, purple and stone (`models/routine-color.ts`). The
+blueprint stores the name (`SessionBlueprint.color`, blueprint v10), so the shades can change without touching
+saved plans. A routine with no colour, including every routine from before v10, shows the one for its place in
+the program, so a three-day split starts out vermilion, green and blue. The colour is the routine's own and
+never follows the app's accent (D2).
 
 ### Set rows
 

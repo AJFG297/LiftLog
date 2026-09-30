@@ -257,7 +257,5 @@ Still open:
 - The routine editor's weight column only shows what carries over: a routine plans no working weights
   (Progression.md), so the number pad there edits reps and warm-up loads. Planning a starting weight would
   need a model change to the blueprint and to session start.
-- The canvas gives each routine a colour. A routine has no colour in the model, so the editor has no swatches
-  yet; storing one needs a blueprint migration.
 - The canvas's "My templates" includes routines outside the active program. Every routine belongs to a
   program here, so the Routines screen lists the active program's routines and the other programs separately.
