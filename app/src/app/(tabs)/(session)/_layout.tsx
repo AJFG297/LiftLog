@@ -14,6 +14,7 @@ export default function Layout() {
         {/* Tall enough that all five set types show above the Android tab bar, which draws over this stack's sheets. */}
         <Stack.Screen name="session/set-type" options={formSheetOptions([0.8, 0.95])} />
         <Stack.Screen name="session/rest" options={formSheetOptions([0.75, 0.95])} />
+        <Stack.Screen name="other-workout" options={formSheetOptions([0.6, 0.95])} />
       </StackWithHeader>
     </WithWorkoutInProgressBar>
   );

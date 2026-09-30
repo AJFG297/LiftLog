@@ -299,6 +299,8 @@
   "home.up_next.eyebrow_day": "Up next · {plan} day {day} of {total}",
   "home.up_next.start.button": "Start {name}",
   "home.up_next.other.button": "Other",
+  "home.other.title": "Start another workout",
+  "home.other.routines.button": "All routines",
   "home.up_next.choose.button": "Choose a routine",
   "home.up_next.minutes.label": "~{minutes} min",
   "home.up_next.last_done.label": "last done {date}",

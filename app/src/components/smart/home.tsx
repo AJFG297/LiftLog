@@ -7,6 +7,7 @@ import { HistoryRestRow, HistoryWorkoutCard } from '@/components/presentation/ho
 import { HomeHeader } from '@/components/presentation/home/home-header';
 import { UpNextCard } from '@/components/presentation/home/up-next-card';
 import { homeWorkoutHref } from '@/components/smart/home-workout-href';
+import { namesText, upNextDetailText } from '@/components/smart/up-next-text';
 import { WelcomeWizard } from '@/components/smart/welcome-wizard';
 import { WhatsNewBanner } from '@/components/smart/whats-new-banner';
 import { spacing, useAppTheme } from '@/hooks/useAppTheme';
@@ -25,7 +26,6 @@ import {
 } from '@/models/home/history-range';
 import { routineColorOf } from '@/models/home/routine-colors';
 import { ProgramBlueprint } from '@/models/blueprint-models';
-import { estimatedMinutesOf, lastDoneLabelOf, lastDoneOf, namePreviewOf } from '@/models/home/up-next';
 import { Session } from '@/models/session-models';
 import { Weight } from '@/models/weight';
 import { useAppSelector, useAppSelectorWhenFocused, useAppSelectorWhenFocusedWithArg } from '@/store';
@@ -44,7 +44,6 @@ import { useDispatch } from 'react-redux';
 
 type TranslateFn = ReturnType<typeof useTranslate>['t'];
 
-const UP_NEXT_EXERCISES_SHOWN = 2;
 const CARD_EXERCISES_SHOWN = 3;
 
 /**
@@ -84,6 +83,8 @@ export function Home() {
   const planWorkoutNames = plan?.sessions.map((x) => x.name) ?? [];
   const colorOf = (session: Session) => routineColorOf(session.blueprint.name, planWorkoutNames);
   const nextSession = upcoming.map((x) => x.at(0)).unwrapOr(undefined);
+  // Other offers the plan's other workouts when it has any; the Routines tab can't start one yet (PM-26).
+  const otherPlanWorkouts = upcoming.map((x) => x.length > 1).unwrapOr(false);
   const bodyweight = nextSession?.bodyweight;
 
   const days = historyDaysOf(sessionsByDate, today, range);
@@ -177,12 +178,12 @@ export function Home() {
           <UpNextCard
             eyebrow={upNextEyebrow(t, plan, nextSession)}
             name={nextSession.blueprint.name}
-            detail={upNextDetail(t, nextSession, sessions, today, formatDate)}
+            detail={upNextDetailText(t, nextSession, sessions, today, formatDate)}
             color={colorOf(nextSession)}
             startLabel={t('home.up_next.start.button', { name: nextSession.blueprint.name })}
             otherLabel={t('home.up_next.other.button')}
             onStart={() => start(nextSession)}
-            onOther={() => navigate('/routines')}
+            onOther={() => (otherPlanWorkouts ? push('/other-workout') : navigate('/routines'))}
           />
           <FreeformButton label={t('workout.freeform.title')} onPress={startFreeform} />
         </View>
@@ -313,51 +314,6 @@ function upNextEyebrow(t: TranslateFn, plan: ProgramBlueprint | undefined, sessi
     day: (index + 1).toString(),
     total: plan.sessions.length.toString(),
   });
-}
-
-function upNextDetail(
-  t: TranslateFn,
-  session: Session,
-  sessions: readonly Session[],
-  today: LocalDate,
-  formatDate: (date: LocalDate, opts: Intl.DateTimeFormatOptions) => string,
-): string | undefined {
-  const minutes = estimatedMinutesOf(session.blueprint, sessions);
-  const lastDone = lastDoneOf(session.blueprint.name, sessions);
-  const parts = [
-    namesText(
-      t,
-      session.blueprint.exercises.map((x) => x.name),
-      UP_NEXT_EXERCISES_SHOWN,
-    ),
-    minutes === undefined ? undefined : t('home.up_next.minutes.label', { minutes: minutes.toString() }),
-    lastDone === undefined ? undefined : lastDoneText(t, lastDoneLabelOf(lastDone, today), formatDate),
-  ].filter(Boolean);
-  return parts.length ? parts.join(' · ') : undefined;
-}
-
-function lastDoneText(
-  t: TranslateFn,
-  label: ReturnType<typeof lastDoneLabelOf>,
-  formatDate: (date: LocalDate, opts: Intl.DateTimeFormatOptions) => string,
-): string {
-  switch (label.kind) {
-    case 'today':
-      return t('home.up_next.last_done_today.label');
-    case 'yesterday':
-      return t('home.up_next.last_done_yesterday.label');
-    case 'weekday':
-      return t('home.up_next.last_done.label', { date: formatDate(label.date, { weekday: 'long' }) });
-    case 'date':
-      return t('home.up_next.last_done.label', { date: formatDate(label.date, { month: 'short', day: 'numeric' }) });
-  }
-}
-
-/** "Bench Press, Overhead Press +3". */
-function namesText(t: TranslateFn, names: readonly string[], shown: number): string {
-  const preview = namePreviewOf(names, shown);
-  const list = preview.names.join(', ');
-  return preview.more ? t('home.names_more.label', { names: list, count: preview.more.toString() }) : list;
 }
 
 function durationText(t: TranslateFn, minutes: number): string {

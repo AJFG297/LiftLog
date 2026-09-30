@@ -28,8 +28,11 @@ can't be the focused one (expo-router throws in development and shows the first 
   this week once it's met the target, as the old streak card counted it. No streak, no chip.
 - **Up next.** The first of `program.upcomingSessions`: the active plan's next workout as progression built
   it. It says which day of the plan it is, its first two exercises, a time estimate and when it was last
-  done. Start opens it straight away, so it's one tap; Other opens Routines. Freeform workout sits under
-  the card. While a workout is in progress the card and Freeform workout are hidden and the bar below
+  done. Start opens it straight away, so it's one tap. Other opens a sheet (`/other-workout`,
+  `components/smart/other-workout-sheet.tsx`) listing the plan's other workouts, each started with one tap,
+  and All routines; with a one-workout plan it goes straight to Routines. The canvas links Other to
+  Routines, but Routines can't start a workout until PM-26, and this keeps every plan day one tap away.
+  Freeform workout sits under the card. While a workout is in progress the card and Freeform workout are hidden and the bar below
   takes over. With no workouts in the plan, the card offers Choose a routine and Freeform workout.
 - **Last 7 days / Last 30 days.** A summary of workouts, volume (tonnes, or thousands of pounds in
   imperial) and time. Under it, 7 days is a strip of day circles and 30 days a five-by-seven calendar with
@@ -86,3 +89,4 @@ workout after a confirmation.
 - `models/home/routine-colors.ts`: `ROUTINE_COLORS` and `routineColorOf`.
 - `models/home/workout-in-progress.ts`: what the bar says is next.
 - `components/smart/home-workout-href.ts`: where a history card goes.
+- `components/smart/up-next-text.ts`: the Up next line, shared by the card and the Other sheet.
