@@ -647,6 +647,7 @@ export function RoutineEditor({ programId, sessionIndex, isNew }: RoutineEditorP
         onPickType: () => openSetType(index, row.position),
         weight: weightCell(),
         reps: {
+          testID: `routine-set-reps-${row.position.list}-${row.position.index}`,
           text: repsText,
           editing: isEditing('reps') || isEditing('repsMax'),
           accessibilityLabel: t('routine_editor.set_table.reps_value.label', { set: setName, reps: repsText }),

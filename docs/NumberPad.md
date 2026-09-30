@@ -63,6 +63,13 @@ iOS keeps the bottom safe-area inset, and Android, whose screen already ends abo
 none. Plate maths shows only for a load on external resistance; bodyweight exercises get no accessory.
 See [LiveWorkout.md](./LiveWorkout.md#logging-a-set).
 
+## In the routine editor
+
+The routine editor mounts the same pad for reps and warm-up loads (a percentage steps by 5 with no
+decimals; a weight steps by the equipment, with plate maths). What's typed is written to the draft when the
+field is left, and the primary key is always Next, closing the pad after the last field. A routine plans no
+working weights, so those cells only show what carries over. See [Routines.md](./Routines.md#set-rows).
+
 ## Trying it
 
 In a dev build, open `liftlog://dev/number-pad`. Query parameters pick the starting state:

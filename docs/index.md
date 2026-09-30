@@ -32,6 +32,10 @@ work to find the docs relevant to your area, and update it whenever you add, rem
   (steps, presets, saving a rest to the routine), and how pages, the next set, focus, reordering and the
   Today target are worked out from the session. Also logging a set: the set table's placeholders, typing
   on the number pad, drafts, undo, RPE, Add set and the set-type sheet.
+- [Routines.md](./Routines.md) - programs and routines: the Routines screen (active program, routines,
+  other programs, the built-in library, and why changing the active program always asks), the program page,
+  and the routine editor: its draft with Save and Cancel, set rows on the number pad, rest with Advanced,
+  the progression presets and how they map to rules, and superset-safe moves.
 - [FeedProcess.md](./FeedProcess.md) - the opt-in social feed: the follow/accept flow, what is and isn't
   visible to the server, and the end-to-end encryption model (AES-CBC payloads, RSA-PSS signatures).
 - [Progression.md](./Progression.md) - how last session's

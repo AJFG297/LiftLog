@@ -19,6 +19,7 @@ export interface RoutineSetCell {
   editing?: boolean;
   /** Drawn in the placeholder colour: shown for information, not set here. */
   muted?: boolean;
+  testID?: string;
 }
 
 export interface RoutineSetTableRow {
@@ -162,13 +163,14 @@ function Cell({ cell }: { cell: RoutineSetCell }) {
   } as const;
   if (!cell.onPress) {
     return (
-      <View accessible accessibilityLabel={cell.accessibilityLabel} style={look}>
+      <View testID={cell.testID} accessible accessibilityLabel={cell.accessibilityLabel} style={look}>
         {body}
       </View>
     );
   }
   return (
     <Pressable
+      testID={cell.testID}
       onPress={cell.onPress}
       accessibilityRole="button"
       accessibilityLabel={cell.accessibilityLabel}

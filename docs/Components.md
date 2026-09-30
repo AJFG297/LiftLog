@@ -53,8 +53,8 @@ is the `failure` red. Drop and myo are ink with an accent ring. Warm-up is `acce
 the page colour with its number in Geist Mono. The badge's props only allow a number on a working set.
 
 It comes in two sizes: the default 36pt circle, and `size="small"` (16pt), which sits in the corner of a
-reps tile on the workout screen. It is the only set badge: the workout screen and the warm-up editor use it
-too, so a set looks the same wherever it appears.
+reps tile on the workout screen. It is the only set badge: the workout screen, the routine editor and the
+warm-up editor use it too, so a set looks the same wherever it appears.
 
 ## Toasts
 
