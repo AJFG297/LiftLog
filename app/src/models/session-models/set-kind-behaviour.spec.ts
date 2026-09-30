@@ -105,11 +105,12 @@ describe('the next session', () => {
   }
 
   it.each([
-    ['working', 80],
-    ['failure', 80],
+    // Straight sets all open on the best set, so only a kind that is never the best keeps its own weight.
+    ['working', 100],
+    ['failure', 100],
     ['drop', 80],
     ['myo', 80],
-  ] as const)('carry-over: a %s set at 80 kg starts the next session at %d kg', (kind, weight) => {
+  ] as const)('carry-over: a %s set at 80 kg after two at 100 kg starts the next session at %d kg', (kind, weight) => {
     const next = nextAfter(exerciseWith(slot(kind, 80, 10, 10, 3)));
 
     expect(next.potentialSets.map((s) => [s.kind, s.weight.value.toNumber()])).toEqual([

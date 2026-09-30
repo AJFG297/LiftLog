@@ -349,7 +349,7 @@ describe('SessionService warm-ups', () => {
 
     const exercise = await upcoming(blueprint, lastWeek);
 
-    expect(weights(exercise.potentialSets)).toEqual([102.5, 122.5]);
+    expect(weights(exercise.potentialSets)).toEqual([122.5, 122.5]);
     // 50% of 122.5 is 61.25 and 70% is 85.75, each to the nearest 2.5.
     expect(weights(exercise.warmupSets)).toEqual([62.5, 85]);
     expect(exercise.warmupSets.map((s) => s.target.max)).toEqual([5, 3]);
@@ -570,11 +570,15 @@ describe('SessionService carry over from the best set', () => {
     ]);
   });
 
+  /** A plan whose working sets ask for different reps, `reps` in order: a pyramid or a back-off. */
+  const shaped = (...reps: number[]) =>
+    press({ plannedSets: reps.map((r) => ({ reps: { min: r, max: r }, kind: 'working' as const })) });
+
   it.each([
     ['first', [50, 40, 40]],
     ['middle', [40, 50, 40]],
     ['last', [40, 40, 50]],
-  ])('opens the top set on the best weight when the best set came %s', (_, lastWeights) => {
+  ])('opens straight sets all on the best weight when the best set came %s', (_, lastWeights) => {
     const last = performed(
       press({ sets: 3 }),
       lastWeights.map((w): Slot => [w, 10]),
@@ -582,7 +586,7 @@ describe('SessionService carry over from the best set', () => {
 
     const nextTime = next(press({ sets: 3 }), last);
 
-    expect(weights(nextTime)).toEqual(lastWeights);
+    expect(weights(nextTime)).toEqual([50, 50, 50]);
     expect(todaysTarget(nextTime, last)?.weight).toEqual(kg(50));
   });
 
@@ -598,27 +602,69 @@ describe('SessionService carry over from the best set', () => {
     expect(weights(next(press({ sets: 3 }), last))).toEqual([40, 40, 40]);
   });
 
-  it('keeps a pyramid’s gaps below its top set when the top set moves', () => {
+  it('carries a single heavy set among lighter ones within the routine’s sets to every set', () => {
     const last = performed(press({ sets: 3 }), [
-      [60, 10],
-      [70, 10],
-      [80, 10],
-      [85, 10],
+      [30, 10],
+      [40, 5],
+      [30, 10],
     ]);
 
-    expect(weights(next(press({ sets: 3 }), last))).toEqual([65, 75, 85]);
+    expect(weights(next(press({ sets: 3 }), last))).toEqual([40, 40, 40]);
+  });
+
+  it('keeps a pyramid’s gaps below its top set when the top set moves', () => {
+    const last = performed(shaped(12, 10, 8), [
+      [60, 12],
+      [70, 10],
+      [80, 8],
+      [85, 8],
+    ]);
+
+    expect(weights(next(shaped(12, 10, 8), last))).toEqual([65, 75, 85]);
   });
 
   it('keeps a back-off set’s gap below the top set, and opens an added set on the best weight', () => {
-    const last = performed(press({ sets: 3 }), [
+    const last = performed(shaped(5, 10, 10), [
       [100, 5],
       [80, 10],
       [80, 10],
     ]);
 
-    expect(weights(next(press({ sets: 3 }), last))).toEqual([100, 80, 80]);
-    expect(weights(next(press({ sets: 2 }), last))).toEqual([100, 80]);
-    expect(weights(next(press({ sets: 4 }), last))).toEqual([100, 80, 80, 100]);
+    expect(weights(next(shaped(5, 10, 10), last))).toEqual([100, 80, 80]);
+    expect(weights(next(shaped(5, 10), last))).toEqual([100, 80]);
+    expect(weights(next(shaped(5, 10, 10, 10), last))).toEqual([100, 80, 80, 100]);
+  });
+
+  describe('a session logged only in part', () => {
+    it('keeps a pyramid’s sets that were never lifted as they were loaded', () => {
+      const last = performed(shaped(12, 10, 8), [
+        [65, 12],
+        [75, undefined],
+        [85, undefined],
+      ]);
+
+      expect(weights(next(shaped(12, 10, 8), last))).toEqual([65, 75, 85]);
+    });
+
+    it('never opens the set that was done below its own weight', () => {
+      const last = performed(shaped(12, 10, 10), [
+        [40, 12],
+        [50, undefined],
+        [50, undefined],
+      ]);
+
+      expect(weights(next(shaped(12, 10, 10), last))).toEqual([40, 50, 50]);
+    });
+
+    it('opens straight sets on the weight that was done, not the heavier one left unlogged', () => {
+      const last = performed(press({ sets: 3 }), [
+        [40, 10],
+        [50, undefined],
+        [50, undefined],
+      ]);
+
+      expect(weights(next(press({ sets: 3 }), last))).toEqual([40, 40, 40]);
+    });
   });
 
   it('ignores warm-up, drop and myo sets, however heavy', () => {
@@ -677,7 +723,7 @@ describe('SessionService carry over from the best set', () => {
         [45, 8],
       ]);
 
-      expect(weights(next(plan, last))).toEqual([40, 40, 45]);
+      expect(weights(next(plan, last))).toEqual([45, 45, 45]);
     });
 
     it('waits behind a rep ladder that not every set has climbed yet', () => {

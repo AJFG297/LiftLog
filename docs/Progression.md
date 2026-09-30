@@ -22,11 +22,15 @@ numbers in.
 - **Weight always carries over, from your best set.** The best set is your heaviest working or failure
   set. On a tie on weight, the one with more reps wins. It does not matter whether that was your first,
   middle or last set, or whether you did it once or on every set: if you did 35 kg, you open on 35 kg.
-- **Straight sets all open on the best weight.** When your sets differ on purpose (a pyramid, or a top
-  set with back-off sets), the heaviest set opens on the best weight and every other set keeps its gap
-  below it. Last time's sets are matched to today's in order. So 60, 70, 80 and an extra top set of 85
-  opens next time as 65, 75, 85; and 100, 80, 80 stays 100, 80, 80. A set with nothing to match (you
-  added one to the routine) opens on the best weight.
+- **Straight sets all open on the best weight.** When your routine asks for the same reps on every set
+  (3 x 10, say), every set opens on the best weight, wherever you did it: 35, 40, 35 opens next time as
+  40, 40, 40.
+- **A pyramid or back-off keeps its shape.** When your routine asks for different reps on different sets
+  (12, 10, 8, or a top set of 5 with back-off sets of 10), the heaviest set opens on the best weight and
+  every other set keeps its gap below it. Last time's sets are matched to today's in order. So 60, 70, 80
+  and an extra top set of 85 opens next time as 65, 75, 85; and 100, 80, 80 stays 100, 80, 80. A set with
+  nothing to match (you added one to the routine) opens on the best weight. A set you never logged was
+  not lifted, so it keeps the weight it was loaded with.
 - **Reps you completed last time normally do not.** The target comes back from the plan each session.
 - A workout you opened but never logged a set in is ignored, so an abandoned session cannot become the
   number you are stuck chasing. Logging only the warm-ups counts as not logging a set.

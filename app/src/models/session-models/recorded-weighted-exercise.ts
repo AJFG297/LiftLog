@@ -6,6 +6,7 @@ import {
   Rest,
   WeightedExerciseBlueprint,
   roundWarmupWeight,
+  uniformTarget,
   warmupIncrementFor,
 } from '@/models/blueprint-models';
 import { RecordedExercise } from '@/models/session-models/recorded-exercise';
@@ -542,10 +543,12 @@ export class RecordedWeightedExercise {
    * This performance as the next session of `plan`, before any progression rule runs. The plan decides the
    * slots, so a set added or removed here or in the routine never loses the numbers.
    *
-   * Each slot whose kind carries over opens from the {@link bestSet}: the heaviest of them on its weight,
-   * and the rest keeping their gap below it from this time, matched in order. A slot with nothing to match
-   * opens on the best weight. So straight sets all open on the best weight and a pyramid keeps its shape.
-   * Reps carry with them only where they are progressed. Otherwise each slot takes the plan's target,
+   * Each slot whose kind carries over opens from the {@link bestSet}. When the plan asks the same reps of
+   * every one of them, they are straight sets and all open on the best weight, wherever it was done. When
+   * the plan's targets differ (a pyramid, a top set with back-offs), the plan holds no weights, so this
+   * time's weights are the only record of the shape: the heaviest logged slot, matched in order, moves to
+   * the best weight and the rest keep their gap below it. A slot with nothing to match opens on the best
+   * weight. Reps carry with them only where they are progressed. Otherwise each slot takes the plan's target,
    * since only an edit to the plan could have changed it: a rep edit made mid-workout is for that workout.
    *
    * A drop or myo slot opens on the weight of the same slot of its kind from this time, in order, or none.
@@ -553,9 +556,14 @@ export class RecordedWeightedExercise {
   carriedInto(plan: WeightedExerciseBlueprint, fallbackUnit: WeightUnit): RecordedWeightedExercise {
     const best = this.bestSet;
     const carried = this.setsCountingTowards('carriesOver');
-    const carryingSlots = plan.plannedSets.filter((s) => setKindHas(s.kind, 'carriesOver')).length;
-    const matched = carried.slice(0, carryingSlots);
-    const top = matched.length ? Weight.max(...matched.map((s) => s.weight)) : undefined;
+    const carryingPlanned = plan.plannedSets.filter((s) => setKindHas(s.kind, 'carriesOver'));
+    const straight = uniformTarget(carryingPlanned) !== undefined;
+    const matched = carried.slice(0, carryingPlanned.length);
+    // A set left unlogged was never lifted, so it can neither be the top the gaps are measured from nor
+    // be pulled down to the best set; it keeps its place as it was loaded.
+    const logged = matched.filter((s) => s.set);
+    const shapedBy = logged.length ? logged : matched;
+    const top = shapedBy.length ? Weight.max(...shapedBy.map((s) => s.weight)) : undefined;
     const delta = best && top ? best.weight.minus(top) : undefined;
 
     const seen = new Map<SetKind, number>();
@@ -566,7 +574,8 @@ export class RecordedWeightedExercise {
       const planTarget = plan.repsTargetForSet(index);
       if (best && setKindHas(planned.kind, 'carriesOver')) {
         const from = carried[carryingBefore++];
-        const weight = !from ? best.weight : delta!.value.isZero() ? from.weight : from.weight.plus(delta!);
+        const weight =
+          straight || !from ? best.weight : delta!.value.isZero() ? from.weight : from.weight.plus(delta!);
         const target = plan.repsAreProgressed ? (from ?? best).target : planTarget;
         return PotentialSet.of({ weight, target, kind: planned.kind });
       }
