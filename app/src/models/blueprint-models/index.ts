@@ -419,7 +419,11 @@ export type IncreaseStrategy = 'first' | 'middle' | 'last' | 'all';
  */
 export type SetScope = { type: 'allSets' } | { type: 'lowestSets'; pick: IncreaseStrategy };
 
-/** What has to happen for a rule to fire. */
+/**
+ * What has to happen for a rule to fire. The only value stored, and what it asks for depends on the
+ * rule's axis (see {@link ProgressionRule.isEarnedBy}): a weight rule waits for the best set to meet its
+ * target, a reps rule for every set. Kept as one value so plans and backups stay readable by older builds.
+ */
 export type SuccessRule = 'allSetsMetTarget';
 
 export interface ProgressionRuleInit {
@@ -455,7 +459,7 @@ export class ProgressionRule {
     return new ProgressionRule(init.axis, init.step, init.scope, init.ceiling, init.onCeiling, init.trigger);
   }
 
-  /** The rule almost every plan wants: put more on the bar once every set hit its target. */
+  /** The rule almost every plan wants: put more on the bar once the best set hit its target. */
   static load(step: BigNumber, scope: SetScope = { type: 'allSets' }): ProgressionRule {
     return new ProgressionRule('load', step, scope);
   }
@@ -508,6 +512,15 @@ export class ProgressionRule {
       this.onCeiling === other.onCeiling &&
       this.trigger === other.trigger
     );
+  }
+
+  /**
+   * Whether `performance` earned this rule's move. Adding weight goes from the best set alone, so a
+   * heavy top set counts whatever the other sets did. Adding reps needs every set there, because the
+   * reps climb on every set together.
+   */
+  isEarnedBy(performance: RecordedWeightedExercise): boolean {
+    return this.axis === 'load' ? performance.bestSetMetTarget : performance.isSuccessForProgressiveOverload;
   }
 
   /**
@@ -652,9 +665,34 @@ export function applyProgression(
   exercise: RecordedWeightedExercise,
   carriedFrom: RecordedWeightedExercise = exercise,
 ): RecordedWeightedExercise {
+  return progressWhere(progression, exercise, carriedFrom, () => true);
+}
+
+/**
+ * {@link applyProgression} after a real session: the rule that would move only does if `carriedFrom`
+ * earned it (see {@link ProgressionRule.isEarnedBy}). When it did not, nothing moves - the rules behind it
+ * never get a turn, so a rep ladder that is still climbing is never skipped for the weight rule after it.
+ */
+export function applyEarnedProgression(
+  progression: ProgressionRule[],
+  exercise: RecordedWeightedExercise,
+  carriedFrom: RecordedWeightedExercise,
+): RecordedWeightedExercise {
+  return progressWhere(progression, exercise, carriedFrom, (rule) => rule.isEarnedBy(carriedFrom));
+}
+
+function progressWhere(
+  progression: ProgressionRule[],
+  exercise: RecordedWeightedExercise,
+  carriedFrom: RecordedWeightedExercise,
+  earned: (rule: ProgressionRule) => boolean,
+): RecordedWeightedExercise {
   for (const [index, rule] of progression.entries()) {
     const moved = rule.applyTo(exercise, carriedFrom);
     if (moved) {
+      if (!earned(rule)) {
+        return exercise;
+      }
       return progression
         .slice(0, index)
         .filter((exhausted) => exhausted.onCeiling === 'reset')
@@ -1062,22 +1100,19 @@ export class WeightedExerciseBlueprint {
    * Whether reps are something this exercise advances on, rather than a fixed prescription: either it
    * carries no load and so has nothing else to advance on, or a rule moves them outright.
    *
-   * Two things hang off this. The rep scheme drops out of {@link progressionKey}, because where reps
-   * climb the plan's numbers are only the ladder's first rung and splitting on them would strand a
-   * lineage that had climbed past it. And the target carries session to session instead of being
-   * re-seeded, because otherwise the next session would undo whatever the rule just did.
+   * The target then carries session to session instead of being re-seeded, because otherwise the next
+   * session would undo whatever the rule just did.
    */
   get repsAreProgressed(): boolean {
     return this.resistance === 'none' || this.progression.some((rule) => rule.axis === 'reps');
   }
 
   /**
-   * See {@link ProgressionKey} and {@link repsAreProgressed}. Warm-ups stay out of it, so planning
-   * them never strands a lineage's carry-over.
+   * See {@link ProgressionKey}. The exercise alone: its sets, rep scheme and warm-ups stay out of it, so
+   * changing any of them keeps the lineage's carry-over.
    */
   progressionKey(): ProgressionKey {
-    const base = `${this.exerciseId}_${this.type}_${this.plannedSets.length}`;
-    return (this.repsAreProgressed ? base : `${base}_${plannedSetsKey(this.plannedSets)}`) as ProgressionKey;
+    return `${this.exerciseId}_${this.type}` as ProgressionKey;
   }
 
   repsTargetForSet(index: number): RepsTarget {
@@ -1191,25 +1226,16 @@ function targetsAsRepsConfig(blueprint: WeightedExerciseBlueprint): RepsConfig {
   return { type: 'perSet', targets: blueprint.plannedSets.map((s) => ({ ...s.reps })) };
 }
 
-/** The rep-scheme half of a load-based {@link ProgressionKey}, collapsing equal targets to one. */
-function plannedSetsKey(plannedSets: PlannedSet[]): string {
-  const targets = plannedSets.map((s) => s.reps);
-  const first = targets[0];
-  if (first && targets.every((t) => t.min === first.min && t.max === first.max)) {
-    return formatRepsTarget(first);
-  }
-  return targets.map(formatRepsTarget).join(',');
-}
-
 /*
  * Two exercises can be "the same" in two different ways, and the answer differs depending on which
  * question is being asked. Both keys are produced by methods on the blueprint (and mirrored on the
  * recorded exercise), so whichever one you have in hand offers both side by side.
  *
  *   movementKey()    - is this the same *movement*, for aggregating history?
- *   progressionKey() - is this the same *programmed slot*, so last session's numbers load into today's?
+ *   progressionKey() - is this the same *progressing lineage*, so last session's numbers load into today's?
  *
- * They are branded so that a map keyed by one cannot be indexed by the other.
+ * A weighted exercise gives the same answer to both; a cardio exercise progresses distance and time work
+ * apart. They are branded so that a map keyed by one cannot be indexed by the other.
  */
 
 /**
@@ -1248,10 +1274,10 @@ const STUB_EXERCISE_NAMESPACE = '4d6c8a1e-2f3b-5c7d-9e0f-1a2b3c4d5e6f';
 export type MovementKey = string & { readonly __brand: 'MovementKey' };
 
 /**
- * Identifies one exercise slot in a program, so that its weights and rep targets carry from session
- * to session: the exercise plus its rep scheme. Sensitive to the rep scheme, which is what lets a plan
- * run Squats 5x5 on two days as a single progressing lineage while Squats 3x8 on a third day climbs on
- * its own. Split by type for the same reason as {@link MovementKey}.
+ * Identifies a progressing lineage, so that weights and rep targets carry from session to session. A
+ * weighted exercise is one lineage whatever its set count or rep scheme: the next session carries from
+ * the latest one, wherever that was planned (see {@link RecordedWeightedExercise.carriedInto}). A cardio
+ * exercise splits on distance and time work. Split by type for the same reason as {@link MovementKey}.
  */
 export type ProgressionKey = string & { readonly __brand: 'ProgressionKey' };
 

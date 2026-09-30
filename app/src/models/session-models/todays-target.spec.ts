@@ -84,12 +84,34 @@ describe('todaysTarget', () => {
     expect(todaysTarget(today([60, 60, 60]), undefined, true)?.reason).toEqual({ kind: 'newScheme' });
   });
 
-  it('says it is new when the performance carried from has no set to compare the top set with', () => {
+  it('measures today’s top set against last time’s best set, whatever the set count', () => {
     const fourSets = bench.with({ sets: 4 });
 
     expect(todaysTarget(today([85, 85, 85, 90], fourSets), lastTime([5, 5, 5]))?.reason).toEqual({
-      kind: 'newScheme',
+      kind: 'weightUp',
+      by: new Weight(5, 'kilograms'),
+      lastTime: { sets: 3, reps: 5 },
     });
+  });
+
+  it('measures against the heaviest set last time, wherever it was', () => {
+    const pyramid = lastTime([5, 5, 5]).with({
+      potentialSets: lastTime([5, 5, 5]).potentialSets.map((s, i) =>
+        s.with({ weight: new Weight([80, 90, 85][i]!, 'kilograms') }),
+      ),
+    });
+
+    expect(todaysTarget(today([82.5, 92.5, 87.5]), pyramid)?.reason).toEqual({
+      kind: 'weightUp',
+      by: new Weight(2.5, 'kilograms'),
+      lastTime: { sets: 3, reps: 5 },
+    });
+  });
+
+  it('says it is new when the performance carried from has only drop sets to compare with', () => {
+    const drops = lastTime([5, 5, 5]).withAllSets((s) => s.with({ kind: 'drop' }));
+
+    expect(todaysTarget(today([85, 85, 85]), drops)?.reason).toEqual({ kind: 'newScheme' });
   });
 
   it('has no weight for a movement that carries no load', () => {
@@ -116,28 +138,27 @@ describe('todaysTarget', () => {
 describe('carriedFrom', () => {
   const fourSets = bench.with({ sets: 4 });
 
-  it('finds the performance by the routine’s key after a set is added mid-workout', () => {
+  it('finds last time after a set is added mid-workout', () => {
     const previous = lastTime([5, 5, 5]);
     const withAddedSet = today([87.5, 87.5, 87.5, 87.5], fourSets);
 
     expect(carriedFrom(withAddedSet, [previous], bench)).toBe(previous);
-    expect(withAddedSet.previousPerformanceIn([previous])).toBeUndefined();
+    expect(withAddedSet.previousPerformanceIn([previous])).toBe(previous);
   });
 
-  it('prefers the routine’s lineage over a newer performance of another scheme', () => {
+  it('takes the newest performance whatever its set count', () => {
     const olderThreeSets = lastTime([5, 5, 5]);
     const newerFourSets = lastTime([5, 5, 5, 5], 80, fourSets);
 
-    expect(carriedFrom(today([87.5, 87.5, 87.5, 87.5], fourSets), [newerFourSets, olderThreeSets], bench)).toBe(
-      olderThreeSets,
-    );
+    expect(carriedFrom(today([87.5, 87.5, 87.5]), [newerFourSets, olderThreeSets], bench)).toBe(newerFourSets);
   });
 
   it('matches on the exercise’s own key without a routine exercise', () => {
     const previous = lastTime([5, 5, 5]);
+    const squat = makeWeightedBlueprint({ name: 'Squat', sets: 3 });
 
-    expect(carriedFrom(today([87.5, 87.5, 87.5]), [previous], undefined)).toBe(previous);
-    expect(carriedFrom(today([87.5, 87.5, 87.5, 87.5], fourSets), [previous], undefined)).toBeUndefined();
+    expect(carriedFrom(today([87.5, 87.5, 87.5, 87.5], fourSets), [previous], undefined)).toBe(previous);
+    expect(carriedFrom(today([100, 100, 100], squat), [previous], undefined)).toBeUndefined();
   });
 });
 
@@ -156,14 +177,14 @@ describe('plannedExerciseFor', () => {
     expect(plannedExerciseFor(second, session, routine)).toBe(lightBench);
   });
 
-  it('finds the second bench’s own last time rather than the first’s', () => {
+  it('gives a movement planned twice one lineage: both carry from the newest performance', () => {
     const heavyLastTime = lastTime([5, 5, 5]);
     const lightLastTime = lastTime([8, 8, 8, 8], 60, lightBench);
     const second = today([60, 60, 60, 60, 60], lightBench.with({ sets: 5 }));
     const session = [today([85, 85, 85]), second];
 
     expect(carriedFrom(second, [heavyLastTime, lightLastTime], plannedExerciseFor(second, session, routine))).toBe(
-      lightLastTime,
+      heavyLastTime,
     );
   });
 

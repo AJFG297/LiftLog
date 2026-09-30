@@ -13,7 +13,7 @@ export interface LastTime {
 /** Why today's numbers are what they are, compared with the performance they were carried from. */
 export type TargetReason =
   | { kind: 'firstTime' }
-  /** Done before, but never with today's sets and reps, so there is nothing to measure against. */
+  /** Done before, but without a working or failure set to measure against: only drop or myo sets. */
   | { kind: 'newScheme' }
   | { kind: 'weightUp'; by: Weight; lastTime: LastTime | undefined }
   | { kind: 'weightDown'; by: Weight }
@@ -34,9 +34,9 @@ export interface TodaysTarget {
 
 /**
  * The performance `exercise` carried on from, among `candidates` (newest first): the latest with the key
- * its routine gives it, `planned`, because that is what the session was built from. A set added or moved
- * during the workout changes the exercise's own key, and the lineage it came from must not be lost with it.
- * Without a routine exercise to go by, the exercise's own key decides.
+ * its routine gives it, `planned`, because that is what the session was built from. An exercise swapped
+ * during the workout has a key of its own, and the lineage it came from must not be lost with it. Without
+ * a routine exercise to go by, the exercise's own key decides.
  */
 export function carriedFrom(
   exercise: RecordedWeightedExercise,
@@ -65,9 +65,9 @@ export function plannedExerciseFor(
 
 /**
  * The top set's numbers for today, and why. Progression runs once, at session start, and keeps no record
- * of what it did, so the reason is read back from the difference with `previous`, the performance today
- * carried on from (see {@link RecordedWeightedExercise.previousPerformanceIn}). `doneBefore` says whether
- * the movement has any recent performance at all, which `previous` misses when the set scheme changed.
+ * of what it did, so the reason is read back from the difference with the best set of `previous`, the
+ * performance today carried on from (see {@link RecordedWeightedExercise.bestSet}), whatever its set
+ * count. `doneBefore` says whether the movement has any recent performance at all.
  */
 export function todaysTarget(
   exercise: RecordedWeightedExercise,
@@ -110,10 +110,11 @@ function reasonFor(
   previous: RecordedWeightedExercise | undefined,
   doneBefore: boolean,
 ): TargetReason {
-  const before = previous?.potentialSets[index];
-  if (!previous || !before) {
+  const bestIndex = previous?.bestSetIndex;
+  if (!previous || bestIndex === undefined) {
     return previous || doneBefore ? { kind: 'newScheme' } : { kind: 'firstTime' };
   }
+  const before = previous.potentialSets[bestIndex]!;
   const now = exercise.potentialSets[index]!;
   const lastTime = previous.isSuccessForProgressiveOverload ? lastTimeOf(previous) : undefined;
 
@@ -122,7 +123,7 @@ function reasonFor(
     const by = now.weight.minus(before.weight);
     return by.value.isPositive() ? { kind: 'weightUp', by, lastTime } : { kind: 'weightDown', by: by.abs() };
   }
-  const repsBy = exercise.repsTargetForSet(index).max - previous.repsTargetForSet(index).max;
+  const repsBy = exercise.repsTargetForSet(index).max - previous.repsTargetForSet(bestIndex).max;
   if (repsBy > 0) {
     return { kind: 'repsUp', by: repsBy, lastTime };
   }

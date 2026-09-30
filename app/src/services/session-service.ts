@@ -3,7 +3,7 @@ import {
   SessionBlueprint,
   ExerciseBlueprint,
   CardioExerciseBlueprint,
-  applyProgression,
+  applyEarnedProgression,
 } from '@/models/blueprint-models';
 import { Weight, WeightUnit } from '@/models/weight';
 import {
@@ -19,7 +19,6 @@ import type { RootState } from '@/store';
 import { selectActiveSession } from '@/store/stored-sessions';
 import { uuid } from '@/utils/uuid';
 import { LocalDate } from '@js-joda/core';
-import { match } from 'ts-pattern';
 
 export class SessionService {
   constructor(
@@ -92,29 +91,16 @@ export class SessionService {
         });
       }
       const weightedLastExercise = lastExercise instanceof RecordedWeightedExercise ? lastExercise : undefined;
-      const potentialSets: PotentialSet[] = match(weightedLastExercise)
-        .returnType<PotentialSet[]>()
-        .with(undefined, () =>
-          e.plannedSets.map((s) =>
-            PotentialSet.of({ weight: new Weight(0, $this.getDefaultWeightUnit()), target: s.reps, kind: s.kind }),
-          ),
-        )
-        // Where reps are what advances, the target carries forward alongside the weight so the
-        // lineage keeps what a rule won for it. Where they are a fixed prescription it is re-seeded
-        // from the plan, because the only thing that could have changed it is an edit to the plan. A
-        // rep edit made mid-workout is for that workout only: the update-routine sheet leaves reps out.
-        .otherwise((x) =>
-          x.potentialSets.map((ps, index) =>
-            ps.carriedInto(e.plannedSets[index]?.kind ?? 'working', {
-              planTarget: e.repsTargetForSet(index),
-              repsAreProgressed: e.repsAreProgressed,
-              fallbackUnit: $this.getDefaultWeightUnit(),
-            }),
-          ),
-        );
-      const newExercise = new RecordedWeightedExercise(e, potentialSets, undefined);
-      const progressed = weightedLastExercise?.isSuccessForProgressiveOverload
-        ? applyProgression(e.progression, newExercise, weightedLastExercise)
+      const unit = $this.getDefaultWeightUnit();
+      const newExercise = weightedLastExercise
+        ? weightedLastExercise.carriedInto(e, unit)
+        : new RecordedWeightedExercise(
+            e,
+            e.plannedSets.map((s) => PotentialSet.of({ weight: new Weight(0, unit), target: s.reps, kind: s.kind })),
+            undefined,
+          );
+      const progressed = weightedLastExercise
+        ? applyEarnedProgression(e.progression, newExercise, weightedLastExercise)
         : newExercise;
       // Built from the plan rather than carried, and only now, so a percentage follows today's
       // progressed working weight.

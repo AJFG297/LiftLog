@@ -7,10 +7,16 @@ import {
   ProgressionRule,
   SessionBlueprint,
   WeightedExerciseBlueprint,
+  WeightedExerciseBlueprintInit,
 } from '@/models/blueprint-models';
-import { OffsetDateTime } from '@js-joda/core';
+import { LocalDate, OffsetDateTime } from '@js-joda/core';
 import BigNumber from 'bignumber.js';
-import { RecordedWeightedExercise, Session } from '@/models/session-models';
+import { v4 as uuid } from 'uuid';
+import { PotentialSet, RecordedSet, RecordedWeightedExercise, Session } from '@/models/session-models';
+import type { WorkingListKind } from '@/models/session-models/set-kind';
+import { todaysTarget } from '@/models/session-models/todays-target';
+import { nextTargets } from '@/models/workout-summary';
+import { storedSessionsReducer, upsertStoredSessions } from '@/store/stored-sessions';
 import { makeRecordedExercise, makeWeightedBlueprint } from '@/models/session-models/__test__/helpers';
 import { Weight } from '@/models/weight';
 import type { RootState } from '@/store';
@@ -227,7 +233,7 @@ describe('SessionService rep targets', () => {
     ]);
   });
 
-  it('falls back to the last planned set when the previous session ran longer than the plan', async () => {
+  it('opens on the plan’s sets when the previous session ran longer than the plan', async () => {
     const blueprint = makeWeightedBlueprint({
       sets: 2,
       repsConfig: {
@@ -242,7 +248,6 @@ describe('SessionService rep targets', () => {
 
     expect((await upcoming(blueprint, lastWeek)).potentialSets.map((s) => s.target)).toEqual([
       { min: 12, max: 12 },
-      { min: 10, max: 10 },
       { min: 10, max: 10 },
     ]);
   });
@@ -270,19 +275,26 @@ describe('SessionService progressive overload', () => {
     expect(await upcomingWeights(blueprint, lastWeek)).toEqual([62.5, 62.5]);
   });
 
-  it('holds the load after a session that missed a target', async () => {
+  it('holds the load after a session whose best set missed its target', async () => {
+    const blueprint = makeWeightedBlueprint({ sets: 2 });
+    const lastWeek = makeRecordedExercise(blueprint, [9, 8], new Weight(60, 'kilograms'));
+
+    expect(await upcomingWeights(blueprint, lastWeek)).toEqual([60, 60]);
+  });
+
+  it('raises the load once the best set hit its target, though another set missed', async () => {
     const blueprint = makeWeightedBlueprint({ sets: 2 });
     const lastWeek = makeRecordedExercise(blueprint, [10, 9], new Weight(60, 'kilograms'));
 
     expect(lastWeek.isSuccessForProgressiveOverload).toBe(false);
-    expect(await upcomingWeights(blueprint, lastWeek)).toEqual([60, 60]);
+    expect(await upcomingWeights(blueprint, lastWeek)).toEqual([62.5, 62.5]);
   });
 
-  it('holds the load when a set was never filled out', async () => {
+  it('raises the load when the best set hit its target and another was never filled out', async () => {
     const blueprint = makeWeightedBlueprint({ sets: 2 });
     const lastWeek = makeRecordedExercise(blueprint, [10, undefined], new Weight(60, 'kilograms'));
 
-    expect(await upcomingWeights(blueprint, lastWeek)).toEqual([60, 60]);
+    expect(await upcomingWeights(blueprint, lastWeek)).toEqual([62.5, 62.5]);
   });
 
   it('starts a fresh exercise at zero rather than progressing from nothing', async () => {
@@ -427,5 +439,280 @@ describe('SessionService warm-ups', () => {
     expect(withWarmups.potentialSets.map((s) => [s.weight.value.toNumber(), s.target])).toEqual(
       without.potentialSets.map((s) => [s.weight.value.toNumber(), s.target]),
     );
+  });
+});
+
+describe('SessionService carry over from the best set', () => {
+  const at = (day: number, minute: number) =>
+    OffsetDateTime.parse(`2026-09-${String(day).padStart(2, '0')}T10:${String(minute).padStart(2, '0')}:00Z`);
+
+  type Slot = [kg: number, reps: number | undefined, kind?: WorkingListKind];
+
+  const press = (init: WeightedExerciseBlueprintInit = {}) =>
+    makeWeightedBlueprint({ name: 'Barbell Shoulder Press', progression: [], ...init });
+
+  /** `slots` logged against `blueprint`'s targets, a minute apart on `day`, as the session's own plan. */
+  function performed(blueprint: WeightedExerciseBlueprint, slots: Slot[], warmups: Slot[] = [], day = 29) {
+    const toSet = ([kg, reps, kind = 'working']: Slot, index: number, target = blueprint.repsTargetForSet(index)) =>
+      PotentialSet.of({
+        weight: new Weight(kg, 'kilograms'),
+        target,
+        kind,
+        set:
+          reps === undefined ? undefined : RecordedSet.of({ repsCompleted: reps, completionDateTime: at(day, index) }),
+      });
+    const plannedSets = slots.map(([, , kind = 'working'], i) => ({ reps: blueprint.repsTargetForSet(i), kind }));
+    return new RecordedWeightedExercise(
+      blueprint.with({ plannedSets }),
+      slots.map((slot, index) => toSet(slot, index)),
+      undefined,
+      warmups.map((slot, index) => toSet(slot, index, { min: 5, max: 5 })),
+    );
+  }
+
+  /** The next session of `plan` after `last`, keyed the way the store keys it: by `last`'s own key. */
+  function next(plan: WeightedExerciseBlueprint, last: RecordedWeightedExercise) {
+    const session = makeService(makeState()).hydrateSessionFromBlueprint(new SessionBlueprint('Push', [plan], ''), {
+      [last.progressionKey()]: last,
+    });
+    return session.recordedExercises[0] as RecordedWeightedExercise;
+  }
+
+  const weights = (exercise: RecordedWeightedExercise) => exercise.potentialSets.map((s) => s.weight.value.toNumber());
+  const kg = (value: number) => new Weight(value, 'kilograms');
+
+  it('shows today’s 35 kg as next time’s target after a set was added and the routine kept as it was', () => {
+    const routine = press({ sets: 3 });
+    const sessionOf = (exercise: RecordedWeightedExercise, date: LocalDate) =>
+      new Session(uuid(), new SessionBlueprint('Push', [routine], ''), [exercise], date, undefined, undefined);
+    const lastWeek = sessionOf(
+      performed(
+        routine,
+        [
+          [30, 10],
+          [30, 10],
+          [30, 10],
+        ],
+        [],
+        22,
+      ),
+      LocalDate.of(2026, 9, 22),
+    );
+    const today = sessionOf(
+      performed(routine, [
+        [35, 10],
+        [35, 10],
+        [35, 10],
+        [35, 10],
+      ]),
+      LocalDate.of(2026, 9, 29),
+    );
+    const { latestExercises } = storedSessionsReducer(undefined, upsertStoredSessions([lastWeek, today]));
+
+    const nextPush = makeService(makeState()).hydrateSessionFromBlueprint(
+      new SessionBlueprint('Push', [routine], ''),
+      latestExercises,
+    );
+
+    expect(weights(nextPush.recordedExercises[0] as RecordedWeightedExercise)).toEqual([35, 35, 35]);
+    expect(nextTargets(nextPush, today)).toEqual([
+      { name: 'Barbell Shoulder Press', weight: kg(35), reps: { min: 10, max: 10 } },
+    ]);
+  });
+
+  it('keeps the numbers when the routine has fewer sets than last time', () => {
+    const last = performed(press({ sets: 4 }), [
+      [40, 10],
+      [40, 10],
+      [40, 10],
+      [40, 10],
+    ]);
+
+    expect(weights(next(press({ sets: 3 }), last))).toEqual([40, 40, 40]);
+  });
+
+  it('keeps the numbers when the routine has more sets than last time', () => {
+    const last = performed(press({ sets: 3 }), [
+      [40, 10],
+      [40, 10],
+      [40, 10],
+    ]);
+
+    expect(weights(next(press({ sets: 5 }), last))).toEqual([40, 40, 40, 40, 40]);
+  });
+
+  it('progresses from last time whatever its set count', () => {
+    const plan = press({ sets: 3, progression: [ProgressionRule.load(new BigNumber(2.5))] });
+    const last = performed(press({ sets: 4 }), [
+      [40, 10],
+      [40, 10],
+      [40, 10],
+      [40, 10],
+    ]);
+
+    expect(weights(next(plan, last))).toEqual([42.5, 42.5, 42.5]);
+  });
+
+  it('keeps the weight when the rep scheme changed, and takes the plan’s new reps', () => {
+    const last = performed(press({ sets: 3, repsConfig: { type: 'fixed', reps: 8 } }), [
+      [50, 8],
+      [50, 8],
+      [50, 8],
+    ]);
+
+    const nextTime = next(press({ sets: 3, repsConfig: { type: 'fixed', reps: 5 } }), last);
+
+    expect(weights(nextTime)).toEqual([50, 50, 50]);
+    expect(nextTime.potentialSets.map((s) => s.target)).toEqual([
+      { min: 5, max: 5 },
+      { min: 5, max: 5 },
+      { min: 5, max: 5 },
+    ]);
+  });
+
+  it.each([
+    ['first', [50, 40, 40]],
+    ['middle', [40, 50, 40]],
+    ['last', [40, 40, 50]],
+  ])('opens the top set on the best weight when the best set came %s', (_, lastWeights) => {
+    const last = performed(
+      press({ sets: 3 }),
+      lastWeights.map((w): Slot => [w, 10]),
+    );
+
+    const nextTime = next(press({ sets: 3 }), last);
+
+    expect(weights(nextTime)).toEqual(lastWeights);
+    expect(todaysTarget(nextTime, last)?.weight).toEqual(kg(50));
+  });
+
+  it('carries a single heavy set added among lighter ones to every set', () => {
+    const last = performed(press({ sets: 3 }), [
+      [30, 10],
+      [30, 10],
+      [30, 10],
+      [30, 10],
+      [40, 5],
+    ]);
+
+    expect(weights(next(press({ sets: 3 }), last))).toEqual([40, 40, 40]);
+  });
+
+  it('keeps a pyramid’s gaps below its top set when the top set moves', () => {
+    const last = performed(press({ sets: 3 }), [
+      [60, 10],
+      [70, 10],
+      [80, 10],
+      [85, 10],
+    ]);
+
+    expect(weights(next(press({ sets: 3 }), last))).toEqual([65, 75, 85]);
+  });
+
+  it('keeps a back-off set’s gap below the top set, and opens an added set on the best weight', () => {
+    const last = performed(press({ sets: 3 }), [
+      [100, 5],
+      [80, 10],
+      [80, 10],
+    ]);
+
+    expect(weights(next(press({ sets: 3 }), last))).toEqual([100, 80, 80]);
+    expect(weights(next(press({ sets: 2 }), last))).toEqual([100, 80]);
+    expect(weights(next(press({ sets: 4 }), last))).toEqual([100, 80, 80, 100]);
+  });
+
+  it('ignores warm-up, drop and myo sets, however heavy', () => {
+    const plan = press({
+      plannedSets: [
+        { reps: { min: 10, max: 10 }, kind: 'working' },
+        { reps: { min: 10, max: 10 }, kind: 'working' },
+        { reps: { min: 10, max: 10 }, kind: 'drop' },
+        { reps: { min: 10, max: 10 }, kind: 'myo' },
+      ],
+      progression: [ProgressionRule.load(new BigNumber(2.5))],
+    });
+    const last = performed(
+      plan,
+      [
+        [40, 10],
+        [40, 10],
+        [60, 4, 'drop'],
+        [70, 3, 'myo'],
+      ],
+      [[100, 5]],
+    );
+
+    const nextTime = next(plan, last);
+
+    expect(nextTime.potentialSets.map((s) => [s.kind, s.weight.value.toNumber()])).toEqual([
+      ['working', 42.5],
+      ['working', 42.5],
+      ['drop', 60],
+      ['myo', 70],
+    ]);
+    expect(todaysTarget(nextTime, last)?.reason).toEqual({
+      kind: 'weightUp',
+      by: kg(2.5),
+      lastTime: { sets: 2, reps: 10 },
+    });
+  });
+
+  describe('the add weight rule', () => {
+    const plan = press({ sets: 3, progression: [ProgressionRule.load(new BigNumber(2.5))] });
+
+    it('adds weight once the best set hit its target, whatever the other sets did', () => {
+      const last = performed(plan, [
+        [40, 8],
+        [40, 10],
+        [40, 6],
+      ]);
+
+      expect(weights(next(plan, last))).toEqual([42.5, 42.5, 42.5]);
+    });
+
+    it('holds the weight when the best set fell short, though a lighter set hit its target', () => {
+      const last = performed(plan, [
+        [40, 10],
+        [40, 10],
+        [45, 8],
+      ]);
+
+      expect(weights(next(plan, last))).toEqual([40, 40, 45]);
+    });
+
+    it('waits behind a rep ladder that not every set has climbed yet', () => {
+      const ladder = press({
+        sets: 3,
+        progression: [
+          ProgressionRule.of({ axis: 'reps', step: new BigNumber(1), ceiling: new BigNumber(12) }),
+          ProgressionRule.load(new BigNumber(2.5)),
+        ],
+      });
+      const last = performed(ladder, [
+        [40, 10],
+        [40, 10],
+        [40, 9],
+      ]);
+
+      const nextTime = next(ladder, last);
+
+      expect(weights(nextTime)).toEqual([40, 40, 40]);
+      expect(nextTime.potentialSets.map((s) => s.target.max)).toEqual([10, 10, 10]);
+    });
+  });
+
+  it('climbs a set added to the routine from the best set’s rung when reps are progressed', () => {
+    const ladder = press({
+      sets: 3,
+      repsConfig: { type: 'fixed', reps: 8 },
+      progression: [ProgressionRule.of({ axis: 'reps', step: new BigNumber(1), ceiling: new BigNumber(15) })],
+    });
+    const last = performed(ladder, [
+      [40, 12],
+      [40, 12],
+      [40, 12],
+    ]).withAllSets((s) => s.with({ target: { min: 12, max: 12 } }));
+
+    expect(next(ladder.withSets(4), last).potentialSets.map((s) => s.target.max)).toEqual([13, 13, 13, 13]);
   });
 });
