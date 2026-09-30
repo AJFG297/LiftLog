@@ -1,10 +1,11 @@
 import Button from '@/components/presentation/foundation/button';
 import ExerciseFilterer from '@/components/presentation/workout-editor/exercise-filterer';
+import { filterExercises, searchSeedFor } from '@/components/presentation/workout-editor/filter-exercises';
 import { spacing } from '@/hooks/useAppTheme';
 import { ExerciseDescriptor } from '@/models/exercise-models';
 import { useAppSelector, useAppSelectorWithArg } from '@/store';
 import { PickedExercise, setExerciseSearchResult } from '@/store/app';
-import { selectExerciseById, selectExerciseIds, updateExercise } from '@/store/stored-sessions';
+import { selectExerciseById, selectExercises, updateExercise } from '@/store/stored-sessions';
 import { uuid } from '@/utils/uuid';
 import { LegendList } from '@legendapp/list';
 import { useTranslate } from '@tolgee/react';
@@ -20,9 +21,12 @@ export function ExerciseSearch(props: { requestId: string; exerciseName: string 
   const { t } = useTranslate();
   const dispatch = useDispatch();
   const { dismiss } = useRouter();
-  const exerciseIds = useAppSelector(selectExerciseIds);
-  const [filteredExerciseIds, setFilteredExerciseIds] = useState(exerciseIds);
-  const [suggestedNewExercise, setSuggestedNewExercise] = useState<ExerciseDescriptor | 'NONE'>('NONE');
+  const exercises = useAppSelector(selectExercises);
+  // The field opens with the exercise's name when it names one, so the list must start filtered by it.
+  const [seed] = useState(() => searchSeedFor(exercises, props.exerciseName));
+  const [initialResult] = useState(() => filterExercises(exercises, seed, []));
+  const [filteredExerciseIds, setFilteredExerciseIds] = useState(initialResult.ids);
+  const [suggestedNewExercise, setSuggestedNewExercise] = useState(initialResult.suggestion);
 
   const exerciseListItems = useMemo(
     () => ['filter', suggestedNewExercise, ...filteredExerciseIds] as const,
@@ -56,7 +60,7 @@ export function ExerciseSearch(props: { requestId: string; exerciseName: string 
           if (i.index === 0) {
             return (
               <ExerciseFilterer
-                exerciseName={props.exerciseName}
+                exerciseName={seed}
                 onSuggestedNewExercise={setSuggestedNewExercise}
                 onFilteredExerciseIdsChange={setFilteredExerciseIds}
               />

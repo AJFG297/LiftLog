@@ -106,6 +106,18 @@ describe('themeTokens', () => {
     }
   });
 
+  it.each([
+    ['light', '#B0552F'],
+    ['dark', '#F0A07E'],
+    ['trueBlack', '#F0A07E'],
+  ] as const)('keeps the warm ink fixed and legible on the %s card and page', (variant, warmInk) => {
+    const n = NEUTRALS[variant];
+    expect(n.warmInk).toBe(warmInk);
+    expect(themeTokens('#2F5BD3', variant).warmInk).toBe(warmInk);
+    expect(wcag(n.warmInk, n.card)).toBeGreaterThanOrEqual(MIN_TEXT_CONTRAST);
+    expect(wcag(n.warmInk, n.bg)).toBeGreaterThanOrEqual(MIN_TEXT_CONTRAST);
+  });
+
   it('keeps white legible on the failure fill in both modes', () => {
     for (const variant of VARIANTS) {
       const t = themeTokens(VERMILION, variant);

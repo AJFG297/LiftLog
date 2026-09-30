@@ -118,6 +118,25 @@ wait_for() { # wait_for <seconds> <description> <command...>
 booted() { [[ "$(adb_s shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" == "1" ]]; }
 metro_up() { curl -fsS "http://127.0.0.1:$METRO_PORT/status" 2>/dev/null | grep -q packager-status:running; }
 
+# The dev client's floating Tools gear sits over header actions such as the live workout's Finish, and a
+# tap by id lands on the element's centre, which opens the dev menu instead. The dev menu reads the gear's
+# visibility from its own preferences, so switch it off there before launch, keeping every other key.
+hide_dev_menu_gear() {
+  local prefs="shared_prefs/expo.modules.devmenu.sharedpreferences.xml"
+  local tmp="$STATE_DIR/devmenu-prefs.xml"
+  adb_s shell am force-stop "$APP_ID"
+  adb_s exec-out run-as "$APP_ID" cat "$prefs" > "$tmp" 2>/dev/null || true
+  if ! grep -q '</map>' "$tmp"; then
+    printf "<?xml version='1.0' encoding='utf-8' standalone='yes' ?>\n<map>\n</map>\n" > "$tmp"
+  fi
+  sed -i '' -e '/name="showFab"/d' -e 's#</map>#    <boolean name="showFab" value="false" />\
+</map>#' "$tmp"
+  adb_s push "$tmp" /data/local/tmp/verify-devmenu-prefs.xml > /dev/null
+  adb_s shell chmod 644 /data/local/tmp/verify-devmenu-prefs.xml
+  adb_s shell run-as "$APP_ID" sh -c "'mkdir -p shared_prefs && cp /data/local/tmp/verify-devmenu-prefs.xml $prefs'"
+  adb_s shell rm -f /data/local/tmp/verify-devmenu-prefs.xml
+}
+
 cmd_up() {
   [[ -d "$HOME/.android/avd/$AVD.avd" ]] || die "AVD $AVD missing; run: verify.sh setup"
   [[ -f "$APK" ]] || die "APK missing at $APK; run: verify.sh build"
@@ -162,6 +181,7 @@ cmd_up() {
     wait_for 120 "metro on $METRO_PORT" metro_up
   fi
 
+  hide_dev_menu_gear
   adb_s shell am start -a android.intent.action.VIEW -d "$DEV_URL" "$APP_ID" > /dev/null
   echo "launched dev client against metro :$METRO_PORT"
   echo "run id: $(cat "$STATE_DIR/run-id")  evidence: $dir"
@@ -233,10 +253,20 @@ cmd_shot() {
 }
 
 cmd_ui() { # dump the current screen's view hierarchy (resource-id = RN testID)
-  local f; f="$(run_dir)/$(date +%H%M%S)-${1:-ui}.xml"
-  adb_s shell uiautomator dump /sdcard/verify-ui.xml > /dev/null
-  adb_s exec-out cat /sdcard/verify-ui.xml > "$f"
-  grep -oE '(text|resource-id|content-desc)="[^"]+"' "$f" | sort -u
+  local f; f="$(run_dir)/$(date +%H%M%S)-${1:-ui}"
+  # uiautomator dump fails on a screen that never goes idle (a ticking rest timer) or while Maestro's
+  # driver holds the accessibility connection, and it leaves the last dump behind, so a failed dump
+  # used to print an earlier screen. Clear it first and fall back to Maestro's own hierarchy.
+  adb_s shell rm -f /sdcard/verify-ui.xml
+  if adb_s shell uiautomator dump /sdcard/verify-ui.xml 2>&1 | grep -q 'dumped to'; then
+    f="$f.xml"
+    adb_s exec-out cat /sdcard/verify-ui.xml > "$f"
+    grep -oE '(text|resource-id|content-desc)="[^"]+"' "$f" | sort -u
+  else
+    f="$f.json"
+    maestro --device "$SERIAL" hierarchy > "$f"
+    grep -oE '"(text|resource-id|accessibilityText)" : "[^"]+"' "$f" | sort -u
+  fi
   echo "saved $f" >&2
 }
 

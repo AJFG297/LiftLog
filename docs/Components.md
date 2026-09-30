@@ -95,7 +95,8 @@ library.
    Detents are ascending fractions of the screen height. Android honours at most three, and the type allows
    no more. The options hide the native header and show the grabber (iOS).
 2. Start the screen with `<SheetHeader title subtitle onClose={() => router.back()} />`, and give its root
-   view the `card` background.
+   view the `card` background. A short count that has to stay readable, like "7 exercises", goes in
+   `titleDetail`: it follows the title after a dot, and a long title truncates before it does.
 3. Open it with `router.push`. It closes with `router.back()` or a swipe down.
 
 The number pad isn't a sheet: it's an in-screen panel, so the set being edited stays visible.

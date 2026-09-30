@@ -28,7 +28,7 @@ export function routineChangeCopy(t: UseTranslateResult['t'], change: RoutineCha
       subtitle: t('finish.update_routine.removed.subtitle'),
     }))
     .with({ kind: 'swapped' }, (c) => ({
-      icon: 'reload',
+      icon: 'swapHoriz',
       title: t('finish.update_routine.swapped.title', { from: c.from, to: c.to }),
       subtitle: t('finish.update_routine.swapped.subtitle'),
     }))
@@ -48,7 +48,7 @@ export function routineChangeCopy(t: UseTranslateResult['t'], change: RoutineCha
             ? 'finish.update_routine.set_removed_one.subtitle'
             : 'finish.update_routine.set_removed_many.subtitle';
       return {
-        icon: 'fitnessCenter',
+        icon: 'notes',
         title:
           c.to === 1
             ? t('finish.update_routine.set_count_one.title', { name: c.exerciseName, from: c.from })

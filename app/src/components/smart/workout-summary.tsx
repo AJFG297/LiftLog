@@ -1,13 +1,13 @@
 import FullHeightScrollView from '@/components/layout/full-height-scroll-view';
 import { ActionButton } from '@/components/presentation/foundation/action-button';
 import { Card } from '@/components/presentation/foundation/card';
-import { Chip } from '@/components/presentation/foundation/chip';
 import { MsIconSrc } from '@/components/presentation/foundation/ms-icon-source';
 import { RoundIconButton } from '@/components/presentation/foundation/round-icon-button';
 import { SurfaceText } from '@/components/presentation/foundation/surface-text';
+import { FeelPicker } from '@/components/presentation/summary/feel-picker';
 import { RoutineUpdatedBanner } from '@/components/presentation/summary/routine-updated-banner';
 import { StatCard } from '@/components/presentation/summary/stat-card';
-import { BestSetRow, ChangeTone, RecordRow } from '@/components/presentation/summary/summary-rows';
+import { BestSetRow, ChangeTone, LoadText, RecordRow } from '@/components/presentation/summary/summary-rows';
 import { useServices } from '@/components/smart/services-provider';
 import { SHEET_OVER_SUMMARY_HREF, useUndoRoutineUpdate } from '@/components/smart/session-diff-save';
 import { useFinishWorkout } from '@/hooks/useFinishWorkout';
@@ -155,17 +155,11 @@ export function WorkoutSummary({ sessionId, finished }: WorkoutSummaryProps) {
     dispatch(encryptAndShare({ item: new SharedSession(session), title: t('workout.shared_item.title') }));
 
   const routineName = session.blueprint.name;
-  const routineIndex = program.sessions.findIndex((s) => s.name === routineName);
-  const routine = routineIndex >= 0 ? program.sessions[routineIndex] : undefined;
+  const routine = program.sessions.find((s) => s.name === routineName);
+  // Programs repeat with no set length, so there is no honest "session N of M" to show: just the program.
   const dateLine = [
     formatDate(session.date, { weekday: 'long', month: 'short', day: 'numeric' }),
-    routine
-      ? t('finish.summary.position.label', {
-          program: program.name,
-          position: routineIndex + 1,
-          total: program.sessions.length,
-        })
-      : undefined,
+    routine && program.name,
   ]
     .filter(Boolean)
     .join(' · ');
@@ -282,17 +276,11 @@ export function WorkoutSummary({ sessionId, finished }: WorkoutSummaryProps) {
       {finished ? (
         <Card style={{ gap: spacing[3] }}>
           <SectionTitle>{t('finish.summary.feel.title')}</SectionTitle>
-          <View style={{ flexDirection: 'row', marginHorizontal: -spacing[1] }}>
-            {SESSION_FEELS.map((feel) => (
-              <Chip
-                key={feel}
-                label={t(FEEL_KEYS[feel])}
-                selected={session.reflection?.feel === feel}
-                onPress={() => pickFeel(feel)}
-                style={{ flexGrow: 1, flexBasis: 0 }}
-              />
-            ))}
-          </View>
+          <FeelPicker
+            options={SESSION_FEELS.map((feel) => ({ value: feel, label: t(FEEL_KEYS[feel]) }))}
+            selected={session.reflection?.feel}
+            onPick={pickFeel}
+          />
           <TextInput
             value={noteDraft}
             onChangeText={setNoteDraft}
@@ -461,14 +449,14 @@ function recordCopy(t: UseTranslateResult['t'], record: SessionRecord, unit: Wei
     return {
       exerciseName: record.exerciseName,
       kind: t('finish.summary.record_heaviest.label'),
-      value: `${formatLoad(record.weight)} × ${record.reps}`,
+      value: loadText(record.weight, 2, record.reps),
       was: t('finish.summary.record_was.label', { value: formatLoad(record.previous) }),
     };
   }
   return {
     exerciseName: record.exerciseName,
     kind: t('finish.summary.record_one_rep_max.label'),
-    value: formatLoad(record.oneRepMax.convertTo(unit), 1),
+    value: loadText(record.oneRepMax.convertTo(unit), 1),
     was: t('finish.summary.record_was.label', { value: formatLoad(record.previous.convertTo(unit), 1) }),
   };
 }
@@ -476,21 +464,24 @@ function recordCopy(t: UseTranslateResult['t'], record: SessionRecord, unit: Wei
 function bestSetCopy(
   t: UseTranslateResult['t'],
   { best, change, tracksWeight }: BestSetComparison,
-): { best: string; change: string; changeSpoken: string; tone: ChangeTone } {
-  const bestText = tracksWeight
-    ? `${formatNumber(best.weight)} × ${best.reps}`
-    : t('finish.summary.reps.label', { count: best.reps });
+): { best: string; bestNumeric: boolean; change: string; changeSpoken: string; tone: ChangeTone } {
+  const bestCopy = {
+    best: tracksWeight
+      ? `${formatNumber(best.weight)} × ${best.reps}`
+      : t('finish.summary.reps.label', { count: best.reps }),
+    bestNumeric: tracksWeight,
+  };
   switch (change.type) {
     case 'new':
       return {
-        best: bestText,
+        ...bestCopy,
         change: t('finish.summary.change_new.label'),
         changeSpoken: t('finish.summary.change_new_spoken.label'),
         tone: 'new',
       };
     case 'same':
       return {
-        best: bestText,
+        ...bestCopy,
         change: t('finish.summary.change_same.label'),
         changeSpoken: t('finish.summary.change_same_spoken.label'),
         tone: 'same',
@@ -499,7 +490,7 @@ function bestSetCopy(
       const up = change.delta.value.isPositive();
       const amount = formatLoad(change.delta.with({ value: change.delta.value.abs() }));
       return {
-        best: bestText,
+        ...bestCopy,
         change: up
           ? t('finish.summary.change_weight_up.label', { amount })
           : t('finish.summary.change_weight_down.label', { amount }),
@@ -514,7 +505,7 @@ function bestSetCopy(
       const count = Math.abs(change.delta);
       const amount = count === 1 ? t('finish.summary.one_rep.label') : t('finish.summary.reps.label', { count });
       return {
-        best: bestText,
+        ...bestCopy,
         change: up
           ? count === 1
             ? t('finish.summary.change_rep_up.label')
@@ -534,6 +525,10 @@ function bestSetCopy(
 /** A weight's number alone, to two decimal places at most: a converted weight can carry many. */
 function formatNumber(weight: Weight, decimalPlaces = 2): string {
   return localeFormatBigNumber(weight.value.decimalPlaces(decimalPlaces));
+}
+
+function loadText(weight: Weight, decimalPlaces: number, reps?: number): LoadText {
+  return { amount: formatNumber(weight, decimalPlaces), unit: shortFormatWeightUnit(weight.unit), reps };
 }
 
 function formatLoad(weight: Weight, decimalPlaces = 2): string {

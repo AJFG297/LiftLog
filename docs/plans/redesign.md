@@ -1,6 +1,6 @@
 # Plan: app redesign ("Clarity")
 
-Status: **in progress**. Phases 0 and 1 are done: ADR-0002 is accepted, and the theme tokens, fonts, core components, number pad and new set types are merged (see [Theming.md](../Theming.md)). Phase 2, the live workout, is next. The Linear parent issue is PM-16, "Spec: App redesign (Clarity)".
+Status: **in progress**. Phases 0 and 1 are done: ADR-0002 is accepted, and the theme tokens, fonts, core components, number pad and new set types are merged (see [Theming.md](../Theming.md)). Phase 2, the gym loop, is done: focus mode and the All exercises sheet (PM-23), set logging (PM-29), rest in the header (PM-30) and finishing a workout (PM-31) are merged, with a pass to match the canvas. Phase 3 is next. The Linear parent issue is PM-16, "Spec: App redesign (Clarity)".
 
 The prototypes live on a private claude.ai design canvas owned by the author
 (<https://claude.ai/artifact/47zQyGzQ5NcrAP7Yw4Szwx>). It holds 28 clickable phone screens: the chosen
@@ -101,9 +101,10 @@ So this is a rebuild of screens and a few model additions, not a rewrite.
 - An arbitrary colour, including a very light one like yellow, still gives a legible theme. Bright hues
   get pulled darker for the fill and lighter for dark-mode text, so they may look duller than picked.
 - Keep the existing `colorSchemeSeed` preference and `theme-chooser.tsx`. Swap Material's presets for a
-  curated set (vermilion default, forest, blue, violet, rose, teal, amber) and keep the custom wheel.
-- The seed's `'default'` value means **Match wallpaper** on Android: Material You's primary becomes the
-  accent source.
+  curated set (vermilion, forest, blue, violet, rose, teal, amber) and keep the custom wheel.
+- A fresh install follows the wallpaper. The seed's default value, `'default'`, means **Match wallpaper**:
+  Material You's primary becomes the accent source. Vermilion is the fallback on devices that can't match
+  the wallpaper (before Android 12, and iOS).
 - `themeMode` (system/light/dark) stays. `trueBlackDarkTheme` becomes a variant of the dark neutrals.
 - Routine colours are a separate, per-routine choice, and the accent never changes them.
 
@@ -248,3 +249,7 @@ Answered:
 Still open:
 
 - Does Progress (step 15) need its own round of prototypes before it's built? Probably yes.
+- The summary's date line names the program but not the canvas's "session 13 of 18". Programs repeat with
+  no set length, and a session doesn't record its program or cycle, so showing progress needs a model change.
+- The live workout's All exercises sheet keeps its always-visible drag handles instead of the canvas's
+  Reorder button. Mid-workout that's one drag, not a tap into reorder mode and then a drag.

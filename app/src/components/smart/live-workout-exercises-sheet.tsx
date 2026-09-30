@@ -159,6 +159,11 @@ function SheetContent({ session }: { session: Session }) {
     <View style={{ flex: 1, backgroundColor: tokens.card, paddingHorizontal: spacing.pageHorizontalMargin }}>
       <SheetHeader
         title={session.blueprint.name}
+        titleDetail={
+          session.recordedExercises.length === 1
+            ? t('live_workout.exercises_sheet_one.label')
+            : t('live_workout.exercises_sheet_many.label', { count: session.recordedExercises.length })
+        }
         subtitle={t('live_workout.exercises_sheet.subtitle', { done: doneSets, total: totalSets, minutes: minutesIn })}
         onClose={back}
       />
