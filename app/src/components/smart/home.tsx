@@ -265,7 +265,8 @@ export function Home() {
           ) : (
             <HistoryRestRow
               key={entry.date.toString()}
-              day={formatDate(entry.date, { weekday: 'short', day: 'numeric' })}
+              weekday={formatDate(entry.date, { weekday: 'short' })}
+              dayOfMonth={entry.date.dayOfMonth()}
               label={entry.isToday ? t('home.history.today.label') : t('home.history.rest_day.label')}
             />
           ),

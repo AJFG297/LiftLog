@@ -83,8 +83,9 @@ export function HistoryWorkoutCard(props: HistoryWorkoutCardProps) {
 }
 
 /** A day without a workout, in the 7-day view: a thin line rather than a card. */
-export function HistoryRestRow({ day, label }: { day: string; label: string }) {
+export function HistoryRestRow({ weekday, dayOfMonth, label }: { weekday: string; dayOfMonth: number; label: string }) {
   const { tokens } = useAppTheme();
+  const day = `${weekday} ${dayOfMonth}`;
   return (
     <View
       style={{
@@ -97,10 +98,12 @@ export function HistoryRestRow({ day, label }: { day: string; label: string }) {
       accessible
       accessibilityLabel={`${day}, ${label}`}
     >
+      {/* One line that may grow past the card's date column: a longer weekday would otherwise wrap above the rule. */}
       <SurfaceText
         font="text-xs"
         weight="600"
-        style={[tabularText, { width: DATE_COLUMN, textAlign: 'center', color: tokens.muted }]}
+        numberOfLines={1}
+        style={[tabularText, { minWidth: DATE_COLUMN, textAlign: 'center', color: tokens.muted }]}
       >
         {day}
       </SurfaceText>
