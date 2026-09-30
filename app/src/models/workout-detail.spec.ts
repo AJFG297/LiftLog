@@ -3,6 +3,7 @@ import { LocalDate, OffsetDateTime } from '@js-joda/core';
 import { SessionBlueprint, WeightedExerciseBlueprint } from '@/models/blueprint-models';
 import { PotentialSet, RecordedSet, RecordedWeightedExercise, Session } from '@/models/session-models';
 import { makeWeightedBlueprint } from '@/models/session-models/__test__/helpers';
+import { withSetKind } from '@/models/session-models/set-entry';
 import { Weight } from '@/models/weight';
 import {
   DetailSetRow,
@@ -27,6 +28,8 @@ const press = makeWeightedBlueprint({
   sets: 2,
   repsConfig: { type: 'fixed', reps: 8 },
 });
+// This week's routine warms up before the bench.
+const benchWithWarmup = bench.with({ warmupSets: [{ load: undefined, reps: 8 }] });
 const fly = makeWeightedBlueprint({ name: 'Cable Fly', exerciseId: 'cable-fly', sets: 1 });
 
 function slot(weight: number, reps: number | undefined, kind: PotentialSet['kind'] = 'working') {
@@ -62,10 +65,17 @@ const lastWeek = workout('last-week', 16, [
   exercise(press, [slot(50, 5), slot(50, 5)]),
 ]);
 
-const today = workout('today', 23, [
-  exercise(bench, [slot(90, 5), slot(90, 5), slot(70, 8, 'drop')], [slot(60, 8, 'warmup')]),
-  exercise(press, [slot(50, 8), slot(50, 7)]),
-]).withAddedExercise(fly, false);
+// The third bench set was turned into a drop set during the workout, and the fly was added to it, through
+// the same edits the workout screen makes, so the session's plan follows its sets.
+const benchWithDrop = withSetKind(
+  { exercise: exercise(benchWithWarmup, [slot(90, 5), slot(90, 5), slot(70, 8)], [slot(60, 8, 'warmup')]), drafts: {} },
+  { list: 'working', index: 2 },
+  'drop',
+).exercise;
+const today = workout('today', 23, [benchWithDrop, exercise(press, [slot(50, 8), slot(50, 7)])]).withAddedExercise(
+  fly,
+  false,
+);
 
 function describeRows(rows: DetailSetRow[] | undefined) {
   return rows?.map((row) => ({
@@ -87,17 +97,20 @@ describe('routineFromSession', () => {
       routine.exercises.map((x) => ({
         name: x.name,
         exerciseId: x.exerciseId,
+        warmups: x.type === 'WeightedExerciseBlueprint' ? x.warmupSets.map((s) => s.reps) : [],
         sets: x.type === 'WeightedExerciseBlueprint' ? x.plannedSets.map((s) => `${s.kind} ${s.reps.min}`) : [],
       })),
     ).toEqual([
-      { name: 'Bench Press', exerciseId: 'bench-press', sets: ['working 5', 'working 5', 'working 5'] },
-      { name: 'Overhead Press', exerciseId: 'overhead-press', sets: ['working 8', 'working 8'] },
-      { name: 'Cable Fly', exerciseId: 'cable-fly', sets: ['working 10'] },
+      { name: 'Bench Press', exerciseId: 'bench-press', warmups: [8], sets: ['working 5', 'working 5', 'drop 5'] },
+      { name: 'Overhead Press', exerciseId: 'overhead-press', warmups: [], sets: ['working 8', 'working 8'] },
+      { name: 'Cable Fly', exerciseId: 'cable-fly', warmups: [], sets: ['working 10'] },
     ]);
   });
 
-  it('is the same structure a routine update would save', () => {
-    expect(routineFromSession(today, 'Push').equals(today.blueprint)).toBe(true);
+  it('leaves out an exercise removed during the workout', () => {
+    const routine = routineFromSession(today.withRemovedExercise(1), 'Push 2');
+
+    expect(routine.exercises.map((x) => x.name)).toEqual(['Bench Press', 'Cable Fly']);
   });
 });
 
