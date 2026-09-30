@@ -15,6 +15,8 @@ interface LiveWorkoutHeaderProps {
   startTime: OffsetDateTime | undefined;
   /** Where the rest pill sits, between the title and Finish. */
   restSlot?: ReactNode;
+  /** A thin line along the header's bottom edge, over its padding, so it never moves the screen. */
+  restProgressSlot?: ReactNode;
   onMinimise: () => void;
   onEditWorkout: () => void;
   onFinish: () => void;
@@ -36,6 +38,11 @@ export function LiveWorkoutHeader(props: LiveWorkoutHeaderProps) {
         backgroundColor: tokens.bg,
       }}
     >
+      {props.restProgressSlot ? (
+        <View pointerEvents="none" style={{ position: 'absolute', left: 0, right: 0, bottom: 0 }}>
+          {props.restProgressSlot}
+        </View>
+      ) : null}
       <RoundIconButton
         icon="expandMore"
         testID="minimise-workout"

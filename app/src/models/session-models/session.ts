@@ -25,6 +25,7 @@ import {
 } from '@/models/session-models/recorded-exercise';
 import { PotentialSet, RecordedWeightedExercise } from '@/models/session-models/recorded-weighted-exercise';
 import { RestTimer } from '@/models/session-models/rest-timer';
+import { restWindowOf } from '@/models/session-models/rest';
 import { normalizedReflection, reflectionsEqual, SessionReflection } from '@/models/session-models/reflection';
 import { IndexOutOfBoundsError } from '@/utils/index-out-of-bounds';
 
@@ -529,20 +530,9 @@ export class Session {
     return result;
   }
 
+  /** When the rest countdown runs out, which is when the "rest over" notification is scheduled. */
   get restTimerEndTime(): OffsetDateTime | undefined {
-    if (!this.restTimer || this.restTimer.isPaused) {
-      return undefined;
-    }
-    const exercise = this.lastExercise;
-    if (this.nextExercise && exercise && exercise.lastActivityTime && exercise instanceof RecordedWeightedExercise) {
-      const { minRest, failureRest } = exercise.blueprint.restBetweenSets;
-      const rest = exercise.lastSetMissedTarget ? failureRest : minRest;
-
-      if (rest.equals(Duration.ZERO)) {
-        return undefined;
-      }
-      return this.restTimer.startedAt.plus(rest);
-    }
+    return restWindowOf(this)?.readyAt;
   }
 
   /** The exercise with the latest set, warm-ups included: the one rest and the workout's end follow. */

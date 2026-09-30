@@ -64,7 +64,9 @@ method or per-key effect. Keys with special needs use the `persist: false` / `hy
 ### Direct `keyValueStore` use
 
 A few non-settings blobs skip `PreferenceService` and use `extra.keyValueStore` directly - the hidden
-built-in exercise id list, the "built-in programs seeded" marker. That's the escape hatch for a value
+built-in exercise id list, the "built-in programs seeded" marker, and the running rest timer
+(`ActiveRestTimer`, versioned JSON written by the workout worker effects and read back after workouts
+hydrate, so a relaunch keeps the rest). That's the escape hatch for a value
 that isn't a user-facing setting but is too small or too structurally awkward for a table. New
 _settings_ should go through `PreferenceService`.
 
