@@ -39,7 +39,9 @@ fast-check):
 - `accentSoftInk` on `accentSoft` ≥ 4.5:1;
 - `invAccent` on `inverse` ≥ 4.5:1.
 
-`warmInk` is fixed per variant rather than generated, and clears 4.5:1 on `card` and `bg` in all three.
+`warmInk` is fixed per variant rather than generated, and clears 4.5:1 on `card` and `bg` in all three. The canvas
+also draws the warm-up badge's W in it, but on `accentSoft` it only reaches 4.27:1 in light, so that badge keeps
+`accentSoftInk`.
 
 A pick whose fill would be too light for white text is pulled darker, and a near-black one is lifted so it
 still reads as a colour. Hue and chroma are kept as far as the sRGB gamut allows. The default, vermilion

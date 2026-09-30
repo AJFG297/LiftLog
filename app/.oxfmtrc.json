@@ -6,7 +6,8 @@
   "printWidth": 120,
   "sortPackageJson": false,
   "ignorePatterns": [
-    "assets/exercises",
+    "assets/exercises/*.json",
+    "!assets/exercises/en.json",
     "src/gen",
     "src/drizzle",
     "src/types/dom.slim.d.ts",

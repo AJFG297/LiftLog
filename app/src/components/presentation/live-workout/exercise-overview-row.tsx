@@ -84,7 +84,7 @@ export function ExerciseOverviewRow(props: ExerciseOverviewRowProps) {
             <SurfaceText
               font="text-xs"
               weight="700"
-              style={{ color: tokens.accentSoftInk, textTransform: 'uppercase', letterSpacing: 0.7 }}
+              style={{ color: tokens.accentSoftInk, textTransform: 'uppercase' }}
             >
               {t('live_workout.exercise_row.now.label')}
             </SurfaceText>
