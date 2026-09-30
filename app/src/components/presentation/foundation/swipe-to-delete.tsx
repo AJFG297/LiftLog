@@ -8,6 +8,11 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
+/**
+ * The row is clipped so it can't slide out over whatever surrounds it. Badges that sit on a row's top edge
+ * (a set's "@9") poke out above it, so the clip starts this far higher.
+ */
+const OVERHANG = 8;
 /** How far a short swipe opens the row: the width of the Delete button it shows. */
 const ACTION_WIDTH = 88;
 /** Past this share of the row's width, letting go deletes instead of leaving the button open. */
@@ -99,13 +104,17 @@ export function SwipeToDelete(props: SwipeToDeleteProps) {
   const fillStyle = useAnimatedStyle(() => ({ width: Math.max(0, -offset.get()) }));
 
   return (
-    <View onLayout={(event) => width.set(event.nativeEvent.layout.width)} testID={props.testID}>
+    <View
+      onLayout={(event) => width.set(event.nativeEvent.layout.width)}
+      testID={props.testID}
+      style={{ overflow: 'hidden', paddingTop: OVERHANG, marginTop: -OVERHANG }}
+    >
       {onDelete ? (
         <Animated.View
           style={[
             {
               position: 'absolute',
-              top: 0,
+              top: OVERHANG,
               bottom: 0,
               right: 0,
               borderRadius: 12,
