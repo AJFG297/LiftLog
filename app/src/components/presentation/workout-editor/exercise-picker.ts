@@ -173,7 +173,7 @@ export function toggledPick(picked: readonly string[], id: string): string[] {
 export function customExerciseOf(input: {
   name: string;
   muscles: string[];
-  equipment: EquipmentChoice | undefined;
+  equipment: string | undefined;
 }): ExerciseDescriptor {
   return {
     name: input.name.trim(),

@@ -26,21 +26,25 @@ appId: com.ajfg297.liftlog
 - inputText: 'E2E Push'
 - hideKeyboard
 
-# Pick two exercises from the picker; each one is added 3 x 10 and opens expanded
+# Pick two exercises in one go. They're added 3 x 10 in the order they were tapped, and the first opens
+# expanded
 - tapOn:
     id: 'routine-start-pick'
 - tapOn:
     id: 'exercise-search-input'
-- inputText: 'Bench Press'
-- tapOn: 'Bench Press'
+- inputText: 'Standing Military Press'
 - tapOn:
-    id: 'routine-add-exercise'
+    id: 'exercise-picker-row-Standing Military Press'
 - tapOn:
-    id: 'exercise-search-input'
-- inputText: 'Overhead Press'
-- tapOn: 'Overhead Press'
+    id: 'exercise-search-clear'
+- inputText: 'Barbell Bench Press'
+- tapOn:
+    id: 'exercise-picker-row-Barbell Bench Press - Medium Grip'
+- assertVisible: 'Add 2 exercises'
+- tapOn:
+    id: 'exercise-picker-add'
 
-# Set the second exercise's first set to 8 reps on the number pad, go to the next set, then hide the pad
+# Set the first exercise's first set to 8 reps on the number pad, go to the next set, then hide the pad
 - tapOn:
     id: 'routine-set-reps-working-0'
 - tapOn: '8'
@@ -48,9 +52,7 @@ appId: com.ajfg297.liftlog
 - tapOn: 'Hide keypad'
 - assertVisible: '8'
 
-# Move it above the first, then superset the pair
-- tapOn:
-    id: 'routine-exercise-up'
+# Superset it with the one after it
 - tapOn:
     id: 'routine-exercise-superset'
 - assertVisible: 'Superset A'

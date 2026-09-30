@@ -17,9 +17,15 @@ appId: com.ajfg297.liftlog
     commands:
       - tapOn: 'Replace'
 
-# Add an exercise (defaults to "New Exercise", 3 sets x 10 reps) and leave it as-is
+# Add an exercise from the picker (3 sets x 10 reps) and leave it as-is
 - tapOn: 'Add exercise'
-- back
+- tapOn:
+    id: 'exercise-search-input'
+- inputText: 'Barbell Squat'
+- tapOn:
+    id: 'exercise-picker-row-Barbell Squat'
+- tapOn:
+    id: 'exercise-picker-add'
 
 # Log the first set with one tap on its check, which starts the rest timer
 - tapOn:

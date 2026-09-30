@@ -3,7 +3,6 @@ import { Chip } from '@/components/presentation/foundation/chip';
 import { SurfaceText } from '@/components/presentation/foundation/surface-text';
 import { MIN_TOUCH_TARGET } from '@/components/presentation/foundation/touch-target';
 import type { ChipOption } from '@/components/presentation/workout-editor/exercise-picker-filters';
-import type { EquipmentChoice } from '@/components/presentation/workout-editor/exercise-picker';
 import { fontFamily, spacing, useAppTheme } from '@/hooks/useAppTheme';
 import { TextInput, View } from 'react-native';
 
@@ -24,9 +23,10 @@ interface EquipmentChipsProps {
   label: string;
   /** "None", for an exercise that uses no equipment worth naming. */
   noneLabel: string;
-  options: ChipOption<EquipmentChoice>[];
-  value: EquipmentChoice | undefined;
-  onChange: (value: EquipmentChoice | undefined) => void;
+  /** Catalog spellings, such as `body only`. */
+  options: ChipOption<string>[];
+  value: string | undefined;
+  onChange: (value: string | undefined) => void;
 }
 
 /** One piece of equipment, or none. Also the equipment field in Settings → Exercises. */

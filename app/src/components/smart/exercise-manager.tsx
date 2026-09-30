@@ -24,6 +24,9 @@ import { showSnackbar } from '@/store/app';
 import { useMountEffect } from '@/hooks/useMountEffect';
 import ExerciseMuscleSelector from '@/components/presentation/workout-editor/exercise-muscle-selector';
 import ExerciseFilterer from '@/components/presentation/workout-editor/exercise-filterer';
+import { ExerciseEquipmentChips } from '@/components/presentation/workout-editor/exercise-create-form';
+import { customExerciseOf, EQUIPMENT_CHOICES } from '@/components/presentation/workout-editor/exercise-picker';
+import { equipmentLabel } from '@/components/smart/exercise-search';
 import { LegendList } from '@legendapp/list';
 import { ExerciseDescriptor } from '@/models/exercise-models';
 import { translateExerciseMeta } from '@/utils/exercise-meta';
@@ -79,7 +82,7 @@ function ExerciseListItem({
         </TouchableRipple>
       </View>
       <List.Accordion
-        title={exercise.name}
+        title={exercise.name || t('exercise.name.untitled')}
         // Important to have a space to ensure they are all the same size
         // Otherwise delete button can show through when there is no desc
         description={exercise.muscles.map((m) => translateExerciseMeta(t, 'muscle', m)).join(', ') || ' '}
@@ -139,16 +142,8 @@ export default function ExerciseManager() {
     dispatch(
       updateExercise({
         id: newId,
-        exercise: {
-          name: 'New exercise',
-          category: '',
-          equipment: null,
-          force: null,
-          instructions: '',
-          level: 'beginner',
-          mechanic: null,
-          muscles: [],
-        },
+        // Starts unnamed, so the name field is empty with its placeholder rather than holding text to delete.
+        exercise: customExerciseOf({ name: '', muscles: [], equipment: undefined }),
       }),
     );
     setFilteredExerciseIds([newId]);
@@ -170,7 +165,7 @@ export default function ExerciseManager() {
       isBuiltIn || !savedExercise ? restoreExercise(id) : updateExercise({ id, exercise: savedExercise });
     dispatch(
       showSnackbar({
-        text: t('deletion.item_deleted.message', { name: exercise.name }),
+        text: t('deletion.item_deleted.message', { name: exercise.name || t('exercise.name.untitled') }),
         action: t('generic.undo.button'),
         dispatchAction: [undoAction, setFilteredExerciseIdsAction(filteredExerciseIds)],
       }),
@@ -247,8 +242,10 @@ function ExerciseEditSheet({ exercise, exerciseId }: { exercise: ExerciseDescrip
     >
       <TextInput
         label={t('exercise.name.label')}
+        placeholder={t('exercise.name.placeholder')}
         value={exercise.name}
         onChangeText={(name) => update({ name })}
+        autoFocus={!exercise.name}
         testID="exercise-name-input"
       />
       <TextInput
@@ -259,6 +256,24 @@ function ExerciseEditSheet({ exercise, exerciseId }: { exercise: ExerciseDescrip
         testID="exercise-instructions-input"
       />
       <ExerciseMuscleSelector muscles={exercise.muscles} onChange={(muscles) => update({ muscles })} />
+      <ExerciseEquipmentChips
+        label={t('exercise_picker.equipment.label')}
+        noneLabel={t('exercise_picker.create.equipment.none')}
+        options={equipmentOptionsFor(t, exercise.equipment)}
+        value={exercise.equipment ?? undefined}
+        onChange={(equipment) => update({ equipment: equipment ?? null })}
+      />
     </View>
   );
+}
+
+/**
+ * The equipment choices, plus the exercise's own when the catalog gave it one outside them (an E-Z bar, a
+ * foam roll), so editing an exercise never shows it as having none.
+ */
+function equipmentOptionsFor(t: ReturnType<typeof useTranslate>['t'], current: string | null) {
+  const options = EQUIPMENT_CHOICES.map((choice) => ({ value: choice as string, label: equipmentLabel(t, choice) }));
+  return current && !options.some((option) => option.value === current)
+    ? [...options, { value: current, label: translateExerciseMeta(t, 'equipment', current) }]
+    : options;
 }

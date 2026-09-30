@@ -57,7 +57,7 @@ interface ExerciseSearchProps {
 interface CreateDraft {
   name: string;
   muscles: string[];
-  equipment: EquipmentChoice | undefined;
+  equipment: string | undefined;
 }
 
 /**

@@ -16,7 +16,18 @@ appId: com.ajfg297.liftlog
       visible: 'Replace current workout?'
     commands:
       - tapOn: 'Replace'
+# Add an exercise from the picker, then make it cardio in its editor
 - tapOn: 'Add exercise'
+- tapOn:
+    id: 'exercise-search-input'
+- inputText: 'Rowing, Stationary'
+- tapOn:
+    id: 'exercise-picker-row-Rowing, Stationary'
+- tapOn:
+    id: 'exercise-picker-add'
+- tapOn:
+    id: 'more-exercise-btn'
+- tapOn: 'Edit'
 - tapOn:
     id: 'cardio-button'
 - back
