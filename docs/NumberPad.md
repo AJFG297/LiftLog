@@ -46,7 +46,8 @@ The row above the keys explains the value being typed:
   can't make exactly gets the heaviest load under it and says how far short that is. A weight lighter than
   the bar says so. The drawing shows up to eight plates a side, then a count of the rest.
 - **Dumbbell:** the weight is per dumbbell. **Cable and machine:** the weight is what's on the stack.
-- **Reps:** RPE chips, 6 to 10 in half steps. Tapping the selected chip clears it.
+- **Reps:** RPE chips, 6 to 10 in half steps. The row opens scrolled to its right end, so 8 to 10 are in
+  view, or to the chip already picked. Tapping the selected chip clears it.
 
 ## Bar and plates
 
@@ -54,6 +55,13 @@ The bar weight and the plates a gym has are preferences, one of each per unit (`
 `availablePlates`), edited in Settings → App configuration → Bar and plates. Defaults: a 20 kg bar with
 25, 20, 15, 10, 5, 2.5 and 1.25 kg plates, and a 45 lb bar with 45, 35, 25, 10, 5 and 2.5 lb plates. Like
 every preference, they aren't in backups (see [Storage.md](./Storage.md)).
+
+## In the live workout
+
+The workout screen mounts the pad under the page, in place of the Up next dock, and passes `bottomInset`:
+iOS keeps the bottom safe-area inset, and Android, whose screen already ends above the tab bar, keeps
+none. Plate maths shows only for a load on external resistance; bodyweight exercises get no accessory.
+See [LiveWorkout.md](./LiveWorkout.md#logging-a-set).
 
 ## Trying it
 

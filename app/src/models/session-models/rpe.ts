@@ -14,3 +14,8 @@ export function isRpe(value: unknown): value is Rpe {
 export function formatRpe(rpe: Rpe): string {
   return `@${rpe}`;
 }
+
+/** The RPE after its chip is tapped: that value, or none when it was the one already picked. */
+export function rpeAfterTap(current: Rpe | undefined, tapped: Rpe): Rpe | undefined {
+  return current === tapped ? undefined : tapped;
+}

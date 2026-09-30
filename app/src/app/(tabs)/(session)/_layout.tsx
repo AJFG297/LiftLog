@@ -7,6 +7,8 @@ export default function Layout() {
     <StackWithHeader>
       <Stack.Screen name="session/index" options={{ headerShown: false }} />
       <Stack.Screen name="session/exercises" options={formSheetOptions([0.7, 0.95])} />
+      {/* Tall enough that all five set types show above the Android tab bar, which draws over this stack's sheets. */}
+      <Stack.Screen name="session/set-type" options={formSheetOptions([0.8, 0.95])} />
     </StackWithHeader>
   );
 }

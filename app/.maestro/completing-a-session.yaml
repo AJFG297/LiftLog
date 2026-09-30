@@ -21,23 +21,19 @@ appId: com.ajfg297.liftlog
 - tapOn: 'Add exercise'
 - back
 
-# Log the first set, which starts the rest timer
+# Log the first set with one tap on its check, which starts the rest timer
 - tapOn:
-    id: 'repcount'
+    id: 'set-check'
 - assertVisible:
     id: 'rest-timer'
 
-# Set the weight to 7.5kg (3 x 2.5kg increments) and save
+# Set the logged set's weight to 7.5kg (3 x 2.5kg steps on the number pad) and hide the pad
 - tapOn:
-    id: 'repcount-weight'
-- tapOn:
-    id: 'increment-weight'
-- tapOn:
-    id: 'increment-weight'
-- tapOn:
-    id: 'increment-weight'
-- tapOn:
-    id: 'save'
+    id: 'set-weight'
+- tapOn: 'Add 2.5 kg'
+- tapOn: 'Add 2.5 kg'
+- tapOn: 'Add 2.5 kg'
+- tapOn: 'Hide keypad'
 
 # Finish the (incomplete) session and confirm
 - tapOn:

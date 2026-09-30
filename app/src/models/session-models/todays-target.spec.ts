@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { Weight } from '@/models/weight';
 import { RecordedWeightedExercise } from '@/models/session-models/recorded-weighted-exercise';
-import { todaysTarget } from '@/models/session-models/todays-target';
+import { carriedFrom, plannedExerciseFor, todaysTarget } from '@/models/session-models/todays-target';
 import { emptyPotentialSet, makeRecordedExercise, makeWeightedBlueprint } from './__test__/helpers';
 
 const bench = makeWeightedBlueprint({ name: 'Bench', sets: 3, repsConfig: { type: 'fixed', reps: 5 } });
@@ -80,6 +80,18 @@ describe('todaysTarget', () => {
     });
   });
 
+  it('says it is new, not a first time, when only another set scheme was done before', () => {
+    expect(todaysTarget(today([60, 60, 60]), undefined, true)?.reason).toEqual({ kind: 'newScheme' });
+  });
+
+  it('says it is new when the performance carried from has no set to compare the top set with', () => {
+    const fourSets = bench.with({ sets: 4 });
+
+    expect(todaysTarget(today([85, 85, 85, 90], fourSets), lastTime([5, 5, 5]))?.reason).toEqual({
+      kind: 'newScheme',
+    });
+  });
+
   it('has no weight for a movement that carries no load', () => {
     const blueprint = makeWeightedBlueprint({ name: 'Plank', sets: 1, resistance: 'none' });
 
@@ -98,5 +110,64 @@ describe('todaysTarget', () => {
 
   it('has nothing to show for an exercise with no sets', () => {
     expect(todaysTarget(today([]), undefined)).toBeUndefined();
+  });
+});
+
+describe('carriedFrom', () => {
+  const fourSets = bench.with({ sets: 4 });
+
+  it('finds the performance by the routine’s key after a set is added mid-workout', () => {
+    const previous = lastTime([5, 5, 5]);
+    const withAddedSet = today([87.5, 87.5, 87.5, 87.5], fourSets);
+
+    expect(carriedFrom(withAddedSet, [previous], bench)).toBe(previous);
+    expect(withAddedSet.previousPerformanceIn([previous])).toBeUndefined();
+  });
+
+  it('prefers the routine’s lineage over a newer performance of another scheme', () => {
+    const olderThreeSets = lastTime([5, 5, 5]);
+    const newerFourSets = lastTime([5, 5, 5, 5], 80, fourSets);
+
+    expect(carriedFrom(today([87.5, 87.5, 87.5, 87.5], fourSets), [newerFourSets, olderThreeSets], bench)).toBe(
+      olderThreeSets,
+    );
+  });
+
+  it('matches on the exercise’s own key without a routine exercise', () => {
+    const previous = lastTime([5, 5, 5]);
+
+    expect(carriedFrom(today([87.5, 87.5, 87.5]), [previous], undefined)).toBe(previous);
+    expect(carriedFrom(today([87.5, 87.5, 87.5, 87.5], fourSets), [previous], undefined)).toBeUndefined();
+  });
+});
+
+describe('plannedExerciseFor', () => {
+  const heavyBench = bench;
+  const lightBench = bench.with({ sets: 4, repsConfig: { type: 'fixed', reps: 8 } });
+  const squat = makeWeightedBlueprint({ name: 'Squat', sets: 3 });
+  const routine = [heavyBench, squat, lightBench];
+
+  it('pairs a movement planned twice with its own place in the routine', () => {
+    const first = today([85, 85, 85]);
+    const second = today([60, 60, 60, 60, 60], lightBench.with({ sets: 5 }));
+    const session = [first, today([100, 100, 100], squat), second];
+
+    expect(plannedExerciseFor(first, session, routine)).toBe(heavyBench);
+    expect(plannedExerciseFor(second, session, routine)).toBe(lightBench);
+  });
+
+  it('finds the second bench’s own last time rather than the first’s', () => {
+    const heavyLastTime = lastTime([5, 5, 5]);
+    const lightLastTime = lastTime([8, 8, 8, 8], 60, lightBench);
+    const second = today([60, 60, 60, 60, 60], lightBench.with({ sets: 5 }));
+    const session = [today([85, 85, 85]), second];
+
+    expect(carriedFrom(second, [heavyLastTime, lightLastTime], plannedExerciseFor(second, session, routine))).toBe(
+      lightLastTime,
+    );
+  });
+
+  it('has none for an exercise outside the session', () => {
+    expect(plannedExerciseFor(today([85, 85, 85]), [], routine)).toBeUndefined();
   });
 });

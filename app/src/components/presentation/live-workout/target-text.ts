@@ -21,6 +21,8 @@ export function targetReasonText(t: TranslateFn, reason: TargetReason): string {
   switch (reason.kind) {
     case 'firstTime':
       return t('live_workout.target.first_time.body');
+    case 'newScheme':
+      return t('live_workout.target.new_scheme.body');
     case 'weightUp':
       return (
         t('live_workout.target.weight_up.body', { weight: formatWeightText(reason.by) }) + lastTime(reason.lastTime)

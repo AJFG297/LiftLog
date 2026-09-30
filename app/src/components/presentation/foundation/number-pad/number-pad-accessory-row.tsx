@@ -3,11 +3,12 @@ import { SurfaceText } from '@/components/presentation/foundation/surface-text';
 import { formatWeightText } from '@/components/presentation/foundation/weight-format';
 import { spacing, tabularText, useAppTheme } from '@/hooks/useAppTheme';
 import { platesFor } from '@/models/plates';
-import { RPE_VALUES, type Rpe } from '@/models/session-models/rpe';
+import { RPE_VALUES, type Rpe, rpeAfterTap } from '@/models/session-models/rpe';
 import { type LoadUnit, Weight } from '@/models/weight';
 import { localeFormatBigNumber } from '@/utils/locale-bignumber';
 import { useTranslate } from '@tolgee/react';
 import BigNumber from 'bignumber.js';
+import { useRef } from 'react';
 import { ScrollView, View } from 'react-native';
 import type { NumberPadAccessory } from './number-pad-accessory';
 import { PlateStack } from './plate-stack';
@@ -108,21 +109,58 @@ function LoadRow(props: { kind: keyof typeof LOAD_LABEL; value: BigNumber; unit:
 function RpeRow(props: { value: Rpe | undefined; onChange: (rpe: Rpe | undefined) => void }) {
   const { t } = useTranslate();
   const { tokens } = useAppTheme();
+  const scrollRef = useRef<ScrollView>(null);
+  const layout = useRef({ viewport: 0, content: 0, picked: undefined as number | undefined, placed: false });
+
+  // Working sets are mostly rated 8 to 10, so the row opens at its right end. A lower rating already
+  // picked is scrolled into view instead. Only the first layout places it, so tapping a chip never jumps.
+  const place = () => {
+    const { viewport, content, picked, placed } = layout.current;
+    if (placed || !viewport || !content || (props.value !== undefined && picked === undefined)) {
+      return;
+    }
+    const end = Math.max(0, content - viewport);
+    const x = picked === undefined ? end : Math.min(end, Math.max(0, picked - spacing[2]));
+    scrollRef.current?.scrollTo({ x, animated: false });
+    layout.current.placed = true;
+  };
+
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[3] }}>
       <SurfaceText font="text-sm" weight="600" style={{ color: tokens.muted }}>
         {t('number_pad.rpe.label')}
       </SurfaceText>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+      <ScrollView
+        ref={scrollRef}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        onLayout={(event) => {
+          layout.current.viewport = event.nativeEvent.layout.width;
+          place();
+        }}
+        onContentSizeChange={(width) => {
+          layout.current.content = width;
+          place();
+        }}
+      >
         {RPE_VALUES.map((rpe) => (
-          <Chip
+          <View
             key={rpe}
-            numeric
-            label={localeFormatBigNumber(new BigNumber(rpe))}
-            accessibilityLabel={t('number_pad.rpe_value.label', { rpe: localeFormatBigNumber(new BigNumber(rpe)) })}
-            selected={props.value === rpe}
-            onPress={() => props.onChange(props.value === rpe ? undefined : rpe)}
-          />
+            onLayout={(event) => {
+              if (props.value === rpe) {
+                layout.current.picked = event.nativeEvent.layout.x;
+                place();
+              }
+            }}
+          >
+            <Chip
+              numeric
+              label={localeFormatBigNumber(new BigNumber(rpe))}
+              accessibilityLabel={t('number_pad.rpe_value.label', { rpe: localeFormatBigNumber(new BigNumber(rpe)) })}
+              selected={props.value === rpe}
+              onPress={() => props.onChange(rpeAfterTap(props.value, rpe))}
+            />
+          </View>
         ))}
       </ScrollView>
     </View>
