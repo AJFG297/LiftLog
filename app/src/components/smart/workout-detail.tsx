@@ -39,6 +39,7 @@ import {
   selectSession,
   selectSessionsBefore,
 } from '@/store/stored-sessions';
+import { formatTimeRange } from '@/utils/format-time-range';
 import { localeFormatBigNumber } from '@/utils/locale-bignumber';
 import { uuid } from '@/utils/uuid';
 import { LocalDate, OffsetDateTime } from '@js-joda/core';
@@ -136,8 +137,7 @@ export function WorkoutDetail({ sessionId }: { sessionId: string }) {
     startTime && endTime
       ? t('workout_detail.date_time.label', {
           date,
-          start: formatTime(startTime, locale),
-          end: formatTime(endTime, locale),
+          time: formatTimeRange(epochDate(startTime), epochDate(endTime), locale),
         })
       : date;
 
@@ -335,8 +335,6 @@ function formatMinutes(minutes: number): string {
   return minutes < 60 ? `${minutes}m` : `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
 }
 
-function formatTime(time: OffsetDateTime, locale: string | undefined): string {
-  return new Intl.DateTimeFormat(locale, { hour: 'numeric', minute: '2-digit' }).format(
-    new Date(time.toInstant().toEpochMilli()),
-  );
+function epochDate(time: OffsetDateTime): Date {
+  return new Date(time.toInstant().toEpochMilli());
 }

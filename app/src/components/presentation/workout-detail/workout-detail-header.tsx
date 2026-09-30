@@ -5,10 +5,10 @@ import { View } from 'react-native';
 interface WorkoutDetailHeaderProps {
   /** The program and day ("PPL · Day 1"), when the routine is in the active program. */
   routineLine: string | undefined;
-  /** The routine's own colour. Routines don't have one yet, so a neutral swatch stands in. */
+  /** The routine's own colour. Routines don't have one yet, so the accent stands in. */
   routineColor?: string;
   name: string;
-  /** The date and the time range ("Wednesday, Sep 23 · 6:04 PM – 6:53 PM"). */
+  /** The date and the time range ("Wednesday, Sep 23 · 6:04 – 6:53 PM"). */
   dateLine: string;
 }
 
@@ -20,7 +20,7 @@ export function WorkoutDetailHeader({ routineLine, routineColor, name, dateLine 
       {routineLine ? (
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[2] }}>
           <View
-            style={{ width: 10, height: 10, borderRadius: 3, backgroundColor: routineColor ?? tokens.placeholder }}
+            style={{ width: 10, height: 10, borderRadius: 3, backgroundColor: routineColor ?? tokens.accent }}
           />
           <SurfaceText font="text-sm" weight="600" style={{ color: tokens.muted }}>
             {routineLine}
