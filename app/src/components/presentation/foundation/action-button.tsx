@@ -37,6 +37,8 @@ export function ActionButton({ label, onPress, variant = 'primary', disabled, st
       {({ pressed }) => (
         <View
           style={{
+            // Side by side in a row, the shorter secondary grows to its partner's height.
+            flexGrow: 1,
             minHeight: look.height,
             borderRadius: look.radius,
             paddingHorizontal: spacing[4],
