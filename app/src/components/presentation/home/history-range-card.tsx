@@ -148,28 +148,33 @@ function MonthGrid({
           <View key={weekIndex} style={{ flexDirection: 'row', gap: 6 }}>
             {week.map((cell, index) =>
               cell ? (
+                // Yoga grows a flex item from its border, so today's ring would widen its column. The ring
+                // goes on an inner view instead, and every column shares the row evenly.
                 <View
                   key={cell.key}
                   accessible
                   accessibilityLabel={cell.accessibilityLabel}
-                  style={{
-                    flex: 1,
-                    height: GRID_CELL_HEIGHT,
-                    borderRadius: 9,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    backgroundColor: cell.color ?? tokens.bg,
-                    ...dayBorder(cell, tokens.accentInk, undefined),
-                  }}
+                  style={{ flex: 1, height: GRID_CELL_HEIGHT }}
                 >
-                  <SurfaceText
-                    font="text-xs"
-                    numeric
-                    weight="500"
-                    style={{ color: cell.color ? tokens.onAccent : tokens.muted }}
+                  <View
+                    style={{
+                      flex: 1,
+                      borderRadius: 9,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backgroundColor: cell.color ?? tokens.bg,
+                      ...dayBorder(cell, tokens.accentInk, undefined),
+                    }}
                   >
-                    {cell.dayOfMonth}
-                  </SurfaceText>
+                    <SurfaceText
+                      font="text-xs"
+                      numeric
+                      weight="500"
+                      style={{ color: cell.color ? tokens.onAccent : tokens.muted }}
+                    >
+                      {cell.dayOfMonth}
+                    </SurfaceText>
+                  </View>
                 </View>
               ) : (
                 <View key={`blank-${index}`} style={{ flex: 1, height: GRID_CELL_HEIGHT }} />
