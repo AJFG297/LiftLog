@@ -315,6 +315,9 @@ export function ExerciseSearch({ requestId, mode, exerciseName, context }: Exerc
         </ScrollView>
       ) : (
         <LegendList
+          // A new search or chip is a new list: remounting starts it at the top. Kept, the old scroll offset
+          // lands past the end of a shorter list and shows it blank or partway down.
+          key={`${query.trim()}|${muscle ?? ''}|${equipment ?? ''}`}
           data={list.rows}
           extraData={picked}
           estimatedItemSize={66}
