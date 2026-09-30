@@ -4,8 +4,6 @@ import { spacing, useAppTheme } from '@/hooks/useAppTheme';
 import type { HexColor } from '@/utils/color';
 import { View } from 'react-native';
 
-/** Day numbers sit on routine colours, which are all dark enough for white (see `ROUTINE_COLORS`). */
-const ON_ROUTINE_COLOR = '#FFFFFF';
 const DAY_CIRCLE = 38;
 const GRID_CELL_HEIGHT = 34;
 
@@ -105,7 +103,7 @@ function WeekStrip({ weekdays, days }: { weekdays: string[]; days: RangeDay[] })
               font="text-sm"
               numeric
               weight="600"
-              style={{ color: day.color ? ON_ROUTINE_COLOR : tokens.muted }}
+              style={{ color: day.color ? tokens.onAccent : tokens.muted }}
             >
               {day.dayOfMonth}
             </SurfaceText>
@@ -168,7 +166,7 @@ function MonthGrid({
                     font="text-xs"
                     numeric
                     weight="500"
-                    style={{ color: cell.color ? ON_ROUTINE_COLOR : tokens.muted }}
+                    style={{ color: cell.color ? tokens.onAccent : tokens.muted }}
                   >
                     {cell.dayOfMonth}
                   </SurfaceText>
