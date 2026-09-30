@@ -35,7 +35,13 @@ const noFilters = { query: '', muscle: undefined, equipment: undefined };
 
 function ids(list: ReturnType<typeof pickerListOf>) {
   return list.rows.map((row) =>
-    row.kind === 'header' ? `# ${row.section}` : row.kind === 'create' ? `+ ${row.name}` : row.id,
+    row.kind === 'header'
+      ? `# ${row.section}`
+      : row.kind === 'create'
+        ? `+ ${row.name}`
+        : row.kind === 'filtered'
+          ? `~ ${row.name}`
+          : row.id,
   );
 }
 
@@ -134,8 +140,34 @@ describe('pickerListOf', () => {
   });
 
   it('reports no match when nothing matches the query and the chips', () => {
-    expect(pickerListOf(exercises, [], { ...noFilters, query: 'zercher' })).toEqual({ rows: [], noMatch: true });
-    expect(pickerListOf(exercises, [], { query: 'curl', muscle: 'legs', equipment: undefined }).noMatch).toBe(true);
+    expect(pickerListOf(exercises, [], { ...noFilters, query: 'zercher' })).toEqual({
+      rows: [],
+      noMatch: true,
+      hiddenByFilters: false,
+      canCreate: true,
+    });
+    expect(pickerListOf(exercises, [], { query: 'curl', muscle: 'legs', equipment: undefined })).toEqual({
+      rows: [],
+      noMatch: true,
+      hiddenByFilters: true,
+      canCreate: true,
+    });
+  });
+
+  it('offers no new exercise when the chips hide one named exactly that', () => {
+    expect(pickerListOf(exercises, [], { ...noFilters, query: 'hammer curl', equipment: 'barbell' })).toEqual({
+      rows: [],
+      noMatch: true,
+      hiddenByFilters: true,
+      canCreate: false,
+    });
+    const withDumbbellBench = {
+      ...exercises,
+      dbBench: exercise('Dumbbell Bench Press', ['chest'], 'dumbbell'),
+    };
+    const list = pickerListOf(withDumbbellBench, [], { ...noFilters, query: 'bench press', equipment: 'dumbbell' });
+    expect(ids(list)).toEqual(['# matches', 'dbBench', '~ Bench Press']);
+    expect(list.canCreate).toBe(false);
   });
 });
 

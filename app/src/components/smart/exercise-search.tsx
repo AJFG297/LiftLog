@@ -115,6 +115,10 @@ export function ExerciseSearch({ requestId, mode, exerciseName, context }: Exerc
   };
 
   const startCreate = (name: string) => setCreating({ name, muscles: musclesForGroup(muscle), equipment });
+  const clearFilters = () => {
+    setMuscle(undefined);
+    setEquipment(undefined);
+  };
 
   const saveCreated = () => {
     if (!creating?.name.trim()) {
@@ -154,6 +158,15 @@ export function ExerciseSearch({ requestId, mode, exerciseName, context }: Exerc
           <ExercisePickerCreateRow
             label={t('exercise_picker.create.button', { name: row.name })}
             onPress={() => startCreate(row.name)}
+          />
+        );
+      case 'filtered':
+        return (
+          <ExercisePickerCreateRow
+            testID="exercise-picker-filtered-row"
+            icon="visibility"
+            label={t('exercise_picker.filtered.button', { name: row.name })}
+            onPress={clearFilters}
           />
         );
       case 'exercise': {
@@ -307,10 +320,34 @@ export function ExerciseSearch({ requestId, mode, exerciseName, context }: Exerc
           contentContainerStyle={{ padding: spacing.pageHorizontalMargin }}
         >
           <ExercisePickerNoMatch
-            title={t('exercise_picker.no_match.title', { name: query.trim() })}
-            body={t('exercise_picker.no_match.body')}
-            createLabel={t('exercise_picker.create.button', { name: query.trim() })}
-            onCreate={() => startCreate(query.trim())}
+            title={
+              list.hiddenByFilters
+                ? t('exercise_picker.no_match.filtered.title', { name: query.trim() })
+                : t('exercise_picker.no_match.title', { name: query.trim() })
+            }
+            body={
+              list.hiddenByFilters ? t('exercise_picker.no_match.filtered.body') : t('exercise_picker.no_match.body')
+            }
+            actions={[
+              ...(list.hiddenByFilters
+                ? [
+                    {
+                      testID: 'exercise-picker-clear-filters',
+                      label: t('exercise_picker.filters.clear.button'),
+                      onPress: clearFilters,
+                    },
+                  ]
+                : []),
+              ...(list.canCreate
+                ? [
+                    {
+                      testID: 'exercise-picker-create',
+                      label: t('exercise_picker.create.button', { name: query.trim() }),
+                      onPress: () => startCreate(query.trim()),
+                    },
+                  ]
+                : []),
+            ]}
           />
         </ScrollView>
       ) : (

@@ -42,8 +42,11 @@ The routine or workout's name and exercise ids travel as route params, so a row 
 - With no search: **Recent**, then every other exercise by name. Recent is the five exercises logged most
   recently, newest first (`recentExerciseIds`, from `storedSessions.latestExercises`).
 - With a search: the fuzzy matches (`exercise-fuzzy-match.ts`), best first, and Recent has no section of
-  its own. If none is named exactly what was typed, a **Create "X"** row ends the list. If nothing matches
-  at all, the screen says so and offers Create "X" there instead.
+  its own. If no exercise in the whole catalog is named exactly what was typed, a **Create "X"** row ends
+  the list. If one is but the chips hide it, the row offers to clear the chips instead, so a filter never
+  leads to a duplicate. If nothing the chips allow matches, the screen says so and offers Create "X", or
+  Clear filters when the chips hide a match.
+- A new search or chip remounts the list, so it starts at the top.
 - **Muscle chips** (All, Chest, Back, Shoulders, Arms, Legs, Core) group the catalog's muscles. An exercise
   files under its first muscle, which the catalog lists first among the primary ones. Filtering on any muscle
   would put every press and row under Arms, through their secondary muscles. Neck is under All only.

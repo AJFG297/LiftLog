@@ -1,3 +1,4 @@
+import { ActionButton } from '@/components/presentation/foundation/action-button';
 import { MsIconSrc } from '@/components/presentation/foundation/ms-icon-source';
 import { SurfaceText } from '@/components/presentation/foundation/surface-text';
 import { spacing, useAppTheme } from '@/hooks/useAppTheme';
@@ -113,11 +114,24 @@ export function ExercisePickerSectionHeader({ label }: { label: string }) {
   );
 }
 
-/** Offers the search as a new exercise, after matches that are close but not exact. */
-export function ExercisePickerCreateRow({ label, onPress }: { label: string; onPress: () => void }) {
+interface ExercisePickerCreateRowProps {
+  label: string;
+  onPress: () => void;
+  /** `add` offers the search as a new exercise; `filter` clears the chips hiding one named exactly that. */
+  icon?: 'add' | 'visibility';
+  testID?: string;
+}
+
+/** The dashed row after matches that are close but not exact: make it, or show the one the chips hide. */
+export function ExercisePickerCreateRow({
+  label,
+  onPress,
+  icon = 'add',
+  testID = 'exercise-picker-create-row',
+}: ExercisePickerCreateRowProps) {
   const { tokens } = useAppTheme();
   return (
-    <Pressable testID="exercise-picker-create-row" onPress={onPress} accessibilityRole="button">
+    <Pressable testID={testID} onPress={onPress} accessibilityRole="button">
       {({ pressed }) => (
         <View
           style={{
@@ -133,7 +147,7 @@ export function ExercisePickerCreateRow({ label, onPress }: { label: string; onP
             backgroundColor: pressed ? tokens.track : undefined,
           }}
         >
-          <MsIconSrc name="add" size={20} color={tokens.accentInk} />
+          <MsIconSrc name={icon} size={20} color={tokens.accentInk} />
           <SurfaceText font="text-base" weight="600" style={{ flex: 1, color: tokens.accentInk }}>
             {label}
           </SurfaceText>
@@ -143,16 +157,23 @@ export function ExercisePickerCreateRow({ label, onPress }: { label: string; onP
   );
 }
 
+interface NoMatchAction {
+  label: string;
+  onPress: () => void;
+  testID: string;
+}
+
 interface ExercisePickerNoMatchProps {
   title: string;
   body: string;
-  createLabel: string;
-  onCreate: () => void;
+  /** The first is the main way out, drawn filled; any after it are outlined. */
+  actions: NoMatchAction[];
 }
 
-/** 'No exercise called "X"' with a way to make it. */
-export function ExercisePickerNoMatch({ title, body, createLabel, onCreate }: ExercisePickerNoMatchProps) {
+/** 'No exercise called "X"', with a way to make it or to clear the chips that hide it. */
+export function ExercisePickerNoMatch({ title, body, actions }: ExercisePickerNoMatchProps) {
   const { tokens } = useAppTheme();
+  const [main, ...rest] = actions;
   return (
     <View style={{ alignItems: 'center', gap: 10, paddingVertical: spacing[8], paddingHorizontal: spacing[3] }}>
       <SurfaceText font="text-base" weight="600" style={{ color: tokens.ink, textAlign: 'center' }}>
@@ -161,24 +182,35 @@ export function ExercisePickerNoMatch({ title, body, createLabel, onCreate }: Ex
       <SurfaceText font="text-sm" style={{ color: tokens.muted, textAlign: 'center' }}>
         {body}
       </SurfaceText>
-      <Pressable testID="exercise-picker-create" onPress={onCreate} accessibilityRole="button">
-        {({ pressed }) => (
-          <View
-            style={{
-              minHeight: 46,
-              paddingHorizontal: 18,
-              borderRadius: 14,
-              justifyContent: 'center',
-              backgroundColor: tokens.ink,
-              opacity: pressed ? 0.85 : 1,
-            }}
-          >
-            <SurfaceText font="text-base" weight="600" style={{ color: tokens.bg }}>
-              {createLabel}
-            </SurfaceText>
-          </View>
-        )}
-      </Pressable>
+      {main ? (
+        <Pressable testID={main.testID} onPress={main.onPress} accessibilityRole="button">
+          {({ pressed }) => (
+            <View
+              style={{
+                minHeight: 46,
+                paddingHorizontal: 18,
+                borderRadius: 14,
+                justifyContent: 'center',
+                backgroundColor: tokens.ink,
+                opacity: pressed ? 0.85 : 1,
+              }}
+            >
+              <SurfaceText font="text-base" weight="600" style={{ color: tokens.bg }}>
+                {main.label}
+              </SurfaceText>
+            </View>
+          )}
+        </Pressable>
+      ) : null}
+      {rest.map((action) => (
+        <ActionButton
+          key={action.testID}
+          testID={action.testID}
+          variant="secondary"
+          label={action.label}
+          onPress={action.onPress}
+        />
+      ))}
     </View>
   );
 }

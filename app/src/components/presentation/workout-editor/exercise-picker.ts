@@ -107,12 +107,18 @@ export type PickerRow =
   | { kind: 'header'; key: string; section: PickerSection }
   | { kind: 'exercise'; key: string; id: string }
   /** Offers the query as a new exercise when some names match it loosely but none exactly. */
-  | { kind: 'create'; key: string; name: string };
+  | { kind: 'create'; key: string; name: string }
+  /** The query names an exercise exactly, but the chips hide it: a way to clear them instead of a duplicate. */
+  | { kind: 'filtered'; key: string; name: string };
 
 export interface PickerList {
   rows: PickerRow[];
-  /** Nothing matches the query at all: the screen shows 'No exercise called "X"' instead of rows. */
+  /** Nothing matches the query and the chips: the screen says so instead of listing rows. */
   noMatch: boolean;
+  /** Some exercise the chips hide matches the query, so clearing them would show it. */
+  hiddenByFilters: boolean;
+  /** No exercise in the whole catalog is named exactly what was typed, so it can be made. */
+  canCreate: boolean;
 }
 
 /**
@@ -144,24 +150,32 @@ export function pickerListOf(
       rows.push({ kind: 'header', key: 'header-all', section: filters.muscle ?? 'all' });
       rows.push(...rest);
     }
-    return { rows, noMatch: false };
+    return { rows, noMatch: false, hiddenByFilters: false, canCreate: false };
   }
 
-  const scored = Object.entries(exercises).flatMap(([id, exercise]) => {
-    const score = passes(exercise) ? fuzzyMatchScore(query, exercise.name) : null;
-    return score === null ? [] : [{ id, name: exercise.name, score }];
+  // Scored across the whole catalog: an exact name the chips hide must not be offered as a new exercise.
+  const matches = Object.entries(exercises).flatMap(([id, exercise]) => {
+    const score = fuzzyMatchScore(query, exercise.name);
+    return score === null ? [] : [{ id, name: exercise.name, score, shown: passes(exercise) }];
   });
-  if (!scored.length) {
-    return { rows, noMatch: true };
+  const isExact = ({ name }: { name: string }) => name.trim().toLowerCase() === query.toLowerCase();
+  const shown = matches.filter((match) => match.shown);
+  const hidden = matches.filter((match) => !match.shown);
+  const canCreate = !matches.some(isExact);
+  const hiddenByFilters = hidden.length > 0;
+  if (!shown.length) {
+    return { rows, noMatch: true, hiddenByFilters, canCreate };
   }
-  scored.sort((a, b) => b.score - a.score || a.name.localeCompare(b.name));
+  shown.sort((a, b) => b.score - a.score || a.name.localeCompare(b.name));
   rows.push({ kind: 'header', key: 'header-matches', section: 'matches' });
-  rows.push(...scored.map(({ id }): PickerRow => ({ kind: 'exercise', key: id, id })));
-  const exact = scored.some(({ name }) => name.trim().toLowerCase() === query.toLowerCase());
-  if (!exact) {
+  rows.push(...shown.map(({ id }): PickerRow => ({ kind: 'exercise', key: id, id })));
+  const hiddenExact = shown.some(isExact) ? undefined : hidden.find(isExact);
+  if (canCreate) {
     rows.push({ kind: 'create', key: 'create', name: query });
+  } else if (hiddenExact) {
+    rows.push({ kind: 'filtered', key: 'filtered', name: hiddenExact.name });
   }
-  return { rows, noMatch: false };
+  return { rows, noMatch: false, hiddenByFilters, canCreate };
 }
 
 /** Tapping a row adds it to the end of the selection, or takes it out and closes the gap. */
