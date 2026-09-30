@@ -46,7 +46,8 @@ The row above the keys explains the value being typed:
   can't make exactly gets the heaviest load under it and says how far short that is. A weight lighter than
   the bar says so. The drawing shows up to eight plates a side, then a count of the rest.
 - **Dumbbell:** the weight is per dumbbell. **Cable and machine:** the weight is what's on the stack.
-- **Reps:** RPE chips, 6 to 10 in half steps. Tapping the selected chip clears it.
+- **Reps:** RPE chips, 6 to 10 in half steps. The row opens scrolled to its right end, so 8 to 10 are in
+  view, or to the chip already picked. Tapping the selected chip clears it.
 
 ## Bar and plates
 
