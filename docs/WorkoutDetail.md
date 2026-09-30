@@ -36,7 +36,8 @@ card's summary (the summary is the button, so the card's own buttons stay reacha
 - **The overflow menu** (native, `PageMenu`) offers Edit workout, Share workout when the feed is
   on, and Delete workout. Delete goes back to the list at once and shows a toast with Undo, which puts the session
   back. Both queue the session for the feed, which publishes a queued session that exists and unpublishes one that
-  doesn't. Local reactions to it are kept, so Undo loses nothing.
+  doesn't. Its local reactions go with it, as from the history list, and Undo puts them back. A session that is
+  gone (a stale link, or deleted from elsewhere) shows a short message instead of the detail.
 - **Edit workout** opens `/workout-detail/edit`, the history's editor (`components/smart/past-workout-editor.tsx`) on
   the root stack above the detail, so back and Save return to the detail. It isn't `/history/edit`: pushing a route
   inside the tabs from a root screen pops that screen, so back would skip the detail and land on another tab.

@@ -2,6 +2,7 @@ import FullHeightScrollView from '@/components/layout/full-height-scroll-view';
 import { ActionButton } from '@/components/presentation/foundation/action-button';
 import PageMenu from '@/components/presentation/foundation/page-menu';
 import { setBadgeText } from '@/components/presentation/foundation/set-badge/set-badge-kinds';
+import { SurfaceText } from '@/components/presentation/foundation/surface-text';
 import { useToast } from '@/components/presentation/foundation/toast';
 import { ExerciseSetCard, SetRowCopy } from '@/components/presentation/workout-detail/exercise-set-card';
 import { WorkoutDetailHeader } from '@/components/presentation/workout-detail/workout-detail-header';
@@ -24,7 +25,15 @@ import {
   uniqueRoutineName,
 } from '@/models/workout-detail';
 import { useAppSelector, useAppSelectorWhenFocusedWithArg } from '@/store';
-import { addUnpublishedSessionId, encryptAndShare } from '@/store/feed';
+import {
+  addUnpublishedSessionId,
+  encryptAndShare,
+  removeReactionsForEvents,
+  selectReceivedReactionsByEvent,
+  selectSentReactionsByEvent,
+  setSentReaction,
+  upsertReceivedReactions,
+} from '@/store/feed';
 import {
   addProgramSession,
   fetchUpcomingSessions,
@@ -45,6 +54,7 @@ import { uuid } from '@/utils/uuid';
 import { LocalDate, OffsetDateTime } from '@js-joda/core';
 import { UseTranslateResult, useTranslate } from '@tolgee/react';
 import { Stack, useRouter } from 'expo-router';
+import { useState } from 'react';
 import { Platform, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDispatch } from 'react-redux';
@@ -71,11 +81,22 @@ export function WorkoutDetail({ sessionId }: { sessionId: string }) {
   const earlier = useAppSelectorWhenFocusedWithArg(selectSessionsBefore, session);
   const program = useAppSelector(selectActiveProgram);
   const programId = useAppSelector((x) => x.program.activePlanId);
+  const receivedReactions = useAppSelector(selectReceivedReactionsByEvent);
+  const sentReactions = useAppSelector(selectSentReactionsByEvent);
   const { start, confirmationDialog } = useStartWorkoutWithConfirmation();
+  const [deleting, setDeleting] = useState(false);
 
-  // Deleting pops this screen before the session goes, so there is nothing to draw on the way out.
   if (!session) {
-    return <View style={{ flex: 1, backgroundColor: tokens.bg }} />;
+    return (
+      <View style={{ flex: 1, backgroundColor: tokens.bg, justifyContent: 'center', padding: spacing[6] }}>
+        {/* Deleting here pops the screen as the session goes, so the message would only flash on the way out. */}
+        {deleting ? null : (
+          <SurfaceText font="text-base" style={{ color: tokens.muted, textAlign: 'center' }}>
+            {t('workout_detail.missing.body')}
+          </SurfaceText>
+        )}
+      </View>
+    );
   }
 
   const records = sessionRecords(session, earlier);
@@ -110,10 +131,15 @@ export function WorkoutDetail({ sessionId }: { sessionId: string }) {
     dispatch(encryptAndShare({ item: new SharedSession(session), title: t('workout.shared_item.title') }));
 
   const deleteWorkout = () => {
+    // Undo puts the session's cheers back too, so they are kept aside rather than lost.
+    const received = receivedReactions.get(session.id) ?? [];
+    const sent = sentReactions.get(session.id) ?? [];
+    setDeleting(true);
     router.back();
     dispatch(deleteStoredSession(session.id));
     // Queued either way: the feed publishes a queued session that exists and unpublishes one that doesn't.
     dispatch(addUnpublishedSessionId(session.id));
+    dispatch(removeReactionsForEvents([session.id]));
     toast.show({
       message: t('workout_detail.deleted.message'),
       action: {
@@ -121,6 +147,10 @@ export function WorkoutDetail({ sessionId }: { sessionId: string }) {
         onPress: () => {
           dispatch(putStoredSession(session));
           dispatch(addUnpublishedSessionId(session.id));
+          if (received.length) {
+            dispatch(upsertReceivedReactions(received));
+          }
+          sent.forEach((reaction) => dispatch(setSentReaction(reaction)));
         },
       },
     });

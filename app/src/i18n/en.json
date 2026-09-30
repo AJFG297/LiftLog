@@ -981,5 +981,7 @@
   "workout_detail.save_as_routine.button": "Save as routine",
   "workout_detail.saved_routine.message": "Saved {name} to {program}",
   "workout_detail.delete.button": "Delete workout",
-  "workout_detail.deleted.message": "Workout deleted"
+  "workout_detail.deleted.message": "Workout deleted",
+  "workout_detail.missing.body": "This workout isn't in your history any more.",
+  "workout_detail.open.label": "{name}, {date}"
 }

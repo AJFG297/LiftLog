@@ -148,7 +148,10 @@ export default function History() {
               <Pressable
                 testID="history-open-workout"
                 accessibilityRole="button"
-                accessibilityLabel={`${session.blueprint.name}, ${formatDate(session.date, { weekday: 'long', month: 'short', day: 'numeric' })}`}
+                accessibilityLabel={t('workout_detail.open.label', {
+                  name: session.blueprint.name,
+                  date: formatDate(session.date, { weekday: 'long', month: 'short', day: 'numeric' }),
+                })}
                 accessibilityHint={t('workout_detail.open.hint')}
                 onPress={() => push(`/workout-detail?sessionId=${encodeURIComponent(session.id)}`)}
                 style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
