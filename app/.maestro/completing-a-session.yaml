@@ -25,11 +25,13 @@ appId: com.ajfg297.liftlog
 - tapOn: 'Add exercise'
 - back
 
-# Log the first set with one tap on its check, which starts the rest timer
+# Log the first set with one tap on its check, which starts the rest timer. The header's rest pill is
+# there even with no rest running, so check that it is counting down.
 - tapOn:
     id: 'set-check'
 - assertVisible:
-    id: 'rest-timer'
+    id: 'rest-pill'
+    text: 'Rest timer, .* left'
 
 # Set the logged set's weight to 7.5kg (3 x 2.5kg steps on the number pad) and hide the pad
 - tapOn:
@@ -53,8 +55,14 @@ appId: com.ajfg297.liftlog
     commands:
       - back
 
-# It shows up in All history (opened from Home) with the logged weight, below the streak card and the calendar
-- tapOn: 'All history'
+# It shows up in All history (opened from the foot of Home) with the logged weight, below the streak card and
+# the calendar
+- scrollUntilVisible:
+    element:
+      id: 'home-all-history'
+    direction: DOWN
+- tapOn:
+    id: 'home-all-history'
 - assertVisible:
     id: 'session-summary-title'
 # Summaries read "10 @ 7.5kg", and `text` is a full-string match, so anchor on the tail
