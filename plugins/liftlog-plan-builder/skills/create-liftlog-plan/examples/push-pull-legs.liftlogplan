@@ -4,7 +4,7 @@
   "lastEdited": "2026-07-12",
   "sessions": [
     {
-      "version": 9,
+      "version": 10,
       "name": "Push",
       "notes": "Chest, shoulders and triceps. Leave one or two reps in reserve on the first working set.",
       "exercises": [
@@ -124,7 +124,7 @@
       ]
     },
     {
-      "version": 9,
+      "version": 10,
       "name": "Pull",
       "notes": "Back and biceps.",
       "exercises": [
@@ -243,7 +243,7 @@
       ]
     },
     {
-      "version": 9,
+      "version": 10,
       "name": "Legs",
       "notes": "",
       "exercises": [

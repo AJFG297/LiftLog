@@ -24,6 +24,7 @@ import {
 import { RecordedWeightedExercise } from '@/models/session-models';
 import { setLabels, type SetKind, type WorkingListKind } from '@/models/session-models/set-kind';
 import { Weight, WeightUnit } from '@/models/weight';
+import { parseRoutineColor, type RoutineColor } from '@/models/routine-color';
 import { uuidFromName } from '@/utils/uuid';
 
 export class ProgramBlueprint {
@@ -120,10 +121,17 @@ export class SessionBlueprint {
     readonly name: string,
     readonly exercises: ExerciseBlueprint[],
     readonly notes: string,
+    /** Undefined until someone picks one: the routine then shows the colour for its place (`routineColorOf`). */
+    readonly color?: RoutineColor,
   ) {}
 
   static fromJSON(json: SessionBlueprintJSON): SessionBlueprint {
-    return new SessionBlueprint(json.name, json.exercises.map(fromExerciseBlueprintJSON), json.notes);
+    return new SessionBlueprint(
+      json.name,
+      json.exercises.map(fromExerciseBlueprintJSON),
+      json.notes,
+      parseRoutineColor(json.color),
+    );
   }
 
   equals(other: SessionBlueprint | undefined) {
@@ -137,6 +145,7 @@ export class SessionBlueprint {
     return (
       this.name === other.name &&
       this.notes === other.notes &&
+      this.color === other.color &&
       this.exercises.length === other.exercises.length &&
       this.exercises.every((exercise, index) => exercise.equals(other.exercises[index]))
     );
@@ -144,15 +153,21 @@ export class SessionBlueprint {
 
   toJSON(): SessionBlueprintJSON {
     return {
-      version: 9,
+      version: 10,
       name: this.name,
       exercises: this.exercises.map((exercise) => exercise.toJSON()),
       notes: this.notes,
+      ...(this.color ? { color: this.color } : {}),
     };
   }
 
   with(other: Partial<SessionBlueprint>): SessionBlueprint {
-    return new SessionBlueprint(other.name ?? this.name, other.exercises ?? this.exercises, other.notes ?? this.notes);
+    return new SessionBlueprint(
+      other.name ?? this.name,
+      other.exercises ?? this.exercises,
+      other.notes ?? this.notes,
+      other.color ?? this.color,
+    );
   }
 
   withName(name: string): SessionBlueprint {

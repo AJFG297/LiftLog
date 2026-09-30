@@ -1064,7 +1064,7 @@ export function applySessionBlueprintDiff(original: SessionBlueprint, diff: Sess
     }
   }
 
-  return new SessionBlueprint(name, finalExercises, notes);
+  return new SessionBlueprint(name, finalExercises, notes, original.color);
 }
 
 // ============================================================================

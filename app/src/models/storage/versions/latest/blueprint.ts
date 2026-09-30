@@ -12,10 +12,15 @@ export interface ProgramBlueprintJSON {
 }
 
 export interface SessionBlueprintJSON {
-  version: 9;
+  version: 10;
   name: string;
   exercises: ExerciseBlueprintJSON[];
   notes: string;
+  /**
+   * The routine's colour: one of vermilion, green, blue, ochre, purple or stone. Leave it out and the
+   * routine takes a colour from its place in the program. A name the app doesn't know is ignored.
+   */
+  color?: string | undefined;
 }
 
 /**

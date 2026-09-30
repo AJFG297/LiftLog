@@ -63,6 +63,11 @@ export const sessionBlueprintMigrations = createMigrations<InitialSessionBluepri
     ...value,
     version: 9 as const,
   }))
+  // `color` is optional, so every older routine already fits: it takes a colour from its place.
+  .add((value) => ({
+    ...value,
+    version: 10 as const,
+  }))
   .build<SessionBlueprintJSON>();
 
 export const programBlueprintMigrations = createMigrations<InitialProgramBlueprintJSON>({ pseudoMigrateUntil: 3 })
