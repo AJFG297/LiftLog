@@ -11,7 +11,8 @@ and the number pad, and PM-30 moved rest into the header.
   While resting, a thin line along the header's bottom edge shows the share of the rest still to go.
 - **Exercise strip** (`ExerciseStrip`): one tile per exercise with its label, name, sets done out of
   planned and a progress bar. The tiles of the page on screen are drawn inverted, and the strip scrolls to
-  keep them in view. The last tile adds an exercise.
+  keep them in view. The last tile adds exercises from the [exercise picker](./ExercisePicker.md), and the
+  screen moves to the first one added.
 - **Focus page**: a card per exercise (`LiveExerciseCard`) with a meta line (equipment, rest or its place
   in a superset, and how many working sets), the History, Warm-up, Note and Swap shortcuts, the Today
   target card, and the set table (see below). A superset page starts with a banner. Cardio exercises still
@@ -21,7 +22,8 @@ and the number pad, and PM-30 moved rest into the header.
   it. While a weight or reps is being typed, the number pad takes the dock's place.
 - **All exercises sheet** (`session/exercises`, a `formSheet`): every exercise with its status, sets and
   target. Tap to jump there; drag a handle to reorder. Add exercise and Make superset sit above the list,
-  so they are in reach at the sheet's first detent, and open the existing flows. The Workout summary row
+  so they are in reach at the sheet's first detent. Add exercise closes the sheet and opens the exercise
+  picker. The Workout summary row
   at the top of the list opens the post-workout summary for the workout so far.
 
 ## Rest
