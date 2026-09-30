@@ -27,6 +27,10 @@ work to find the docs relevant to your area, and update it whenever you add, rem
 
 ## Features
 
+- [Home.md](./Home.md) - the four tabs (Home, Routines, Progress, You) and which route folders they hold,
+  why history and the feed aren't tabs, and the Home screen: the Up next card, the 7 and 30-day views
+  and where their numbers come from, derived routine colours, the history cards, and the
+  workout-in-progress bar above the tab bar.
 - [LiveWorkout.md](./LiveWorkout.md) - the workout in progress: focus mode one exercise or superset at a
   time, the exercise strip, the Up next bar and the All exercises sheet, the rest pill and rest sheet
   (steps, presets, saving a rest to the routine), and how pages, the next set, focus, reordering and the

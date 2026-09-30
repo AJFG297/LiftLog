@@ -6,7 +6,8 @@ and the number pad, and PM-30 moved rest into the header.
 
 ## What is on screen
 
-- **Header** (`LiveWorkoutHeader`): minimise (back to Home, the workout keeps running), the workout name
+- **Header** (`LiveWorkoutHeader`): minimise (back to Home; the workout keeps running, and the
+  [workout-in-progress bar](./Home.md#the-workout-in-progress-bar) brings it back from any tab), the workout name
   (tap it to edit the name and notes), the elapsed time since the first set, the rest pill, and Finish.
   While resting, a thin line along the header's bottom edge shows the share of the rest still to go.
 - **Exercise strip** (`ExerciseStrip`): one tile per exercise with its label, name, sets done out of

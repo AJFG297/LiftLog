@@ -263,7 +263,7 @@ Two things follow from that, and both matter when you touch this slice:
 
 - **Editing a session must not re-run every aggregate.** Streak, personal records, volume scales, the
   month list and the "previous performances" lookup all sweep the whole history, and screens that
-  subscribe to them stay mounted while you edit - the History tab sits behind the workout screen, and
+  subscribe to them stay mounted while you edit - Home sits behind the workout screen, and
   the History list sits behind `/history/edit`. Three things keep an edit off that path, and all three
   matter:
   - `selectSessions` returns only _finished_ sessions, so the workout in progress cannot move it.
