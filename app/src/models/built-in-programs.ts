@@ -967,3 +967,13 @@ export const BuiltInPrograms: Record<string, ProgramBlueprint> = {
     }),
   ),
 };
+
+/**
+ * The built-in programs not saved yet, in library order. A saved one is already listed with the person's
+ * own programs, so the library only offers the rest.
+ */
+export function unsavedBuiltInPrograms(
+  savedPrograms: Readonly<Record<string, unknown>>,
+): [id: string, program: ProgramBlueprint][] {
+  return Object.entries(BuiltInPrograms).filter(([id]) => !(id in savedPrograms));
+}

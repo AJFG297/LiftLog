@@ -18,7 +18,7 @@ import { useFormatDate } from '@/hooks/useFormatDate';
 import { spacing, useAppTheme } from '@/hooks/useAppTheme';
 import { useStartWorkoutWithConfirmation } from '@/hooks/useStartWorkoutWithConfirmation';
 import { ProgramBlueprint, SessionBlueprint } from '@/models/blueprint-models';
-import { BuiltInPrograms } from '@/models/built-in-programs';
+import { BuiltInPrograms, unsavedBuiltInPrograms } from '@/models/built-in-programs';
 import { Session } from '@/models/session-models';
 import { useAppSelector } from '@/store';
 import { fetchUpcomingSessions, linkPlanExercises, savePlan, selectAllPrograms } from '@/store/program';
@@ -43,9 +43,9 @@ export function routineEditorHref(programId: string, sessionIndex: number, optio
 
 /**
  * The Routines screen (plan decision D4): the active program with its next workout, that program's routines,
- * an empty workout, the other saved programs and the built-in library. Every control sits in the scrolling
- * content, so nothing floats over a row to take its taps, and making another program active always asks
- * first.
+ * an empty workout, the other saved programs and the built-in programs not saved yet. Every control sits in
+ * the scrolling content, so nothing floats over a row to take its taps, and making another program active
+ * always asks first.
  */
 export function RoutinesScreen({ focusProgramId }: { focusProgramId?: string }) {
   const { t } = useTranslate();
@@ -226,7 +226,7 @@ export function RoutinesScreen({ focusProgramId }: { focusProgramId?: string }) 
 
         <Section title={t('routines.find_program.title')}>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing[2] }}>
-            {Object.entries(BuiltInPrograms).map(([id, program]) => (
+            {unsavedBuiltInPrograms(savedPrograms).map(([id, program]) => (
               <LibraryTile
                 key={id}
                 title={program.name}
