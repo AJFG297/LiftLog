@@ -238,7 +238,10 @@ Settled differences from the steps below:
   and `personalRecords`, all over finished workouts. The calendar's "sessions by date" became per-day
   counts and volume sums (`OwnActivity`), which the activity selectors take as a parameter; the streak
   takes training dates.
-- PR badges are a running-max window query; no `personal_record` table (a few ms over 5,000 workouts).
+- PR badges are a running-max window query; no `personal_record` table (about 130 ms under Node over
+  5,000 workouts, re-run only after a write). All-time stats now rebuild the range's sessions on each
+  recalculation (about 0.8 s under Node for 5,000), the cost hydration paid once; SQL per-movement
+  aggregates are the follow-up.
   The query compares exact scores, so two sets with the same e1RM (61.5 kg x 10 and 60 kg x 11 are both
   82 kg) no longer make a record the way BigNumber's 20-digit `11/30` did. One such record left the
   snapshot.

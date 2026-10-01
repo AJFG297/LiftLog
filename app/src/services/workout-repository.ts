@@ -169,47 +169,55 @@ export class WorkoutRepository {
   async personalRecords(): Promise<Map<string, PersonalRecord[]>> {
     const rows = await Promise.resolve(
       this.db.all<PersonalRecordRow>(sql`
-        with scored as (
-          select
-            s.workout_id as "workoutId",
-            w.reference_time_ms as "referenceTimeMs",
-            e.movement_key as "movementKey",
-            s.effective_weight_kg * (30 + s.reps) as "score",
-            json_extract(e.blueprint, '$.name') as "exerciseName",
-            json_extract(e.blueprint, '$.resistance') as "resistance",
-            json_extract(e.blueprint, '$.usesBodyweight') as "usesBodyweight",
-            s.weight_value as "weightValue",
-            s.weight_unit as "weightUnit",
-            s.reps as "reps",
-            w.bodyweight_value as "bodyweightValue",
-            w.bodyweight_unit as "bodyweightUnit",
-            row_number() over (
-              partition by s.workout_id, e.movement_key
-              order by s.effective_weight_kg * (30 + s.reps) desc, s.exercise_position, s.position
-            ) as "rank",
-            min(s.exercise_position) over (partition by s.workout_id, e.movement_key) as "firstPosition"
-          from ${weightedSetsSchema} s
-          join ${workoutExercisesSchema} e on e.workout_id = s.workout_id and e.position = s.exercise_position
-          join ${workoutsSchema} w on w.id = s.workout_id
-          where w.active = 0
-            and s.reps > 0
-            and s.kind in ${prSetKinds}
-            and json_extract(e.blueprint, '$.resistance') is not 'none'
+        with lifts as (
+          -- Each weighted exercise of a finished workout that tracks a load: the blueprint is read once
+          -- here, per exercise, rather than once per set below.
+          select e.workout_id, e.position, e.movement_key, w.reference_time_ms, w.bodyweight_value, w.bodyweight_unit
+          from ${workoutExercisesSchema} e
+          join ${workoutsSchema} w on w.id = e.workout_id
+          where w.active = 0 and e.kind = 'weighted' and json_extract(e.blueprint, '$.resistance') is not 'none'
         ),
-        best as (select * from scored where "rank" = 1),
+        best_sets as (
+          -- The best set of each exercise. With a lone max(), SQLite takes the other columns from the row
+          -- that holds it, the first on a tie; the group walks the primary key, so nothing is sorted.
+          select s.workout_id, s.exercise_position, max(s.effective_weight_kg * (30 + s.reps)) as score,
+            s.weight_value, s.weight_unit, s.reps
+          from ${weightedSetsSchema} s
+          where s.reps > 0 and s.kind in ${prSetKinds}
+          group by s.workout_id, s.exercise_position
+        ),
+        best as (
+          -- The best per movement and workout, since a workout can hold the same movement twice.
+          select b.workout_id, l.movement_key, l.reference_time_ms, l.bodyweight_value, l.bodyweight_unit,
+            max(b.score) as score, b.exercise_position, b.weight_value, b.weight_unit, b.reps
+          from best_sets b
+          join lifts l on l.workout_id = b.workout_id and l.position = b.exercise_position
+          group by b.workout_id, l.movement_key
+        ),
         ranked as (
-          select *, max("score") over (
-            partition by "movementKey"
-            order by "referenceTimeMs", "workoutId"
+          select *, max(score) over (
+            partition by movement_key
+            order by reference_time_ms, workout_id
             rows between unbounded preceding and 1 preceding
-          ) as "previousBest"
+          ) as previous_best
           from best
         )
-        select "workoutId", "exerciseName", "resistance", "usesBodyweight", "weightValue", "weightUnit", "reps",
-          "bodyweightValue", "bodyweightUnit"
-        from ranked
-        where "previousBest" is not null and "score" > "previousBest"
-        order by "referenceTimeMs", "workoutId", "firstPosition"
+        select
+          r.workout_id as "workoutId",
+          json_extract(e.blueprint, '$.name') as "exerciseName",
+          json_extract(e.blueprint, '$.resistance') as "resistance",
+          json_extract(e.blueprint, '$.usesBodyweight') as "usesBodyweight",
+          r.weight_value as "weightValue",
+          r.weight_unit as "weightUnit",
+          r.reps as "reps",
+          r.bodyweight_value as "bodyweightValue",
+          r.bodyweight_unit as "bodyweightUnit"
+        from ranked r
+        join ${workoutExercisesSchema} e on e.workout_id = r.workout_id and e.position = r.exercise_position
+        where r.previous_best is not null and r.score > r.previous_best
+        -- Records of one workout read in exercise order, by the movement's first exercise.
+        order by r.reference_time_ms, r.workout_id,
+          (select min(f.position) from lifts f where f.workout_id = r.workout_id and f.movement_key = r.movement_key)
       `),
     );
     const records = new Map<string, PersonalRecord[]>();

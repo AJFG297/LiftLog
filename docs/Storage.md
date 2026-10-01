@@ -214,11 +214,13 @@ only: the one in progress (`active = 1`) is left out, as `selectSessions` leaves
   calendar's counts and levels, the week strips, the streak and "last workout" all derive from it.
 - `volumeScale()` - the 10th/90th percentile of `volume_kg` over started workouts (`volumeScaleOf`).
 - `personalRecords()` - records per workout, as `findPersonalRecords` walks them: one query scores each
-  set as `effective_weight_kg * (30 + reps)` (Epley without the division), keeps the best per movement
-  and workout, and runs `MAX() OVER (PARTITION BY movement_key ORDER BY reference_time_ms ROWS ... 1
-  PRECEDING)`; only the rows that beat the running max come back, with the set that did, and the exact
-  1RM is rebuilt in JS (`effectiveLoad`, `oneRepMaxOf`) so it reads in the unit it was lifted in. A
-  `personal_record` table was not needed: the query is a few milliseconds over 5,000 workouts.
+  set as `effective_weight_kg * (30 + reps)` (Epley without the division), keeps the best per exercise
+  and then per movement and workout with `GROUP BY ... MAX()` (SQLite takes the other columns from the
+  winning row, so nothing is sorted), and runs `MAX() OVER (PARTITION BY movement_key ORDER BY
+  reference_time_ms ROWS ... 1 PRECEDING)`; only the rows that beat the running max come back, with the
+  set that did, and the exact 1RM is rebuilt in JS (`effectiveLoad`, `oneRepMaxOf`) so it reads in the
+  unit it was lifted in. A `personal_record` table was not needed: about 130 ms under Node over 5,000
+  workouts (75k sets), off the render path and only re-run after a write.
 
 A workout is "started" in SQL when it has a `weighted_set` with `reps` or a `cardio_set` with
 `completed_at`, which is `Session.isStarted`; warm-ups are in their own table, so they don't count, as in
@@ -254,7 +256,9 @@ the result down: a list item that queried for itself would run the query once pe
 Stats are the exception that still caches in Redux: `fetchOverallStats` reads `earliestDate()` and
 `finishedBetween()` and keeps the result in `stats.overallView`, invalidated by the write actions
 (`stats/effects.ts`) rather than by `subscribe`, because the effect has the actions and knows to skip the
-workout in progress.
+workout in progress. All-time stats rebuild every `Session` in the range (about 0.8 s under Node for 5,000
+workouts), which hydration used to pay once; pushing the per-movement aggregates into SQL is the
+follow-up that removes it.
 
 Workout ids are kept end to end. They are the Health Connect / HealthKit record ids and the key the CSV
 import dedupes on.
