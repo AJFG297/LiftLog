@@ -847,6 +847,41 @@ describe('applySessionBlueprintDiff additional branches', () => {
     expect(result.exercises.map((e) => e.name)).toEqual(['B', 'A']);
   });
 
+  it('moves two exercises of the same name to their own slots', () => {
+    const heavy = makeWeightedBlueprint({ name: 'Bench', sets: 5, repsConfig: { type: 'fixed', reps: 5 } });
+    const light = makeWeightedBlueprint({ name: 'Bench', sets: 3, repsConfig: { type: 'fixed', reps: 12 } });
+    const original = new SessionBlueprint('W', [heavy, weighted('Row'), light], '');
+    const modified = new SessionBlueprint('W', [weighted('Row'), heavy, light], '');
+
+    const result = applySessionBlueprintDiff(original, diffSessionBlueprints(original, modified));
+
+    expect(result.exercises).toEqual(modified.exercises);
+  });
+
+  it('pairs same-named exercises that did not change before the rest', () => {
+    const heavy = makeWeightedBlueprint({ name: 'Bench', sets: 5, repsConfig: { type: 'fixed', reps: 5 } });
+    const light = makeWeightedBlueprint({ name: 'Bench', sets: 3, repsConfig: { type: 'fixed', reps: 12 } });
+    const original = new SessionBlueprint('W', [heavy, light], '');
+    const modified = new SessionBlueprint('W', [light, heavy], '');
+
+    const diff = diffSessionBlueprints(original, modified);
+
+    expect(diff.modifiedExercises).toEqual([]);
+    expect(diff.reorderedExercises).toMatchObject([
+      { oldIndex: 0, newIndex: 1 },
+      { oldIndex: 1, newIndex: 0 },
+    ]);
+  });
+
+  it('removes every cardio set dropped today', () => {
+    const original = new SessionBlueprint('W', [cardio('Run', [cardioSet(30), cardioSet(20), cardioSet(10)])], '');
+    const modified = new SessionBlueprint('W', [cardio('Run', [cardioSet(30)])], '');
+
+    const result = applySessionBlueprintDiff(original, diffSessionBlueprints(original, modified));
+
+    expect(result.exercises).toEqual(modified.exercises);
+  });
+
   it('round-trips a full weighted diff back to the modified blueprint', () => {
     const original = new SessionBlueprint('W', [weighted('Squat')], 'notes');
     const modified = new SessionBlueprint(
