@@ -47,6 +47,7 @@ import {
   selectPreviousComparableSession,
   selectSession,
   selectSessionsBefore,
+  sessionFinished,
 } from '@/store/stored-sessions';
 import { formatTimeRange } from '@/utils/format-time-range';
 import { localeFormatBigNumber } from '@/utils/locale-bignumber';
@@ -146,7 +147,9 @@ export function WorkoutDetail({ sessionId }: { sessionId: string }) {
         label: t('generic.undo.button'),
         onPress: () => {
           dispatch(putStoredSession(session));
-          dispatch(addUnpublishedSessionId(session.id));
+          // Finishing it again is what exports it back to the health app the delete removed it from, and
+          // queues it for the feed.
+          dispatch(sessionFinished(session.id));
           if (received.length) {
             dispatch(upsertReceivedReactions(received));
           }
