@@ -714,10 +714,7 @@ export function RoutineEditor({ programId, sessionIndex, isNew }: RoutineEditorP
           >
             {({ pressed }) => (
               <View
-                // Without this, Android flattens the pill into a sibling of its label, and the pressed
-                // opacity un-flattens it, which moves the label into it. Releasing Save moves the label
-                // back while the screen is already leaving, and react-native-screens holds a leaving
-                // screen's views in place for the animation, so the move throws "View already has a parent".
+                // Pressing Save also leaves the screen; see ActionButton for why the label must not move.
                 collapsable={false}
                 style={{
                   minHeight: 40,

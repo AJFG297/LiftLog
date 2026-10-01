@@ -36,6 +36,12 @@ export function ActionButton({ label, onPress, variant = 'primary', disabled, st
     >
       {({ pressed }) => (
         <View
+          // The fill stays a native view for its background, but Fabric hoists the label out of it into the
+          // Pressable. Opacity below 1 makes a stacking context, which moves the label back in, so a press
+          // moves it twice. When the press also leaves the screen (Done, Apply), the move back lands while
+          // react-native-screens holds the leaving screen's views in place for the exit animation, and
+          // Android throws "View already has a parent". Keeping the fill a container stops the moves.
+          collapsable={false}
           style={{
             // Side by side in a row, the shorter secondary grows to its partner's height.
             flexGrow: 1,
