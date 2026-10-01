@@ -1,6 +1,6 @@
 # Plan: relational storage and stable exercise identity
 
-Status: **in progress**. Phase 0 (PM-9) and phase 1 (PM-10, PM-11) are done: workouts live in relational tables and blueprints carry stable exercise IDs. Phase 2, reading history from SQL, is next.
+Status: **in progress**. Phase 0 (PM-9) and phase 1 (PM-10, PM-11) are done: workouts live in relational tables and blueprints carry stable exercise IDs. Phase 2, reading history from SQL, is under way: the History tab, calendar, feed strips and Stats read from SQL (PM-13); the workout screen's hot path (PM-12) and the rest (PM-14) remain.
 
 This plan rests on two assumptions:
 
@@ -227,6 +227,29 @@ instead of 5k payloads; phase 2 removes that read.
 Move one consumer group at a time, each gated by the phase 0 snapshots. Add a `useWorkoutQuery` hook
 that refreshes on repository write events. Use Drizzle's `useLiveQuery` only if it works under the
 libsql Vitest shim; otherwise wrap it.
+
+**Steps 2–3 done in PM-13**, with the query layer step 1 reuses (see `docs/Storage.md`, "Workouts").
+Settled differences from the steps below:
+- Drizzle's `useLiveQuery` was not used: it needs expo-sqlite's `addDatabaseChangeListener`, which the
+  libsql shim doesn't have, and it fires on any table change. `WorkoutRepository.subscribe` notifies after
+  each of the repository's own writes, and `useWorkoutQuery` re-queries on that, deferring while the
+  screen is unfocused. One mechanism for every screen.
+- The read methods are `finishedBetween`, `latestNamed`, `earliestDate`, `dailyActivity`, `volumeScale`
+  and `personalRecords`, all over finished workouts. The calendar's "sessions by date" became per-day
+  counts and volume sums (`OwnActivity`), which the activity selectors take as a parameter; the streak
+  takes training dates.
+- PR badges are a running-max window query; no `personal_record` table (a few ms over 5,000 workouts).
+  The query compares exact scores, so two sets with the same e1RM (61.5 kg x 10 and 60 kg x 11 are both
+  82 kg) no longer make a record the way BigNumber's 20-digit `11/30` did. One such record left the
+  snapshot.
+- Stats read the range latest-first, so `exerciseName` is the name an exercise was last logged under (as
+  documented) rather than the first hydrated, and of two same-name workouts on one day the later is
+  charted. The series order in `sessionStats` follows: most recently done workout first.
+- Home's Up next detail reads `latestNamed(name, 10)` rather than the whole history; its estimate takes
+  the last five with a length.
+- Left for PM-12: the workout screen, post-workout comparison, carry-over and `selectSessionsBefore`.
+  For PM-14: You-tab profile counts, export, CSV dedupe, feed publishing, exercise history, and the full
+  hydration itself.
 
 1. **Hot path:**
    - Build `latestExercises` at startup from "latest `workout_exercise` per `progression_key`", including
