@@ -351,7 +351,8 @@ interface ExerciseWithIndex {
 }
 
 /**
- * Match exercises by name. For duplicate names, fall back to position matching.
+ * Match exercises by name. Among duplicates, an exercise that did not change is matched with itself
+ * wherever it sits; the rest pair up in order.
  */
 function matchExercisesByName(
   oldExercises: readonly ExerciseBlueprint[],
@@ -385,24 +386,34 @@ function matchExercisesByName(
     newByName.set(ex.name, indices);
   });
 
-  // Match by name, handling duplicates by position within the name group
   for (const [name, oldIndices] of oldByName) {
-    const newIndices = newByName.get(name) ?? [];
+    const unmatchedNew = [...(newByName.get(name) ?? [])];
+    const unmatchedOld: number[] = [];
 
-    // Match exercises with the same name by their relative position
-    const matchCount = Math.min(oldIndices.length, newIndices.length);
-    for (let i = 0; i < matchCount; i++) {
-      const oldIdx = oldIndices[i]!;
-      const newIdx = newIndices[i]!;
-      matched.push({
-        oldExercise: oldExercises[oldIdx]!,
-        newExercise: newExercises[newIdx]!,
-        oldIndex: oldIdx,
-        newIndex: newIdx,
-      });
-      matchedOldIndices.add(oldIdx);
-      matchedNewIndices.add(newIdx);
+    // Two same-named exercises that differ in nothing are the same exercise, wherever each sits: a
+    // workout that did its two bench slots the other way round is a reorder, not two edited exercises.
+    for (const oldIdx of oldIndices) {
+      const twin = unmatchedNew.findIndex((newIdx) => newExercises[newIdx]!.equals(oldExercises[oldIdx]));
+      if (twin === -1) {
+        unmatchedOld.push(oldIdx);
+      } else {
+        pair(oldIdx, unmatchedNew[twin]!);
+        unmatchedNew.splice(twin, 1);
+      }
     }
+    // The rest pair up by their relative position within the name group.
+    unmatchedOld.slice(0, unmatchedNew.length).forEach((oldIdx, i) => pair(oldIdx, unmatchedNew[i]!));
+  }
+
+  function pair(oldIdx: number, newIdx: number) {
+    matched.push({
+      oldExercise: oldExercises[oldIdx]!,
+      newExercise: newExercises[newIdx]!,
+      oldIndex: oldIdx,
+      newIndex: newIdx,
+    });
+    matchedOldIndices.add(oldIdx);
+    matchedNewIndices.add(newIdx);
   }
 
   // Collect unmatched as removed/added
@@ -666,8 +677,9 @@ function diffCardioExercises(
     });
   }
 
-  // Handle removed sets
-  for (let i = minLength; i < oldSets.length; i++) {
+  // Removed sets, last first, so that applying them in order removes from the tail and no removal
+  // shifts the index of the one after it.
+  for (let i = oldSets.length - 1; i >= minLength; i--) {
     changes.push({
       id: generateChangeId(),
       kind: 'cardioSet',
@@ -930,14 +942,7 @@ export function applySessionBlueprintDiff(original: SessionBlueprint, diff: Sess
 
   // Apply field-level modifications
   for (const mod of diff.modifiedExercises) {
-    // The routine can have been edited since the diff was computed, so trust the index only while the
-    // exercise there still has the name it had then.
-    const oldName = diff.originalSession.exercises[mod.originalIndex]?.name;
-    const originalIdx =
-      original.exercises[mod.originalIndex]?.name === oldName
-        ? mod.originalIndex
-        : original.exercises.findIndex((ex) => ex.name === oldName);
-
+    const originalIdx = locateInOriginal(original, diff, mod.originalIndex);
     if (originalIdx === -1) continue;
 
     let exercise = exercises[originalIdx]!;
@@ -1017,54 +1022,43 @@ export function applySessionBlueprintDiff(original: SessionBlueprint, diff: Sess
     exercises[originalIdx] = exercise;
   }
 
-  // Apply reordering if selected
-  // Note: Reordering is complex when combined with add/remove.
-  // For now, we apply reordering based on the target positions from modified.
-  const reorderChanges = diff.reorderedExercises;
+  // Order the exercises the routine keeps. A kept move puts an exercise at the index it had in the
+  // workout; the others stay at their routine index, which is the same thing for an exercise that did
+  // not move. The sort is stable, so an exercise whose removal was not kept stays where it was among
+  // its neighbours.
+  const movedTo = new Map<number, number>();
+  for (const reorder of diff.reorderedExercises) {
+    const originalIdx = locateInOriginal(original, diff, reorder.oldIndex);
+    if (originalIdx !== -1) {
+      movedTo.set(originalIdx, reorder.newIndex);
+    }
+  }
+  const finalExercises = exercises
+    .map((exercise, idx) => ({ exercise, position: movedTo.get(idx) ?? idx, idx }))
+    .filter(({ idx }) => !indicesToRemove.has(idx))
+    .sort((a, b) => a.position - b.position)
+    .map(({ exercise }) => exercise);
 
-  // Remove exercises marked for removal
-  const finalExercises = exercises.filter((_, idx) => !indicesToRemove.has(idx));
-
-  // Add new exercises at their target positions
-  // Sort by index to insert in correct order
+  // Added exercises go in at the index they had in the workout, top first, so that each lands below
+  // the ones added above it.
   exercisesToAdd.sort((a, b) => a.index - b.index);
   for (const { exercise, index } of exercisesToAdd) {
-    // Clamp index to valid range
-    const insertIdx = Math.min(index, finalExercises.length);
-    finalExercises.splice(insertIdx, 0, exercise);
-  }
-
-  // Apply reordering
-  if (reorderChanges.length > 0) {
-    // Create a map of exercise name to current index
-    const nameToCurrentIdx = new Map<string, number>();
-    finalExercises.forEach((ex, idx) => {
-      // Only map first occurrence for duplicates
-      if (!nameToCurrentIdx.has(ex.name)) {
-        nameToCurrentIdx.set(ex.name, idx);
-      }
-    });
-
-    // Sort reorder changes by target index
-    const sortedReorders = [...reorderChanges].sort((a, b) => a.newIndex - b.newIndex);
-
-    // Apply reorders (this is a simplified approach)
-    for (const reorder of sortedReorders) {
-      const currentIdx = nameToCurrentIdx.get(reorder.exerciseName);
-      if (currentIdx !== undefined && currentIdx !== reorder.newIndex) {
-        const [exercise] = finalExercises.splice(currentIdx, 1);
-        const targetIdx = Math.min(reorder.newIndex, finalExercises.length);
-        finalExercises.splice(targetIdx, 0, exercise!);
-
-        // Update the map
-        finalExercises.forEach((ex, idx) => {
-          nameToCurrentIdx.set(ex.name, idx);
-        });
-      }
-    }
+    finalExercises.splice(Math.min(index, finalExercises.length), 0, exercise);
   }
 
   return new SessionBlueprint(name, finalExercises, notes, original.color);
+}
+
+/**
+ * Where the exercise at `originalIndex` of the diff's original session sits in `original`, or -1. The
+ * routine can have been edited since the diff was computed, so the index is trusted only while the
+ * exercise there still has the name it had then.
+ */
+function locateInOriginal(original: SessionBlueprint, diff: SessionBlueprintDiff, originalIndex: number): number {
+  const oldName = diff.originalSession.exercises[originalIndex]?.name;
+  return original.exercises[originalIndex]?.name === oldName
+    ? originalIndex
+    : original.exercises.findIndex((ex) => ex.name === oldName);
 }
 
 // ============================================================================

@@ -1,5 +1,5 @@
 import { DiffChange, ExerciseModification, SessionBlueprintDiff } from '@/models/blueprint-diff';
-import { PlannedSet, PlannedWarmupSet, SessionBlueprint, WeightedExerciseBlueprint } from '@/models/blueprint-models';
+import { PlannedSet, PlannedWarmupSet, WeightedExerciseBlueprint } from '@/models/blueprint-models';
 import { setLabels } from '@/models/session-models/set-kind';
 import { Duration } from '@js-joda/core';
 
@@ -260,41 +260,14 @@ function kindsDiffer(a: PlannedSet[], b: PlannedSet[]): boolean {
 
 /**
  * The diff calls an exercise reordered whenever its index moves, which an exercise added or removed
- * above it also causes. Only a change in the order of the exercises both sessions share is a reorder.
+ * above it also causes. Only a change in the order of the exercises both sessions share is a reorder:
+ * taken in the routine's order, their positions in the workout must climb.
  */
 function isRealReorder(diff: SessionBlueprintDiff): boolean {
-  if (diff.reorderedExercises.length === 0) {
-    return false;
-  }
-  const shared = sharedNames(diff.originalSession, diff.newSession);
-  const before = namesIn(diff.originalSession, shared);
-  const after = namesIn(diff.newSession, shared);
-  return before.some((name, index) => name !== after[index]);
-}
-
-/** How many times each name appears in both sessions. */
-function sharedNames(a: SessionBlueprint, b: SessionBlueprint): Map<string, number> {
-  const counts = (session: SessionBlueprint) => {
-    const map = new Map<string, number>();
-    for (const exercise of session.exercises) {
-      map.set(exercise.name, (map.get(exercise.name) ?? 0) + 1);
-    }
-    return map;
-  };
-  const inA = counts(a);
-  const inB = counts(b);
-  return new Map(Array.from(inA, ([name, count]) => [name, Math.min(count, inB.get(name) ?? 0)]));
-}
-
-function namesIn(session: SessionBlueprint, shared: Map<string, number>): string[] {
-  const remaining = new Map(shared);
-  const names: string[] = [];
-  for (const exercise of session.exercises) {
-    const left = remaining.get(exercise.name) ?? 0;
-    if (left > 0) {
-      names.push(exercise.name);
-      remaining.set(exercise.name, left - 1);
-    }
-  }
-  return names;
+  const removed = new Set(diff.removedExercises.map((c) => c.oldIndex));
+  const movedTo = new Map(diff.reorderedExercises.map((c) => [c.oldIndex, c.newIndex]));
+  const positions = diff.originalSession.exercises.flatMap((_, index) =>
+    removed.has(index) ? [] : [movedTo.get(index) ?? index],
+  );
+  return positions.some((position, i) => i > 0 && position < positions[i - 1]!);
 }
