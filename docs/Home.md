@@ -11,7 +11,7 @@ the plan import) opens in the Routines tab instead of switching to You:
 | Tab | Folder | What it holds |
 | --- | --- | --- |
 | Home | `(session)/` | Home, the workout screen and its sheets, and `history/`: All history (`/history`, the month list that used to be the History tab) and the workout editor (`/history/edit`). |
-| Routines | `routines/` | The Routines screen, and `manage-workouts/`: a program's page and the routine editor and the plan import (see [Routines.md](./Routines.md)). |
+| Routines | `routines/` | The Routines screen; `manage-workouts/`, a program's page and the routine editor; `import-plan-info` and `import-plan`, the plan import; and `ai/planner` (see [Routines.md](./Routines.md)). |
 | Progress | `stats/` | The stats screens, relabelled. |
 | You | `settings/` | A profile card, then the settings, then Feed when `showFeed` is on. |
 
