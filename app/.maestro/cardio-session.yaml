@@ -20,7 +20,18 @@ appId: com.ajfg297.liftlog
 # Text matching is case-insensitive by default, which would also match the "Freeform Workout"
 # cards in the list, so `(?-i)` pins this to the button's own casing.
 - tapOn: '(?-i)Freeform workout'
+# Add an exercise from the picker, then make it cardio in its editor
 - tapOn: 'Add exercise'
+- tapOn:
+    id: 'exercise-search-input'
+- inputText: 'Rowing, Stationary'
+- tapOn:
+    id: 'exercise-picker-row-Rowing, Stationary'
+- tapOn:
+    id: 'exercise-picker-add'
+- tapOn:
+    id: 'more-exercise-btn'
+- tapOn: 'Edit'
 - tapOn:
     id: 'cardio-button'
 - back

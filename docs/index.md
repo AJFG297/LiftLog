@@ -43,6 +43,9 @@ work to find the docs relevant to your area, and update it whenever you add, rem
 - [WorkoutDetail.md](./WorkoutDetail.md) - a past workout, opened from history: the header, stats row and set
   tables (e1RM, PR tags, the comparison with last time), Do again, Save as routine (into the active plan), and the
   overflow menu's edit, share and delete with Undo.
+- [ExercisePicker.md](./ExercisePicker.md) - choosing exercises for a routine or a workout: add (many, in
+  tap order, optionally as a superset) and swap (one), how the pick comes back through the store, the list
+  (Recent, fuzzy matches, muscle and equipment chips), creating a custom exercise, and the catalog's limits.
 - [FeedProcess.md](./FeedProcess.md) - the opt-in social feed: the follow/accept flow, what is and isn't
   visible to the server, and the end-to-end encryption model (AES-CBC payloads, RSA-PSS signatures).
 - [Progression.md](./Progression.md) - how last session's numbers carry into today from the best set,

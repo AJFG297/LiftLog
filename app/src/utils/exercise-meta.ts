@@ -23,3 +23,12 @@ export function translateExerciseMeta(t: TranslateFn, kind: ExerciseMetaKind, va
   const key = `exercise.${kind}.${toKeySegment(value)}` as TranslationKey;
   return t(key, value);
 }
+
+/**
+ * `translateExerciseMeta`, capitalised for a chip or the start of a line. The picker's equipment chips and its
+ * rows' meta both use it, so a chip and the rows it filters read the same word.
+ */
+export function exerciseMetaLabel(t: TranslateFn, kind: ExerciseMetaKind, value: string): string {
+  const text = translateExerciseMeta(t, kind, value);
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}

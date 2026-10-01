@@ -49,11 +49,16 @@ export function LiveExerciseCard(props: LiveExerciseCardProps) {
   const [removeOpen, setRemoveOpen] = useState(false);
   const exercise = session.recordedExercises[exerciseIndex];
 
-  const openSearch = useExerciseSearch((picked) =>
-    updateSession((s) => {
-      const current = s.recordedExercises[exerciseIndex];
-      return current ? s.withEditedExercise(exerciseIndex, swapped(current.blueprint, picked), useImperialUnits) : s;
-    }),
+  const openSearch = useExerciseSearch(
+    (picked) =>
+      updateSession((s) => {
+        const current = s.recordedExercises[exerciseIndex];
+        return current ? s.withEditedExercise(exerciseIndex, swapped(current.blueprint, picked), useImperialUnits) : s;
+      }),
+    {
+      name: session.blueprint.name,
+      exerciseIds: session.recordedExercises.map((recorded) => recorded.blueprint.exerciseId),
+    },
   );
 
   if (!exercise) {

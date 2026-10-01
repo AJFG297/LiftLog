@@ -65,7 +65,7 @@ function Layout() {
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       {/* The feed opens from You rather than being a tab, so it sits over the tabs with a stack of its own. */}
       <Stack.Screen name="feed" options={{ headerShown: false }} />
-      <Stack.Screen name="exercise-search" options={{ presentation: 'modal' }} />
+      <Stack.Screen name="exercise-search" options={{ presentation: 'modal', headerShown: false }} />
       <Stack.Screen name="exercise-editor" />
       <Stack.Screen name="exercise-history" options={formSheetOptions([0.6, 0.95])} />
       <Stack.Screen name="workout-editor" />

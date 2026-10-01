@@ -85,11 +85,12 @@ The draft also keeps one key per exercise, so an open card stays open while exer
 
 - A **name and notes** card with the routine's **colour** and a live summary: "Day 2 of Push Pull Legs · 5 exercises · 16 sets · ~50 min".
   The estimate is 45 seconds per set plus its rest, rounded to 5 minutes.
-- With no exercises, **four starts**: Pick exercises (the exercise picker), Describe it (the AI planner),
+- With no exercises, **four starts**: Pick exercises (the [exercise picker](./ExercisePicker.md)), Describe it (the AI planner),
   Import (plan import) and Start from a program (the Routines screen). The last three build whole programs
   for now.
 - **Exercise cards**, collapsed to a summary ("1 warm-up + 4 × 5 · 87.5 kg · rest 2:30") and a progression
-  tag. A new exercise from the picker is 3 × 10 with 1:30 rest and no rules, and opens expanded.
+  tag. Exercises from the picker land in the order they were tapped, linked when picked As superset, each
+  3 × 10 with 1:30 rest and no rules. The first of them opens expanded.
 - Expanded, a card has the **set rows**, **rest**, **progression**, More options, and Move up, Move down,
   Superset or Unlink, and Remove (with an Undo toast).
 - The **Ask AI to change this routine** bar is built but hidden (`ASK_AI_BAR_ENABLED` in `ask-ai-bar.tsx`)
