@@ -1,8 +1,8 @@
 import StackWithHeader from '@/components/layout/stack-with-header';
 import { WithWorkoutInProgressBar } from '@/components/smart/workout-in-progress';
 
-// A link straight to a program or routine (from the feed, an import) still has the Routines screen under it,
-// so Back lands there.
+// A deep link straight to a program or routine, or a push with `withAnchor` (saving a shared workout to the
+// plan from the feed), still gets the Routines screen under it, so Back lands there. A plain push doesn't.
 export const unstable_settings = {
   initialRouteName: 'index',
 };

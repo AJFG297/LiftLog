@@ -139,7 +139,7 @@ function SharedSessionContent({ sharedItem }: { sharedItem: SharedSession }) {
                 sessionBlueprint: session.blueprint,
               }),
             );
-            push(programHref(activeProgramId));
+            push(programHref(activeProgramId), { withAnchor: true });
           }}
           mode="outlined"
           style={{ flex: 1 }}
