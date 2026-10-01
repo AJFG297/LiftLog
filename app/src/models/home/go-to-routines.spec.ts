@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { rootStateWith } from '@/models/home/__test__/root-state';
-import { goToRoutinesActions } from '@/models/home/go-to-routines';
+import { goToRoutinesActions, importScreensOnTop } from '@/models/home/go-to-routines';
 
 const routinesScreen = {
   key: 'index-1',
@@ -78,5 +78,25 @@ describe('goToRoutinesActions', () => {
         routes: [{ key: '__root-route', name: '__root', state: { key: 'root', routes: [{ name: 'feed' }] } }],
       }),
     ).toBeUndefined();
+  });
+});
+
+describe('importScreensOnTop', () => {
+  const name = (n: string) => ({ name: n });
+
+  it('counts the picker page and preview over the editor they were opened from', () => {
+    expect(importScreensOnTop(['index', editor.name, 'import-plan-info', 'import-plan'].map(name))).toBe(2);
+  });
+
+  it('counts only the preview when a file was opened over the Routines screen', () => {
+    expect(importScreensOnTop(['index', 'import-plan'].map(name))).toBe(1);
+  });
+
+  it('leaves the one route of a stack that started on the preview', () => {
+    expect(importScreensOnTop([name('import-plan')])).toBe(0);
+  });
+
+  it('is 0 when no import screen is on top', () => {
+    expect(importScreensOnTop(['index', 'import-plan', programPage.name].map(name))).toBe(0);
   });
 });

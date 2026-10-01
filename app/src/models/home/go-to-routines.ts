@@ -4,6 +4,7 @@ import type { NavigationAction } from 'expo-router/react-navigation';
 const TABS = '(tabs)';
 const ROUTINES_TAB = 'routines';
 const ROUTINES_SCREEN = 'index';
+const IMPORT_SCREENS = ['import-plan', 'import-plan-info'];
 
 /**
  * The actions that land on the one Routines screen from anywhere: whatever is open over the tabs closes,
@@ -69,4 +70,16 @@ function findTabs(
     }
   }
   return undefined;
+}
+
+/**
+ * How many of the plan import's screens (the file picker page, the preview) are on top of a Routines stack,
+ * so saving an import can leave them before going to Routines. At least one route stays.
+ */
+export function importScreensOnTop(routes: readonly { name: string }[]): number {
+  let count = 0;
+  while (count < routes.length - 1 && IMPORT_SCREENS.includes(routes[routes.length - 1 - count]!.name)) {
+    count++;
+  }
+  return count;
 }

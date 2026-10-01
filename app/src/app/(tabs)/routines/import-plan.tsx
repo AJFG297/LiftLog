@@ -11,17 +11,19 @@ import { useAppSelector } from '@/store';
 import { clearPendingImport, linkPlanExercises, savePlan, selectPendingImport } from '@/store/program';
 import { uuid } from '@/utils/uuid';
 import { useTranslate } from '@tolgee/react';
-import { Stack } from 'expo-router';
+import { Stack, useNavigation } from 'expo-router';
 import { Fragment } from 'react';
 import { View } from 'react-native';
 import { useDispatch } from 'react-redux';
 import { useOnDismiss } from '@/hooks/useOnDismiss';
 import { useGoToRoutines } from '@/hooks/useGoToRoutines';
+import { importScreensOnTop } from '@/models/home/go-to-routines';
 
 export default function ImportPlan() {
   const pending = useAppSelector(selectPendingImport);
   const dispatch = useDispatch();
   const { t } = useTranslate();
+  const navigation = useNavigation();
   const goToRoutines = useGoToRoutines();
   const preferredWeightUnit = usePreferredWeightUnit();
 
@@ -34,9 +36,13 @@ export default function ImportPlan() {
     const programId = uuid();
     dispatch(savePlan({ programId, programBlueprint: pending }));
     dispatch(linkPlanExercises({ programId }));
-    // Cleared here as well as on dismiss, so the preview can't save the same plan twice and the next
-    // import is seen as new.
-    dispatch(clearPendingImport());
+    // Leave the import screens first: the preview's dismiss clears the pending import, so it can't save the
+    // plan twice and the next import is seen as new. Going to Routines can then be held up by an unsaved
+    // routine editor underneath, and Keep editing returns to that editor rather than to an empty preview.
+    const count = importScreensOnTop(navigation.getState()?.routes ?? []);
+    if (count > 0) {
+      navigation.dispatch({ type: 'POP', payload: { count } });
+    }
     goToRoutines(programId);
   };
 
