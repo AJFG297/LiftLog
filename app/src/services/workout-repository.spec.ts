@@ -364,20 +364,32 @@ describe('WorkoutRepository', () => {
     });
 
     describe('subscribe', () => {
-      it('tells listeners after each kind of write has landed', async () => {
+      it('tells listeners after each kind of write has landed, and what it touched', async () => {
         const seen: number[] = [];
-        repository.subscribe(() => {
+        const writes: unknown[] = [];
+        repository.subscribe((write) => {
+          writes.push(write);
           void repository.loadAll().then(({ workouts }) => seen.push(workouts.length));
         });
-        const session = lifted('A', april(1));
+        const a = lifted('A', april(1));
+        const b = lifted('B', april(2));
+        const c = lifted('C', april(3));
 
-        await repository.put(session);
-        await repository.putMany([lifted('B', april(2))]);
-        await repository.setActive(lifted('C', april(3)));
-        await repository.delete(session.id);
+        await repository.put(a);
+        await repository.putMany([b]);
+        await repository.setActive(c);
+        await repository.delete(a.id);
+        await repository.setActive(undefined);
         await new Promise((resolve) => setTimeout(resolve, 0));
 
-        expect(seen).toEqual([1, 2, 3, 2]);
+        expect(seen).toEqual([1, 2, 3, 2, 2]);
+        expect(writes).toEqual([
+          { workoutIds: [a.id], activeChanged: false },
+          { workoutIds: [b.id], activeChanged: false },
+          { workoutIds: [c.id], activeChanged: true },
+          { workoutIds: [a.id], activeChanged: false },
+          { workoutIds: [], activeChanged: true },
+        ]);
       });
 
       it('stops once unsubscribed', async () => {

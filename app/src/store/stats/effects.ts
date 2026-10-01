@@ -4,6 +4,7 @@ import { fetchOverallStats, setOverallStats } from './index';
 import { AddEffectFn } from '@/store/store';
 import {
   deleteStoredSession,
+  initializeStoredSessionsStateSlice,
   putStoredSession,
   updateStoredSession,
   upsertStoredSessions,
@@ -15,6 +16,22 @@ import { selectPreferredWeightUnit } from '../settings';
 import { calculateStats } from '@/store/stats/calculate-stats';
 
 export function applyStatsEffects(addEffect: AddEffectFn) {
+  // Stats are read from the workout tables, so they are stale once a write has *committed* - which is after
+  // the action the effect below sees. A fetch between the two would read the old rows and clear the flag,
+  // so the repository marks them stale again after each commit. Writes of the workout in progress are
+  // skipped as below; `setActive` isn't, since finishing is what makes a workout count.
+  let unsubscribe = () => {};
+  addEffect(initializeStoredSessionsStateSlice, (_, { getState, dispatch, extra: { workoutRepository } }) => {
+    unsubscribe();
+    unsubscribe = workoutRepository.subscribe(({ workoutIds, activeChanged }) => {
+      const activeSessionId = getState().storedSessions.activeSessionId;
+      if (!activeChanged && workoutIds.every((id) => id === activeSessionId)) {
+        return;
+      }
+      dispatch(setStatsIsDirty(true));
+    });
+  });
+
   addEffect(fetchOverallStats, async (_, { getState, dispatch, extra: { workoutRepository } }) => {
     const before = getState();
 

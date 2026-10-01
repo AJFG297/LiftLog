@@ -39,6 +39,14 @@ type WorkoutReadRow = Omit<typeof workoutsSchema.$inferSelect, 'referenceTimeMs'
 // Keeps every statement under SQLite's historical 999 bound-parameter limit.
 const MAX_PARAMETERS = 999;
 
+/** What a write touched, for {@link WorkoutRepository.subscribe} listeners. */
+export interface WorkoutWrite {
+  /** The workouts whose rows were written or deleted. */
+  workoutIds: readonly string[];
+  /** True for `setActive`: the set of finished workouts changed even where no content did. */
+  activeChanged: boolean;
+}
+
 /** Finished history: the workout in progress is left out of every read below. */
 const finished = eq(workoutsSchema.active, false);
 
@@ -74,15 +82,15 @@ interface PersonalRecordRow {
  * {@link subscribe} tells screens when any write has landed, so what they show can be re-queried.
  */
 export class WorkoutRepository {
-  private readonly listeners = new Set<() => void>();
+  private readonly listeners = new Set<(write: WorkoutWrite) => void>();
 
   constructor(private readonly db: ExpoSQLiteDatabase) {}
 
   /**
-   * Calls `listener` after each write has landed, whatever it changed. Returns the unsubscribe. A listener
+   * Calls `listener` after each write has landed, with what it touched. Returns the unsubscribe. A listener
    * that re-queries sees the written rows, since the transaction has committed by then.
    */
-  subscribe(listener: () => void): () => void {
+  subscribe(listener: (write: WorkoutWrite) => void): () => void {
     this.listeners.add(listener);
     return () => {
       this.listeners.delete(listener);
@@ -258,14 +266,17 @@ export class WorkoutRepository {
       return Promise.resolve();
     }
     const rows = sessions.map(toWorkoutRows);
-    return this.write((tx) => writeContent(tx, rows, { activate: false }));
+    return this.write((tx) => writeContent(tx, rows, { activate: false }), {
+      workoutIds: sessions.map((x) => x.id),
+      activeChanged: false,
+    });
   }
 
   delete(workoutId: string): Promise<void> {
-    return this.write((tx) => [
-      ...deleteChildren(tx, [workoutId]),
-      tx.delete(workoutsSchema).where(eq(workoutsSchema.id, workoutId)),
-    ]);
+    return this.write(
+      (tx) => [...deleteChildren(tx, [workoutId]), tx.delete(workoutsSchema).where(eq(workoutsSchema.id, workoutId))],
+      { workoutIds: [workoutId], activeChanged: false },
+    );
   }
 
   /**
@@ -274,15 +285,18 @@ export class WorkoutRepository {
    * dispatched together and race.
    */
   setActive(session: Session | undefined): Promise<void> {
-    return this.write((tx) => [
-      tx.update(workoutsSchema).set({ active: false }).where(eq(workoutsSchema.active, true)),
-      ...(session ? writeContent(tx, [toWorkoutRows(session)], { activate: true }) : []),
-    ]);
+    return this.write(
+      (tx) => [
+        tx.update(workoutsSchema).set({ active: false }).where(eq(workoutsSchema.active, true)),
+        ...(session ? writeContent(tx, [toWorkoutRows(session)], { activate: true }) : []),
+      ],
+      { workoutIds: session ? [session.id] : [], activeChanged: true },
+    );
   }
 
-  private async write(build: (tx: Transaction) => Statement[]): Promise<void> {
+  private async write(build: (tx: Transaction) => Statement[], write: WorkoutWrite): Promise<void> {
     await writeAtomically(this.db, build);
-    this.listeners.forEach((listener) => listener());
+    this.listeners.forEach((listener) => listener(write));
   }
 
   /**

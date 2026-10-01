@@ -228,7 +228,8 @@ the model.
 
 `subscribe(listener)` is the one write notification: every `put`, `putMany`, `delete` and `setActive`
 calls the listeners after its transaction has committed, so a listener that re-queries sees the rows. It
-carries no detail about what changed; a screen re-runs its query, which is cheap.
+carries a `WorkoutWrite`: the ids touched, and whether the active flag changed (`setActive`). Screens
+ignore it and re-run their query, which is cheap; the stats effect uses it to skip the workout in progress.
 
 #### Reading from a screen: `useWorkoutQuery`
 
@@ -254,9 +255,11 @@ parameter), `useStreakStats(own, today)` and `usePersonalRecords()`. Call each o
 the result down: a list item that queried for itself would run the query once per row.
 
 Stats are the exception that still caches in Redux: `fetchOverallStats` reads `earliestDate()` and
-`finishedBetween()` and keeps the result in `stats.overallView`, invalidated by the write actions
-(`stats/effects.ts`) rather than by `subscribe`, because the effect has the actions and knows to skip the
-workout in progress. All-time stats rebuild every `Session` in the range (about 0.8 s under Node for 5,000
+`finishedBetween()` and keeps the result in `stats.overallView`. The write actions mark it stale at once,
+and `subscribe` marks it stale again after the commit (`stats/effects.ts`): a fetch that runs between the
+action and the commit (a big import, an edit while Stats is mounted) would otherwise read the old rows
+and clear the flag. Both skip writes that touch only the workout in progress; `setActive` is never skipped,
+since finishing is what makes a workout count. All-time stats rebuild every `Session` in the range (about 0.8 s under Node for 5,000
 workouts), which hydration used to pay once; pushing the per-movement aggregates into SQL is the
 follow-up that removes it.
 
