@@ -5,6 +5,7 @@ import { WorkoutInProgressBar } from '@/components/presentation/home/workout-in-
 import { useAppTheme } from '@/hooks/useAppTheme';
 import { useLiveWorkoutFocus } from '@/hooks/useLiveWorkoutFocus';
 import { resumeWorkoutActions } from '@/models/home/resume-workout';
+import { showsWorkoutInProgressBar } from '@/models/home/workout-bar-visibility';
 import { workoutInProgressNextOf, WorkoutInProgressNext } from '@/models/home/workout-in-progress';
 import { Session } from '@/models/session-models';
 import { restWindowOf } from '@/models/session-models/rest';
@@ -12,7 +13,7 @@ import { useAppSelector, useAppSelectorWhenFocused } from '@/store';
 import { fetchUpcomingSessions } from '@/store/program';
 import { deleteStoredSession, selectActiveSession } from '@/store/stored-sessions';
 import { useTranslate } from '@tolgee/react';
-import { useNavigationContainerRef, usePathname, useRouter } from 'expo-router';
+import { useNavigationContainerRef, useRootNavigationState, useRoute, useRouter } from 'expo-router';
 import { ReactNode } from 'react';
 import { Alert, Platform, Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -37,9 +38,12 @@ export function WithWorkoutInProgressBar({ children }: { children: ReactNode }) 
 function WorkoutInProgress() {
   // Tabs behind the open one stay mounted; they needn't follow every logged set.
   const session = useAppSelectorWhenFocused(selectActiveSession);
-  const pathname = usePathname();
-  // The workout screen and its sheets are the workout itself.
-  if (!session || pathname === '/session' || pathname.startsWith('/session/')) {
+  // This sits in a tab's layout, outside its stack, so the route is the tab's own.
+  const tab = useRoute();
+  const root = useRootNavigationState();
+  // Hidden while the tab shows the workout or one of its sheets, including while a screen over the tabs
+  // opens or closes on top of it.
+  if (!showsWorkoutInProgressBar(root, tab.key, session !== undefined) || !session) {
     return null;
   }
   return <Bar session={session} />;

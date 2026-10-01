@@ -73,7 +73,9 @@ of its name, so a name keeps its colour. The colours are fills under white day n
 
 While a workout is minimised, `WithWorkoutInProgressBar` (`components/smart/workout-in-progress.tsx`) puts a
 bar under every tab's stack, just above the tab bar. It takes its own space rather than floating, so it
-never covers a screen's content or its bottom buttons. It hides on the workout screen and its sheets.
+never covers a screen's content or its bottom buttons. It hides while its tab shows the workout screen or one
+of its sheets, which it reads from navigation state rather than the URL (`showsWorkoutInProgressBar`), so it stays
+hidden while a screen over the tabs, such as the exercise picker, opens or closes on top of the workout.
 
 It shows the workout's name, the time since the first set, the next set and, while resting, the countdown
 from `restWindowOf(session)`, which turns to Go when the rest is over (nothing with rest timers off).
