@@ -331,9 +331,12 @@ all three hit other sessions' builds, Metro, and emulators.
 - **Installing with `npm ci --ignore-scripts` breaks `build`.** It skips `patch-package` and
   `@shopify/react-native-skia`'s binary download, so the build fails with `Skia prebuilt binaries not found`.
   `build` only runs `npm ci` when `node_modules` is missing, so run a plain `npm ci` in `app/` yourself.
-- A slot's AVD and ports are overridable with `VERIFY_AVD`, `VERIFY_EMU_PORT`, and `VERIFY_METRO_PORT`. `up`
-  records the values it used in the slot, so later commands follow them without the variables. Use them only when
-  a slot collides with something that isn't a verify instance. `VERIFY_SLOTS_DIR` moves the claim directory.
+- A slot's AVD and ports are overridable with `VERIFY_AVD`, `VERIFY_EMU_PORT`, and `VERIFY_METRO_PORT`. They
+  apply only to `setup` and to the slot `up` claims, and `up` refuses a target that something already runs on.
+  `up` records the values in the slot, so later commands, and other checkouts judging the slot, read them back
+  without the variables. Other slots are always judged by what they recorded, so overrides can't make a live
+  slot look stale. To change them on a slot you already run, `down` first. Use them only when a slot collides
+  with something that isn't a verify instance. `VERIFY_SLOTS_DIR` moves the claim directory.
 
 ## Feature map
 

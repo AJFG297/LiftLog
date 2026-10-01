@@ -67,20 +67,33 @@ slot_set() { # slot_set <n> key=value...
 
 valid_slot() { [[ "$1" =~ ^[1-9]$ ]]; }
 
-# Sets AVD, EMU_PORT, METRO_PORT, SERIAL and DEV_URL for slot <n>. Values the slot recorded at `up` win
-# over the slot's defaults, and explicit VERIFY_* variables win over both.
-load_slot() {
-  local n="$1"
-  SLOT="$n"
-  AVD="${VERIFY_AVD:-$(slot_get "$n" avd)}"
-  AVD="${AVD:-$(slot_avd "$n")}"
-  EMU_PORT="${VERIFY_EMU_PORT:-$(slot_get "$n" emu_port)}"
-  EMU_PORT="${EMU_PORT:-$((5582 + 2 * n))}"
-  METRO_PORT="${VERIFY_METRO_PORT:-$(slot_get "$n" metro_port)}"
-  METRO_PORT="${METRO_PORT:-$((8089 + 2 * n))}"
+set_target() { # set_target <avd> <emu port> <metro port>
+  AVD="$1"
+  EMU_PORT="$2"
+  METRO_PORT="$3"
   SERIAL="emulator-$EMU_PORT"
   DEV_URL="exp+liftlog://expo-development-client/?url=http%3A%2F%2F127.0.0.1%3A$METRO_PORT"
 }
+
+# Sets SLOT, AVD, EMU_PORT, METRO_PORT, SERIAL and DEV_URL for slot <n>: what the slot recorded at `up`, or
+# the slot's defaults. VERIFY_AVD, VERIFY_EMU_PORT and VERIFY_METRO_PORT never apply here, because this is
+# also how one checkout judges whether another's slot is alive: with the caller's overrides it would look
+# at the wrong AVD and ports, find nothing, and reclaim a live slot.
+load_slot() {
+  local n="$1" avd emu metro
+  SLOT="$n"
+  avd="$(slot_get "$n" avd)"
+  emu="$(slot_get "$n" emu_port)"
+  metro="$(slot_get "$n" metro_port)"
+  set_target "${avd:-$(slot_avd "$n")}" "${emu:-$((5582 + 2 * n))}" "${metro:-$((8089 + 2 * n))}"
+}
+
+# The VERIFY_* overrides apply only to the slot this checkout is setting up or starting. `up` records them in
+# the slot, so every later command, and every other checkout, reads them back through load_slot.
+apply_overrides() {
+  set_target "${VERIFY_AVD:-$AVD}" "${VERIFY_EMU_PORT:-$EMU_PORT}" "${VERIFY_METRO_PORT:-$METRO_PORT}"
+}
+has_overrides() { [[ -n "${VERIFY_AVD:-}${VERIFY_EMU_PORT:-}${VERIFY_METRO_PORT:-}" ]]; }
 
 held_slot() { # the slot this checkout holds, if any
   local d
@@ -107,9 +120,10 @@ port_pid() { lsof -nP -tiTCP:"$1" -sTCP:LISTEN 2>/dev/null | head -1; }
 pid_cwd() { lsof -a -p "$1" -d cwd -Fn 2>/dev/null | sed -n 's/^n//p'; }
 
 # What is running on slot <n>'s emulator and Metro right now, whoever started it. Empty means nothing.
-slot_activity() {
-  local n="$1" bits=() p
-  load_slot "$n"
+slot_activity() { load_slot "$1"; target_activity; }
+
+target_activity() { # the same for the AVD and ports currently loaded
+  local bits=() p
   p="$(avd_pid "$AVD")"
   [[ -n "$p" ]] && bits+=("AVD $AVD running (pid $p)")
   serial_online "$EMU_PORT" && bits+=("$SERIAL online")
@@ -169,9 +183,18 @@ cmd__claim() { # internal: prints the slot claimed for this checkout, or explain
         ;;
     esac
     load_slot "$n"
+    apply_overrides
     if [[ ! -d "$HOME/.android/avd/$AVD.avd" ]]; then
       reasons+=("slot $n has no AVD $AVD; create it with: VERIFY_SLOT=$n verify.sh setup")
       continue
+    fi
+    # The slot's own AVD and ports are idle (slot_state said so), but overrides point elsewhere.
+    if has_overrides; then
+      local busy; busy="$(target_activity)"
+      if [[ -n "$busy" ]]; then
+        reasons+=("slot $n: the VERIFY_AVD/VERIFY_EMU_PORT/VERIFY_METRO_PORT target is in use: $busy")
+        continue
+      fi
     fi
     mkdir "$(slot_dir "$n")"
     slot_set "$n" "owner=$REPO_ROOT" "pid=$VERIFY_CLAIMER_PID" "claimed=$(date +%Y-%m-%dT%H:%M:%S)"
@@ -251,6 +274,7 @@ cmd_setup() {
   local n="${VERIFY_SLOT:-1}"
   valid_slot "$n" || die "VERIFY_SLOT must be 1-9"
   load_slot "$n"
+  apply_overrides
 
   local avd_dir="$HOME/.android/avd/$AVD.avd"
   if [[ -d "$avd_dir" ]]; then
@@ -370,13 +394,20 @@ cmd_up() {
   export VERIFY_CLAIMER_PID=$$
   n="$(with_claim_lock _claim)" || exit 1
   load_slot "$n"
+  local recorded="$AVD $EMU_PORT $METRO_PORT"
+  apply_overrides
+  # A slot this checkout already runs keeps its AVD and ports until down, or a second emulator would boot.
+  if [[ -n "$(slot_get "$n" avd)" && "$AVD $EMU_PORT $METRO_PORT" != "$recorded" ]]; then
+    die "slot $n already runs $recorded (AVD, emulator port, metro port); run verify.sh down before changing VERIFY_*"
+  fi
   if [[ ! -d "$HOME/.android/avd/$AVD.avd" ]]; then
     with_claim_lock _release > /dev/null
     die "AVD $AVD missing; run: VERIFY_SLOT=$n verify.sh setup"
   fi
   slot_set "$n" "avd=$AVD" "emu_port=$EMU_PORT" "metro_port=$METRO_PORT"
   mkdir -p "$STATE_DIR"
-  echo "$n" > "$STATE_DIR/slot"
+  # down reads what this checkout started from here, not from the slot, which it may no longer hold.
+  printf 'slot=%s\navd=%s\nemu_port=%s\nmetro_port=%s\n' "$n" "$AVD" "$EMU_PORT" "$METRO_PORT" > "$STATE_DIR/slot"
   echo "slot $n: AVD $AVD on $SERIAL, metro :$METRO_PORT"
 
   if emu_online; then
@@ -766,6 +797,23 @@ cmd_logs() { # logs [metro|emulator|app]
   esac
 }
 
+# Loads the AVD and ports this checkout's `up` started, as STATE_DIR/slot recorded them. The slot's own info
+# names whoever holds the slot now, which is not this checkout once its claim was lost. With no held slot, an
+# older STATE_DIR/slot (only a slot number) or none at all (pre-slot state, slot 1) picks the slot to load.
+load_started() { # load_started [held slot]
+  local f="$STATE_DIR/slot" first="" avd="" emu="" metro=""
+  if [[ -f "$f" ]]; then
+    first="$(head -1 "$f")"
+    [[ "$first" =~ ^[0-9]+$ ]] || first="$(sed -n 's/^slot=//p' "$f" | tail -1)"
+    avd="$(sed -n 's/^avd=//p' "$f" | tail -1)"
+    emu="$(sed -n 's/^emu_port=//p' "$f" | tail -1)"
+    metro="$(sed -n 's/^metro_port=//p' "$f" | tail -1)"
+  fi
+  load_slot "${1:-${first:-1}}"
+  if [[ -n "$avd" && -n "$emu" && -n "$metro" ]]; then set_target "$avd" "$emu" "$metro"; fi
+  return 0
+}
+
 cmd_down() {
   local n; n="$(held_slot)"
   if [[ -n "${VERIFY_SLOT:-}" && "$VERIFY_SLOT" != "$n" ]]; then
@@ -776,9 +824,7 @@ cmd_down() {
     echo "this checkout holds no slot and started nothing"
     return 0
   fi
-  # Without a held slot, stop what STATE_DIR says this checkout started: on the slot `up` recorded there, or
-  # on slot 1 for state from a verify.sh that predates slots. our_emulator_pid still checks the AVD.
-  load_slot "${n:-$(cat "$STATE_DIR/slot" 2>/dev/null || echo 1)}"
+  load_started "$n"
   if [[ -f "$STATE_DIR/metro.pid" ]]; then
     local mpid; mpid="$(cat "$STATE_DIR/metro.pid")"
     if kill -0 -- "-$mpid" 2>/dev/null; then
