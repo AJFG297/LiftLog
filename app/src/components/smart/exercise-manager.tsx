@@ -271,7 +271,10 @@ function ExerciseEditSheet({ exercise, exerciseId }: { exercise: ExerciseDescrip
  * foam roll), so editing an exercise never shows it as having none.
  */
 function equipmentOptionsFor(t: ReturnType<typeof useTranslate>['t'], current: string | null) {
-  const options = EQUIPMENT_CHOICES.map((choice) => ({ value: choice as string, label: exerciseMetaLabel(t, 'equipment', choice) }));
+  const options = EQUIPMENT_CHOICES.map((choice) => ({
+    value: choice as string,
+    label: exerciseMetaLabel(t, 'equipment', choice),
+  }));
   return current && !options.some((option) => option.value === current)
     ? [...options, { value: current, label: exerciseMetaLabel(t, 'equipment', current) }]
     : options;

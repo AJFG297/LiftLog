@@ -182,9 +182,7 @@ export function ExercisePickerNoMatch({ title, body, actions }: ExercisePickerNo
       <SurfaceText font="text-sm" style={{ color: tokens.muted, textAlign: 'center' }}>
         {body}
       </SurfaceText>
-      {main ? (
-        <ActionButton testID={main.testID} variant="ink" label={main.label} onPress={main.onPress} />
-      ) : null}
+      {main ? <ActionButton testID={main.testID} variant="ink" label={main.label} onPress={main.onPress} /> : null}
       {rest.map((action) => (
         <ActionButton
           key={action.testID}
