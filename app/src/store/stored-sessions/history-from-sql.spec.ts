@@ -11,7 +11,14 @@ import { makeRecordedExercise, makeWeightedBlueprint } from '@/models/session-mo
 import { createEffectStore } from '@/utils/__test__/effect-store';
 import { applyStoredSessionsEffects } from '@/store/stored-sessions/effects';
 import { applyStatsEffects } from '@/store/stats/effects';
-import { deleteStoredSession, initializeStoredSessionsStateSlice, updateStoredSession } from '@/store/stored-sessions';
+import {
+  deleteStoredSession,
+  initializeStoredSessionsStateSlice,
+  putStoredSession,
+  sessionFinished,
+  setActiveSessionId,
+  updateStoredSession,
+} from '@/store/stored-sessions';
 import { fetchOverallStats, setOverallViewTime } from '@/store/stats';
 import { oneRepMaxOf } from '@/store/stats/calculate-stats';
 import { setIsHydrated as setSettingsIsHydrated } from '@/store/settings';
@@ -163,5 +170,72 @@ describe('history read from SQL', () => {
     // 2026-03-09 to today is 87 days: 2 workouts over 87/7 weeks.
     expect(app.getState().stats.overallView.unwrapOr(undefined)?.workoutsPerWeek).toBeCloseTo((2 * 7) / 87, 6);
     expect(TODAY.toString()).toBe(LocalDate.now().toString());
+  });
+
+  it('a fetch that overtakes a slow write still ends with stats from the new rows', async () => {
+    const app = await startApp(history());
+    const { workoutRepository: repository } = app;
+    app.store.dispatch(setOverallViewTime(march));
+    await app.settle();
+    const heaviest = () => app.getState().stats.overallView.unwrapOr(undefined)?.heaviestLift?.weight;
+    expect(heaviest()).toEqual(new Weight(105, 'kilograms'));
+
+    // The persist effect's write waits on the test, as a big import or a slow device would make it.
+    let commit = () => {};
+    const putMany = repository.putMany.bind(repository);
+    vi.spyOn(repository, 'putMany').mockImplementation(async (sessions) => {
+      await new Promise<void>((resolve) => (commit = resolve));
+      return putMany(sessions);
+    });
+    app.store.dispatch(
+      updateStoredSession({
+        sessionId: 'week-1',
+        update: (session) => {
+          const exercise = session.recordedExercises[0] as RecordedWeightedExercise;
+          const top = exercise.potentialSets[2]!;
+          return session.withExercise(
+            0,
+            exercise.with({
+              potentialSets: [
+                ...exercise.potentialSets.slice(0, 2),
+                top.with({ weight: new Weight(120, 'kilograms') }),
+              ],
+            }),
+          );
+        },
+      }),
+    );
+    // Stats were marked stale by the action; a screen asks before the rows have changed.
+    app.store.dispatch(fetchOverallStats());
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    expect(heaviest()).toEqual(new Weight(105, 'kilograms'));
+
+    commit();
+    await app.settle();
+
+    // The commit must leave the stats stale again, so the next ask reads the new rows.
+    expect(app.getState().stats.isDirty).toBe(true);
+    app.store.dispatch(fetchOverallStats());
+    await app.settle();
+    expect(heaviest()).toEqual(new Weight(120, 'kilograms'));
+  });
+
+  it('a set logged in the workout in progress leaves the stats alone, finishing it does not', async () => {
+    const app = await startApp(history());
+    const live = history()[0]!.with({ id: 'live', date: TODAY });
+    app.store.dispatch(putStoredSession(live));
+    app.store.dispatch(setActiveSessionId(live.id));
+    await app.settle();
+    app.store.dispatch(setOverallViewTime(march));
+    await app.settle();
+    expect(app.getState().stats.isDirty).toBe(false);
+
+    app.store.dispatch(updateStoredSession({ sessionId: live.id, update: (s) => s.withName('Renamed') }));
+    await app.settle();
+    expect(app.getState().stats.isDirty).toBe(false);
+
+    app.store.dispatch(sessionFinished(live.id));
+    await app.settle();
+    expect(app.getState().stats.isDirty).toBe(true);
   });
 });
