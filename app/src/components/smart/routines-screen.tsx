@@ -215,7 +215,7 @@ export function RoutinesScreen({ focusProgramId }: { focusProgramId?: string }) 
             <OutlinedButton
               icon="download"
               label={t('routines.import_program.button')}
-              onPress={() => router.push('/settings/import-plan-info')}
+              onPress={() => router.push('/routines/import-plan-info')}
             />
           </View>
         </Section>
@@ -237,7 +237,7 @@ export function RoutinesScreen({ focusProgramId }: { focusProgramId?: string }) 
               icon="promptSuggestion"
               title={t('routines.build_ai.title')}
               subtitle={t('routines.build_ai.body')}
-              onPress={() => router.push('/settings/ai/planner')}
+              onPress={() => router.push('/routines/ai/planner')}
             />
           </View>
         </Section>

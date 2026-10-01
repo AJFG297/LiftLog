@@ -809,8 +809,8 @@ export function RoutineEditor({ programId, sessionIndex, isNew }: RoutineEditorP
         {exerciseCount === 0 ? (
           <RoutineStartOptions
             onPickExercises={addExercise}
-            onDescribe={() => router.push('/settings/ai/planner')}
-            onImport={() => router.push('/settings/import-plan-info')}
+            onDescribe={() => router.push('/routines/ai/planner')}
+            onImport={() => router.push('/routines/import-plan-info')}
             onFromProgram={() => router.dismissTo(routinesHref())}
           />
         ) : (
@@ -880,7 +880,7 @@ export function RoutineEditor({ programId, sessionIndex, isNew }: RoutineEditorP
             backgroundColor: tokens.bg,
           }}
         >
-          <AskAiBar onPress={() => router.push('/settings/ai/planner')} />
+          <AskAiBar onPress={() => router.push('/routines/ai/planner')} />
         </View>
       ) : null}
       <View onLayout={keepEditedRowInView}>
