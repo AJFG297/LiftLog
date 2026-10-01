@@ -3,6 +3,7 @@ import { RemoteData } from '@/models/remote';
 import { Session } from '@/models/session-models';
 import { makeRecordedExercise, makeWeightedBlueprint } from '@/models/session-models/__test__/helpers';
 import { Weight } from '@/models/weight';
+import { OwnActivity, ownActivityOf as ownActivityFrom, sessionVolume, volumeScaleOf } from '@/store/activity';
 import { RootState } from '@/store/store';
 import { DayOfWeek, LocalDate, LocalTime, ZoneOffset } from '@js-joda/core';
 
@@ -36,14 +37,22 @@ export function workout(
   );
 }
 
-/** Just enough state for the activity selectors: these sessions, no feed. */
-export function stateWith(sessions: Session[], firstDayOfWeek = DayOfWeek.MONDAY): RootState {
+/** Just enough state for the activity selectors: no feed. Own activity is handed to them, see `ownActivityOf`. */
+export function stateWith(firstDayOfWeek = DayOfWeek.MONDAY): RootState {
   return {
     feed: { feed: [], followedUsers: {}, identity: RemoteData.notAsked() },
-    storedSessions: {
-      sessions: Object.fromEntries(sessions.map((session) => [session.id, session])),
-      activeSessionId: undefined,
-    },
     settings: { firstDayOfWeek },
   } as unknown as RootState;
+}
+
+/** What `WorkoutRepository.dailyActivity` and `volumeScale` would report for these finished workouts. */
+export function ownActivityOf(sessions: Session[]): OwnActivity {
+  const started = sessions.filter((x) => x.isStarted);
+  const byDate = new Map<string, { date: LocalDate; workouts: number; volumeKg: number }>();
+  for (const session of started) {
+    const key = session.date.toString();
+    const day = byDate.get(key) ?? { date: session.date, workouts: 0, volumeKg: 0 };
+    byDate.set(key, { ...day, workouts: day.workouts + 1, volumeKg: day.volumeKg + sessionVolume(session) });
+  }
+  return ownActivityFrom([...byDate.values()], started.length ? volumeScaleOf(started.map(sessionVolume)) : undefined);
 }

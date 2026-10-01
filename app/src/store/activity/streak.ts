@@ -1,5 +1,4 @@
 import { DayOfWeek, LocalDate } from '@js-joda/core';
-import { Session } from '@/models/session-models';
 import { weekStart } from '@/store/activity/week-start';
 
 /**
@@ -33,19 +32,19 @@ export interface StreakStats {
 }
 
 /** Distinct days trained per week. A two-a-day is one day, so it can't inflate the bar. */
-function countDistinctDaysByWeek(sessions: Session[], firstDayOfWeek: DayOfWeek): Map<string, Set<string>> {
+function countDistinctDaysByWeek(
+  trainingDates: readonly LocalDate[],
+  firstDayOfWeek: DayOfWeek,
+): Map<string, Set<string>> {
   const byWeek = new Map<string, Set<string>>();
 
-  for (const session of sessions) {
-    if (!session.isStarted) {
-      continue;
-    }
-    const key = weekStart(session.date, firstDayOfWeek).toString();
+  for (const date of trainingDates) {
+    const key = weekStart(date, firstDayOfWeek).toString();
     const days = byWeek.get(key);
     if (days) {
-      days.add(session.date.toString());
+      days.add(date.toString());
     } else {
-      byWeek.set(key, new Set([session.date.toString()]));
+      byWeek.set(key, new Set([date.toString()]));
     }
   }
 
@@ -65,18 +64,23 @@ function lowerMedian(ascending: number[]): number {
  * split perfectly would see "broken" every week. And a plan gives us no cadence to measure against
  * (ProgramBlueprint is just a rotation, with no days-per-week), so the bar comes from the user's own
  * trailing behaviour instead.
+ *
+ * `trainingDates` are the days a started workout was done, repeats allowed: `trainingDatesOf` an
+ * `OwnActivity`.
  */
-export function calculateStreak(sessions: Session[], firstDayOfWeek: DayOfWeek, today: LocalDate): StreakStats {
-  const daysByWeek = countDistinctDaysByWeek(sessions, firstDayOfWeek);
+export function calculateStreak(
+  trainingDates: readonly LocalDate[],
+  firstDayOfWeek: DayOfWeek,
+  today: LocalDate,
+): StreakStats {
+  const daysByWeek = countDistinctDaysByWeek(trainingDates, firstDayOfWeek);
   const currentWeekStart = weekStart(today, firstDayOfWeek);
   const currentWeekCount = daysByWeek.get(currentWeekStart.toString())?.size ?? 0;
 
   const countForWeek = (start: LocalDate) => daysByWeek.get(start.toString())?.size ?? 0;
 
   const workoutsLast7Days = new Set(
-    sessions
-      .filter((x) => x.isStarted && !x.date.isAfter(today) && x.date.isAfter(today.minusDays(7)))
-      .map((x) => x.date.toString()),
+    trainingDates.filter((x) => !x.isAfter(today) && x.isAfter(today.minusDays(7))).map((x) => x.toString()),
   ).size;
 
   const earliest = [...daysByWeek.keys()].sort()[0];
