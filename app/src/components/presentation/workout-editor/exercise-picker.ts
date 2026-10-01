@@ -144,7 +144,7 @@ export function pickerListOf(
     }
     const rest = Object.entries(exercises)
       .filter(([id, exercise]) => !recent.includes(id) && passes(exercise))
-      .sort((a, b) => a[1].name.localeCompare(b[1].name))
+      .sort((a, b) => byName(a[1].name, b[1].name))
       .map(([id]): PickerRow => ({ kind: 'exercise', key: id, id }));
     if (rest.length) {
       rows.push({ kind: 'header', key: 'header-all', section: filters.muscle ?? 'all' });
@@ -282,4 +282,9 @@ export function sessionWithPickAdded(
     (next, blueprint) => next.withAddedExercise(blueprint, useImperialUnits),
     result,
   );
+}
+
+/** A to Z, with unnamed exercises (one left blank in Settings > Exercises) last rather than first. */
+function byName(a: string, b: string): number {
+  return Number(!a.trim()) - Number(!b.trim()) || a.localeCompare(b);
 }

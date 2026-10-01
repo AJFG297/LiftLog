@@ -106,6 +106,11 @@ describe('pickerListOf', () => {
     ]);
   });
 
+  it('lists an unnamed exercise after the named ones', () => {
+    const withUnnamed = { blank: exercise('', [], null), ...exercises };
+    expect(ids(pickerListOf(withUnnamed, [], noFilters)).slice(-2)).toEqual(['skull', 'blank']);
+  });
+
   it('narrows both sections by muscle and names the section after it', () => {
     expect(ids(pickerListOf(exercises, ['curl'], { ...noFilters, muscle: 'arms' }))).toEqual([
       '# recent',
