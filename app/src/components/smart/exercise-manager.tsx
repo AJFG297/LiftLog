@@ -155,15 +155,19 @@ export default function ExerciseManager() {
   };
 
   const deleteExercise = (id: string) => {
-    const state = getState().storedSessions;
+    // Read everything at call time. LegendList keeps a rendered row, and the onDelete it was given,
+    // until its data changes, so values captured at render miss edits made in place, like a rename.
+    const rootState = getState();
+    const state = rootState.storedSessions;
     const isBuiltIn = !!state.builtInExercises[id];
     const savedExercise = state.savedExercises[id];
-    const exercise = exercises[id];
+    const exercise = selectExerciseById(rootState, id);
+    const shownIds = state.filteredExerciseIds;
     if (!exercise) {
       return;
     }
 
-    setFilteredExerciseIds(filteredExerciseIds.filter((x) => x !== id));
+    setFilteredExerciseIds(shownIds.filter((x) => x !== id));
     dispatch(deleteExerciseAction(id));
     // Built-ins are tombstoned, so undo restores the tombstone; user exercises are re-inserted.
     const undoAction =
@@ -172,7 +176,7 @@ export default function ExerciseManager() {
       showSnackbar({
         text: t('deletion.item_deleted.message', { name: exercise.name }),
         action: t('generic.undo.button'),
-        dispatchAction: [undoAction, setFilteredExerciseIdsAction(filteredExerciseIds)],
+        dispatchAction: [undoAction, setFilteredExerciseIdsAction(shownIds)],
       }),
     );
   };
