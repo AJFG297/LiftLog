@@ -113,9 +113,11 @@ When the check needs data to start from, run `verify.sh seed <fixture>` instead 
   holds it open, so the pipeline never ends even though `up` has finished. Redirect to a file instead
   (`verify.sh up > up.log 2>&1`), or run it as a background task.
 - **Ready means `flows/ready.yaml` exits 0.** The flow brings the app that `up` opened to the front without
-  restarting it (`launchApp: {stopApp: false}`), waits up to 3 minutes for the bundle, dismisses the dev client's developer-menu sheet, taps
-  through the welcome wizard on a fresh install (Next, Next, Get started), and waits for Home's `home-range`
-  switch. It's safe to re-run at any time.
+  restarting it (`launchApp: {stopApp: false}`). If no tab bar or wizard shows within 20 seconds (a page or
+  sheet over the tabs), it restarts the app instead. It waits up to 3 minutes for the bundle, dismisses the dev
+  client's developer-menu sheet, taps through the welcome wizard on a fresh install (Next, Next, Get started),
+  returns to Home from any other tab or pushed page, and waits for Home's `home-range` switch. It's safe to
+  re-run wherever the app was left.
 - `clear`: wipes the app's data on this slot's emulator only (`pm clear com.ajfg297.liftlog`), then reopens the
   app on Metro. Run `ready.yaml` next: the app is back to a first run, with the welcome wizard. Use it to start a
   check from empty data without reinstalling.

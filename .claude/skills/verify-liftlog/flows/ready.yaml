@@ -1,11 +1,22 @@
 appId: com.ajfg297.liftlog
 ---
-# Readiness gate: gets from a cold launch to the Home tab, clearing the first-run welcome wizard if
-# it is up. Run after every `verify.sh up`; it is safe to re-run on an already-onboarded install.
-# `verify.sh up` has already opened the app on this slot's Metro. Restarting it here would land on the
-# dev launcher on a fresh AVD, which has no remembered Metro URL, so only bring it to the front.
+# Readiness gate: ends on Home's root, clearing the first-run welcome wizard if it is up. Run after every
+# `verify.sh up`; re-running it is safe wherever the app was left.
+# `up`, `clear` and `seed` have just opened the app on this slot's Metro with an intent pinned to the
+# package (Maestro's openLink stops on an "Open with" chooser), so only bring that instance to the front.
 - launchApp:
     stopApp: false
+- extendedWaitUntil:
+    visible: 'Next|Get started|Home|Continue'
+    timeout: 20000
+    optional: true
+# None of those means a page or sheet over the tabs, which hides the tab bar, or a load that stalled. A
+# restart lands on Home's root and reconnects to the Metro URL the dev client remembers from `up`.
+- runFlow:
+    when:
+      notVisible: 'Next|Get started|Home|Continue'
+    commands:
+      - launchApp
 # First bundle of a fresh Metro can take well over a minute
 - extendedWaitUntil:
     visible: 'Next|Home|Continue'
@@ -36,6 +47,23 @@ appId: com.ajfg297.liftlog
       visible: 'Get started'
     commands:
       - tapOn: 'Get started'
+# From another tab, the Home tab goes back to Home. Reselecting a tab doesn't pop its stack on Android, so
+# a page pushed inside Home's own tab needs a back.
+- repeat:
+    while:
+      notVisible:
+        id: 'home-range'
+    times: 4
+    commands:
+      - tapOn: 'Home'
+      - waitForAnimationToEnd:
+          timeout: 3000
+      - runFlow:
+          when:
+            notVisible:
+              id: 'home-range'
+          commands:
+            - back
 # The range switch is always on Home. `Freeform workout` is not: a workout in progress hides it.
 - extendedWaitUntil:
     visible:
