@@ -337,6 +337,8 @@ hide_dev_menu_gear() {
 # Opens the app on this slot's Metro and waits until Metro has served it a bundle. A fresh install has no
 # remembered Metro URL, so the plain launcher intent (and Maestro's launchApp) opens the dev launcher; the
 # app can also come up on a published update. Either way no bundle reaches Metro, so re-send the URL.
+# The intent names the package because other installed apps (upstream LiftLog) claim the same scheme, and
+# an unpinned VIEW intent (as Maestro's openLink sends) stops on an "Open with" chooser.
 open_on_metro() {
   local attempt before i fg
   for attempt in 1 2 3; do
@@ -480,11 +482,9 @@ cmd_flow() { # flow <flow.yaml> [label]
   local label="${2:-$(basename "$flow" .yaml)}"
   local out; out="$(run_dir)"; out="$out/$(date +%H%M%S)-$label"
   mkdir -p "$out"
-  # Run from the output dir so `takeScreenshot` files land next to the maestro report. DEV_URL lets a flow
-  # reopen the app on this slot's Metro with `openLink: ${DEV_URL}`.
+  # Run from the output dir so `takeScreenshot` files land next to the maestro report.
   local rc=0
-  (cd "$out" && maestro --device "$SERIAL" test -e "DEV_URL=$DEV_URL" -e "METRO_PORT=$METRO_PORT" \
-    --test-output-dir "$out" "$flow") 2>&1 | tee "$out/maestro.log" || rc=$?
+  (cd "$out" && maestro --device "$SERIAL" test --test-output-dir "$out" "$flow") 2>&1 | tee "$out/maestro.log" || rc=$?
   adb_s exec-out screencap -p > "$out/final.png" || true
   echo "flow $label exit=$rc evidence: $out"
   return "$rc"
