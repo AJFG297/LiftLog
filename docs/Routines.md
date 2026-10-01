@@ -10,9 +10,19 @@ issue PM-26). For how numbers move between workouts, see [Progression.md](./Prog
 `components/smart/routines-screen.tsx` (`RoutinesScreen`), the Routines tab's `app/(tabs)/routines/index.tsx`
 (`/routines`, `?focusprogramId=` to show one of the saved programs). The program page and the routine editor are
 routes in the same tab (`routines/manage-workouts/`), so they open in its stack with the tab still selected, and
-Back returns to the Routines screen. Link to them with `routinesHref`, `programHref` and `routineEditorHref`
-(`components/smart/routines-href.ts`). The old `/settings/program-list` address redirects to `/routines`. From
-the top:
+Back returns to the Routines screen. Link to them with `programHref` and `routineEditorHref`
+(`components/smart/routines-href.ts`).
+
+The plan import (`routines/import-plan-info`, then the preview at `routines/import-plan`, where `PlanImportGate`
+sends a parsed file from any tab) is in this tab too, and so is a second route to the AI planner
+(`routines/ai/planner`, the same screen as You's `settings/ai/planner`), so Build with AI, Import a plan and a
+new routine's Describe it and Import open on top of what's there and Back returns to it.
+
+To show the Routines screen from anywhere, use `useGoToRoutines()` (`hooks/useGoToRoutines.ts`), not a link to
+`/routines`. From another tab that link pushes a second Routines screen whenever a program or routine is open in
+this tab. The hook closes what's open over the tabs, cuts the Routines stack back to the Routines screen and
+selects the tab (`goToRoutinesActions`). Saving an import, an AI plan or a shared program goes there, on the new
+program. From the top:
 
 - **Title row** with **New routine** (+), which opens an empty routine at the end of the active program.
 - **Active program**, a dark card: its progress, a tile per routine showing **Next** or the day it was last

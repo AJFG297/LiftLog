@@ -6,6 +6,8 @@ import { useAppSelector } from '@/store';
 import { selectHasUnseenWhatsNew, setLastSeenWhatsNewId } from '@/store/settings';
 import { T, useTranslate } from '@tolgee/react';
 import { Href, Stack, useRouter } from 'expo-router';
+import { routinesHref } from '@/components/smart/routines-href';
+import { useGoToRoutines } from '@/hooks/useGoToRoutines';
 import { useEffect } from 'react';
 import { View } from 'react-native';
 import { Card, Icon, Text } from 'react-native-paper';
@@ -39,7 +41,8 @@ export default function WhatsNew() {
 function WhatsNewCard({ entry }: { entry: WhatsNewEntry }) {
   const { colors } = useAppTheme();
   const { push } = useRouter();
-  const goToFeature = (route: Href) => push(route);
+  const goToRoutines = useGoToRoutines();
+  const goToFeature = (route: Href) => (route === routinesHref() ? goToRoutines() : push(route));
 
   return (
     <Card mode="contained">

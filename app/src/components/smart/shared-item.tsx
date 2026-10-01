@@ -15,7 +15,8 @@ import Button from '@/components/presentation/foundation/button';
 import { useDispatch } from 'react-redux';
 import { uuid } from '@/utils/uuid';
 import { useRouter } from 'expo-router';
-import { programHref, routinesHref } from '@/components/smart/routines-href';
+import { programHref } from '@/components/smart/routines-href';
+import { useGoToRoutines } from '@/hooks/useGoToRoutines';
 import { Session } from '@/models/session-models';
 import { usePreferredWeightUnit } from '@/hooks/usePreferredWeightUnit';
 import SessionComponent from '@/components/smart/session-component';
@@ -31,7 +32,7 @@ function SharedProgramBlueprintContent({ sharedItem }: { sharedItem: SharedProgr
   const program = sharedItem.programBlueprint;
   const dispatch = useDispatch();
   const preferredWeightUnit = usePreferredWeightUnit();
-  const { push } = useRouter();
+  const goToRoutines = useGoToRoutines();
 
   // Convert session blueprints to sessions for display
   const sessions = program.sessions.map((sessionBlueprint) =>
@@ -47,9 +48,7 @@ function SharedProgramBlueprintContent({ sharedItem }: { sharedItem: SharedProgr
       }),
     );
     dispatch(linkPlanExercises({ programId }));
-    push(routinesHref(programId), {
-      withAnchor: true,
-    });
+    goToRoutines(programId);
     dispatch(
       showSnackbar({
         text: `"${program.name}" saved to your plans`,

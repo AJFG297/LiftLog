@@ -11,18 +11,18 @@ import { useAppSelector } from '@/store';
 import { clearPendingImport, linkPlanExercises, savePlan, selectPendingImport } from '@/store/program';
 import { uuid } from '@/utils/uuid';
 import { useTranslate } from '@tolgee/react';
-import { Stack, useRouter } from 'expo-router';
+import { Stack } from 'expo-router';
 import { Fragment } from 'react';
 import { View } from 'react-native';
 import { useDispatch } from 'react-redux';
 import { useOnDismiss } from '@/hooks/useOnDismiss';
-import { routinesHref } from '@/components/smart/routines-href';
+import { useGoToRoutines } from '@/hooks/useGoToRoutines';
 
 export default function ImportPlan() {
   const pending = useAppSelector(selectPendingImport);
   const dispatch = useDispatch();
   const { t } = useTranslate();
-  const { replace } = useRouter();
+  const goToRoutines = useGoToRoutines();
   const preferredWeightUnit = usePreferredWeightUnit();
 
   useOnDismiss(() => dispatch(clearPendingImport()));
@@ -34,7 +34,10 @@ export default function ImportPlan() {
     const programId = uuid();
     dispatch(savePlan({ programId, programBlueprint: pending }));
     dispatch(linkPlanExercises({ programId }));
-    replace(routinesHref(programId));
+    // Cleared here as well as on dismiss, so the preview can't save the same plan twice and the next
+    // import is seen as new.
+    dispatch(clearPendingImport());
+    goToRoutines(programId);
   };
 
   return (

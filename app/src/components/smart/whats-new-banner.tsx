@@ -7,6 +7,8 @@ import { useAppSelector } from '@/store';
 import { selectUnseenWhatsNew, setLastSeenWhatsNewId } from '@/store/settings';
 import { T } from '@tolgee/react';
 import { Href, useRouter } from 'expo-router';
+import { routinesHref } from '@/components/smart/routines-href';
+import { useGoToRoutines } from '@/hooks/useGoToRoutines';
 import { StyleSheet, View } from 'react-native';
 import { Icon, Text } from 'react-native-paper';
 import { shallowEqual, useDispatch } from 'react-redux';
@@ -16,6 +18,7 @@ export function WhatsNewBanner() {
   const dispatch = useDispatch();
   const { colors } = useAppTheme();
   const { push } = useRouter();
+  const goToRoutines = useGoToRoutines();
 
   if (!unseen.length) {
     return null;
@@ -24,7 +27,11 @@ export function WhatsNewBanner() {
   const dismiss = () => dispatch(setLastSeenWhatsNewId(latestWhatsNewId));
 
   const goToFeature = (route: Href) => {
-    push(route);
+    if (route === routinesHref()) {
+      goToRoutines();
+    } else {
+      push(route);
+    }
   };
 
   return (
