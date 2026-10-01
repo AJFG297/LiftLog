@@ -4,6 +4,7 @@ import { MIN_TOUCH_TARGET } from '@/components/presentation/foundation/touch-tar
 import { WorkoutInProgressBar } from '@/components/presentation/home/workout-in-progress-bar';
 import { useAppTheme } from '@/hooks/useAppTheme';
 import { useLiveWorkoutFocus } from '@/hooks/useLiveWorkoutFocus';
+import { resumeWorkoutActions } from '@/models/home/resume-workout';
 import { workoutInProgressNextOf, WorkoutInProgressNext } from '@/models/home/workout-in-progress';
 import { Session } from '@/models/session-models';
 import { restWindowOf } from '@/models/session-models/rest';
@@ -11,7 +12,7 @@ import { useAppSelector, useAppSelectorWhenFocused } from '@/store';
 import { fetchUpcomingSessions } from '@/store/program';
 import { deleteStoredSession, selectActiveSession } from '@/store/stored-sessions';
 import { useTranslate } from '@tolgee/react';
-import { usePathname, useRouter } from 'expo-router';
+import { useNavigationContainerRef, usePathname, useRouter } from 'expo-router';
 import { ReactNode } from 'react';
 import { Alert, Platform, Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -48,6 +49,7 @@ function Bar({ session }: { session: Session }) {
   const { t } = useTranslate();
   const { tokens } = useAppTheme();
   const { push } = useRouter();
+  const navigation = useNavigationContainerRef();
   const dispatch = useDispatch();
   const restTimersEnabled = useAppSelector((x) => x.settings.restTimersEnabled);
   const { groups, focusedGroupIndex } = useLiveWorkoutFocus(session);
@@ -56,7 +58,16 @@ function Bar({ session }: { session: Session }) {
   const insets = useSafeAreaInsets();
 
   // The page on screen is kept in the store, so the workout opens where it was left.
-  const resume = () => push('/(tabs)/(session)/session', { withAnchor: true });
+  const resume = () => {
+    const actions = resumeWorkoutActions(navigation.getRootState());
+    if (!actions) {
+      push('/(tabs)/(session)/session', { withAnchor: true });
+      return;
+    }
+    for (const action of actions) {
+      navigation.dispatch(action);
+    }
+  };
   const clear = () =>
     Alert.alert(t('workout.clear_current.confirm.title'), t('workout.clear_current.confirm.body'), [
       { text: t('generic.cancel.button'), style: 'cancel' },
