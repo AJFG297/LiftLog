@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Drive LiftLog on a dedicated Android emulator slot for verification.
-# Usage: verify.sh <setup|build|up|doctor|slots|flow|shot|ui|db|clear|logs|down> [args]
+# Usage: verify.sh <setup|build|up|doctor|slots|flow|flows|shot|ui|db|clear|seed|snapshot|fixture|fixtures|logs|down> [args]
 # See SKILL.md next to this file for what each command does and when to use it.
 set -euo pipefail
 
@@ -332,7 +332,7 @@ hide_dev_menu_gear() {
   fi
   sed -i '' -e '/name="showFab"/d' -e 's#</map>#    <boolean name="showFab" value="false" />\
 </map>#' "$tmp"
-  adb_s push "$tmp" /data/local/tmp/verify-devmenu-prefs.xml > /dev/null
+  adb_s push "$tmp" /data/local/tmp/verify-devmenu-prefs.xml > /dev/null 2>&1
   adb_s shell chmod 644 /data/local/tmp/verify-devmenu-prefs.xml
   adb_s shell run-as "$APP_ID" sh -c "'mkdir -p shared_prefs && cp /data/local/tmp/verify-devmenu-prefs.xml $prefs'"
   adb_s shell rm -f /data/local/tmp/verify-devmenu-prefs.xml
@@ -546,6 +546,217 @@ cmd_clear() { # wipe the app's data on this slot's emulator, then reopen it on M
   echo "next: verify.sh flow $SKILL_DIR/flows/ready.yaml"
 }
 
+# --- fixtures ----------------------------------------------------------------------------------------
+#
+# A fixture is the app's user data: files/SQLite/db.db plus the preference files at the top of files/
+# (KeyValueStore keeps one file per key). It leaves out shared_prefs, where the dev client keeps its
+# remembered Metro URL and the gear setting, and the dev client's own files in files/ (a 23 MB bundle,
+# logs). A fixture made from a seed flow (flows/seed-<name>.yaml) is shared machine-wide, keyed by a
+# fingerprint of what decides its contents, so every checkout with the same storage code reuses it.
+# `snapshot` captures whatever the app holds now, for this checkout only.
+
+FIXTURE_CACHE="${VERIFY_FIXTURES_DIR:-$SLOTS_DIR/fixtures}"
+SNAPSHOTS_DIR="$RUNS_DIR/fixtures"
+FLOWS_DIR="$SKILL_DIR/flows"
+
+valid_fixture_name() { [[ "$1" =~ ^[a-z0-9][a-z0-9-]*$ ]]; }
+seed_flow() { echo "$FLOWS_DIR/seed-$1.yaml"; }
+
+# The schema, the persisted model versions and the What's New id decide whether this checkout's app can
+# open a fixture as its seed flow left it. The seed flow and its helpers decide what is in it.
+fixture_fingerprint() { # <name>
+  {
+    (cd "$APP_DIR/src" && find drizzle models/storage/versions models/whats-new.ts -type f | LC_ALL=C sort | xargs shasum)
+    (cd "$FLOWS_DIR" && { echo ready.yaml; echo "seed-$1.yaml"; find seed -type f 2>/dev/null; } | LC_ALL=C sort | xargs shasum)
+  } | shasum | cut -c1-12
+}
+
+fixture_dir() { # <name>: where this checkout reads and writes fixture <name>
+  if [[ -f "$(seed_flow "$1")" ]]; then echo "$FIXTURE_CACHE/$1-$(fixture_fingerprint "$1")"
+  else echo "$SNAPSHOTS_DIR/$1"
+  fi
+}
+
+app_migrations() { grep -c '"idx"' "$APP_DIR/src/drizzle/meta/_journal.json"; }
+
+# Copies this slot's app data into <dir>/fixture.tar and writes <dir>/info. The app is stopped first so no
+# write lands mid-copy.
+capture_fixture() { # <name> <dir>
+  local name="$1" dest="$2" work keys
+  work="$(mktemp -d "${TMPDIR:-/tmp}/verify-fixture.XXXXXX")"
+  adb_s shell am force-stop "$APP_ID"
+  keys="$(adb_s shell run-as "$APP_ID" ls -p files | tr -d '\r' | grep -v '/$' \
+    | grep -vE '^(DevLauncherApp-.*\.js|app\.log|profileInstalled|dev\.expo\..*|.*-tmp.*)$' || true)"
+  # shellcheck disable=SC2086
+  adb_s exec-out run-as "$APP_ID" tar -cf - -C files SQLite $keys > "$work/raw.tar"
+  mkdir -p "$work/data"
+  tar -xf "$work/raw.tar" -C "$work/data"
+  [[ -s "$work/data/SQLite/db.db" ]] || { rm -rf "$work"; die "could not read files/SQLite/db.db from $APP_ID"; }
+  local db="$work/data/SQLite/db.db" t
+  # Fold the WAL into db.db so the fixture is one file. The feed identity is a key pair and password in
+  # plain text: two slots seeded with it would be one feed account, so no feed rows travel.
+  sqlite3 "$db" 'PRAGMA wal_checkpoint(TRUNCATE);' > /dev/null
+  for t in $(sqlite3 "$db" "select name from sqlite_master where type = 'table' and name like 'feed\_%' escape '\\';"); do
+    sqlite3 "$db" "delete from \"$t\";"
+  done
+  rm -f "$db-wal" "$db-shm"
+  sqlite3 "$db" 'PRAGMA journal_mode=DELETE; VACUUM;' > /dev/null
+  if [[ "$(sqlite3 "$db" 'select count(*) from workout where active = 1;')" != 0 ]]; then
+    echo "verify: warning: $name holds a workout in progress; seed stops the app, which ends its rest timer and notification" >&2
+  else
+    # Left behind by the last workout; with none in progress they only describe a page that is gone.
+    keys="$(echo "$keys" | grep -vxE 'ActiveRestTimer|LiveWorkoutFocus' || true)"
+  fi
+  local tmp="$dest.tmp.$$"
+  rm -rf "$tmp"
+  mkdir -p "$tmp"
+  # COPYFILE_DISABLE keeps macOS tar from adding ._ AppleDouble files, which would land in files/.
+  # shellcheck disable=SC2086
+  (cd "$work/data" && COPYFILE_DISABLE=1 tar -cf "$tmp/fixture.tar" SQLite $keys)
+  {
+    echo "name=$name"
+    echo "made=$(date +%Y-%m-%dT%H:%M:%S)"
+    echo "checkout=$REPO_ROOT"
+    echo "commit=$(git -C "$REPO_ROOT" rev-parse --short HEAD 2>/dev/null || echo unknown)"
+    echo "migrations=$(sqlite3 "$db" 'select count(*) from __drizzle_migrations;')"
+    echo "workouts=$(sqlite3 "$db" 'select count(*) from workout;')"
+    echo "programs=$(sqlite3 "$db" 'select count(*) from program;')"
+    if [[ -f "$(seed_flow "$name")" ]]; then echo "fingerprint=$(fixture_fingerprint "$name")"; fi
+  } > "$tmp/info"
+  rm -rf "$work" "$dest"
+  mkdir -p "$(dirname "$dest")"
+  mv "$tmp" "$dest"
+  echo "fixture $name: $dest ($(wc -c < "$dest/fixture.tar" | tr -d ' ') bytes; $(sed -n 's/^workouts=//p' "$dest/info") workouts, $(sed -n 's/^programs=//p' "$dest/info") programs)"
+}
+
+# Replaces the app's user data on this slot with <dir>/fixture.tar, keeping the dev client's own state.
+restore_fixture() { # <dir>
+  local tar="$1/fixture.tar" apply
+  apply="$(mktemp "${TMPDIR:-/tmp}/verify-apply.XXXXXX")"
+  # Runs as the app user, in its data dir: drops every preference file and the database, keeping the dev
+  # client's files, then unpacks the fixture. Stale preference files (a rest timer, the focused page)
+  # would otherwise outlive the swap.
+  cat > "$apply" <<'EOF'
+mkdir -p files && cd files || exit 1
+for f in *; do
+  [ -f "$f" ] || continue
+  case "$f" in DevLauncherApp-*.js|app.log|profileInstalled|dev.expo.*) continue ;; esac
+  rm -f "$f"
+done
+rm -rf SQLite
+tar -xf /data/local/tmp/verify-fixture.tar
+EOF
+  adb_s shell am force-stop "$APP_ID"
+  adb_s push "$tar" /data/local/tmp/verify-fixture.tar > /dev/null 2>&1
+  adb_s push "$apply" /data/local/tmp/verify-fixture-apply.sh > /dev/null 2>&1
+  rm -f "$apply"
+  adb_s shell chmod 644 /data/local/tmp/verify-fixture.tar /data/local/tmp/verify-fixture-apply.sh
+  adb_s shell run-as "$APP_ID" sh /data/local/tmp/verify-fixture-apply.sh
+  adb_s shell rm -f /data/local/tmp/verify-fixture.tar /data/local/tmp/verify-fixture-apply.sh
+}
+
+# Notification permission is system state, outside the data dir: `pm clear` revokes it, and the dialog
+# asking for it again would stall a flow.
+grant_notifications() { adb_s shell pm grant "$APP_ID" android.permission.POST_NOTIFICATIONS > /dev/null 2>&1 || true; }
+
+cmd_snapshot() { # snapshot <name>: capture this slot's app data as a fixture for this checkout
+  local name="${1:?usage: verify.sh snapshot <name>}"
+  valid_fixture_name "$name" || die "fixture names are lowercase letters, digits and dashes"
+  [[ ! -f "$(seed_flow "$name")" ]] || die "$name is made by flows/seed-$name.yaml; run verify.sh fixture $name, or snapshot under another name"
+  require_slot
+  require_our_emulator
+  capture_fixture "$name" "$SNAPSHOTS_DIR/$name"
+  open_on_metro
+}
+
+cmd_fixture() { # fixture <name>: clear the app, run flows/seed-<name>.yaml, and save the result
+  local name="${1:?usage: verify.sh fixture <name>}"
+  local flow; flow="$(seed_flow "$name")"
+  [[ -f "$flow" ]] || die "no seed flow $flow; verify.sh fixtures lists the fixtures"
+  require_slot
+  require_our_emulator
+  local dir; dir="$(fixture_dir "$name")"
+  echo "making fixture $name from $flow (a few minutes; it drives the real UI)"
+  cmd_clear > /dev/null
+  grant_notifications
+  cmd_flow "$flow" "fixture-$name" || die "seed flow for $name failed; nothing saved"
+  capture_fixture "$name" "$dir"
+  open_on_metro
+}
+
+cmd_seed() { # seed <name>: replace this slot's app data with fixture <name>, then reopen it on Metro
+  local name="${1:?usage: verify.sh seed <name>}"
+  valid_fixture_name "$name" || die "fixture names are lowercase letters, digits and dashes"
+  require_slot
+  require_our_emulator
+  local dir; dir="$(fixture_dir "$name")"
+  if [[ ! -f "$dir/fixture.tar" ]]; then
+    [[ -f "$(seed_flow "$name")" ]] || die "no fixture $name; verify.sh fixtures lists them"
+    echo "no $name fixture for this checkout's storage code yet; making it"
+    cmd_fixture "$name"
+  fi
+  local fm am made today age
+  fm="$(sed -n 's/^migrations=//p' "$dir/info")"
+  am="$(app_migrations)"
+  (( ${fm:-0} <= am )) || die "fixture $name has $fm migrations and this app only $am: it was made by newer code; snapshot it again from this checkout"
+  restore_fixture "$dir"
+  grant_notifications
+  echo "seeded $name from $dir"
+  open_on_metro
+  made="$(sed -n 's/^made=//p' "$dir/info" | cut -dT -f1)"
+  today="$(date +%Y-%m-%d)"
+  if [[ -n "$made" && "$made" != "$today" ]]; then
+    age=$(( ($(date -j -f %Y-%m-%d "$today" +%s) - $(date -j -f %Y-%m-%d "$made" +%s)) / 86400 ))
+    echo "verify: note: $name was made $age day(s) ago, so its dates sit $age day(s) further back from today than they did then" >&2
+    if [[ -f "$(seed_flow "$name")" ]]; then echo "verify: if the check depends on recent dates, remake it: verify.sh fixture $name" >&2; fi
+  fi
+  cmd_flow "$FLOWS_DIR/ready.yaml" "seed-$name-ready"
+}
+
+cmd_fixtures() { # list the fixtures this checkout can seed
+  local f name dir state
+  printf '%-16s %-9s %-11s %-20s %s\n' fixture kind state made where
+  for f in "$FLOWS_DIR"/seed-*.yaml; do
+    [[ -f "$f" ]] || continue
+    name="$(basename "$f" .yaml)"; name="${name#seed-}"
+    dir="$(fixture_dir "$name")"
+    if [[ -f "$dir/fixture.tar" ]]; then state=ready; else state="not made"; fi
+    printf '%-16s %-9s %-11s %-20s %s\n' "$name" flow "$state" "$(sed -n 's/^made=//p' "$dir/info" 2>/dev/null)" "$dir"
+  done
+  for dir in "$SNAPSHOTS_DIR"/*/; do
+    [[ -f "$dir/fixture.tar" ]] || continue
+    dir="${dir%/}"
+    printf '%-16s %-9s %-11s %-20s %s\n' "${dir##*/}" snapshot ready "$(sed -n 's/^made=//p' "$dir/info")" "$dir"
+  done
+}
+
+cmd_flows() { # flows <dir|flow.yaml>...: run flows in order, stopping at the first failure
+  (( $# )) || die "usage: verify.sh flows <dir|flow.yaml>..."
+  require_slot
+  local list=() arg f
+  for arg in "$@"; do
+    if [[ -d "$arg" ]]; then
+      # Only the top level runs, so subflows can live in a subdirectory. config.yaml is Maestro's workspace file.
+      while IFS= read -r f; do list+=("$f"); done < <(find "$arg" -maxdepth 1 -name '*.yaml' ! -name config.yaml | LC_ALL=C sort)
+    elif [[ -f "$arg" ]]; then list+=("$arg")
+    else die "no such flow or directory: $arg"
+    fi
+  done
+  (( ${#list[@]} )) || die "no flows in $*"
+  local i rc
+  for ((i = 0; i < ${#list[@]}; i++)); do
+    echo "== flow $((i + 1))/${#list[@]}: ${list[$i]}"
+    rc=0
+    cmd_flow "${list[$i]}" || rc=$?
+    if (( rc != 0 )); then
+      echo "flows: ${list[$i]} failed (exit $rc)"
+      if (( i + 1 < ${#list[@]} )); then echo "flows: not run:"; printf '  %s\n' "${list[@]:$((i + 1))}"; fi
+      return "$rc"
+    fi
+  done
+  echo "flows: all ${#list[@]} passed"
+}
+
 cmd_logs() { # logs [metro|emulator|app]
   case "${1:-metro}" in
     metro) tail -n 80 "$STATE_DIR/metro.log" ;;
@@ -596,7 +807,8 @@ cmd_down() {
 }
 
 case "${1:-}" in
-  setup | build | up | doctor | slots | flow | shot | ui | db | clear | logs | down | _claim | _release)
+  setup | build | up | doctor | slots | flow | flows | shot | ui | db | clear | seed | snapshot | fixture | fixtures | logs \
+    | down | _claim | _release)
     c="$1"; shift; "cmd_$c" "$@" ;;
   *) sed -n '2,4p' "$0"; exit 2 ;;
 esac
