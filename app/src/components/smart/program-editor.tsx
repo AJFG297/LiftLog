@@ -8,7 +8,7 @@ import { RoutineColorDot } from '@/components/presentation/workout-editor/routin
 import { estimatedMinutesOf } from '@/components/presentation/workout-editor/routine-summary';
 import CopyWorkoutDialog from '@/components/smart/copy-workout-dialog';
 import { ItemMenu, programSummary, useSwitchActiveProgram } from '@/components/smart/program-list-item';
-import { routineEditorHref } from '@/components/smart/routines-screen';
+import { routineEditorHref } from '@/components/smart/routines-href';
 import { fontFamily, spacing, useAppTheme } from '@/hooks/useAppTheme';
 import { useBackWhenGone } from '@/hooks/useBackWhenGone';
 import { SessionBlueprint } from '@/models/blueprint-models';

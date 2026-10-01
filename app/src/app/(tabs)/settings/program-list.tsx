@@ -1,8 +1,8 @@
-import { RoutinesScreen } from '@/components/smart/routines-screen';
-import { useLocalSearchParams } from 'expo-router';
+import { routinesHref } from '@/components/smart/routines-href';
+import { Redirect, useLocalSearchParams } from 'expo-router';
 
-/** The Routines screen. The Routines tab renders this route's default export too. */
-export default function ProgramListPage() {
+/** The Routines screen's old address. It lives in the Routines tab now; this keeps old links working. */
+export default function ProgramListRedirect() {
   const { focusprogramId } = useLocalSearchParams<{ focusprogramId?: string }>();
-  return <RoutinesScreen focusProgramId={focusprogramId} />;
+  return <Redirect href={routinesHref(focusprogramId)} />;
 }

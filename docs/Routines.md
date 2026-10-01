@@ -7,8 +7,12 @@ issue PM-26). For how numbers move between workouts, see [Progression.md](./Prog
 
 ## The Routines screen
 
-`components/smart/routines-screen.tsx` (`RoutinesScreen`), mounted by `app/(tabs)/settings/program-list.tsx`.
-The Routines tab renders that route's default export too. From the top:
+`components/smart/routines-screen.tsx` (`RoutinesScreen`), the Routines tab's `app/(tabs)/routines/index.tsx`
+(`/routines`, `?focusprogramId=` to show one of the saved programs). The program page and the routine editor are
+routes in the same tab (`routines/manage-workouts/`), so they open in its stack with the tab still selected, and
+Back returns to the Routines screen. Link to them with `routinesHref`, `programHref` and `routineEditorHref`
+(`components/smart/routines-href.ts`). The old `/settings/program-list` address redirects to `/routines`. From
+the top:
 
 - **Title row** with **New routine** (+), which opens an empty routine at the end of the active program.
 - **Active program**, a dark card: its progress, a tile per routine showing **Next** or the day it was last
@@ -36,14 +40,14 @@ Two rules keep a tap from doing something big by accident (PM-35):
 
 ## The program page
 
-`components/smart/program-editor.tsx`, at `settings/manage-workouts/[programId]`: the program's name (saved
+`components/smart/program-editor.tsx`, at `routines/manage-workouts/[programId]`: the program's name (saved
 as you type), Use this program or a note that it's the one in use, and its routines in order, each with its colour, with
 move up and down, Duplicate, Copy to another program and Remove (with Undo). **New routine** at the end opens the routine
 editor on a new routine. If the program is removed while its page is open, the page goes back (`useBackWhenGone`).
 
 ## The routine editor
 
-`components/smart/routine-editor.tsx`, at `settings/manage-workouts/[programId]/manage-session/[sessionIndex]`
+`components/smart/routine-editor.tsx`, at `routines/manage-workouts/[programId]/manage-session/[sessionIndex]`
 (add `?new=1` with the index one past the end for a new routine).
 
 ### Draft, Save and Cancel

@@ -15,6 +15,7 @@ import Button from '@/components/presentation/foundation/button';
 import { useDispatch } from 'react-redux';
 import { uuid } from '@/utils/uuid';
 import { useRouter } from 'expo-router';
+import { programHref, routinesHref } from '@/components/smart/routines-href';
 import { Session } from '@/models/session-models';
 import { usePreferredWeightUnit } from '@/hooks/usePreferredWeightUnit';
 import SessionComponent from '@/components/smart/session-component';
@@ -46,7 +47,7 @@ function SharedProgramBlueprintContent({ sharedItem }: { sharedItem: SharedProgr
       }),
     );
     dispatch(linkPlanExercises({ programId }));
-    push(`/settings/program-list?focusprogramId=${programId}`, {
+    push(routinesHref(programId), {
       withAnchor: true,
     });
     dispatch(
@@ -139,7 +140,7 @@ function SharedSessionContent({ sharedItem }: { sharedItem: SharedSession }) {
                 sessionBlueprint: session.blueprint,
               }),
             );
-            push(`/settings/manage-workouts/${activeProgramId}`);
+            push(programHref(activeProgramId));
           }}
           mode="outlined"
           style={{ flex: 1 }}

@@ -12,7 +12,8 @@ import {
   routinesDoneThisRoundOf,
   workoutsDoneOf,
 } from '@/components/presentation/workout-editor/routine-summary';
-import { programHref, ProgramListItem, programSummary } from '@/components/smart/program-list-item';
+import { ProgramListItem, programSummary } from '@/components/smart/program-list-item';
+import { programHref, routineEditorHref } from '@/components/smart/routines-href';
 import { useServices } from '@/components/smart/services-provider';
 import { useFormatDate } from '@/hooks/useFormatDate';
 import { spacing, useAppTheme } from '@/hooks/useAppTheme';
@@ -27,7 +28,7 @@ import { selectLatestExercises, selectSessions } from '@/store/stored-sessions';
 import { uuid } from '@/utils/uuid';
 import { LocalDate } from '@js-joda/core';
 import { useTranslate } from '@tolgee/react';
-import { type Href, Stack, useFocusEffect, useRouter } from 'expo-router';
+import { Stack, useFocusEffect, useRouter } from 'expo-router';
 import { type ReactNode, useEffect } from 'react';
 import { Pressable, View } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
@@ -35,11 +36,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDispatch } from 'react-redux';
 
 type TranslateFn = ReturnType<typeof useTranslate>['t'];
-
-/** Where a routine is edited: an existing one by its place in the program, a new one at the end. */
-export function routineEditorHref(programId: string, sessionIndex: number, options?: { isNew?: boolean }): Href {
-  return `/settings/manage-workouts/${programId}/manage-session/${sessionIndex}${options?.isNew ? '?new=1' : ''}` as Href;
-}
 
 /**
  * The Routines screen (plan decision D4): the active program with its next workout, that program's routines,

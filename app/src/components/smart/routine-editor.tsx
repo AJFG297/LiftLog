@@ -64,6 +64,7 @@ import {
   useOwnedRoutineDraft,
 } from '@/components/smart/routine-draft';
 import { useServices } from '@/components/smart/services-provider';
+import { routinesHref } from '@/components/smart/routines-href';
 import { fontFamily, spacing, useAppTheme } from '@/hooks/useAppTheme';
 import { useBackWhenGone } from '@/hooks/useBackWhenGone';
 import { useExerciseSearch } from '@/hooks/useExerciseSearch';
@@ -429,7 +430,7 @@ export function RoutineEditor({ programId, sessionIndex, isNew }: RoutineEditorP
   const openDetails = (index: number) => {
     closePad();
     router.push({
-      pathname: '/settings/manage-workouts/[programId]/manage-session/[sessionIndex]/exercise',
+      pathname: '/routines/manage-workouts/[programId]/manage-session/[sessionIndex]/exercise',
       params: { programId, sessionIndex, exerciseIndex: index },
     });
   };
@@ -808,7 +809,7 @@ export function RoutineEditor({ programId, sessionIndex, isNew }: RoutineEditorP
             onPickExercises={addExercise}
             onDescribe={() => router.push('/settings/ai/planner')}
             onImport={() => router.push('/settings/import-plan-info')}
-            onFromProgram={() => router.dismissTo('/settings/program-list')}
+            onFromProgram={() => router.dismissTo(routinesHref())}
           />
         ) : (
           <>

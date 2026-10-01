@@ -13,10 +13,7 @@ import { useTranslate } from '@tolgee/react';
 import { useRouter } from 'expo-router';
 import { Alert, Pressable, View } from 'react-native';
 import { useDispatch } from 'react-redux';
-
-export function programHref(programId: string) {
-  return `/settings/manage-workouts/${programId}` as const;
-}
+import { programHref } from '@/components/smart/routines-href';
 
 /** "3 days · 12 exercises": a program's size. */
 export function programSummary(t: ReturnType<typeof useTranslate>['t'], program: ProgramBlueprint): string {

@@ -14,6 +14,7 @@ import { ChatMessage } from '@/store/ai-planner';
 import { linkPlanExercises, savePlan } from '@/store/program';
 import { Session } from '@/models/session-models';
 import { usePreferredWeightUnit } from '@/hooks/usePreferredWeightUnit';
+import { routinesHref } from '@/components/smart/routines-href';
 
 export function PlanMessage({ message, isUser }: { message: AiChatPlanResponseV2 & ChatMessage; isUser: boolean }) {
   const dispatch = useDispatch();
@@ -29,7 +30,7 @@ export function PlanMessage({ message, isUser }: { message: AiChatPlanResponseV2
       }),
     );
     dispatch(linkPlanExercises({ programId }));
-    push(`/settings/program-list?focusprogramId=${programId}`);
+    push(routinesHref(programId));
   };
   return (
     <View style={{ gap: spacing[2] }}>

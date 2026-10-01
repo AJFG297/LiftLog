@@ -1,6 +1,8 @@
-import ProgramListPage from '../settings/program-list';
+import { RoutinesScreen } from '@/components/smart/routines-screen';
+import { useLocalSearchParams } from 'expo-router';
 
-/** The Routines tab. Until the Routines screen is built (PM-26), it shows the plan list from Settings. */
+/** The Routines tab. Programs and the routine editor open in this tab's own stack (`manage-workouts/`). */
 export default function RoutinesTab() {
-  return <ProgramListPage />;
+  const { focusprogramId } = useLocalSearchParams<{ focusprogramId?: string }>();
+  return <RoutinesScreen focusProgramId={focusprogramId} />;
 }

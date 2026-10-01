@@ -16,6 +16,7 @@ import { Fragment } from 'react';
 import { View } from 'react-native';
 import { useDispatch } from 'react-redux';
 import { useOnDismiss } from '@/hooks/useOnDismiss';
+import { routinesHref } from '@/components/smart/routines-href';
 
 export default function ImportPlan() {
   const pending = useAppSelector(selectPendingImport);
@@ -33,7 +34,7 @@ export default function ImportPlan() {
     const programId = uuid();
     dispatch(savePlan({ programId, programBlueprint: pending }));
     dispatch(linkPlanExercises({ programId }));
-    replace(`/settings/program-list?focusprogramId=${programId}`);
+    replace(routinesHref(programId));
   };
 
   return (
