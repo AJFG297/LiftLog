@@ -1,8 +1,8 @@
 import { RecordedExercise, RecordedWeightedExercise, Session } from '@/models/session-models';
-import { carriedFrom, plannedExerciseFor, TodaysTarget, todaysTarget } from '@/models/session-models/todays-target';
+import { carriedFrom, plannedLineageFor, TodaysTarget, todaysTarget } from '@/models/session-models/todays-target';
 import { useAppSelector, useAppSelectorWithArg } from '@/store';
 import { selectActiveProgram } from '@/store/program';
-import { selectRecentlyCompletedExercises } from '@/store/stored-sessions';
+import { selectPreviousLineages, selectRecentlyCompletedExercises } from '@/store/stored-sessions';
 
 /**
  * The performance an exercise of `session` carries on from (see {@link carriedFrom}), and every recent
@@ -10,12 +10,13 @@ import { selectRecentlyCompletedExercises } from '@/store/stored-sessions';
  */
 export function usePreviousPerformance(session: Session) {
   const recentlyCompletedExercises = useAppSelectorWithArg(selectRecentlyCompletedExercises, session.id);
+  const previousByLineage = useAppSelectorWithArg(selectPreviousLineages, session.id);
   const program = useAppSelector(selectActiveProgram);
   const routine = program.sessions.find((planned) => planned.name === session.blueprint.name);
   return (exercise: RecordedWeightedExercise) => {
     const candidates = recentlyCompletedExercises(exercise.movementKey()) as RecordedWeightedExercise[];
-    const planned = plannedExerciseFor(exercise, session.recordedExercises, routine?.exercises ?? []);
-    return { previous: carriedFrom(exercise, candidates, planned), candidates };
+    const planned = plannedLineageFor(exercise, session.recordedExercises, routine?.exercises ?? []);
+    return { previous: carriedFrom(exercise, candidates, planned, previousByLineage), candidates };
   };
 }
 

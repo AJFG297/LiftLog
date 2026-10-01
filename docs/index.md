@@ -34,8 +34,8 @@ work to find the docs relevant to your area, and update it whenever you add, rem
   on the number pad, drafts, undo, RPE, Add set and the set-type sheet.
 - [FeedProcess.md](./FeedProcess.md) - the opt-in social feed: the follow/accept flow, what is and isn't
   visible to the server, and the end-to-end encryption model (AES-CBC payloads, RSA-PSS signatures).
-- [Progression.md](./Progression.md) - how last session's
-  numbers carry into today (and why weight carries but reps usually do not), and how the progressive
+- [Progression.md](./Progression.md) - how last session's numbers carry into today from the best set,
+  whatever the set count (and why weight carries but reps usually do not), and how the progressive
   overload rules move them. Covers rule order, limits and starting over, rules that can never run, and
   the two ways to set up double progression. Ends with pointers to the code.
 - [NumberPad.md](./NumberPad.md) - the in-screen number pad for weight and reps: how a field's buffer

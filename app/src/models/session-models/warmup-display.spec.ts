@@ -25,13 +25,12 @@ function logged(ex: RecordedWeightedExercise) {
 }
 
 describe('previous performance', () => {
-  it('is the newest candidate with the same progression key', () => {
+  it('is the newest candidate of the same exercise, whatever its set count', () => {
     const today = exercise([percent(50)]);
     const otherScheme = logged(exercise([percent(50)], { sets: 5 }));
     const older = logged(exercise([percent(50)], { kg: 60 }));
-    const newer = logged(exercise([percent(50)], { kg: 80 }));
 
-    expect(today.previousPerformanceIn([otherScheme, newer, older])).toBe(newer);
+    expect(today.previousPerformanceIn([otherScheme, older])).toBe(otherScheme);
   });
 
   it('still matches once the plan gains or loses warm-ups', () => {
@@ -41,7 +40,8 @@ describe('previous performance', () => {
   });
 
   it('is undefined with nothing comparable', () => {
-    expect(exercise([]).previousPerformanceIn([logged(exercise([], { sets: 4 }))])).toBeUndefined();
+    const otherExercise = logged(exercise([])).with({ blueprint: makeWeightedBlueprint({ name: 'Bench' }) });
+    expect(exercise([]).previousPerformanceIn([otherExercise])).toBeUndefined();
   });
 });
 
