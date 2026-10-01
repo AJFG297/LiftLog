@@ -126,7 +126,7 @@ describe('history aggregates over the 420-session fixture', () => {
     // Labelled by the latest exercise's own name, which is what the key held before it held an id.
     const labelled = byLabel(
       Object.entries(latest).map(([key, exercise]) => [
-        `${exercise!.blueprint.name}${key.slice(key.search(/_(Weighted|Cardio)ExerciseBlueprint_/))}`,
+        `${exercise!.blueprint.name}${key.slice(key.search(/_(Weighted|Cardio)ExerciseBlueprint(_|$)/))}`,
         key,
         normalize(exercise),
       ]),

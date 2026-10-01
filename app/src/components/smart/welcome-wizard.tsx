@@ -235,7 +235,7 @@ export function WelcomeWizard() {
           <SegmentedListSwitch
             label={t('feed.show_feed.label')}
             icon={'forum'}
-            supportingText={t('feed.show_feed.subtitle')}
+            supportingText={t('feed.show_feed.you.subtitle')}
             value={settings.showFeed}
             onValueChange={(value) => dispatch(setShowFeed(value))}
           />

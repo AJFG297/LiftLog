@@ -1,7 +1,6 @@
 import { SurfaceText } from '@/components/presentation/foundation/surface-text';
 import { spacing } from '@/hooks/useAppTheme';
 import { T } from '@tolgee/react';
-import { useRouter } from 'expo-router';
 import { Fragment } from 'react';
 import { View } from 'react-native';
 import { useDispatch } from 'react-redux';
@@ -14,10 +13,11 @@ import { ChatMessage } from '@/store/ai-planner';
 import { linkPlanExercises, savePlan } from '@/store/program';
 import { Session } from '@/models/session-models';
 import { usePreferredWeightUnit } from '@/hooks/usePreferredWeightUnit';
+import { useGoToRoutines } from '@/hooks/useGoToRoutines';
 
 export function PlanMessage({ message, isUser }: { message: AiChatPlanResponseV2 & ChatMessage; isUser: boolean }) {
   const dispatch = useDispatch();
-  const { push } = useRouter();
+  const goToRoutines = useGoToRoutines();
   const preferredWeightUnit = usePreferredWeightUnit();
   const blueprint = message.plan.blueprint;
   const saveAiPlan = () => {
@@ -29,7 +29,7 @@ export function PlanMessage({ message, isUser }: { message: AiChatPlanResponseV2
       }),
     );
     dispatch(linkPlanExercises({ programId }));
-    push(`/settings/program-list?focusprogramId=${programId}`);
+    goToRoutines(programId);
   };
   return (
     <View style={{ gap: spacing[2] }}>

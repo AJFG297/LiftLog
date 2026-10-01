@@ -9,15 +9,17 @@ import {
   daysAgoOf,
   estimatedMinutesOf,
   lastDoneByRoutineName,
+  routinesDoneThisRoundOf,
   workoutsDoneOf,
 } from '@/components/presentation/workout-editor/routine-summary';
-import { programHref, ProgramListItem, programSummary } from '@/components/smart/program-list-item';
+import { ProgramListItem, programSummary } from '@/components/smart/program-list-item';
+import { programHref, routineEditorHref } from '@/components/smart/routines-href';
 import { useServices } from '@/components/smart/services-provider';
 import { useFormatDate } from '@/hooks/useFormatDate';
 import { spacing, useAppTheme } from '@/hooks/useAppTheme';
 import { useStartWorkoutWithConfirmation } from '@/hooks/useStartWorkoutWithConfirmation';
 import { ProgramBlueprint, SessionBlueprint } from '@/models/blueprint-models';
-import { BuiltInPrograms } from '@/models/built-in-programs';
+import { BuiltInPrograms, unsavedBuiltInPrograms } from '@/models/built-in-programs';
 import { Session } from '@/models/session-models';
 import { useAppSelector } from '@/store';
 import { fetchUpcomingSessions, linkPlanExercises, savePlan, selectAllPrograms } from '@/store/program';
@@ -26,7 +28,7 @@ import { selectLatestExercises, selectSessions } from '@/store/stored-sessions';
 import { uuid } from '@/utils/uuid';
 import { LocalDate } from '@js-joda/core';
 import { useTranslate } from '@tolgee/react';
-import { type Href, Stack, useFocusEffect, useRouter } from 'expo-router';
+import { Stack, useFocusEffect, useRouter } from 'expo-router';
 import { type ReactNode, useEffect } from 'react';
 import { Pressable, View } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
@@ -35,16 +37,11 @@ import { useDispatch } from 'react-redux';
 
 type TranslateFn = ReturnType<typeof useTranslate>['t'];
 
-/** Where a routine is edited: an existing one by its place in the program, a new one at the end. */
-export function routineEditorHref(programId: string, sessionIndex: number, options?: { isNew?: boolean }): Href {
-  return `/settings/manage-workouts/${programId}/manage-session/${sessionIndex}${options?.isNew ? '?new=1' : ''}` as Href;
-}
-
 /**
  * The Routines screen (plan decision D4): the active program with its next workout, that program's routines,
- * an empty workout, the other saved programs and the built-in library. Every control sits in the scrolling
- * content, so nothing floats over a row to take its taps, and making another program active always asks
- * first.
+ * an empty workout, the other saved programs and the built-in programs not saved yet. Every control sits in
+ * the scrolling content, so nothing floats over a row to take its taps, and making another program active
+ * always asks first.
  */
 export function RoutinesScreen({ focusProgramId }: { focusProgramId?: string }) {
   const { t } = useTranslate();
@@ -109,6 +106,7 @@ export function RoutinesScreen({ focusProgramId }: { focusProgramId?: string }) 
     router.push(programHref(programId));
   };
 
+  const routineNames = active ? active.sessions.map((routine) => routine.name) : [];
   const others = programs.filter(({ id }) => id !== activePlanId);
   if (sortOrder === 'recent') {
     others.sort((a, b) => b.program.lastEdited.compareTo(a.program.lastEdited));
@@ -159,10 +157,8 @@ export function RoutinesScreen({ focusProgramId }: { focusProgramId?: string }) 
             program={active}
             next={nextSession}
             lastDone={lastDone}
-            workoutsDone={workoutsDoneOf(
-              sessions,
-              active.sessions.map((routine) => routine.name),
-            )}
+            workoutsDone={workoutsDoneOf(sessions, routineNames)}
+            routinesDoneThisRound={routinesDoneThisRoundOf(sessions, routineNames)}
             onStart={() => nextSession && start(nextSession)}
             onAddRoutine={newRoutine}
           />
@@ -219,14 +215,14 @@ export function RoutinesScreen({ focusProgramId }: { focusProgramId?: string }) 
             <OutlinedButton
               icon="download"
               label={t('routines.import_program.button')}
-              onPress={() => router.push('/settings/import-plan-info')}
+              onPress={() => router.push('/routines/import-plan-info')}
             />
           </View>
         </Section>
 
         <Section title={t('routines.find_program.title')}>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing[2] }}>
-            {Object.entries(BuiltInPrograms).map(([id, program]) => (
+            {unsavedBuiltInPrograms(savedPrograms).map(([id, program]) => (
               <LibraryTile
                 key={id}
                 title={program.name}
@@ -241,7 +237,7 @@ export function RoutinesScreen({ focusProgramId }: { focusProgramId?: string }) 
               icon="promptSuggestion"
               title={t('routines.build_ai.title')}
               subtitle={t('routines.build_ai.body')}
-              onPress={() => router.push('/settings/ai/planner')}
+              onPress={() => router.push('/routines/ai/planner')}
             />
           </View>
         </Section>
@@ -257,6 +253,7 @@ function ActiveProgramCard(props: {
   next: Session | undefined;
   lastDone: Map<string, LocalDate>;
   workoutsDone: number;
+  routinesDoneThisRound: number;
   onStart: () => void;
   onAddRoutine: () => void;
 }) {
@@ -267,6 +264,7 @@ function ActiveProgramCard(props: {
   const { program, next } = props;
   const nextIndex = next ? program.sessions.findIndex((s) => s.equals(next.blueprint)) : -1;
   const count = program.sessions.length;
+  const distinctRoutines = new Set(program.sessions.map((routine) => routine.name)).size;
   // Programs repeat with no set length, so progress is the place in the current round of routines.
   const progress =
     nextIndex >= 0
@@ -336,7 +334,7 @@ function ActiveProgramCard(props: {
         <ProgressBar
           tone="inverse"
           height={6}
-          progress={nextIndex / count}
+          progress={props.routinesDoneThisRound / distinctRoutines}
           accessibilityLabel={t('routines.active_program.round.label')}
         />
       ) : null}

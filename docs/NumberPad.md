@@ -52,7 +52,7 @@ The row above the keys explains the value being typed:
 ## Bar and plates
 
 The bar weight and the plates a gym has are preferences, one of each per unit (`barWeight` and
-`availablePlates`), edited in Settings → App configuration → Bar and plates. Defaults: a 20 kg bar with
+`availablePlates`), edited in You → App configuration → Bar and plates. Defaults: a 20 kg bar with
 25, 20, 15, 10, 5, 2.5 and 1.25 kg plates, and a 45 lb bar with 45, 35, 25, 10, 5 and 2.5 lb plates. Like
 every preference, they aren't in backups (see [Storage.md](./Storage.md)).
 

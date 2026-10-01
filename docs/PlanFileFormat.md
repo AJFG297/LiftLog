@@ -2,7 +2,7 @@
 
 LiftLog plans can be exported to, and imported from, `.liftlogplan` files. A plan file is plain JSON, so you can write one yourself, share one with a friend, keep one in version control - or have an AI write one for you.
 
-To import a plan, either tap a `.liftlogplan` file on your device (LiftLog is registered to open them), or open the app and go to `Plans -> Import`.
+To import a plan, either tap a `.liftlogplan` file on your device (LiftLog is registered to open them), or open the app and go to `Routines -> Import a plan`.
 
 To export one, open `Plans`, tap the `⋮` next to the plan and choose `Export to file`. LiftLog writes the `.liftlogplan` and hands it to the system share sheet, so you can save it to Files or Drive, AirDrop it, or mail it to yourself - whatever gets it somewhere you can reach it again.
 

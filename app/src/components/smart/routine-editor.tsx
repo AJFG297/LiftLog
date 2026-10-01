@@ -66,7 +66,9 @@ import {
 } from '@/components/smart/routine-draft';
 import { useServices } from '@/components/smart/services-provider';
 import { fontFamily, spacing, useAppTheme } from '@/hooks/useAppTheme';
+import { useBackWhenGone } from '@/hooks/useBackWhenGone';
 import { type ExercisePick, useExercisePicker } from '@/hooks/useExerciseSearch';
+import { useGoToRoutines } from '@/hooks/useGoToRoutines';
 import {
   CardioExerciseBlueprint,
   ExerciseBlueprint,
@@ -126,6 +128,7 @@ export function RoutineEditor({ programId, sessionIndex, isNew }: RoutineEditorP
   const { tokens } = useAppTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const goToRoutines = useGoToRoutines();
   const navigation = useNavigation();
   const dispatch = useDispatch();
   const toast = useToast();
@@ -154,11 +157,7 @@ export function RoutineEditor({ programId, sessionIndex, isNew }: RoutineEditorP
   // Typing on the pad reaches the draft when the field is left, so a number still on the pad counts too.
   const changed = isRoutineDraftChanged(draft) || (!!editing && buffer.typed !== null);
   const missing = !program || (!isNew && !saved);
-  useEffect(() => {
-    if (missing) {
-      router.back();
-    }
-  }, [missing, router]);
+  useBackWhenGone(missing);
 
   usePreventRemove(changed && !leaving, ({ data }) => {
     Alert.alert(t('routine_editor.discard.title'), t('routine_editor.discard.body'), [
@@ -432,7 +431,7 @@ export function RoutineEditor({ programId, sessionIndex, isNew }: RoutineEditorP
   const openDetails = (index: number) => {
     closePad();
     router.push({
-      pathname: '/settings/manage-workouts/[programId]/manage-session/[sessionIndex]/exercise',
+      pathname: '/routines/manage-workouts/[programId]/manage-session/[sessionIndex]/exercise',
       params: { programId, sessionIndex, exerciseIndex: index },
     });
   };
@@ -716,6 +715,8 @@ export function RoutineEditor({ programId, sessionIndex, isNew }: RoutineEditorP
           >
             {({ pressed }) => (
               <View
+                // Pressing Save also leaves the screen; see ActionButton for why the label must not move.
+                collapsable={false}
                 style={{
                   minHeight: 40,
                   borderRadius: 20,
@@ -809,9 +810,9 @@ export function RoutineEditor({ programId, sessionIndex, isNew }: RoutineEditorP
         {exerciseCount === 0 ? (
           <RoutineStartOptions
             onPickExercises={addExercise}
-            onDescribe={() => router.push('/settings/ai/planner')}
-            onImport={() => router.push('/settings/import-plan-info')}
-            onFromProgram={() => router.dismissTo('/settings/program-list')}
+            onDescribe={() => router.push('/routines/ai/planner')}
+            onImport={() => router.push('/routines/import-plan-info')}
+            onFromProgram={() => goToRoutines()}
           />
         ) : (
           <>
@@ -880,7 +881,7 @@ export function RoutineEditor({ programId, sessionIndex, isNew }: RoutineEditorP
             backgroundColor: tokens.bg,
           }}
         >
-          <AskAiBar onPress={() => router.push('/settings/ai/planner')} />
+          <AskAiBar onPress={() => router.push('/routines/ai/planner')} />
         </View>
       ) : null}
       <View onLayout={keepEditedRowInView}>

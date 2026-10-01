@@ -13,7 +13,7 @@ export function PlanImportGate() {
   const { navigate } = useRouter();
   useEffect(() => {
     if (hasPendingImport) {
-      navigate('/settings/import-plan');
+      navigate('/routines/import-plan');
     }
   }, [hasPendingImport, navigate]);
   return null;

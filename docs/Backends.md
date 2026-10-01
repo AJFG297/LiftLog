@@ -5,7 +5,7 @@ point at a **backend**. By default all three use the one run at `api.liftlog.onl
 your own and assign features to it individually: your feed on our server and your backups on yours is
 a perfectly valid setup.
 
-Manage them under **Settings → Backends**. See [SelfHosting.md](./SelfHosting.md) for running the
+Manage them under **You → Backends**. See [SelfHosting.md](./SelfHosting.md) for running the
 server itself.
 
 ## What a backend is
@@ -43,7 +43,7 @@ Headers can be specified to provide a level of authentication:
 
 ### Remote backup
 
-Backup has **no default backend**. Pick a backend under Settings → Backends, or on the Automatic remote backup
+Backup has **no default backend**. Pick a backend under You → Backends, or on the Automatic remote backup
 screen.
 
 ### AI planner

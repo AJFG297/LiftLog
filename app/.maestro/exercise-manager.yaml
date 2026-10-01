@@ -1,12 +1,12 @@
 appId: com.ajfg297.liftlog
 ---
-# Settings tab -> Manage exercises
+# You tab -> Manage exercises
 - launchApp
 # A cold dev-client launch can take up to a minute to fetch the bundle from Metro
 - extendedWaitUntil:
-    visible: 'Workout'
+    visible: 'Home'
     timeout: 60000
-- tapOn: 'Settings'
+- tapOn: 'You'
 - tapOn: 'Manage exercises'
 
 # Add a new exercise. It starts unnamed, so the name field is empty

@@ -6,6 +6,7 @@ import {
   Rest,
   WeightedExerciseBlueprint,
   roundWarmupWeight,
+  uniformTarget,
   warmupIncrementFor,
 } from '@/models/blueprint-models';
 import { RecordedExercise } from '@/models/session-models/recorded-exercise';
@@ -150,7 +151,7 @@ export class RecordedWeightedExercise {
 
   /**
    * The earlier performance this one is compared against: the most recent of `candidates` (newest
-   * first) with the same progression key, so a changed set scheme never borrows mismatched numbers.
+   * first) with the same progression key, whatever its set count or rep scheme.
    */
   previousPerformanceIn(candidates: readonly RecordedWeightedExercise[]): RecordedWeightedExercise | undefined {
     const key = this.progressionKey();
@@ -487,18 +488,19 @@ export class RecordedWeightedExercise {
 
   /**
    * Indexes into the working list of the slots that continue `last`'s progression, which are the only ones
-   * a rule may move. A slot whose kind changed so that it started over from the plan is left there.
+   * a rule may move: every slot whose kind carries over, since {@link carriedInto} seeds each of them from
+   * `last`'s best set. None do when `last` has no set that carries over, and they start from the plan.
    */
   workingIndicesContinuing(last: RecordedWeightedExercise): number[] {
-    return this.potentialSets.flatMap((set, index) => {
-      const was = last.potentialSets[index];
-      return was && continuesProgression(was.kind, set.kind) ? [index] : [];
-    });
+    if (last.bestSetIndex === undefined) {
+      return [];
+    }
+    return this.workingIndicesCountingTowards('carriesOver');
   }
 
   /**
    * A success once every set the progression check reads met the top of its target. A drop or myo set
-   * short of its reps never holds the lift back.
+   * short of its reps never holds the lift back. What a reps rule waits for.
    */
   get isSuccessForProgressiveOverload(): boolean {
     return this.workingIndicesCountingTowards('countsTowardsProgression').every((index) => {
@@ -506,6 +508,91 @@ export class RecordedWeightedExercise {
       return set && set.repsCompleted >= this.repsTargetForSet(index).max;
     });
   }
+
+  /**
+   * The set the next session carries over from: the heaviest logged set whose kind carries over, and on a
+   * tie on weight the one with more reps, then the earlier. Warm-up, drop and myo sets never count. When
+   * none of those sets was logged it is the heaviest of them as loaded. Undefined when no slot carries
+   * over at all.
+   */
+  get bestSetIndex(): number | undefined {
+    const carrying = this.workingIndicesCountingTowards('carriesOver');
+    const logged = carrying.filter((index) => this.potentialSets[index]!.set);
+    let best: number | undefined;
+    for (const index of logged.length ? logged : carrying) {
+      if (best === undefined || beatsForBest(this.potentialSets[index]!, this.potentialSets[best]!)) {
+        best = index;
+      }
+    }
+    return best;
+  }
+
+  /** See {@link bestSetIndex}. */
+  get bestSet(): PotentialSet | undefined {
+    return this.bestSetIndex === undefined ? undefined : this.potentialSets[this.bestSetIndex];
+  }
+
+  /** Whether the best set was logged at the top of its target or beyond. What a weight rule waits for. */
+  get bestSetMetTarget(): boolean {
+    const index = this.bestSetIndex;
+    const set = index === undefined ? undefined : this.potentialSets[index]!.set;
+    return !!set && set.repsCompleted >= this.repsTargetForSet(index!).max;
+  }
+
+  /**
+   * This performance as the next session of `plan`, before any progression rule runs. The plan decides the
+   * slots, so a set added or removed here or in the routine never loses the numbers.
+   *
+   * Each slot whose kind carries over opens from the {@link bestSet}. When the plan asks the same reps of
+   * every one of them, they are straight sets and all open on the best weight, wherever it was done. When
+   * the plan's targets differ (a pyramid, a top set with back-offs), the plan holds no weights, so this
+   * time's weights are the only record of the shape: the heaviest logged slot, matched in order, moves to
+   * the best weight and the rest keep their gap below it. A slot with nothing to match opens on the best
+   * weight. Reps carry with them only where they are progressed. Otherwise each slot takes the plan's target,
+   * since only an edit to the plan could have changed it: a rep edit made mid-workout is for that workout.
+   *
+   * A drop or myo slot opens on the weight of the same slot of its kind from this time, in order, or none.
+   */
+  carriedInto(plan: WeightedExerciseBlueprint, fallbackUnit: WeightUnit): RecordedWeightedExercise {
+    const best = this.bestSet;
+    const carried = this.setsCountingTowards('carriesOver');
+    const carryingPlanned = plan.plannedSets.filter((s) => setKindHas(s.kind, 'carriesOver'));
+    const straight = uniformTarget(carryingPlanned) !== undefined;
+    const matched = carried.slice(0, carryingPlanned.length);
+    // A set left unlogged was never lifted, so it can neither be the top the gaps are measured from nor
+    // be pulled down to the best set; it keeps its place as it was loaded.
+    const logged = matched.filter((s) => s.set);
+    const shapedBy = logged.length ? logged : matched;
+    const top = shapedBy.length ? Weight.max(...shapedBy.map((s) => s.weight)) : undefined;
+    const delta = best && top ? best.weight.minus(top) : undefined;
+
+    const seen = new Map<SetKind, number>();
+    let carryingBefore = 0;
+    const potentialSets = plan.plannedSets.map((planned, index) => {
+      const occurrence = seen.get(planned.kind) ?? 0;
+      seen.set(planned.kind, occurrence + 1);
+      const planTarget = plan.repsTargetForSet(index);
+      if (best && setKindHas(planned.kind, 'carriesOver')) {
+        const from = carried[carryingBefore++];
+        const weight = straight || !from ? best.weight : delta!.value.isZero() ? from.weight : from.weight.plus(delta!);
+        const target = plan.repsAreProgressed ? (from ?? best).target : planTarget;
+        return PotentialSet.of({ weight, target, kind: planned.kind });
+      }
+      const sameKind = this.potentialSets.filter((s) => s.kind === planned.kind)[occurrence];
+      return sameKind
+        ? sameKind.carriedInto(planned.kind, { planTarget, repsAreProgressed: plan.repsAreProgressed, fallbackUnit })
+        : PotentialSet.of({ weight: new Weight(0, fallbackUnit), target: planTarget, kind: planned.kind });
+    });
+    return new RecordedWeightedExercise(plan, potentialSets, undefined);
+  }
+}
+
+/** Heavier wins, and more reps breaks a tie on weight. An unlogged set counts as no reps. */
+function beatsForBest(a: PotentialSet, b: PotentialSet): boolean {
+  if (!a.weight.equals(b.weight, true)) {
+    return a.weight.isGreaterThan(b.weight);
+  }
+  return (a.set?.repsCompleted ?? 0) > (b.set?.repsCompleted ?? 0);
 }
 
 /**

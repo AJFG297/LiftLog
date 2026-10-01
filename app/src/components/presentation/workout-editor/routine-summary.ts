@@ -78,6 +78,30 @@ export function workoutsDoneOf(sessions: readonly Session[], routineNames: reado
   ).length;
 }
 
+/**
+ * How many of the program's routines were done in the current round. A round ends once every routine has
+ * been done at least once, in any order, and the next workout starts a new one, so a finished round reads
+ * as nothing done yet. Workouts count the way {@link workoutsDoneOf} counts them.
+ */
+export function routinesDoneThisRoundOf(sessions: readonly Session[], routineNames: readonly string[]): number {
+  const names = new Set(routineNames);
+  const done = sessions
+    .filter((session) => !session.isFreeform && session.hasLoggedAnySet && names.has(session.blueprint.name))
+    .sort((a, b) => a.date.compareTo(b.date) || activityEpochOf(a) - activityEpochOf(b));
+  const thisRound = new Set<string>();
+  for (const session of done) {
+    thisRound.add(session.blueprint.name);
+    if (thisRound.size === names.size) {
+      thisRound.clear();
+    }
+  }
+  return thisRound.size;
+}
+
+function activityEpochOf(session: Session): number {
+  return session.lastExercise?.lastActivityTime?.toEpochSecond() ?? 0;
+}
+
 /** How long ago `date` was, in the unit a person would say it in. */
 export type DaysAgo =
   | { unit: 'today' }

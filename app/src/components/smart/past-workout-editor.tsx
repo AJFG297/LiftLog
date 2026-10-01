@@ -5,7 +5,7 @@ import { useAppSelector, useAppSelectorWithArg } from '@/store';
 import { selectSession, sessionFinished, updateStoredSession } from '@/store/stored-sessions';
 import { useFinishWorkout } from '@/hooks/useFinishWorkout';
 import { LocalDate } from '@js-joda/core';
-import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
+import { useRouter, Stack } from 'expo-router';
 import { View } from 'react-native';
 import { DatePickerInput } from 'react-native-paper-dates';
 import { useDispatch } from 'react-redux';
@@ -14,11 +14,15 @@ import { useStartWorkoutWithConfirmation } from '@/hooks/useStartWorkoutWithConf
 import { useTranslate } from '@tolgee/react';
 import { useRef } from 'react';
 
-export default function HistoryEditPage() {
+/**
+ * Editing a finished workout: its sets, its date, and resuming it as the workout in progress. `close` leaves the
+ * screen after saving or resuming, which depends on the stack it was opened in: the history list's, or the root
+ * stack above the workout detail.
+ */
+export function PastWorkoutEditor({ sessionId, close }: { sessionId: string; close: () => void }) {
   const dispatch = useDispatch();
-  const { sessionId } = useLocalSearchParams<{ sessionId: string }>();
   const session = useAppSelectorWithArg(selectSession, sessionId);
-  const { dismissTo, push } = useRouter();
+  const { push } = useRouter();
   const finishWorkout = useFinishWorkout(sessionId);
 
   // Resuming hands the session back to the workout in progress, so leaving this screen must not also
@@ -32,13 +36,13 @@ export default function HistoryEditPage() {
   const { start: resume, confirmationDialog } = useStartWorkoutWithConfirmation({
     onStarted: () => {
       resumed.current = true;
-      dismissTo('/history');
+      close();
     },
   });
 
   const save = () => {
     const hasDiff = finishWorkout();
-    dismissTo('/history');
+    close();
     if (hasDiff) {
       push('/diff-save');
     }
