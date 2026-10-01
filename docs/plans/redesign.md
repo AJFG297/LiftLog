@@ -212,7 +212,8 @@ Each numbered step is one Linear issue (child of PM-16) and roughly one PR.
     - A new exercise must start with an empty name and a placeholder. Today `useAddExercise` and
       `exercise-manager.tsx` save "New Exercise" as the real name, so it has to be deleted before typing.
     - The built-in exercise library is too small. A bigger one belongs here or in its own issue.
-14. **PM-25.** Past workout detail (a single list) with "Do again" and "Save as routine".
+14. **PM-25.** Past workout detail (a single list) with "Do again" and "Save as routine". See
+    [WorkoutDetail.md](../WorkoutDetail.md).
 
 **Phase 4: needs design first**
 

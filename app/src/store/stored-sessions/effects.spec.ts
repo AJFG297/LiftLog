@@ -7,6 +7,7 @@ import { eq, sql } from 'drizzle-orm';
 import { DatabaseMigrationService } from '@/services/database-migration-service';
 import { applyStoredSessionsEffects } from '@/store/stored-sessions/effects';
 import {
+  deleteStoredSession,
   initializeStoredSessionsStateSlice,
   putStoredSession,
   sessionFinished,
@@ -350,6 +351,44 @@ describe('stored-sessions effects', () => {
 
       await testBed.dispatchHandled(sessionFinished(session.id));
       expect(exportWorkout).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('deleting a finished session and undoing it', () => {
+    it('removes it from the health aggregator, then exports it again when it is put back and finished', async () => {
+      const session = Session.freeformSession(LocalDate.of(2026, 4, 10), undefined);
+      const calls: string[] = [];
+      const healthExportService = {
+        canExport: () => true,
+        deleteWorkout: vi.fn(async (id: string) => {
+          calls.push(`delete ${id}`);
+        }),
+        exportWorkout: vi.fn(async (workout: Session) => {
+          calls.push(`export ${workout.id}`);
+        }),
+      };
+      const testBed = createAddEffectTestBed({
+        initialState: {
+          settings: { isHydrated: true, exportToHealthAggregator: true },
+          storedSessions: { sessions: { [session.id]: session }, activeSessionId: undefined },
+        } as Partial<RootState>,
+        services: {
+          db,
+          workoutRepository: new WorkoutRepository(db),
+          logger,
+          keyValueStore: makeKvStore(),
+          healthExportService,
+        },
+      });
+      applyStoredSessionsEffects(testBed.addEffect);
+
+      await testBed.dispatchHandled(deleteStoredSession(session.id));
+      expect(calls).toEqual([`delete ${session.id}`]);
+
+      await testBed.dispatchHandled(putStoredSession(session));
+      await testBed.dispatchHandled(sessionFinished(session.id));
+      expect(calls).toEqual([`delete ${session.id}`, `export ${session.id}`]);
+      expect(healthExportService.exportWorkout).toHaveBeenCalledWith(session);
     });
   });
 

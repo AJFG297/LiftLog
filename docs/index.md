@@ -36,6 +36,9 @@ work to find the docs relevant to your area, and update it whenever you add, rem
   (steps, presets, saving a rest to the routine), and how pages, the next set, focus, reordering and the
   Today target are worked out from the session. Also logging a set: the set table's placeholders, typing
   on the number pad, drafts, undo, RPE, Add set and the set-type sheet.
+- [WorkoutDetail.md](./WorkoutDetail.md) - a past workout, opened from history: the header, stats row and set
+  tables (e1RM, PR tags, the comparison with last time), Do again, Save as routine (into the active plan), and the
+  overflow menu's edit, share and delete with Undo.
 - [FeedProcess.md](./FeedProcess.md) - the opt-in social feed: the follow/accept flow, what is and isn't
   visible to the server, and the end-to-end encryption model (AES-CBC payloads, RSA-PSS signatures).
 - [Progression.md](./Progression.md) - how last session's numbers carry into today from the best set,

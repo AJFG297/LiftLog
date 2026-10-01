@@ -69,6 +69,8 @@ function Layout() {
       <Stack.Screen name="exercise-editor" />
       <Stack.Screen name="exercise-history" options={formSheetOptions([0.6, 0.95])} />
       <Stack.Screen name="workout-editor" />
+      <Stack.Screen name="workout-detail/index" />
+      <Stack.Screen name="workout-detail/edit" />
       <Stack.Screen name="session/post-workout" options={{ headerShown: false }} />
       <Stack.Screen name="diff-save" options={formSheetOptions([0.75, 0.95])} />
       <Stack.Screen name="dev/components-sheet" options={formSheetOptions([0.5, 0.9])} />
