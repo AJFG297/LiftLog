@@ -7,9 +7,11 @@ Paths below are relative to the repository root.
 LiftLog aims to be the workout tracker people never want to leave. Other trackers pile up small
 frustrations: extra taps, manual entry, screens to dig through. This one removes them. Two levers set it apart:
 
-- **Effortless UX.** Count the taps. Between two designs, pick the one where the user does less: fewer
-  screens and fields, sensible defaults, the next action already in reach. Choose user delight over
-  implementation convenience.
+- **Effortless UX.** Cut friction: everything the user spends to get something done, including taps,
+  reading, searching, deciding and undoing mistakes. Between two designs, pick the one with less
+  friction overall. But be mindful, saving a tap at the cost of a clearer screen or an easy-to-miss action adds friction.
+  Lean on sensible defaults and keep the next action in reach. Choose user delight over implementation
+  convenience.
 - **AI that does the manual work.** Wherever the user would type or assemble something by hand, offer an
   AI shortcut alongside the manual path, which always stays. Directions we want, not built yet: turn any
   input (pasted text, a screenshot, a spreadsheet) into a routine, or build a named program on request
@@ -18,6 +20,8 @@ frustrations: extra taps, manual entry, screens to dig through. This one removes
 
 When you scope or design a feature, look for steps you can remove and manual work an AI shortcut could
 take on, and propose both.
+
+These are judgment calls, not a checklist (and also mostly for you to get the vision). When a design trades one kind of friction for another, name the tradeoff in your proposal so it can be decided together. 
 
 ## Where work happens
 
