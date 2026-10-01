@@ -45,4 +45,27 @@ describe('showsWorkoutInProgressBar', () => {
       false,
     );
   });
+
+  describe("from the tabs navigator's own state, as the bar reads it", () => {
+    /** The tabs' state: Home's stack holding `homeRoutes`, Routines on its screen. */
+    const tabsWith = (homeRoutes: { key: string; name: string }[]) => ({
+      key: 'tabs',
+      routes: [
+        { key: 'home-tab', name: '(session)', state: { key: 'home', routes: homeRoutes } },
+        { key: 'routines-tab', name: 'routines', state: { key: 'routines', routes: routines } },
+      ],
+    });
+
+    it('shows the bar on Home right after Minimise, which leaves Home on its own', () => {
+      expect(showsWorkoutInProgressBar(tabsWith([home]), 'home-tab', true)).toBe(true);
+    });
+
+    it('hides it on Home right after the workout is reopened from the bar', () => {
+      expect(showsWorkoutInProgressBar(tabsWith([home, workout]), 'home-tab', true)).toBe(false);
+    });
+
+    it('keeps it on Routines while the workout is open on Home', () => {
+      expect(showsWorkoutInProgressBar(tabsWith([home, workout]), 'routines-tab', true)).toBe(true);
+    });
+  });
 });

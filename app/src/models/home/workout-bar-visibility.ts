@@ -12,17 +12,18 @@ const WORKOUT_ROUTE_PREFIX = 'session/';
  * would flash in under the workout. A minimised workout has left the Home stack, and every other tab's
  * stack never holds it, so the bar shows there.
  *
- * `root` is `getRootState()`, and `tabKey` the key of the tab's own route in it.
+ * `state` is any navigation state that holds the tab's route, such as the tabs navigator's own state or
+ * `getRootState()`, and `tabKey` the key of that route.
  */
 export function showsWorkoutInProgressBar(
-  root: NavigatorState | undefined,
+  state: NavigatorState | undefined,
   tabKey: string,
   hasWorkout: boolean,
 ): boolean {
   if (!hasWorkout) {
     return false;
   }
-  const stack = root && stateOfRoute(root, tabKey);
+  const stack = state && stateOfRoute(state, tabKey);
   // A stack's top route is its last one.
   const top = stack?.routes[stack.routes.length - 1];
   return !top?.name.startsWith(WORKOUT_ROUTE_PREFIX);
