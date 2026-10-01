@@ -1,0 +1,43 @@
+appId: com.ajfg297.liftlog
+---
+# Logs one Push workout from Home's Up next card and dates it DAYS_AGO days back. FIRST 'true' types
+# the starting weights; later workouts keep the weights carried over, which the first exercise's
+# Add weight progression raises by 2.5 kg, so each repeat sets a personal record on it. RPE rates the
+# first exercise's Set 1 ('-' for none).
+# Push's bench press and Seed Cable Fly are a superset, so they share one page.
+- runFlow:
+    file: start.yaml
+    env:
+      ROUTINE: 'Push'
+- runFlow:
+    file: log-exercise.yaml
+    env:
+      NAME: 'Barbell Bench Press - Medium Grip'
+      SETS: 3
+      WARMUP: 'true'
+      D1: "${FIRST == 'true' ? '6' : '-'}"
+      D2: '0'
+      RPE: ${RPE}
+- runFlow:
+    file: log-exercise.yaml
+    env:
+      NAME: 'Seed Cable Fly'
+      SETS: 3
+      WARMUP: 'false'
+      D1: "${FIRST == 'true' ? '2' : '-'}"
+      D2: '0'
+      RPE: '-'
+- runFlow: next.yaml
+- runFlow:
+    file: log-exercise.yaml
+    env:
+      NAME: 'Standing Military Press'
+      SETS: 3
+      WARMUP: 'false'
+      D1: "${FIRST == 'true' ? '4' : '-'}"
+      D2: '0'
+      RPE: '-'
+- runFlow:
+    file: finish.yaml
+    env:
+      DAYS_AGO: ${DAYS_AGO}

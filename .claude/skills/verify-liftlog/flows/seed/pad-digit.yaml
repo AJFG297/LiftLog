@@ -1,0 +1,36 @@
+appId: com.ajfg297.liftlog
+---
+# Taps DIGIT on the open number pad. The keys have no testIDs and their digits also appear in set
+# badges and weight cells, so each key is found as the nearest DIGIT left of its row's right-hand key.
+- runFlow:
+    when:
+      true: ${DIGIT == '1' || DIGIT == '2' || DIGIT == '3'}
+    commands:
+      - tapOn:
+          text: ${DIGIT}
+          leftOf: 'Hide keypad'
+          waitToSettleTimeoutMs: 500
+- runFlow:
+    when:
+      true: ${DIGIT == '4' || DIGIT == '5' || DIGIT == '6'}
+    commands:
+      - tapOn:
+          text: ${DIGIT}
+          leftOf: 'Subtract .*'
+          waitToSettleTimeoutMs: 500
+- runFlow:
+    when:
+      true: ${DIGIT == '7' || DIGIT == '8' || DIGIT == '9'}
+    commands:
+      - tapOn:
+          text: ${DIGIT}
+          leftOf: 'Add [0-9.]+ .*'
+          waitToSettleTimeoutMs: 500
+- runFlow:
+    when:
+      true: ${DIGIT == '0'}
+    commands:
+      - tapOn:
+          text: '0'
+          leftOf: 'Delete'
+          waitToSettleTimeoutMs: 500

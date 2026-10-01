@@ -1,0 +1,5 @@
+appId: com.ajfg297.liftlog
+---
+# Seed flow for the empty fixture (see ../fixtures/README.md): a cleared app taken through the welcome
+# wizard to Home, with nothing else added.
+- runFlow: ready.yaml

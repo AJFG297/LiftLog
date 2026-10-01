@@ -1,0 +1,73 @@
+appId: com.ajfg297.liftlog
+---
+# In a live workout: logs exercise NAME, the first exercise on the page with sets still to log. Logs its
+# warm-up (WARMUP 'true') and its SETS working sets. D1 D2 are the weight's two digits, typed into Set 1
+# (the other sets and the warm-up follow it); D1 '-' keeps the weight carried from last time. RPE rates
+# Set 1; '-' leaves it unrated.
+# A superset page holds two exercises' rows, and the rows are not inside the card that carries the
+# exercise's testID. So rows are found by their labels, which change once used: "Log Set 1" becomes
+# "Undo Set 1", and a weight or reps loses its ", today's target" once typed. The first match is then
+# always this exercise's row.
+- runFlow:
+    when:
+      true: ${D1 != '-'}
+    commands:
+      - scrollUntilVisible:
+          element:
+            text: "Weight for Set 1: .*, today's target"
+          direction: DOWN
+      - tapOn:
+          text: "Weight for Set 1: .*, today's target"
+          waitToSettleTimeoutMs: 500
+      - runFlow:
+          file: pad-digit.yaml
+          env:
+            DIGIT: ${D1}
+      - runFlow:
+          file: pad-digit.yaml
+          env:
+            DIGIT: ${D2}
+      - tapOn:
+          text: 'Hide keypad'
+          waitToSettleTimeoutMs: 500
+- runFlow:
+    when:
+      true: ${RPE != '-'}
+    commands:
+      - scrollUntilVisible:
+          element:
+            text: "Reps for Set 1: .*, today's target"
+          direction: DOWN
+      - tapOn:
+          text: "Reps for Set 1: .*, today's target"
+          waitToSettleTimeoutMs: 500
+      - tapOn:
+          text: 'RPE ${RPE}'
+          waitToSettleTimeoutMs: 500
+      - tapOn:
+          text: 'Hide keypad'
+          waitToSettleTimeoutMs: 500
+- runFlow:
+    when:
+      true: ${WARMUP == 'true'}
+    commands:
+      - scrollUntilVisible:
+          element:
+            text: 'Log Warm-up set'
+          direction: DOWN
+      - tapOn:
+          text: 'Log Warm-up set'
+          waitToSettleTimeoutMs: 500
+- evalScript: ${output.set = 1}
+- repeat:
+    times: ${SETS}
+    commands:
+      - scrollUntilVisible:
+          element:
+            text: 'Log Set ${output.set}'
+          direction: DOWN
+      - tapOn:
+          text: 'Log Set ${output.set}'
+          waitToSettleTimeoutMs: 500
+      - evalScript: ${output.set = output.set + 1}
+- assertVisible: '${NAME}, ${SETS} of ${SETS} sets done'

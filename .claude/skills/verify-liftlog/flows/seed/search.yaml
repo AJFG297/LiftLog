@@ -1,0 +1,14 @@
+appId: com.ajfg297.liftlog
+---
+# In the exercise picker: replace the search text with NAME. The clear button empties the field
+# wherever the cursor is; eraseText only deletes in front of it.
+- runFlow:
+    when:
+      visible:
+        id: 'exercise-search-clear'
+    commands:
+      - tapOn:
+          id: 'exercise-search-clear'
+- tapOn:
+    id: 'exercise-search-input'
+- inputText: ${NAME}

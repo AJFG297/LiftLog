@@ -1,0 +1,16 @@
+appId: com.ajfg297.liftlog
+---
+# You -> App configuration -> Log RPE on, so working sets get an RPE chip row on the number pad.
+- tapOn: 'You'
+- scrollUntilVisible:
+    element:
+      text: 'App configuration'
+    direction: DOWN
+- tapOn: 'App configuration'
+- scrollUntilVisible:
+    element:
+      text: 'Log RPE'
+    direction: DOWN
+- tapOn: 'Log RPE'
+- back
+- tapOn: 'Home'
