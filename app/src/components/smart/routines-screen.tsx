@@ -9,6 +9,7 @@ import {
   daysAgoOf,
   estimatedMinutesOf,
   lastDoneByRoutineName,
+  routinesDoneThisRoundOf,
   workoutsDoneOf,
 } from '@/components/presentation/workout-editor/routine-summary';
 import { programHref, ProgramListItem, programSummary } from '@/components/smart/program-list-item';
@@ -109,6 +110,7 @@ export function RoutinesScreen({ focusProgramId }: { focusProgramId?: string }) 
     router.push(programHref(programId));
   };
 
+  const routineNames = active ? active.sessions.map((routine) => routine.name) : [];
   const others = programs.filter(({ id }) => id !== activePlanId);
   if (sortOrder === 'recent') {
     others.sort((a, b) => b.program.lastEdited.compareTo(a.program.lastEdited));
@@ -159,10 +161,8 @@ export function RoutinesScreen({ focusProgramId }: { focusProgramId?: string }) 
             program={active}
             next={nextSession}
             lastDone={lastDone}
-            workoutsDone={workoutsDoneOf(
-              sessions,
-              active.sessions.map((routine) => routine.name),
-            )}
+            workoutsDone={workoutsDoneOf(sessions, routineNames)}
+            routinesDoneThisRound={routinesDoneThisRoundOf(sessions, routineNames)}
             onStart={() => nextSession && start(nextSession)}
             onAddRoutine={newRoutine}
           />
@@ -257,6 +257,7 @@ function ActiveProgramCard(props: {
   next: Session | undefined;
   lastDone: Map<string, LocalDate>;
   workoutsDone: number;
+  routinesDoneThisRound: number;
   onStart: () => void;
   onAddRoutine: () => void;
 }) {
@@ -267,6 +268,7 @@ function ActiveProgramCard(props: {
   const { program, next } = props;
   const nextIndex = next ? program.sessions.findIndex((s) => s.equals(next.blueprint)) : -1;
   const count = program.sessions.length;
+  const distinctRoutines = new Set(program.sessions.map((routine) => routine.name)).size;
   // Programs repeat with no set length, so progress is the place in the current round of routines.
   const progress =
     nextIndex >= 0
@@ -336,7 +338,7 @@ function ActiveProgramCard(props: {
         <ProgressBar
           tone="inverse"
           height={6}
-          progress={nextIndex / count}
+          progress={props.routinesDoneThisRound / distinctRoutines}
           accessibilityLabel={t('routines.active_program.round.label')}
         />
       ) : null}
