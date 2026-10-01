@@ -37,6 +37,13 @@ export interface ActivityRow {
   cells: ActivityCell[];
 }
 
+/** One day the user trained: how many finished workouts were started on it, and the kilograms they moved. */
+export interface DailyActivity {
+  date: LocalDate;
+  workouts: number;
+  volumeKg: number;
+}
+
 /**
  * The volume range a user's days are graded against, as the 10th/90th percentile of their whole history.
  * Percentiles rather than min/max so a single PR day doesn't wash out the year and a deload doesn't read as

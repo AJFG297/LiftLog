@@ -19,7 +19,10 @@ import Enumerable from 'linq';
 
 /** Epley: 1RM = weight * (1 + reps/30). `weight` is the effective load, folding in bodyweight. */
 export function calculateOneRepMax(ps: PotentialSet, weight: Weight): Weight {
-  const reps = ps.set!.repsCompleted;
+  return oneRepMaxOf(weight, ps.set!.repsCompleted);
+}
+
+export function oneRepMaxOf(weight: Weight, reps: number): Weight {
   return weight.multipliedBy(new BigNumber(1).plus(new BigNumber(reps).div(30)));
 }
 
