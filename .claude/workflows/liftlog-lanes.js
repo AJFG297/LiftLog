@@ -20,7 +20,8 @@ export const meta = {
 //   live      live scenarios, one per line; empty means no live proof (non-UI lanes)
 //   folder    pr-assets folder for screenshots (default the id in lower case)
 //   effort    owner effort: 'medium' (default) or 'high' for hard lanes
-//   fixture   optional fixture name for verify.sh seed
+//   fixture   optional fixture for verify.sh seed: 'ppl-history' (programs and two weeks of history), 'empty'
+//             (onboarded, no history), or another listed by verify.sh fixtures
 //   ui        optional boolean, default true: false skips before/after screenshots
 const REPO = (args && args.repo) || '/Users/aidanbuzzaroo/Documents/Personal/repos/LiftLog'
 const SLOTS = (args && args.slots) || 2
@@ -204,9 +205,9 @@ function apkLine(apkPath) {
     : `APK: the diff has no native changes, so copy ${REPO}/app/android/app/build/outputs/apk/debugOptimized/app-debugOptimized.apk to the same relative path in the worktree (mkdir -p first) instead of building.`
 }
 
-const LIVE_RULES = `Read .claude/skills/verify-liftlog/SKILL.md in the worktree and use only verify.sh. Start with verify.sh up: it claims a free emulator slot, and doctor reports which one. If no slot is free, wait and retry; never stop an emulator or Metro another checkout started, and never touch emulator-5554, Metro 8081 or the Pixel_10_Pro_XL AVD. Never run gradlew --stop, pkill node or adb kill-server. Then run flows/ready.yaml. If the dev client shows the Expo launcher instead of LiftLog, re-run verify.sh up, which reopens Metro. Metro may miss edits in a worktree, so after any git checkout that changes code run verify.sh down then verify.sh up before trusting the app.
-Preconditions come from a fixture, proof from the real UI: seed the data a scenario needs, then tap through the feature under test as a user would, with no deep links that skip the screens under test and no writes to SQLite. Check every side effect with verify.sh db before and after, or by reopening the screen.
-Save each scenario as its own Maestro flow under the run's evidence directory (flows/<nn>-<scenario>.yaml), with takeScreenshot after the key tap and on the result screen, and run it with verify.sh flow so a re-test can replay it. Report each flow's absolute path.
+const LIVE_RULES = (l) => `Read .claude/skills/verify-liftlog/SKILL.md in the worktree and use only verify.sh. Start with verify.sh up (redirect its output to a file; never pipe it): it claims a free emulator slot, and doctor reports which one. If no slot is free, check verify.sh slots, then wait and retry; never stop an emulator or Metro another checkout started, never run down from another checkout, and never touch emulator-5554, Metro 8081 or the Pixel_10_Pro_XL AVD. Never run gradlew --stop, pkill node or adb kill-server. Then get to Home with verify.sh seed <fixture>, which ends with flows/ready.yaml, or with verify.sh flow .claude/skills/verify-liftlog/flows/ready.yaml when no data is needed. If the dev client shows the Expo launcher instead of LiftLog, re-run verify.sh up, which reopens Metro on the slot you hold. Metro may miss edits in a worktree, so after any git checkout that changes code run verify.sh down then verify.sh up, and seed again, before trusting the app.
+Preconditions come from a fixture, proof from the real UI: seed the data a scenario needs (verify.sh fixtures lists them; verify.sh clear gives a first run; verify.sh snapshot <name> saves a slow-to-reach state so seed <name> returns to it), then tap through the feature under test as a user would, with no deep links that skip the screens under test and no writes to SQLite. Check every side effect with verify.sh db before and after, or by reopening the screen. Reuse the helpers in .claude/skills/verify-liftlog/flows/seed/ in your flows.
+Save each scenario as its own Maestro flow in .verify-runs/scenarios/${l.folder}/ at the worktree root, numbered in run order (<nn>-<scenario>.yaml), naming its fixture in its first comment, with takeScreenshot after the key tap and on the result screen. Run them with verify.sh flows <file>, so a re-test can replay them unchanged. Report each flow's absolute path.
 A scenario you could not run is NOT RUN with the reason, never PASS. If a tool call is denied, do not try another route to the same action; mark the scenario NOT RUN and say what was denied. Do not fix code. Put only real defects in problems; questions and observations go in notes.
 Finish with verify.sh down from this worktree, always, after a failure too.`
 
@@ -220,8 +221,8 @@ function livePrompt(l, b, head, apkPath, notes) {
 
 You run the one live proof for ${l.id} (${b.prUrl}) at ${head}, which code review has already cleared. Work only in the worktree ${b.worktree}.
 ${apkLine(apkPath)}
-${LIVE_RULES}
-${l.fixture ? `Seed the preconditions with verify.sh seed ${l.fixture} after ready.yaml, and again after each restart.` : 'No fixture is named for this lane: seed only what the scenarios need, as fast as you can, and say how in each scenario\'s evidence.'}
+${LIVE_RULES(l)}
+${l.fixture ? `Seed the preconditions with verify.sh seed ${l.fixture} in place of ready.yaml, and again after each restart. If the base and the branch differ in storage code, the base's seed rebuilds the fixture from its seed flow first; let it.` : 'No fixture is named for this lane: pick the nearest one from verify.sh fixtures (seed empty for an onboarded app with no data), add only what the scenarios still need through the UI, and say how in each scenario\'s evidence.'}
 ${l.ui ? `Before shots: git checkout --detach origin/${l.base}, restart, confirm the old UI shows, and take them with the same seeded data. Then git checkout ${l.branch}, restart, confirm HEAD is ${head} and the new UI shows, and run the scenarios.` : `Stay on ${l.branch} at ${head}.`}
 Scenarios:
 ${l.live}
@@ -236,9 +237,9 @@ function retestPrompt(l, b, head, apkPath, failed, prevHead) {
 
 RE-TEST for ${l.id} (${b.prUrl}) at ${head}. The fix for the failures below was reviewed after ${prevHead}. Work only in the worktree ${b.worktree}, on ${l.branch} at ${head}; do not check out the base and do not retake before shots.
 ${apkLine(apkPath)}
-${LIVE_RULES}
-${l.fixture ? `Seed the preconditions with verify.sh seed ${l.fixture} after ready.yaml.` : 'Seed only what these scenarios need.'}
-Re-run only these scenarios, by replaying their saved flows with verify.sh flow <file>. Edit a flow only where the fix changed what the user sees, and say what you changed:
+${LIVE_RULES(l)}
+${l.fixture ? `Seed with verify.sh seed ${l.fixture} in place of ready.yaml, the same fixture the first run used.` : 'Seed from the same fixture each flow names in its first comment.'}
+Re-run only these scenarios, by replaying their saved flows with verify.sh flows <file>..., seeding again before a flow whose starting state an earlier one changed. Edit a flow only where the fix changed what the user sees, and say what you changed:
 ${failed.map((s) => `- ${s.name} (flow: ${s.flow || 'none saved; write one'}). Last time: ${s.evidence}`).join('\n')}
 Return only these scenarios.
 ${screenshotsLine(l, `-r${prevHead.slice(0, 7)}`)} Replace only the after images for these scenarios and keep the before images already in the PR. Update ## Verification to say which scenarios were re-run at ${head}. Return the structured result.`

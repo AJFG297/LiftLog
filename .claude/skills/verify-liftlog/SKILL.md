@@ -5,6 +5,8 @@ description: Launch and drive the real LiftLog mobile app (Expo dev-client build
 
 # Verify LiftLog on Android
 
+For the order a change is verified in (review before the emulator, one live run, re-test only failures), read [`PROCESS.md`](PROCESS.md) first.
+
 The user-facing surface is the **Android app** built from `app/`, served as a dev-client build (JS from a Metro
 bundler, so JS edits need no rebuild). iOS isn't covered: it needs full Xcode, and this machine has only the Command
 Line Tools. The `backend/` API is a secondary surface and isn't covered here. The driver is **Maestro**, the same one

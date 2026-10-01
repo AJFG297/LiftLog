@@ -33,27 +33,34 @@ in the PR's `## Verification` and leave it for the user.
 ## Slots
 
 `verify.sh up` claims a free slot: its own AVD, emulator port and Metro port. Two lanes can be live at once, one
-per slot. `verify.sh doctor` prints the slot you hold.
+per slot (`VERIFY_SLOTS=3` adds a third where its AVD exists). `verify.sh slots` lists every slot and its owner,
+and `verify.sh doctor` prints the slot you hold.
 
-- Never stop an emulator or Metro that another checkout started, even if it blocks you. Wait for a slot instead,
-  or ask the user.
+- Never stop an emulator or Metro that another checkout started, even if it blocks you, and never run `down` from
+  another checkout. When `up` finds no free slot, check `verify.sh slots`, wait and retry, or ask the user.
 - Never touch `emulator-5554`, Metro 8081 or the `Pixel_10_Pro_XL` AVD. They are the user's.
 - Always finish with `verify.sh down` from your own checkout, after a failure too, so the slot frees up.
 
 ## Preconditions vs proof
 
 - **Preconditions come from a fixture.** Seed the data a scenario needs (plans, history) with
-  `verify.sh seed <fixture>` instead of tapping it in. A fixture is a starting state, not proof of anything.
+  `verify.sh seed <fixture>` instead of tapping it in: `ppl-history` for programs and two weeks of history,
+  `empty` for an onboarded app with no history. `seed` ends with `ready.yaml`, so it replaces that step.
+  `verify.sh fixtures` lists what can be seeded. A fixture is a starting state, not proof of anything.
+- **Other starting states.** `verify.sh clear` returns this slot's app to a first run (then run `ready.yaml`).
+  `verify.sh snapshot <name>` saves a state that is slow to reach so `seed <name>` can return to it between
+  attempts. When a change alters what a seed flow builds, remake its fixture with `verify.sh fixture <name>`.
 - **The feature under test goes through the real UI.** Tap through it as a user would. No deep links that skip
   the screens under test, no writes to SQLite or Redux.
 - **Side effects are checked with `verify.sh db`**, before and after, or by reopening the screen.
 
 ## Replayable flows
 
-Save each live scenario as a Maestro flow: under the run's evidence directory, or in `app/.maestro/` when it is
-worth keeping as an e2e flow. Name it for the scenario. A re-test replays the saved flows with
-`verify.sh flow <file>` rather than re-driving the app by hand. Edit a saved flow only where the fix changed
-what the user sees.
+Save each live scenario as a Maestro flow in `.verify-runs/scenarios/<issue>/`, numbered in run order
+(`01-log-set.yaml`), with the fixture it starts from in its first comment. That directory is gitignored and
+survives `down`. Use `app/.maestro/` instead only when the flow is worth keeping as an e2e flow. A re-test seeds
+the same fixture and replays only the failed scenarios with `verify.sh flows <file>...` rather than re-driving
+the app by hand. Edit a saved flow only where the fix changed what the user sees.
 
 ## Screenshots on UI PRs
 
