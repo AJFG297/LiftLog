@@ -10,6 +10,7 @@ import CopyWorkoutDialog from '@/components/smart/copy-workout-dialog';
 import { ItemMenu, programSummary, useSwitchActiveProgram } from '@/components/smart/program-list-item';
 import { routineEditorHref } from '@/components/smart/routines-screen';
 import { fontFamily, spacing, useAppTheme } from '@/hooks/useAppTheme';
+import { useBackWhenGone } from '@/hooks/useBackWhenGone';
 import { SessionBlueprint } from '@/models/blueprint-models';
 import { useAppSelector } from '@/store';
 import {
@@ -38,6 +39,7 @@ export function ProgramEditor({ programId }: { programId: string }) {
   const program = useAppSelector((x) => x.program.savedPrograms[programId]);
   const isActive = useAppSelector((x) => x.program.activePlanId) === programId;
   const switchTo = useSwitchActiveProgram();
+  useBackWhenGone(!program);
 
   if (!program) {
     return null;

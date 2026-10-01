@@ -65,6 +65,7 @@ import {
 } from '@/components/smart/routine-draft';
 import { useServices } from '@/components/smart/services-provider';
 import { fontFamily, spacing, useAppTheme } from '@/hooks/useAppTheme';
+import { useBackWhenGone } from '@/hooks/useBackWhenGone';
 import { useExerciseSearch } from '@/hooks/useExerciseSearch';
 import {
   CardioExerciseBlueprint,
@@ -155,11 +156,7 @@ export function RoutineEditor({ programId, sessionIndex, isNew }: RoutineEditorP
   // Typing on the pad reaches the draft when the field is left, so a number still on the pad counts too.
   const changed = isRoutineDraftChanged(draft) || (!!editing && buffer.typed !== null);
   const missing = !program || (!isNew && !saved);
-  useEffect(() => {
-    if (missing) {
-      router.back();
-    }
-  }, [missing, router]);
+  useBackWhenGone(missing);
 
   usePreventRemove(changed && !leaving, ({ data }) => {
     Alert.alert(t('routine_editor.discard.title'), t('routine_editor.discard.body'), [
