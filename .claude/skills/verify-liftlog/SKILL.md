@@ -25,8 +25,13 @@ Metro, and the emulator slot that checkout holds.
 | `slots`                      | lists every slot, its owner checkout and whether it's up                      |
 | `doctor`                     | read-only health check of this checkout's slot, plus the slots table          |
 | `flow <flow.yaml> [label]`   | runs a Maestro flow on this slot                                              |
+| `flows <dir\|flow.yaml>...`  | runs flows in order and stops at the first failure                            |
 | `shot`, `ui`, `db "<sql>"`   | screenshot, view hierarchy, SQLite query on this slot                         |
 | `clear`                      | wipes the app's data on this slot only, then reopens it on Metro              |
+| `seed <fixture>`             | replaces the app's data with a fixture, reopens it, runs `ready.yaml`         |
+| `snapshot <name>`            | saves the app's current data as a fixture for this checkout                   |
+| `fixture <name>`             | remakes a fixture from its seed flow (`flows/seed-<name>.yaml`)               |
+| `fixtures`                   | lists the fixtures this checkout can seed                                     |
 | `logs metro\|emulator\|app`  | tails this checkout's Metro or emulator log, or the app's logcat              |
 | `down`                       | stops what this checkout started and releases its slot                        |
 
@@ -40,10 +45,10 @@ Verification runs on **slots**. Each slot has its own AVD, emulator port and Met
 | 2    | `liftlog-verify-2` | `emulator-5586` | 8093  |
 | 3    | `liftlog-verify-3` | `emulator-5588` | 8095  |
 
-`up` claims a slot for this checkout and every other command (`flow`, `shot`, `ui`, `db`, `clear`, `logs`,
-`doctor`, `down`) acts on that slot only. The claim is machine-wide, in `~/.cache/liftlog-verify/slot-N/`, which
-records the owner checkout, the claiming pid, and the emulator and Metro it runs. Exactly one checkout holds a
-slot.
+`up` claims a slot for this checkout and every other command (`flow`, `flows`, `shot`, `ui`, `db`, `clear`,
+`seed`, `snapshot`, `fixture`, `logs`, `doctor`, `down`) acts on that slot only. The claim is machine-wide, in
+`~/.cache/liftlog-verify/slot-N/`, which records the owner checkout, the claiming pid, and the emulator and Metro
+it runs. Exactly one checkout holds a slot.
 
 - `up` reuses this checkout's slot if it holds one. Otherwise it claims the first free slot from 1 to
   `VERIFY_SLOTS` (default 2). `VERIFY_SLOT=N` asks for slot N only.
@@ -84,6 +89,9 @@ mobile-dev-inc/tap/maestro`) and that JDK 17 is present (`brew install openjdk@1
 .claude/skills/verify-liftlog/verify.sh flow .claude/skills/verify-liftlog/flows/ready.yaml
 ```
 
+When the check needs data to start from, run `verify.sh seed <fixture>` instead of `ready.yaml`: it ends with
+`ready.yaml` too. See "Seed data".
+
 - `build`: `npm ci` if `node_modules` is missing, `expo prebuild --platform android` if `app/android/` is missing,
   then `gradlew app:assembleDebugOptimized` for arm64 only. A warm build takes about 2 minutes. Rebuild only when native
   code changes: `package.json` native deps, `app.json` plugins, or anything under `app/modules/` or `app/plugins/`.
@@ -108,6 +116,49 @@ mobile-dev-inc/tap/maestro`) and that JDK 17 is present (`brew install openjdk@1
   check from empty data without reinstalling.
 
 Teardown is `verify.sh down`. See Cleanup.
+
+## Seed data
+
+A check that needs plans and history starts from a **fixture** instead of tapping that data in. Seed only the
+preconditions. The feature under test still goes through the real UI, and its result is still proven in a
+second view or `db`.
+
+```bash
+.claude/skills/verify-liftlog/verify.sh seed ppl-history
+```
+
+- `seed <fixture>` stops the app, replaces its database and preference files on this slot with the fixture,
+  grants the notification permission, reopens the app on Metro and runs `ready.yaml`. It ends on Home with the
+  fixture's data. It keeps the dev client's own state (its remembered Metro URL, the hidden gear), so nothing
+  else needs redoing. It replaces whatever data the app had, and seeding twice gives the same data twice.
+- The fixtures, and what each holds, are in [`fixtures/README.md`](fixtures/README.md). `verify.sh fixtures`
+  lists them with their state and where each is stored.
+  - `ppl-history`: an active Push/Pull/Legs program with a superset, a second program, a custom exercise, and
+    two weeks of finished workouts with warm-ups, RPE and personal records.
+  - `empty`: a first run that's already onboarded. No history, the preset programs, and an empty active `My Plan`.
+- A fixture is made by its **seed flow**, `flows/seed-<name>.yaml`, which drives the real UI on a cleared app.
+  `verify.sh fixture <name>` runs `clear`, the seed flow and a snapshot. `seed` does that by itself when the
+  fixture is missing, which takes about 18 minutes for `ppl-history` and under 2 minutes for `empty`. With the
+  fixture there, `seed` takes about 25 seconds.
+- Fixtures aren't in git. A seed flow's fixture is stored machine-wide under
+  `~/.cache/liftlog-verify/fixtures/<name>-<fingerprint>/`. The fingerprint covers the app's schema
+  (`app/src/drizzle/`), its persisted model versions (`app/src/models/storage/versions/`), `whats-new.ts`, and
+  the seed flows. Every checkout with the same storage code shares one copy, and a change to any of those makes
+  a new one. Other app code isn't covered, so after a change that alters what the seed flow builds (a new
+  default, a moved control), remake the fixture with `verify.sh fixture <name>`.
+- Dates in a fixture are fixed when it's made. `seed` warns when a fixture is from an earlier day. If the check
+  depends on recent dates, such as Home's last 7 days or a streak, remake it first with `verify.sh fixture <name>`.
+- `snapshot <name>` saves the app's current data as a fixture for this checkout only, under
+  `.verify-runs/fixtures/<name>/`. Use it for a state that's slow to reach and that no seed flow makes, then
+  `seed <name>` to return to it between attempts. A snapshot can hold a workout in progress, but `seed` stops
+  the app first, so a running rest timer and its notification don't survive.
+- A fixture holds `files/SQLite/db.db` and the preference files at the top of `files/`. It never holds feed rows:
+  the feed identity is a key pair and password in plain text, and two slots with the same one would be the same
+  feed account. A fixture from older code opens in newer code, and the app migrates it on first launch, the way
+  an upgrade does. A fixture from newer code is refused.
+
+To add a fixture, write `flows/seed-<name>.yaml`, reusing the helpers in `flows/seed/`, and document it in
+`fixtures/README.md`. Keep that README in sync with the seed flow.
 
 ## Doctor
 
@@ -143,6 +194,25 @@ Write a Maestro flow and run it against the verify device. Start from `app/.maes
   client remembers the URL `up` opened. Don't use `openLink` with a dev-client URL: other installed apps claim the
   same scheme, so the link stops on an "Open with" chooser. Put scratch flows in the run's evidence directory, not
   in `app/.maestro/`, unless the task is to add an e2e flow.
+- **Save each scenario as a flow, so a re-test replays it.** Write every live scenario you check as a flow
+  file in `.verify-runs/scenarios/<issue>/` (gitignored, kept across `down` and later runs), numbered in the
+  order to run them (`01-log-set.yaml`, `02-history.yaml`). Note the fixture it starts from in its first comment.
+  A re-test after a fix then runs only the failed scenarios, unchanged:
+
+  ```bash
+  .claude/skills/verify-liftlog/verify.sh seed ppl-history
+  .claude/skills/verify-liftlog/verify.sh flows .verify-runs/scenarios/pm-42/02-history.yaml
+  .claude/skills/verify-liftlog/verify.sh flows .verify-runs/scenarios/pm-42/
+  ```
+
+  `flows` takes directories and files. It runs a directory's top-level `*.yaml` in name order (subflows can sit
+  in a subdirectory, and `config.yaml` is skipped), and it stops at the first failure and lists what didn't run.
+  Each flow gets its own evidence directory, as with `flow`. A scenario that changes data the next one depends
+  on should say so. Otherwise seed before each one.
+- `flows/seed/` holds tested helpers to reuse in scenario flows: `start.yaml` (start a routine from Up next),
+  `log-exercise.yaml` (weight, RPE and every set of one exercise), `next.yaml`, `finish.yaml` (finish, rate, and
+  re-date in All history), `pad-digit.yaml` (one number-pad key) and `search.yaml` / `pick.yaml` (the exercise
+  picker). Each one's header comment lists the variables it takes.
 - **Handles**, in order of preference:
   - React Native `testID`, which Android exposes as `resource-id`. Target it with `tapOn: {id: 'set-check'}`.
   - Visible English text, which is a regex matched against the full string and case-insensitive. `(?-i)` pins the
@@ -213,8 +283,10 @@ deletes `.verify-runs/.state/`, and releases this checkout's slot. It never touc
 `VERIFY_SLOT=N down` for a slot this checkout doesn't hold refuses and names the owner. It prints
 `evidence kept at ...`, and `.verify-runs/<run-id>/` stays. The next `up` cold-boots, and each slot's emulator keeps
 its userdata, so installed-app data (sessions, plans) persists across runs on that slot, and the next `up` may
-land on a different slot with different data. Flows should clean up after themselves the way
-`app/.maestro/creating-a-plan.yaml` removes its plan. To start from empty data, run `verify.sh clear` after `up`.
+land on a different slot with different data. Don't rely on what a slot holds: start each check from a fixture
+with `verify.sh seed <fixture>` (`seed empty` for an onboarded app with no history), or from a first run with
+`verify.sh clear`. Flows should still clean up after themselves the way `app/.maestro/creating-a-plan.yaml`
+removes its plan.
 Run `down` after a failed attempt too, so no emulator or Metro is left running and the slot is free.
 
 Never delete `.verify-runs/<run-id>/` as part of cleanup. Never run `gradlew --stop`, `pkill node`, or `adb kill-server`:
@@ -234,8 +306,20 @@ all three hit other sessions' builds, Metro, and emulators.
   Metro once the app has loaded from it. A fresh AVD, or one just cleared, has no remembered URL until `up` or
   `clear` opens it. If a flow shows the Expo dev-launcher screen instead of LiftLog, re-run `up`: on the slot this
   checkout already holds it boots nothing new and re-opens the URL.
-- Running the whole `app/.maestro/` directory also runs `fresh-install-onboarding` unless you pass
-  `--exclude-tags ci-only`. Run flows one at a time through `verify.sh flow`.
+- Running the whole `app/.maestro/` directory also runs `fresh-install-onboarding`, which is tagged `ci-only`.
+  Pass the other files to `verify.sh flows` instead of the directory.
+- **Taps in a live workout take 7 to 20 seconds** unless they set `waitToSettleTimeoutMs: 500`. The elapsed clock
+  and the rest timer change the screen every second, so Maestro's wait for the screen to settle runs out each
+  time.
+- **Number-pad keys have no testIDs**, and their digits also appear in set badges and weight cells. Tap a digit
+  as the nearest match left of its row's right-hand key: `tapOn: {text: '4', leftOf: 'Subtract .*'}`. See
+  `flows/seed/pad-digit.yaml`.
+- **Live set rows are not inside `live-exercise-N`**, so `childOf` finds nothing. Their labels change once
+  used: `Log Set 1` becomes `Undo Set 1`, and `Weight for Set 1: 0 kg, today's target` loses `, today's target`
+  once typed. The first unused label on a page is therefore always the first unfinished exercise's.
+  `scrollUntilVisible` with a `below:` selector didn't match when tried, so scroll to a plain selector.
+- The past workout editor's date field (`session-date-input`) takes `MM/DD/YYYY`, as the emulator is en-US.
+  `flows/seed/finish.yaml` computes the date with `evalScript`.
 - **Metro can miss JS edits.** Without watchman installed, Metro's file watcher didn't notice an edited file in a
   git worktree. The app kept its already-built bundle, even across `am force-stop` and `launchApp`, and a flow that
   should have failed passed. A fresh bundle request did return the new code, so asking Metro directly doesn't
