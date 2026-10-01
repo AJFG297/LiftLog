@@ -179,7 +179,9 @@ cmd__claim() { # internal: prints the slot claimed for this checkout, or explain
     return 0
   done
   {
-    echo "verify: no free slot for $REPO_ROOT (VERIFY_SLOTS=$MAX_SLOTS):"
+    if [[ -n "${VERIFY_SLOT:-}" ]]; then echo "verify: slot $VERIFY_SLOT is not free for $REPO_ROOT:"
+    else echo "verify: no free slot for $REPO_ROOT (VERIFY_SLOTS=$MAX_SLOTS):"
+    fi
     printf '  %s\n' "${reasons[@]}"
     echo "  Wait for one, or ask the user. Never stop another checkout's emulator."
   } >&2
