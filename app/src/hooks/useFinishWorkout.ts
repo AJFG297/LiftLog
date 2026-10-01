@@ -1,7 +1,5 @@
-import { useAppSelector, useAppSelectorWithArg } from '@/store';
-import { getPlanDiff } from '@/store/program/helpers';
-import { selectActiveProgram, setPendingPlanDiff } from '@/store/program';
-import { selectSession, sessionFinished } from '@/store/stored-sessions';
+import { finishWorkout } from '@/store/finish-workout';
+import type { AppDispatch } from '@/store/store';
 import { useDispatch } from 'react-redux';
 
 /**
@@ -9,19 +7,6 @@ import { useDispatch } from 'react-redux';
  * differs from the active plan, so the caller can open the diff-save modal.
  */
 export function useFinishWorkout(sessionId: string | undefined) {
-  const dispatch = useDispatch();
-  const session = useAppSelectorWithArg(selectSession, sessionId ?? '');
-  const program = useAppSelector(selectActiveProgram);
-  const programId = useAppSelector((x) => x.program.activePlanId);
-  return (): boolean => {
-    if (!sessionId || !session) {
-      return false;
-    }
-    const diff = getPlanDiff(program, session, programId);
-    if (diff) {
-      dispatch(setPendingPlanDiff(diff));
-    }
-    dispatch(sessionFinished(sessionId));
-    return !!diff;
-  };
+  const dispatch = useDispatch<AppDispatch>();
+  return (): boolean => (sessionId ? dispatch(finishWorkout(sessionId)) : false);
 }

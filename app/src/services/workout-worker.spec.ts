@@ -7,7 +7,7 @@ import { makeSession, makeWeightedBlueprint } from '@/models/session-models/__te
 import { Session } from '@/models/session-models';
 import { WorkoutMessage } from '@/models/workout-worker-messages';
 import { RootState } from '@/store';
-import programReducer, { savePlan, setActivePlan } from '@/store/program';
+import programReducer, { clearPendingPlanDiff, savePlan, setActivePlan } from '@/store/program';
 import { settingsReducer } from '@/store/settings';
 import { putStoredSession, setActiveSessionId, storedSessionsReducer } from '@/store/stored-sessions';
 import { WorkoutWorker } from '@/services/workout-worker';
@@ -46,8 +46,14 @@ function setUp(session: Session) {
   store.dispatch(setActivePlan({ activePlanId: PLAN_ID }));
   store.dispatch(putStoredSession(session));
   store.dispatch(setActiveSessionId(session.id));
-  new WorkoutWorker(store.dispatch, store.getState as unknown as () => RootState, {} as TolgeeInstance);
-  return store;
+  const offers: (() => boolean)[] = [];
+  new WorkoutWorker(
+    store.dispatch,
+    store.getState as unknown as () => RootState,
+    {} as TolgeeInstance,
+    (stillPending) => offers.push(stillPending),
+  );
+  return { store, offers };
 }
 
 function tapNotificationFinish() {
@@ -63,7 +69,7 @@ describe('finishing from the workout notification', () => {
 
   it('leaves the same pending plan diff as the in-app Finish when the workout changed', () => {
     const session = makeSession([squat, bench, makeWeightedBlueprint({ name: 'Deadlift' })]);
-    const store = setUp(session);
+    const { store, offers } = setUp(session);
 
     tapNotificationFinish();
 
@@ -72,13 +78,24 @@ describe('finishing from the workout notification', () => {
     expect(pending?.diff.originalSession).toBe(routine);
     expect(pending?.diff.newSession).toBe(session.blueprint);
     expect(pending?.diff.addedExercises.map((x) => [x.exercise.name, x.newIndex])).toEqual([['Deadlift', 2]]);
+    expect(offers.map((stillPending) => stillPending())).toEqual([true]);
+  });
+
+  it('stops offering once the sheet has dealt with the diff', () => {
+    const { store, offers } = setUp(makeSession([squat, bench, makeWeightedBlueprint({ name: 'Deadlift' })]));
+    tapNotificationFinish();
+
+    store.dispatch(clearPendingPlanDiff(store.getState().program.pendingPlanDiff!));
+
+    expect(offers.map((stillPending) => stillPending())).toEqual([false]);
   });
 
   it('leaves no pending plan diff when the workout matches the routine', () => {
-    const store = setUp(makeSession([squat, bench]));
+    const { store, offers } = setUp(makeSession([squat, bench]));
 
     tapNotificationFinish();
 
     expect(store.getState().program.pendingPlanDiff).toBeUndefined();
+    expect(offers).toEqual([]);
   });
 });
