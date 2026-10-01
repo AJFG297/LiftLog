@@ -8,6 +8,10 @@ appId: com.ajfg297.liftlog
 # exercise's testID. So rows are found by their labels, which change once used: "Log Set 1" becomes
 # "Undo Set 1", and a weight or reps loses its ", today's target" once typed. The first match is then
 # always this exercise's row.
+# The Up next bar floats over the bottom of the page, and scrollUntilVisible counts a row under it as
+# visible, so a tap meant for the row lands on Up next and moves to the next page. Each scroll centres
+# its row instead, which leaves it well above the bar. A scroll that can't centre (the end of the page)
+# already has the row clear of the bar, as the page ends with room for it.
 - runFlow:
     when:
       true: ${D1 != '-'}
@@ -16,6 +20,8 @@ appId: com.ajfg297.liftlog
           element:
             text: "Weight for Set 1: .*, today's target"
           direction: DOWN
+          centerElement: true
+          waitToSettleTimeoutMs: 500
       - tapOn:
           text: "Weight for Set 1: .*, today's target"
           waitToSettleTimeoutMs: 500
@@ -38,6 +44,8 @@ appId: com.ajfg297.liftlog
           element:
             text: "Reps for Set 1: .*, today's target"
           direction: DOWN
+          centerElement: true
+          waitToSettleTimeoutMs: 500
       - tapOn:
           text: "Reps for Set 1: .*, today's target"
           waitToSettleTimeoutMs: 500
@@ -55,6 +63,8 @@ appId: com.ajfg297.liftlog
           element:
             text: 'Log Warm-up set'
           direction: DOWN
+          centerElement: true
+          waitToSettleTimeoutMs: 500
       - tapOn:
           text: 'Log Warm-up set'
           waitToSettleTimeoutMs: 500
@@ -66,6 +76,8 @@ appId: com.ajfg297.liftlog
           element:
             text: 'Log Set ${output.set}'
           direction: DOWN
+          centerElement: true
+          waitToSettleTimeoutMs: 500
       - tapOn:
           text: 'Log Set ${output.set}'
           waitToSettleTimeoutMs: 500

@@ -327,6 +327,11 @@ all three hit other sessions' builds, Metro, and emulators.
   used: `Log Set 1` becomes `Undo Set 1`, and `Weight for Set 1: 0 kg, today's target` loses `, today's target`
   once typed. The first unused label on a page is therefore always the first unfinished exercise's.
   `scrollUntilVisible` with a `below:` selector didn't match when tried, so scroll to a plain selector.
+- **A live workout's Up next bar floats over the bottom of the page**, and `scrollUntilVisible` counts a row
+  under it as visible. The tap then lands on Up next and moves to the next page, so a set looks logged when it
+  isn't. Give each `scrollUntilVisible` for a row `centerElement: true` (and `waitToSettleTimeoutMs: 500`), as
+  `flows/seed/log-exercise.yaml` does. The summary's pinned Done button does the same to the feel picker, which
+  `flows/seed/finish.yaml` scrolls past.
 - The past workout editor's date field (`session-date-input`) takes `MM/DD/YYYY`, as the emulator is en-US.
   `flows/seed/finish.yaml` computes the date with `evalScript`.
 - **Metro can miss JS edits.** Without watchman installed, Metro's file watcher didn't notice an edited file in a
