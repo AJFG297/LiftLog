@@ -4,9 +4,11 @@
 # See SKILL.md next to this file for what each command does and when to use it.
 set -euo pipefail
 
-SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Physical paths (pwd -P): slot owners and doctor's Metro cwd check compare against what lsof reports, and
+# /tmp is a symlink to /private/tmp on macOS.
+SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 SELF="$SKILL_DIR/$(basename "${BASH_SOURCE[0]}")"
-REPO_ROOT="$(cd "$SKILL_DIR/../../.." && pwd)"
+REPO_ROOT="$(cd "$SKILL_DIR/../../.." && pwd -P)"
 APP_DIR="$REPO_ROOT/app"
 
 export ANDROID_HOME="${ANDROID_HOME:-$HOME/Library/Android/sdk}"
@@ -372,6 +374,7 @@ cmd_up() {
   fi
   slot_set "$n" "avd=$AVD" "emu_port=$EMU_PORT" "metro_port=$METRO_PORT"
   mkdir -p "$STATE_DIR"
+  echo "$n" > "$STATE_DIR/slot"
   echo "slot $n: AVD $AVD on $SERIAL, metro :$METRO_PORT"
 
   if emu_online; then
@@ -560,8 +563,9 @@ cmd_down() {
     echo "this checkout holds no slot and started nothing"
     return 0
   fi
-  # Without a slot (state from an older verify.sh) fall back to slot 1, the only instance that existed.
-  load_slot "${n:-1}"
+  # Without a held slot, stop what STATE_DIR says this checkout started: on the slot `up` recorded there, or
+  # on slot 1 for state from a verify.sh that predates slots. our_emulator_pid still checks the AVD.
+  load_slot "${n:-$(cat "$STATE_DIR/slot" 2>/dev/null || echo 1)}"
   if [[ -f "$STATE_DIR/metro.pid" ]]; then
     local mpid; mpid="$(cat "$STATE_DIR/metro.pid")"
     if kill -0 -- "-$mpid" 2>/dev/null; then
