@@ -151,7 +151,9 @@ second view or `db`.
   `~/.cache/liftlog-verify/fixtures/<name>-<fingerprint>/`. The fingerprint covers the app's schema
   (`app/src/drizzle/`), its persisted model versions (`app/src/models/storage/versions/`), `whats-new.ts`, and
   the seed flows. Every checkout with the same storage code shares one copy, and a change to any of those makes
-  a new one. Other app code isn't covered, so after a change that alters what the seed flow builds (a new
+  a new one. Making, replacing and seeding a shared fixture take a lock on it, so when another checkout is
+  making the same fixture, `seed` and `fixture` say so and wait for it, then use the copy it made instead of
+  making their own. Other app code isn't covered, so after a change that alters what the seed flow builds (a new
   default, a moved control), remake the fixture with `verify.sh fixture <name>`.
 - Dates in a fixture are fixed when it's made. `seed` warns when a fixture is from an earlier day. If the check
   depends on recent dates, such as Home's last 7 days or a streak, remake it first with `verify.sh fixture <name>`.

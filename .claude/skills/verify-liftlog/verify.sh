@@ -149,14 +149,25 @@ slot_state() { # prints: free | ours | held | stale | busy
   fi
 }
 
-# Claiming and releasing run under one machine-wide lock, so checking a slot and taking it is atomic.
-# lockf (macOS) and flock (Linux) hold a kernel lock that is dropped if the holder dies.
-with_claim_lock() {
-  mkdir -p "$SLOTS_DIR"
-  if command -v lockf > /dev/null; then lockf -k -t 60 "$CLAIM_LOCK" bash "$SELF" "$@"
-  elif command -v flock > /dev/null; then flock -w 60 "$CLAIM_LOCK" bash "$SELF" "$@"
-  else die "need lockf or flock to claim a slot"
+# run_locked <lock file> <timeout secs> <verify.sh command> [args]: runs the command in a new verify.sh while
+# holding the lock, and exits 75 (EX_TEMPFAIL) without a word if the lock stays taken. lockf (macOS) and
+# flock (Linux) hold a kernel lock that is dropped if the holder dies. -k keeps the lock file: removing it
+# on exit would let a later process lock a fresh file while a waiter still holds the old one.
+run_locked() {
+  local lock="$1" secs="$2"; shift 2
+  mkdir -p "$(dirname "$lock")"
+  if command -v lockf > /dev/null; then lockf -s -k -t "$secs" "$lock" bash "$SELF" "$@"
+  elif command -v flock > /dev/null; then flock -E 75 -w "$secs" "$lock" bash "$SELF" "$@"
+  else die "need lockf or flock"
   fi
+}
+
+# Claiming and releasing run under one machine-wide lock, so checking a slot and taking it is atomic.
+with_claim_lock() {
+  local rc=0
+  run_locked "$CLAIM_LOCK" 60 "$@" || rc=$?
+  (( rc != 75 )) || die "gave up after 60s waiting for $CLAIM_LOCK"
+  return "$rc"
 }
 
 cmd__claim() { # internal: prints the slot claimed for this checkout, or explains why none is free
@@ -720,19 +731,51 @@ cmd_snapshot() { # snapshot <name>: capture this slot's app data as a fixture fo
   open_on_metro
 }
 
+# A seed flow's fixture is shared by every checkout, so making, replacing and reading <dir> all happen under
+# <dir>.lock. Without it two checkouts that both find the fixture missing each spend the full seed flow making
+# it, and one can push a fixture.tar to its emulator while the other is replacing that directory.
+FIXTURE_LOCK_WAIT="${VERIFY_FIXTURE_LOCK_WAIT:-3600}"
+
+with_fixture_lock() { # <dir> <verify.sh command> [args]
+  local dir="$1" rc=0; shift
+  run_locked "$dir.lock" 0 "$@" || rc=$?
+  if (( rc == 75 )); then
+    echo "verify: another checkout is making or reading ${dir##*/}; waiting for it (up to ${FIXTURE_LOCK_WAIT}s)" >&2
+    rc=0
+    run_locked "$dir.lock" "$FIXTURE_LOCK_WAIT" "$@" || rc=$?
+    (( rc != 75 )) || die "gave up after ${FIXTURE_LOCK_WAIT}s waiting for $dir.lock"
+  fi
+  return "$rc"
+}
+
+make_fixture() { # <name> <dir>: clear the app, run its seed flow, and save the result in <dir>
+  local name="$1" dir="$2" flow; flow="$(seed_flow "$1")"
+  echo "making fixture $name from $flow (a few minutes; it drives the real UI)"
+  cmd_clear > /dev/null
+  grant_notifications
+  cmd_flow "$flow" "fixture-$name" || die "seed flow for $name failed; nothing saved"
+  capture_fixture "$name" "$dir"
+}
+
 cmd_fixture() { # fixture <name>: clear the app, run flows/seed-<name>.yaml, and save the result
   local name="${1:?usage: verify.sh fixture <name>}"
   local flow; flow="$(seed_flow "$name")"
   [[ -f "$flow" ]] || die "no seed flow $flow; verify.sh fixtures lists the fixtures"
   require_slot
   require_our_emulator
-  local dir; dir="$(fixture_dir "$name")"
-  echo "making fixture $name from $flow (a few minutes; it drives the real UI)"
-  cmd_clear > /dev/null
-  grant_notifications
-  cmd_flow "$flow" "fixture-$name" || die "seed flow for $name failed; nothing saved"
-  capture_fixture "$name" "$dir"
+  with_fixture_lock "$(fixture_dir "$name")" _fixture "$name" "$(date +%s)"
   open_on_metro
+}
+
+cmd__fixture() { # internal, under the fixture lock: _fixture <name> <epoch the caller asked at>
+  require_slot
+  local dir; dir="$(fixture_dir "$1")"
+  # Another checkout made it while this one waited for the lock, so it is as fresh as a remake would be.
+  if [[ -f "$dir/fixture.tar" && -f "$dir/info" ]] && (( $(stat -f %m "$dir/info") >= $2 )); then
+    echo "fixture $1 was just made by $(sed -n 's/^checkout=//p' "$dir/info"); using it"
+    return 0
+  fi
+  make_fixture "$1" "$dir"
 }
 
 cmd_seed() { # seed <name>: replace this slot's app data with fixture <name>, then reopen it on Metro
@@ -741,19 +784,30 @@ cmd_seed() { # seed <name>: replace this slot's app data with fixture <name>, th
   require_slot
   require_our_emulator
   local dir; dir="$(fixture_dir "$name")"
+  if [[ -f "$(seed_flow "$name")" ]]; then with_fixture_lock "$dir" _restore "$name"
+  else cmd__restore "$name"
+  fi
+  grant_notifications
+  open_on_metro
+  cmd_flow "$FLOWS_DIR/ready.yaml" "seed-$name-ready"
+}
+
+cmd__restore() { # internal, under the fixture lock for a seed flow's fixture: _restore <name>
+  local name="$1" dir
+  require_slot
+  dir="$(fixture_dir "$name")"
+  # Checked again under the lock: a checkout that waited here finds the fixture the holder just made.
   if [[ ! -f "$dir/fixture.tar" ]]; then
     [[ -f "$(seed_flow "$name")" ]] || die "no fixture $name; verify.sh fixtures lists them"
     echo "no $name fixture for this checkout's storage code yet; making it"
-    cmd_fixture "$name"
+    make_fixture "$name" "$dir"
   fi
   local fm am made today age
   fm="$(sed -n 's/^migrations=//p' "$dir/info")"
   am="$(app_migrations)"
   (( ${fm:-0} <= am )) || die "fixture $name has $fm migrations and this app only $am: it was made by newer code; snapshot it again from this checkout"
   restore_fixture "$dir"
-  grant_notifications
   echo "seeded $name from $dir"
-  open_on_metro
   made="$(sed -n 's/^made=//p' "$dir/info" | cut -dT -f1)"
   today="$(date +%Y-%m-%d)"
   if [[ -n "$made" && "$made" != "$today" ]]; then
@@ -761,7 +815,6 @@ cmd_seed() { # seed <name>: replace this slot's app data with fixture <name>, th
     echo "verify: note: $name was made $age day(s) ago, so its dates sit $age day(s) further back from today than they did then" >&2
     if [[ -f "$(seed_flow "$name")" ]]; then echo "verify: if the check depends on recent dates, remake it: verify.sh fixture $name" >&2; fi
   fi
-  cmd_flow "$FLOWS_DIR/ready.yaml" "seed-$name-ready"
 }
 
 cmd_fixtures() { # list the fixtures this checkout can seed
@@ -883,7 +936,7 @@ cmd_down() {
 
 case "${1:-}" in
   setup | build | up | doctor | slots | flow | flows | shot | ui | db | clear | seed | snapshot | fixture | fixtures | logs \
-    | down | _claim | _release)
+    | down | _claim | _release | _fixture | _restore)
     c="$1"; shift; "cmd_$c" "$@" ;;
   *) sed -n '2,4p' "$0"; exit 2 ;;
 esac
