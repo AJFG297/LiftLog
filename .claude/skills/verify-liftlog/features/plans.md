@@ -37,14 +37,20 @@ Preconditions:
   scope dropdown `Every set` → `Every lowest`; a second add inserts a rule in front (`Rule 2`, `Stop at a limit`).
 - **Persistence.** `back` → `assertVisible: 'Exercise 1'` → reopen it → `assertVisible: {id: 'fixed-value-input', text: '9'}`
   and `{id: 'fixed-value-input', text: '4'}`, superset switch `checked: true`, `Rule 2` present.
-- **Remove.** `back` ×3, `tapOn: {id: 'more-program-btn', rightOf: 'New plan'}`, `tapOn: 'Remove'`.
+- **Remove.** `back` ×3 lands on You (the plan editor is on the You tab's settings stack), so `tapOn: 'Routines'`,
+  then `tapOn: 'More for New plan'` (each plan's more button is named for its plan), `tapOn: 'Remove'` →
+  `assertVisible: 'Plan deleted'`.
 - **Proof.** Before removing, `verify.sh db "select json_extract(payload,'$.name') name, json_extract(payload,'$.sessions[0].exercises[0]') ex from program;"`
   shows the new plan with the 4×9 exercise and `supersetWithNext: true`.
 
 ## Gotchas
 
-- New plans are named `New plan`; a leftover one from a failed run makes `rightOf: 'New plan'` ambiguous. Remove
+- New plans are named `New plan`; a leftover one from a failed run makes `More for New plan` ambiguous. Remove
   leftovers before re-running.
+- Don't pick a plan's more button by position (`id: 'more-program-btn'` with `rightOf:`/`below:`): the match isn't
+  kept to the row, so it can open the active plan's menu (where Remove is disabled) or another plan's and remove it.
+- A plan row can sit under the Add plan / Import toolbar. Taps on the toolbar used to fall through to that row; if
+  `Add plan` opens a plan's menu or `Import` switches the active plan, that bug is back.
 - Fields below the fold need `scrollUntilVisible` first; `tapOn` does not scroll.
 - A fresh install's `program` table already holds an empty `My Plan` plus the presets (Starting Strength,
   Stronglifts 5x5, PPL, PHUL, calisthenics, Cardio), so count rows before/after instead of expecting one. Creating a

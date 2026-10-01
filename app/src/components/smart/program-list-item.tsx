@@ -32,7 +32,15 @@ export function ItemMenu({ id, mode }: ItemProps) {
   const { t } = useTranslate();
   return (
     <Menu
-      trigger={(open) => <IconButton testID="more-program-btn" mode={mode} onPress={open} icon={'moreHoriz'} />}
+      trigger={(open) => (
+        <IconButton
+          testID="more-program-btn"
+          accessibilityLabel={t('plan.item_more.button', { name: thisProgram.name })}
+          mode={mode}
+          onPress={open}
+          icon={'moreHoriz'}
+        />
+      )}
       items={[
         {
           label: t('generic.edit.button'),

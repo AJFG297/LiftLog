@@ -97,11 +97,15 @@ appId: com.ajfg297.liftlog
       text: 'Every lowest'
     direction: DOWN
 
-# Back out to the plan list and remove the plan so the flow leaves no state behind
+# Back out and remove the plan so the flow leaves no state behind. The plan editor sits on the You
+# tab's settings stack, so backing out of it lands on You; the plan list is the Routines tab.
 - back
 - back
 - back
-- tapOn:
-    id: 'more-program-btn'
-    rightOf: 'New plan'
+- tapOn: 'Routines'
+# Each plan's more button is named for its plan. Picking one by position (rightOf the name) can land
+# on another plan's button, which removes the wrong plan.
+- tapOn: 'More for New plan'
 - tapOn: 'Remove'
+- assertVisible: 'Plan deleted'
+- assertNotVisible: 'New plan'

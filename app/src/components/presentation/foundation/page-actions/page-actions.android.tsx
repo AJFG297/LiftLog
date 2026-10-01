@@ -13,6 +13,7 @@ import {
 } from '@expo/ui/jetpack-compose';
 import { PageActionsAccessory } from './page-actions-accessory';
 import { View } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 
 const contentPadding = { start: 24, top: 16, end: 24, bottom: 16 };
 
@@ -24,6 +25,18 @@ export function PageActions({
   accessory,
 }: PageActionsProps) {
   const { colors } = useAppTheme();
+
+  // Gesture handler hit-tests touches itself, and it treats a view group without a background as
+  // see-through, so that whatever lies underneath can take the touch. The Compose host is one, so a
+  // tap on these actions went to the gesture handlers of the row beneath them (a plan's row or its
+  // more button), and once that tap activated, gesture handler cancelled the touch Compose was
+  // handling. A gesture attached here claims the touch for the actions. A manual gesture only
+  // activates when told to, so it never takes the touch from Compose; failing it when the finger
+  // lifts readies it for the next touch.
+  const claimTouch = Gesture.Manual()
+    .runOnJS(true)
+    .onTouchesUp((_event, manager) => manager.fail())
+    .onTouchesCancelled((_event, manager) => manager.fail());
 
   const label = (action: PageAction, iconSize: number) => (
     <Row horizontalArrangement={{ spacedBy: spacing[2] }} verticalAlignment="center">
@@ -68,27 +81,31 @@ export function PageActions({
         paddingBottom: spacing[3],
       }}
     >
-      <Host matchContents seedColor={colors.seedColor} colorScheme={colors.scheme}>
-        {primaryKind === 'surface' ? (
-          surfaceActions
-        ) : (
-          <Row horizontalArrangement={{ spacedBy: spacing[2] }} verticalAlignment="center">
-            {secondary.map((action) => (
-              <TextButton key={action.label} enabled={!action.disabled} onClick={action.onPress}>
-                {label(action, 18)}
-              </TextButton>
-            ))}
-            <Button
-              onClick={primary.onPress}
-              enabled={!primary.disabled}
-              shape={Shape.Pill({})}
-              contentPadding={contentPadding}
-            >
-              {label(primary, 18)}
-            </Button>
-          </Row>
-        )}
-      </Host>
+      <GestureDetector gesture={claimTouch}>
+        <View collapsable={false}>
+          <Host matchContents seedColor={colors.seedColor} colorScheme={colors.scheme}>
+            {primaryKind === 'surface' ? (
+              surfaceActions
+            ) : (
+              <Row horizontalArrangement={{ spacedBy: spacing[2] }} verticalAlignment="center">
+                {secondary.map((action) => (
+                  <TextButton key={action.label} enabled={!action.disabled} onClick={action.onPress}>
+                    {label(action, 18)}
+                  </TextButton>
+                ))}
+                <Button
+                  onClick={primary.onPress}
+                  enabled={!primary.disabled}
+                  shape={Shape.Pill({})}
+                  contentPadding={contentPadding}
+                >
+                  {label(primary, 18)}
+                </Button>
+              </Row>
+            )}
+          </Host>
+        </View>
+      </GestureDetector>
       <PageActionsAccessory>{accessory}</PageActionsAccessory>
     </View>
   );

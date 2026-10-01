@@ -419,6 +419,7 @@
   "plan.add_to.button": "Add to plan",
   "plan.choose.button": "Choose plan",
   "plan.deleted.message": "Plan deleted",
+  "plan.item_more.button": "More for {name}",
   "plan.diff.dialog.title": "Update plan",
   "plan.diff.dialog_add.body": "Would you like to save this workout to your plan?",
   "plan.diff.dialog_update.body": "Would you like to save your changes from this workout to your plan?",
