@@ -20,11 +20,12 @@ The Routines tab renders that route's default export too. From the top:
 - **My routines**: the active program's routines, each with its colour, exercises, set count, estimated time
   and last done. Tap to edit, ▶ to start that routine now (asking first if another workout is in progress).
 - **Start an empty workout**: a freeform workout.
-- **Your programs**: the other saved programs, sortable by name or most recent, plus **New program** and
-  **Import a plan**. Tapping a program opens it. Its menu has Edit, Use this program, Duplicate, Share, Export
-  and Remove (not for the active one).
-- **Find a program**: the built-in programs and **Build with AI** (the AI planner). A built-in opens its saved
-  copy, or is added back first if it was deleted.
+- **Your programs**: the other saved programs, saved built-ins included, sortable by name or most recent,
+  plus **New program** and **Import a plan**. Tapping a program opens it. Its menu has Edit, Use this program,
+  Duplicate, Share, Export and Remove (not for the active one).
+- **Find a program**: only the built-in programs that aren't saved (`unsavedBuiltInPrograms`), then **Build
+  with AI** (the AI planner). The first launch saves every built-in, so until one is removed this section shows
+  only Build with AI. Tapping a built-in here saves it again and opens its page. Each program is listed once.
 
 Two rules keep a tap from doing something big by accident (PM-35):
 
@@ -38,7 +39,7 @@ Two rules keep a tap from doing something big by accident (PM-35):
 `components/smart/program-editor.tsx`, at `settings/manage-workouts/[programId]`: the program's name (saved
 as you type), Use this program or a note that it's the one in use, and its routines in order, each with its colour, with
 move up and down, Duplicate, Copy to another program and Remove (with Undo). **New routine** at the end opens the routine
-editor on a new routine.
+editor on a new routine. If the program is removed while its page is open, the page goes back (`useBackWhenGone`).
 
 ## The routine editor
 
