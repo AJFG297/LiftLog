@@ -13,7 +13,7 @@ an `Undo` snackbar that restores it.
 
 ## How to get to it (user POV)
 
-- Settings → `Manage exercises`.
+- You → `Manage exercises`.
 - While editing a plan's exercise, the exercise-name search (`exercise-search` route) picks from the same library.
 
 ## Driving it with Maestro
@@ -24,7 +24,7 @@ Preconditions:
 
 - **Whole path in one go.** Run `verify.sh flow app/.maestro/exercise-manager.yaml exercise-manager`. Exit 0; the
   flow deletes its exercise at the end.
-- **Add.** `tapOn: 'Settings'`, `tapOn: 'Manage exercises'`, `tapOn: 'Add exercise'` → `assertVisible: 'New exercise'`.
+- **Add.** `tapOn: 'You'`, `tapOn: 'Manage exercises'`, `tapOn: 'Add exercise'` → `assertVisible: 'New exercise'`.
 - **Delete and undo.** `swipe: {from: {id: 'exercise-accordion'}, direction: LEFT}`, `tapOn: {id: 'exercise-delete-btn'}`
   → `assertVisible: 'New exercise deleted'` → `tapOn: 'Undo'` → `assertVisible: 'New exercise'`.
 - **Edit.** `tapOn: {id: 'exercise-name-input'}`, `eraseText`, `inputText: 'E2E Bench Press'`; same for

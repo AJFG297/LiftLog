@@ -27,6 +27,10 @@ work to find the docs relevant to your area, and update it whenever you add, rem
 
 ## Features
 
+- [Home.md](./Home.md) - the four tabs (Home, Routines, Progress, You) and which route folders they hold,
+  why history and the feed aren't tabs, and the Home screen: the Up next card, the 7 and 30-day views
+  and where their numbers come from, derived routine colours, the history cards, and the
+  workout-in-progress bar above the tab bar.
 - [LiveWorkout.md](./LiveWorkout.md) - the workout in progress: focus mode one exercise or superset at a
   time, the exercise strip, the Up next bar and the All exercises sheet, the rest pill and rest sheet
   (steps, presets, saving a rest to the routine), and how pages, the next set, focus, reordering and the
@@ -36,10 +40,13 @@ work to find the docs relevant to your area, and update it whenever you add, rem
   other programs, the built-in library, and why changing the active program always asks), the program page,
   and the routine editor: its draft with Save and Cancel, the routine's colour, set rows on the number pad,
   rest with Advanced, the progression presets and how they map to rules, and superset-safe moves.
+- [WorkoutDetail.md](./WorkoutDetail.md) - a past workout, opened from history: the header, stats row and set
+  tables (e1RM, PR tags, the comparison with last time), Do again, Save as routine (into the active plan), and the
+  overflow menu's edit, share and delete with Undo.
 - [FeedProcess.md](./FeedProcess.md) - the opt-in social feed: the follow/accept flow, what is and isn't
   visible to the server, and the end-to-end encryption model (AES-CBC payloads, RSA-PSS signatures).
-- [Progression.md](./Progression.md) - how last session's
-  numbers carry into today (and why weight carries but reps usually do not), and how the progressive
+- [Progression.md](./Progression.md) - how last session's numbers carry into today from the best set,
+  whatever the set count (and why weight carries but reps usually do not), and how the progressive
   overload rules move them. Covers rule order, limits and starting over, rules that can never run, and
   the two ways to set up double progression. Ends with pointers to the code.
 - [NumberPad.md](./NumberPad.md) - the in-screen number pad for weight and reps: how a field's buffer

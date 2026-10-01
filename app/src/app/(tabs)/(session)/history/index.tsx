@@ -30,7 +30,7 @@ import { LocalDate, YearMonth } from '@js-joda/core';
 import { T, useTranslate } from '@tolgee/react';
 import { Stack, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { LegendList } from '@legendapp/list';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Card, Tooltip } from 'react-native-paper';
@@ -143,16 +143,30 @@ export default function History() {
         renderItem={({ item: session }) => (
           <Card mode="contained">
             <Card.Content>
-              <SplitCardControl
-                titleContent={<SessionSummaryTitle showDate session={session} />}
-                mainContent={
-                  <View style={{ gap: spacing[2] }}>
-                    <SessionSummary isFilled showWeight session={session} />
-                    <HistoryPrBadges sessionId={session.id} />
-                  </View>
-                }
-              />
-              <ReactionSummary eventId={session.id} />
+              {/* The summary opens the workout, not the whole card: an accessible card would hide its own buttons
+                  from VoiceOver. */}
+              <Pressable
+                testID="history-open-workout"
+                accessibilityRole="button"
+                accessibilityLabel={t('workout_detail.open.label', {
+                  name: session.blueprint.name,
+                  date: formatDate(session.date, { weekday: 'long', month: 'short', day: 'numeric' }),
+                })}
+                accessibilityHint={t('workout_detail.open.hint')}
+                onPress={() => push(`/workout-detail?sessionId=${encodeURIComponent(session.id)}`)}
+                style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
+              >
+                <SplitCardControl
+                  titleContent={<SessionSummaryTitle showDate session={session} />}
+                  mainContent={
+                    <View style={{ gap: spacing[2] }}>
+                      <SessionSummary isFilled showWeight session={session} />
+                      <HistoryPrBadges sessionId={session.id} />
+                    </View>
+                  }
+                />
+                <ReactionSummary eventId={session.id} />
+              </Pressable>
             </Card.Content>
             <CardActions style={{ marginTop: spacing[2] }}>
               <Tooltip title={t('workout.share_workout.button')}>

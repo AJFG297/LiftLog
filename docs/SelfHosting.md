@@ -43,7 +43,7 @@ The server must be reachable over **HTTPS** from your phone - put it behind a re
 terminates TLS (Caddy, Traefik, nginx) rather than exposing port 8080 directly. Mobile platforms
 block cleartext HTTP, so this is not optional.
 
-In the app, go to **Settings → Backends → Add backend** and enter:
+In the app, go to **You → Backends → Add backend** and enter:
 
 | Field   | Value                                                                               |
 | ------- | ----------------------------------------------------------------------------------- |

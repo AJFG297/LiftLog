@@ -51,7 +51,7 @@ still reads as a colour. Hue and chroma are kept as far as the sRGB gamut allows
 
 The `colorSchemeSeed` preference:
 
-- A `#RRGGBB` value is the user's accent (a preset or the custom wheel in Settings → Theme).
+- A `#RRGGBB` value is the user's accent (a preset or the custom wheel in You → Theme).
 - `'default'` means **Match wallpaper** on Android 12+: the system Material You primary becomes the
   source. Elsewhere `'default'` is vermilion.
 

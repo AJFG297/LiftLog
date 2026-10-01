@@ -30,6 +30,11 @@ if (Platform.OS !== 'web') {
   I18nManager.swapLeftAndRightInRTL?.(true);
 }
 
+// A deep link straight into a stack over the tabs (a shared feed item) still gets the tabs beneath it.
+export const unstable_settings = {
+  initialRouteName: '(tabs)',
+};
+
 export default function RootLayout() {
   return (
     <GestureHandlerRootView>
@@ -58,10 +63,14 @@ function Layout() {
   return (
     <StackWithHeader>
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      {/* The feed opens from You rather than being a tab, so it sits over the tabs with a stack of its own. */}
+      <Stack.Screen name="feed" options={{ headerShown: false }} />
       <Stack.Screen name="exercise-search" options={{ presentation: 'modal' }} />
       <Stack.Screen name="exercise-editor" />
       <Stack.Screen name="exercise-history" options={formSheetOptions([0.6, 0.95])} />
       <Stack.Screen name="workout-editor" />
+      <Stack.Screen name="workout-detail/index" />
+      <Stack.Screen name="workout-detail/edit" />
       <Stack.Screen name="session/post-workout" options={{ headerShown: false }} />
       <Stack.Screen name="diff-save" options={formSheetOptions([0.75, 0.95])} />
       <Stack.Screen name="routine-set-type" options={formSheetOptions([0.8, 0.95])} />

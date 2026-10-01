@@ -14,8 +14,8 @@ typed values without using the clock.
 
 ## How to get to it (user POV)
 
-- Workout tab → `Freeform workout` → `Add exercise` → cardio button → back.
-- Settings → Manage plans → a plan → a workout → an exercise → cardio toggle (plan-level; see [Plans](./plans.md)).
+- Home → `Freeform workout` → `Add exercise` → cardio button → back.
+- Routines → a plan → a workout → an exercise → cardio toggle (plan-level; see [Plans](./plans.md)).
 
 ## Driving it with Maestro
 
@@ -24,7 +24,7 @@ Preconditions:
 - Baseline from the [index](./README.md).
 
 - **Whole path in one go.** Run `verify.sh flow app/.maestro/cardio-session.yaml cardio-session`. Exit 0.
-- **Add cardio.** After starting freeform (with the `Replace current workout?` guard): `tapOn: 'Add exercise'`,
+- **Add cardio.** After starting freeform (with the in-progress guard from the [index](./README.md)): `tapOn: 'Add exercise'`,
   `tapOn: {id: 'cardio-button'}`, `back`.
 - **Tiles present.** `assertVisible: {id: 'cardio-duration-tile'}`, `assertVisible: {id: 'cardio-distance-tile'}`,
   `assertNotVisible: {id: 'add-tracker-button'}`.
