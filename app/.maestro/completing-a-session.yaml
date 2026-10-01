@@ -21,11 +21,14 @@ appId: com.ajfg297.liftlog
 - tapOn: 'Add exercise'
 - back
 
-# Log the first set with one tap on its check, which starts the rest timer
+# Log the first set with one tap on its check, which starts the rest timer. The rest pill in the
+# header is always there, so check it is counting down: its label reads "Rest timer, 1:29 left" while
+# resting and "Rest timer, 1:30" when idle.
 - tapOn:
     id: 'set-check'
 - assertVisible:
-    id: 'rest-timer'
+    id: 'rest-pill'
+    text: 'Rest timer, .* left'
 
 # Set the logged set's weight to 7.5kg (3 x 2.5kg steps on the number pad) and hide the pad
 - tapOn:
@@ -41,13 +44,11 @@ appId: com.ajfg297.liftlog
 - tapOn:
     id: 'action-ok'
 
-# A freeform session names itself and adds an exercise, so finishing it offers to fold both back into
-# the plan. This flow is not about that, so decline and leave the plan alone.
-- runFlow:
-    when:
-      visible: 'Would you like to save this workout to your plan?'
-    commands:
-      - back
+# Finishing opens the summary, and a freeform workout isn't in the program yet, so a sheet over it offers
+# to save the workout as a routine. This flow is not about that, so decline and leave the plan alone.
+- assertVisible: 'Save Freeform Workout as a routine\?'
+- tapOn: "Don't save it"
+- tapOn: 'Done'
 
 # It shows up in History with the logged weight, below the streak card and the calendar
 - tapOn: 'History'

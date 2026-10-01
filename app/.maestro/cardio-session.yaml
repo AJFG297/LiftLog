@@ -49,10 +49,16 @@ appId: com.ajfg297.liftlog
 - hideKeyboard
 - tapOn:
     id: 'cardio-value-save'
-- assertVisible: '45'
+- assertVisible: '00:00:45'
 
 # Finish the (incomplete) session and confirm
 - tapOn:
     id: 'finish-session-button'
 - tapOn:
     id: 'action-ok'
+
+# Decline saving the freeform workout as a routine, then leave the summary
+- assertVisible: 'Save Freeform Workout as a routine\?'
+- tapOn: "Don't save it"
+- tapOn: 'Done'
+- assertVisible: '(?-i)Freeform workout'
