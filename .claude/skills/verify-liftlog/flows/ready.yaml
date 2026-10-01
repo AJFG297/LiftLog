@@ -2,7 +2,9 @@ appId: com.ajfg297.liftlog
 ---
 # Readiness gate: gets from a cold launch to the Home tab, clearing the first-run welcome wizard if
 # it is up. Run after every `verify.sh up`; it is safe to re-run on an already-onboarded install.
-- launchApp
+# launchApp would open the dev launcher on a fresh install, which has no remembered Metro URL, so open
+# this slot's Metro directly. `verify.sh flow` passes DEV_URL.
+- openLink: ${DEV_URL}
 # First bundle of a fresh Metro can take well over a minute
 - extendedWaitUntil:
     visible: 'Next|Home|Continue'
