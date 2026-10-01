@@ -261,6 +261,17 @@ our_emulator_pid() {
   return 0
 }
 
+# What STATE_DIR says this checkout still runs, whether or not it holds a slot. Empty means nothing.
+started_live() {
+  local bits=() p
+  p="$(cat "$STATE_DIR/emulator.pid" 2>/dev/null || true)"
+  if [[ -n "$p" ]] && pid_cmd "$p" | grep -q -- '-avd '; then bits+=("an emulator (pid $p)"); fi
+  p="$(cat "$STATE_DIR/metro.pid" 2>/dev/null || true)"
+  if [[ -n "$p" ]] && kill -0 -- "-$p" 2>/dev/null; then bits+=("Metro (pgid $p)"); fi
+  (( ${#bits[@]} )) && { local IFS=';'; echo "${bits[*]}" | sed 's/;/ and /'; }
+  return 0
+}
+
 require_our_emulator() {
   emu_online || die "$SERIAL is not online; run: verify.sh up"
   [[ -n "$(our_emulator_pid)" ]] || die "$SERIAL was not started from this checkout; refusing to drive it"
@@ -390,6 +401,12 @@ open_on_metro() {
 cmd_up() {
   [[ -f "$APK" ]] || die "APK missing at $APK; run: verify.sh build"
   if [[ -n "${VERIFY_SLOT:-}" ]]; then valid_slot "$VERIFY_SLOT" || die "VERIFY_SLOT must be 1-9"; fi
+  # An instance from a pre-slot verify.sh (or one whose claim was lost) holds no slot but keeps that slot's
+  # AVD and ports busy. Starting over it would overwrite its pids, and nothing could stop it any more.
+  if [[ -z "$(held_slot)" ]]; then
+    local live; live="$(started_live)"
+    [[ -z "$live" ]] || die "this checkout still runs $live from an earlier up that holds no slot; run verify.sh down, then up"
+  fi
   local n
   export VERIFY_CLAIMER_PID=$$
   n="$(with_claim_lock _claim)" || exit 1
@@ -466,7 +483,10 @@ cmd_doctor() {
   check "APK built ($APK)" test -f "$APK"
   local n; n="$(held_slot)"
   if [[ -z "$n" ]]; then
-    echo "FAIL this checkout holds no slot; run verify.sh up"
+    local live; live="$(started_live)"
+    if [[ -n "$live" ]]; then echo "FAIL this checkout holds no slot but still runs $live; run verify.sh down, then up"
+    else echo "FAIL this checkout holds no slot; run verify.sh up"
+    fi
     ok=0
   else
     load_slot "$n"
@@ -801,7 +821,7 @@ cmd_logs() { # logs [metro|emulator|app]
 # names whoever holds the slot now, which is not this checkout once its claim was lost. With no held slot, an
 # older STATE_DIR/slot (only a slot number) or none at all (pre-slot state, slot 1) picks the slot to load.
 load_started() { # load_started [held slot]
-  local f="$STATE_DIR/slot" first="" avd="" emu="" metro=""
+  local f="$STATE_DIR/slot" first="" avd="" emu="" metro="" cmd
   if [[ -f "$f" ]]; then
     first="$(head -1 "$f")"
     [[ "$first" =~ ^[0-9]+$ ]] || first="$(sed -n 's/^slot=//p' "$f" | tail -1)"
@@ -810,9 +830,18 @@ load_started() { # load_started [held slot]
     metro="$(sed -n 's/^metro_port=//p' "$f" | tail -1)"
   fi
   load_slot "${1:-${first:-1}}"
-  if [[ -n "$avd" && -n "$emu" && -n "$metro" ]]; then set_target "$avd" "$emu" "$metro"; fi
-  return 0
+  # A pre-slot verify.sh recorded no AVD or port, and may have run on VERIFY_AVD and VERIFY_EMU_PORT, so read
+  # them off the emulator it started. Only a verify AVD counts, in case its pid now belongs to another emulator.
+  if [[ -z "$avd" ]]; then
+    cmd="$(pid_cmd "$(cat "$STATE_DIR/emulator.pid" 2>/dev/null || true)" || true)"
+    avd="$(cmd_arg -avd "$cmd")"
+    emu="$(cmd_arg -port "$cmd")"
+    [[ "$avd" =~ ^liftlog-verify(-[0-9]+)?$ ]] || { avd=""; emu=""; }
+  fi
+  set_target "${avd:-$AVD}" "${emu:-$EMU_PORT}" "${metro:-$METRO_PORT}"
 }
+
+cmd_arg() { awk -v k="$1" '{ for (i = 1; i < NF; i++) if ($i == k) { print $(i + 1); exit } }' <<< "$2"; }
 
 cmd_down() {
   local n; n="$(held_slot)"

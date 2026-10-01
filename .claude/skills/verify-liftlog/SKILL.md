@@ -58,6 +58,9 @@ it runs. Exactly one checkout holds a slot.
   busy if something outside the slots (an older `verify.sh`, a hand-started emulator) runs its AVD or ports.
   `up` skips a busy slot and, when none is free, refuses and names each owner.
 - A claim is stale once its owner pid, emulator and Metro are all gone. The next `up` reclaims it.
+- A checkout that still runs an emulator or Metro from a pre-slot `verify.sh` holds no slot, yet keeps that
+  slot busy for everyone. `up` there refuses until you run `down`, which stops that instance, even one started
+  on `VERIFY_AVD` and `VERIFY_EMU_PORT`.
 - `verify.sh slots` lists every slot, its owner checkout and whether it's up. `doctor` prints the same table.
 
 If another checkout holds a slot, use another slot: `up` does this automatically. **Never stop another
