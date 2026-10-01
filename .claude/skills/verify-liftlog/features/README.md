@@ -8,19 +8,24 @@ before driving the app, then use the matching feature file as the recipe. Comman
 
 - `verify.sh up` has run from this checkout and `verify.sh doctor` prints `doctor: healthy`.
 - `verify.sh flow .claude/skills/verify-liftlog/flows/ready.yaml` exited 0 in this run (welcome wizard and dev-menu
-  sheet are out of the way; Workout tab shows `Freeform workout`).
+  sheet are out of the way; the Home tab is up).
 - The emulator's app data persists between runs. Check the starting state instead of assuming an empty app:
-  `verify.sh db "select count(*), sum(active) from workout;"`, and on the Workout tab, whether a `Current workout` card is up.
+  `verify.sh db "select count(*), sum(active) from workout;"`, and on Home, whether the workout-in-progress bar
+  (`workout-in-progress-bar`) is up.
+- The tabs are Home, Routines, Progress and You. All history and the feed are pages, not tabs: Home →
+  `All history`, and You → `Feed` (only with Show feed on).
 - Never drive `emulator-5554` or any device that `doctor` does not report as ours.
 
 ## Driving conventions
 
 - Every flow: `appId: com.ajfg297.liftlog`, `---`, `- launchApp`, then
-  `- extendedWaitUntil: {visible: 'Workout', timeout: 60000}`.
+  `- extendedWaitUntil: {visible: 'Home', timeout: 60000}`.
 - Prefer `id:` (React Native `testID`) over text. Text is a case-insensitive full-string regex; use `(?-i)` when a
   lowercase/uppercase variant appears elsewhere (e.g. `'(?-i)Freeform workout'` vs `Freeform Workout` cards).
-- A session left in progress by an earlier run blocks starting a new one. Guard with
-  `runFlow: {when: {visible: 'Replace current workout?'}, commands: [{tapOn: 'Replace'}]}`.
+- A workout left in progress by an earlier run hides Home's Up next card and `Freeform workout`. Clear it first, as
+  `app/.maestro/completing-a-session.yaml` does: `runFlow: {when: {visible: {id: 'workout-in-progress-bar'}}, commands:
+  [{tapOn: {id: 'workout-in-progress-more'}}, {tapOn: 'Clear current workout'}, {tapOn: 'Clear'}]}`. Starting a
+  past workout from All history still asks `Replace current workout?` instead.
 - Put scratch flows in the run's evidence dir; run each with `verify.sh flow <file> <feature-id>`.
 - Remove what a flow creates (plans, exercises), as `app/.maestro/creating-a-plan.yaml` does, but keep its evidence.
 
@@ -42,11 +47,11 @@ required state, commands, and observable proof.
 ## Features
 
 - [Workout session](./workout-session.md) - start a freeform or planned workout, log sets and weights, rest timer,
-  finish, and see it in History. **Proven end to end** by the skill's own shakedown run.
+  finish, and see it on Home and in All history. **Proven end to end** by the skill's own shakedown run.
 - [Cardio session](./cardio-session.md) - cardio exercises in a workout: metric tiles, the timer pane, typed
   durations.
 - [Plans and workout editor](./plans.md) - create a plan, add workouts and exercises, sets/reps, superset, and
   progression rules.
 - [Exercise manager](./exercise-manager.md) - the exercise library: add, rename, describe, filter, delete with undo.
-- [History](./history.md) - streak card, calendar, past session summaries, editing, deleting and restarting a past
-  workout.
+- [History](./history.md) - Home's last 7 or 30 days, and All history: streak card, calendar, past session summaries,
+  editing, deleting and restarting a past workout.

@@ -52,7 +52,7 @@ The row above the keys explains the value being typed:
 ## Bar and plates
 
 The bar weight and the plates a gym has are preferences, one of each per unit (`barWeight` and
-`availablePlates`), edited in Settings → App configuration → Bar and plates. Defaults: a 20 kg bar with
+`availablePlates`), edited in You → App configuration → Bar and plates. Defaults: a 20 kg bar with
 25, 20, 15, 10, 5, 2.5 and 1.25 kg plates, and a 45 lb bar with 45, 35, 25, 10, 5 and 2.5 lb plates. Like
 every preference, they aren't in backups (see [Storage.md](./Storage.md)).
 
@@ -62,6 +62,13 @@ The workout screen mounts the pad under the page, in place of the Up next dock, 
 iOS keeps the bottom safe-area inset, and Android, whose screen already ends above the tab bar, keeps
 none. Plate maths shows only for a load on external resistance; bodyweight exercises get no accessory.
 See [LiveWorkout.md](./LiveWorkout.md#logging-a-set).
+
+## In the routine editor
+
+The routine editor mounts the same pad for reps and warm-up loads (a percentage steps by 5 with no
+decimals; a weight steps by the equipment, with plate maths). What's typed is written to the draft when the
+field is left, and the primary key is always Next, closing the pad after the last field. A routine plans no
+working weights, so those cells only show what carries over. See [Routines.md](./Routines.md#set-rows).
 
 ## Trying it
 

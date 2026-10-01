@@ -14,7 +14,7 @@ const validBlueprint: ProgramBlueprintJSON = {
   lastEdited: '2024-01-01' as LocalDateJSON,
   sessions: [
     {
-      version: 9,
+      version: 10,
       name: 'Day 1',
       notes: '',
       exercises: [

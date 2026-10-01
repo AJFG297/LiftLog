@@ -10,6 +10,8 @@ export default function TabsLayout() {
   const { colors } = useAppTheme();
   const followRequestCount = useAppSelector(selectFollowRequestCount);
   const showFeed = useAppSelector((x) => x.settings.showFeed);
+  // The feed lives under You, so its follow requests badge the You tab.
+  const youBadge = showFeed && followRequestCount ? followRequestCount.toString() : undefined;
   return (
     <NativeTabs
       indicatorColor={colors.secondaryContainer}
@@ -26,37 +28,33 @@ export default function TabsLayout() {
       }
     >
       <NativeTabs.Trigger name="(session)">
-        <NativeTabs.Trigger.Label>{t('workout.workout.label')}</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Label>{t('tabs.home.label')}</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon
-          sf={{ default: 'dumbbell', selected: 'dumbbell.fill' }}
-          md={{ default: 'fitness_center', selected: 'fitness_center' }}
+          sf={{ default: 'house', selected: 'house.fill' }}
+          md={{ default: 'home', selected: 'home' }}
         />
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="feed" hidden={!showFeed}>
+      <NativeTabs.Trigger name="routines">
+        <NativeTabs.Trigger.Label>{t('tabs.routines.label')}</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon
-          sf={{
-            default: 'bubble.left.and.bubble.right',
-            selected: 'bubble.left.and.bubble.right.fill',
-          }}
-          md={{ default: 'forum', selected: 'forum' }}
+          sf={{ default: 'list.clipboard', selected: 'list.clipboard.fill' }}
+          md={{ default: 'assignment', selected: 'assignment' }}
         />
-        <NativeTabs.Trigger.Label>{t('feed.feed.title')}</NativeTabs.Trigger.Label>
-        {followRequestCount && <NativeTabs.Trigger.Badge>{followRequestCount.toString()}</NativeTabs.Trigger.Badge>}
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="stats">
+        <NativeTabs.Trigger.Label>{t('tabs.progress.label')}</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon
           sf={{ default: 'chart.bar', selected: 'chart.bar.fill' }}
           md={{ default: 'bar_chart', selected: 'bar_chart' }}
         />
-        <NativeTabs.Trigger.Label>{t('stats.stats.title')}</NativeTabs.Trigger.Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="history">
-        <NativeTabs.Trigger.Icon sf="calendar" md={{ default: 'calendar_month', selected: 'calendar_month' }} />
-        <NativeTabs.Trigger.Label>{t('generic.history.title')}</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="settings">
-        <NativeTabs.Trigger.Icon sf="gear" md={{ default: 'settings', selected: 'settings' }} />
-        <NativeTabs.Trigger.Label>{t('settings.settings.title')}</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Label>{t('tabs.you.label')}</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon
+          sf={{ default: 'person', selected: 'person.fill' }}
+          md={{ default: 'person', selected: 'person' }}
+        />
+        {youBadge && <NativeTabs.Trigger.Badge>{youBadge}</NativeTabs.Trigger.Badge>}
       </NativeTabs.Trigger>
     </NativeTabs>
   );

@@ -9,6 +9,7 @@ import {
 } from '@/services/data-migrations/dedupe-builtin-exercises';
 import { importBackends, importBackendsDataMigration } from '@/services/data-migrations/import-backends';
 import { linkExerciseIds, linkExerciseIdsDataMigration } from '@/services/data-migrations/link-exercise-ids';
+import { rekeyProgression, rekeyProgressionDataMigration } from '@/services/data-migrations/rekey-progression';
 import {
   seedBackendAssignments,
   seedBackendAssignmentsDataMigration,
@@ -42,6 +43,9 @@ export class DatabaseImportService implements DatabaseImporter {
     // After the built-in de-dup, so names match the exercises that are left.
     if (!dataMigrationsRun.includes(linkExerciseIdsDataMigration)) {
       await linkExerciseIds(this.db);
+    }
+    if (!dataMigrationsRun.includes(rekeyProgressionDataMigration)) {
+      await rekeyProgression(this.db);
     }
 
     console.info('Imported old data to DB in ' + (performance.now() - now) + 'ms');

@@ -33,7 +33,7 @@ export default function StatsPage() {
     <FullHeightScrollView contentContainerStyle={{ gap: spacing[2] }}>
       <Stack.Screen
         options={{
-          title: t('stats.statistics.title'),
+          title: t('tabs.progress.label'),
         }}
       />
       <View style={{ flexDirection: 'row', justifyContent: 'flex-end', paddingRight: spacing[2] }}>

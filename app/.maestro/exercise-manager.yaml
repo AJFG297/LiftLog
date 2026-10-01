@@ -1,17 +1,17 @@
 appId: com.ajfg297.liftlog
 ---
-# Settings tab -> Manage exercises
+# You tab -> Manage exercises
 - launchApp
 # A cold dev-client launch can take up to a minute to fetch the bundle from Metro
 - extendedWaitUntil:
-    visible: 'Workout'
+    visible: 'Home'
     timeout: 60000
-- tapOn: 'Settings'
+- tapOn: 'You'
 - tapOn: 'Manage exercises'
 
-# Add a new exercise
+# Add a new exercise. It starts unnamed, so the name field is empty
 - tapOn: 'Add exercise'
-- assertVisible: 'New exercise'
+- assertVisible: 'Unnamed exercise'
 
 # Delete reveals an undo snackbar that restores the exercise
 - swipe:
@@ -20,14 +20,13 @@ appId: com.ajfg297.liftlog
     direction: LEFT
 - tapOn:
     id: 'exercise-delete-btn'
-- assertVisible: 'New exercise deleted'
+- assertVisible: 'Unnamed exercise deleted'
 - tapOn: 'Undo'
-- assertVisible: 'New exercise'
+- assertVisible: 'Unnamed exercise'
 
 # Edit name and instructions
 - tapOn:
     id: 'exercise-name-input'
-- eraseText
 - inputText: 'E2E Bench Press'
 - tapOn:
     id: 'exercise-instructions-input'

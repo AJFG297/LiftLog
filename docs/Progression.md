@@ -5,25 +5,44 @@ When an exercise is completed, the next time it is loaded into a workout, two th
 - **Carry over** always happens. Starting a workout opens each exercise on the numbers you did last
   time, not the numbers written in your plan.
 - **Progressive overload** is a list of rules on the exercise that pushes those numbers up when you hit
-  all your targets.
+  your targets.
 
 ## Carry over
 
 When you start a workout, LiftLog looks for the last time you did the same exercise and loads those
 numbers in.
 
-- It matches on the **exercise itself**, its **number of sets**, and usually its **rep scheme**. The
-  exercise is the one in your exercise list, not its name, so renaming it there keeps your numbers, and
-  so does spelling it differently in a plan ("Squat", "squat" and "Squats" are the same exercise).
-  Swapping in a different exercise or changing how many sets it has starts over from the plan.
-- **Weight always carries over.**
+- It matches on the **exercise itself**, and nothing else: not how many sets it had, and not its rep
+  scheme. The exercise is the one in your exercise list, not its name, so renaming it there keeps your
+  numbers, and so does spelling it differently in a plan ("Squat", "squat" and "Squats" are the same
+  exercise). Adding or removing a set, mid-workout or in the routine, keeps your progress. Swapping in a
+  different exercise starts over from the plan.
+- **Your routine decides how many sets you get.** Last time's numbers are fitted onto today's sets, so a
+  set you added once and did not keep in the routine is not carried as an extra set.
+- **Weight always carries over, from your best set.** The best set is your heaviest working or failure
+  set. On a tie on weight, the one with more reps wins. It does not matter whether that was your first,
+  middle or last set, or whether you did it once or on every set: if you did 35 kg, you open on 35 kg.
+- **Straight sets all open on the best weight.** When your routine asks for the same reps on every set
+  (3 x 10, say), every set opens on the best weight, wherever you did it: 35, 40, 35 opens next time as
+  40, 40, 40.
+- **A pyramid or back-off keeps its shape.** When your routine asks for different reps on different sets
+  (12, 10, 8, or a top set of 5 with back-off sets of 10), the heaviest set opens on the best weight and
+  every other set keeps its gap below it. Last time's sets are matched to today's in order. So 60, 70, 80
+  and an extra top set of 85 opens next time as 65, 75, 85; and 100, 80, 80 stays 100, 80, 80. A set with
+  nothing to match (you added one to the routine) opens on the best weight. A set you never logged was
+  not lifted, so it keeps the weight it was loaded with.
 - **Reps you completed last time normally do not.** The target comes back from the plan each session.
 - A workout you opened but never logged a set in is ignored, so an abandoned session cannot become the
   number you are stuck chasing. Logging only the warm-ups counts as not logging a set.
-- **Warm-up sets never affect carry over or the rules.** They are not part of the match, so adding or
-  removing one keeps your progress. They are rebuilt from the plan each session rather than carried,
-  and the rules ignore them: a skipped or short warm-up never fails a session, and a light one is never
-  picked as the "lowest set".
+- **Warm-up, drop and myo sets are never the best set**, however heavy. Warm-ups are rebuilt from the
+  plan each session rather than carried, and the rules ignore them: a skipped or short warm-up never
+  fails a session, and a light one is never picked as the "lowest set". A drop or myo set opens on the
+  weight of the same drop or myo set last time, and the rules never move it.
+- **Across sessions, one exercise is one lineage.** If you run it heavy one day and light another (Squat
+  5x5 on Monday, 3x8 on Friday), the next session carries from whichever you did last.
+- **Within a session, each place is its own lineage.** If a routine has the same exercise twice (a heavy
+  single, then back-off sets), each carries from the same place last time, so the single never opens on
+  the back-off weight. The first time a routine has it twice, the second place starts from the first.
 
 **Reps carry over too when reps are what you are progressing on** - either the exercise's Resistance is
 set to None (there is nothing else to advance on), or you have given it a rule that increases reps. In
@@ -39,14 +58,23 @@ the routine.
 
 ## Progressive overload
 
-Found under **Progressive Overload** in the exercise editor. A new exercise has no rules, so it stays
+In the routine editor, **Progression** offers Add weight, Reps then weight, or Off, which set these rules for
+you (see [Routines.md](./Routines.md#progression-presets)). **Advanced** there, and **Progressive Overload** in
+an exercise's More options, edit the rules themselves. A new exercise has no rules, so it stays
 where you leave it until you add one.
 
-**Rules only fire after a successful session** - every set logged, each at or above its target. Miss one
-and nothing moves; you repeat the same numbers next time.
+**Rules only fire after a successful session**, and what counts as successful depends on the rule:
+
+- A **weight rule** needs your **best set** logged at or above its target. The other sets do not have to
+  make it. A heavier set that fell short holds the weight, even when a lighter one hit its reps.
+- A **reps rule** needs **every set** logged, each at or above its target, because the reps climb on
+  every set together.
+
+Miss it and nothing moves; you repeat the same numbers next time.
 
 **Rules run in order, and only one runs per session.** LiftLog takes the first rule that still has room
-to move and stops there. This is what lets you chain them.
+to move and stops there. This is what lets you chain them. If that rule's session was not successful,
+nothing moves: a weight rule behind a reps rule that is still climbing waits for the reps.
 
 Each rule has:
 
@@ -77,7 +105,7 @@ Climbing reps to a limit, then adding weight and starting the reps again. There 
 up, and you want one or the other, not both.
 
 - **A rep range** like 8-12 with a weight rule. A set only counts as successful at the top of the range,
-  so the weight only goes up once you hit 12 on everything. The counter shows "8-12" every week.
+  so the weight only goes up once your best set hits 12. The counter shows "8-12" every week.
 - **A fixed rep target** like 8, with two rules: `Reps +1, stop at a limit of 12, start over after`, then
   `Weight +2.5`. The counter shows the rung you are actually on - 8, 9, 10, 11, 12 - then the weight goes
   up and the reps drop back to 8.
@@ -87,7 +115,14 @@ move and does nothing at all.
 
 ---
 
-For the code behind this: `progressionKey()` and `applyProgression` in
-`app/src/models/blueprint-models/index.ts`, session start in `app/src/services/session-service.ts`, what each slot
-carries over by its set kind in `PotentialSet.carriedInto` and `app/src/models/session-models/set-kind.ts`, the
-editor in `app/src/components/presentation/workout-editor/progressive-overload.tsx`.
+For the code behind this: `progressionKey()`, `lineageKeys` and `latestInLineage` (a repeat within a
+session), `applyProgression`, `applyEarnedProgression` and `ProgressionRule.isEarnedBy` in
+`app/src/models/blueprint-models/index.ts`; the store's `latestExercises` and `selectPreviousLineages`,
+keyed by lineage, in `app/src/store/stored-sessions/index.ts`; the best set
+(`bestSetIndex`, `bestSetMetTarget`) and fitting last time onto today's sets
+(`RecordedWeightedExercise.carriedInto`) in `app/src/models/session-models/recorded-weighted-exercise.ts`;
+what each set kind carries in `app/src/models/session-models/set-kind.ts`; session start in
+`app/src/services/session-service.ts`; the editor in
+`app/src/components/presentation/workout-editor/progressive-overload.tsx`. The stored
+`workout_exercise.progression_key` column was rewritten to the new key by the
+`REKEY_PROGRESSION_BY_EXERCISE` data migration (`app/src/services/data-migrations/rekey-progression.ts`).

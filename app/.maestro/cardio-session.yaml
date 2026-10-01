@@ -4,19 +4,34 @@ appId: com.ajfg297.liftlog
 - launchApp
 # A cold dev-client launch can take up to a minute to fetch the bundle from Metro
 - extendedWaitUntil:
-    visible: 'Workout'
+    visible: 'Home'
     timeout: 60000
-- tapOn: 'Workout'
+- tapOn: 'Home'
+# A workout left in progress by an earlier run hides Freeform workout, so clear it from its bar first
+- runFlow:
+    when:
+      visible:
+        id: 'workout-in-progress-bar'
+    commands:
+      - tapOn:
+          id: 'workout-in-progress-more'
+      - tapOn: 'Clear current workout'
+      - tapOn: 'Clear'
 # Text matching is case-insensitive by default, which would also match the "Freeform Workout"
 # cards in the list, so `(?-i)` pins this to the button's own casing.
 - tapOn: '(?-i)Freeform workout'
-# A session left in progress by an earlier run has to be replaced before a fresh one starts
-- runFlow:
-    when:
-      visible: 'Replace current workout?'
-    commands:
-      - tapOn: 'Replace'
+# Add an exercise from the picker, then make it cardio in its editor
 - tapOn: 'Add exercise'
+- tapOn:
+    id: 'exercise-search-input'
+- inputText: 'Rowing, Stationary'
+- tapOn:
+    id: 'exercise-picker-row-Rowing, Stationary'
+- tapOn:
+    id: 'exercise-picker-add'
+- tapOn:
+    id: 'more-exercise-btn'
+- tapOn: 'Edit'
 - tapOn:
     id: 'cardio-button'
 - back

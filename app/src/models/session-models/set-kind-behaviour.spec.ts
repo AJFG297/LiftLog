@@ -105,11 +105,12 @@ describe('the next session', () => {
   }
 
   it.each([
-    ['working', 80],
-    ['failure', 80],
+    // Straight sets all open on the best set, so only a kind that is never the best keeps its own weight.
+    ['working', 100],
+    ['failure', 100],
     ['drop', 80],
     ['myo', 80],
-  ] as const)('carry-over: a %s set at 80 kg starts the next session at %d kg', (kind, weight) => {
+  ] as const)('carry-over: a %s set at 80 kg after two at 100 kg starts the next session at %d kg', (kind, weight) => {
     const next = nextAfter(exerciseWith(slot(kind, 80, 10, 10, 3)));
 
     expect(next.potentialSets.map((s) => [s.kind, s.weight.value.toNumber()])).toEqual([
@@ -162,7 +163,7 @@ describe('the next session', () => {
     ).toEqual([100, 100, 0]);
   });
 
-  it('carry-over: a working set that was a drop set last time does not take on its lighter weight', () => {
+  it('carry-over: a working set that was a drop set last time opens on the best set, not the drop’s weight', () => {
     const last = exerciseWith(slot('drop', 40, 10, 10, 3));
     const blueprint = last.blueprint.with({
       progression: [],
@@ -175,7 +176,7 @@ describe('the next session', () => {
 
     expect(
       (session.recordedExercises[0] as RecordedWeightedExercise).potentialSets.map((s) => s.weight.value.toNumber()),
-    ).toEqual([100, 100, 0]);
+    ).toEqual([100, 100, 100]);
   });
 
   it('progression: a load rule moves only the sets the check reads', () => {
@@ -190,7 +191,7 @@ describe('the next session', () => {
     ).toEqual([102.5, 102.5, 60]);
   });
 
-  describe('progression: a slot that starts over is left where it started', () => {
+  describe('progression: a drop set that becomes a working set progresses from the best set', () => {
     /** Last session: two working sets of 10 x 100 kg and a 40 kg drop set, all on target. */
     function nextWithThirdSetAs(kind: WorkingListKind, progression: ProgressionRule[]) {
       const last = exerciseWith(slot('drop', 40, 10, 10, 3));
@@ -204,17 +205,17 @@ describe('the next session', () => {
       return (session.recordedExercises[0] as RecordedWeightedExercise).potentialSets;
     }
 
-    it.each(['working', 'failure'] as const)('a load rule does not put weight on a drop set that is now %s', (kind) => {
+    it.each(['working', 'failure'] as const)('a load rule moves a drop set that is now %s with the rest', (kind) => {
       const sets = nextWithThirdSetAs(kind, [ProgressionRule.load(new BigNumber(2.5))]);
 
       expect(sets.map((s) => [s.kind, s.weight.value.toNumber()])).toEqual([
         ['working', 102.5],
         ['working', 102.5],
-        [kind, 0],
+        [kind, 102.5],
       ]);
     });
 
-    it('a reps rule leaves a drop set that is now working on the plan target', () => {
+    it('a reps rule climbs a drop set that is now working from the best set’s target', () => {
       const sets = nextWithThirdSetAs('working', [
         ProgressionRule.of({ axis: 'reps', step: new BigNumber(1), ceiling: new BigNumber(15) }),
       ]);
@@ -222,16 +223,16 @@ describe('the next session', () => {
       expect(sets.map((s) => [s.weight.value.toNumber(), s.target])).toEqual([
         [100, { min: 11, max: 11 }],
         [100, { min: 11, max: 11 }],
-        [0, { min: 10, max: 10 }],
+        [100, { min: 11, max: 11 }],
       ]);
     });
 
-    it('a lowest-sets load rule moves the lowest working sets, not the one at no weight', () => {
+    it('a lowest-sets load rule moves every working set when they all open on the best weight', () => {
       const sets = nextWithThirdSetAs('working', [
         ProgressionRule.load(new BigNumber(2.5), { type: 'lowestSets', pick: 'all' }),
       ]);
 
-      expect(sets.map((s) => s.weight.value.toNumber())).toEqual([102.5, 102.5, 0]);
+      expect(sets.map((s) => s.weight.value.toNumber())).toEqual([102.5, 102.5, 102.5]);
     });
   });
 });

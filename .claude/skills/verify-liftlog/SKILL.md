@@ -60,7 +60,7 @@ One-time per machine: `setup` creates the AVD. It checks that `maestro` is insta
   has finished. Redirect to a file instead (`verify.sh up > up.log 2>&1`), or run it as a background task.
 - **Ready means `flows/ready.yaml` exits 0.** The flow launches the app, waits up to 3 minutes for the first bundle,
   dismisses the dev-client's developer-menu sheet, taps through the welcome wizard on a fresh install (Next, Next,
-  Get started), and asserts the Workout tab's `Freeform workout` button. It's safe to re-run at any time.
+  Get started), and waits for Home's `home-range` switch. It's safe to re-run at any time.
 
 Teardown is `verify.sh down`. See Cleanup.
 
@@ -92,10 +92,10 @@ Write a Maestro flow and run it against the verify device. Start from `app/.maes
 ```
 
 - Every flow starts with `appId: com.ajfg297.liftlog`, `---`, then `- launchApp` and `extendedWaitUntil: {visible:
-  'Workout', timeout: 60000}`. Put scratch flows in the run's evidence directory, not in `app/.maestro/`, unless the
+  'Home', timeout: 60000}`. Put scratch flows in the run's evidence directory, not in `app/.maestro/`, unless the
   task is to add an e2e flow.
 - **Handles**, in order of preference:
-  - React Native `testID`, which Android exposes as `resource-id`. Target it with `tapOn: {id: 'repcount'}`.
+  - React Native `testID`, which Android exposes as `resource-id`. Target it with `tapOn: {id: 'set-check'}`.
   - Visible English text, which is a regex matched against the full string and case-insensitive. `(?-i)` pins the
     case: `'(?-i)Freeform workout'` is the button, and `'Freeform Workout'` also matches plan cards.
   - `index:` or `rightOf:` only when handles repeat.

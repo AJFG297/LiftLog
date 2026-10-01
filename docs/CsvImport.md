@@ -10,7 +10,7 @@ exports cannot be imported back in.
 
 1. In the other app, export your workout history as a CSV (see [Supported formats](#supported-formats)
    for what the file should look like).
-2. In LiftLog, go to **Settings → Export, backup, and restore → Import from other apps**.
+2. In LiftLog, go to **You → Export, backup, and restore → Import from other apps**.
 3. Choose the matching **Format**, tap **Import**, and pick the file.
 
 After a successful import, the workouts show up in History. If every workout in the file is already

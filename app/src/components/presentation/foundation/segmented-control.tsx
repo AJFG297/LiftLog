@@ -27,8 +27,8 @@ interface SegmentedControlProps<T extends string> {
 }
 
 /**
- * Two to four mutually exclusive options that share one row, e.g. "Last 7 days / Last 30 days". Screen
- * readers hear a radio group.
+ * Two to four mutually exclusive options that share one row, e.g. "Last 7 days / Last 30 days". Each
+ * segment is as wide as its label plus an equal share of the spare room. Screen readers hear a radio group.
  */
 export function SegmentedControl<T extends string>({
   options,
@@ -70,8 +70,12 @@ export function SegmentedControl<T extends string>({
             accessibilityRole="radio"
             accessibilityState={{ checked: selected }}
             accessibilityLabel={option.label}
+            // Segments start from their label's width and share what is left, so a long label gets the
+            // room it needs; one that still doesn't fit wraps rather than being cut off.
             style={{
-              flex: 1,
+              flexGrow: 1,
+              flexShrink: 1,
+              flexBasis: 'auto',
               minHeight: SEGMENT_HEIGHT,
               paddingHorizontal: spacing[2],
               borderRadius: 9,
@@ -85,8 +89,8 @@ export function SegmentedControl<T extends string>({
             <SurfaceText
               font="text-sm"
               weight="600"
-              numberOfLines={1}
-              style={{ color: selected ? tokens.ink : tokens.muted }}
+              numberOfLines={2}
+              style={{ color: selected ? tokens.ink : tokens.muted, textAlign: 'center' }}
             >
               {option.label}
             </SurfaceText>
