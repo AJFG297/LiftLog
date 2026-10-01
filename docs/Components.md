@@ -14,8 +14,8 @@ screen isn't linked from the app. Its theme controls change the real theme setti
 | --- | --- | --- |
 | `Card` | `card.tsx` | A white (dark: raised) surface with a hairline border. `onPress` makes the whole card a button. |
 | `Chip` | `chip.tsx` | A toggle: filters, rest presets, RPE. `numeric` sets a number-only label in Geist Mono; `style={{ flexGrow: 1 }}` shares a row; `contentStyle` styles the drawn chip. |
-| `SegmentedControl` | `segmented-control.tsx` | Two to four mutually exclusive options in one row ("Last 7 days / Last 30 days"). |
-| `ActionButton` | `action-button.tsx` | The full-width button that ends a sheet or a page: `primary` is the accent fill ("Update routine", "Done"), `secondary` an outlined card ("Keep the routine as it was"). Side by side in a row, the pair share one height. Disabled, it greys out. |
+| `SegmentedControl` | `segmented-control.tsx` | Two to four mutually exclusive options in one row ("Last 7 days / Last 30 days"). Each segment is its label's width plus an equal share of the rest, and a label that still doesn't fit wraps to two lines instead of being cut off. |
+| `ActionButton` | `action-button.tsx` | The full-width button that ends a sheet or a page: `primary` is the accent fill ("Update routine", "Done"), `secondary` an outlined card ("Keep the routine as it was"), `ink` the ink fill for an empty state's way out (the picker's Create "X"). Side by side in a row, the pair share one height. Disabled, it greys out. |
 | `RoundIconButton` | `round-icon-button.tsx` | A round, outlined icon button, `regular` (44pt) or `compact` (36pt). The label is required. A visible `label` stretches it into a pill. |
 | `ListRow` | `list-row.tsx` | Leading slot, title, subtitle, trailing slot. `onPress` makes the row a button. |
 | `SetBadge` | `set-badge/` | The circle at the start of a set row: the working set's number, or W, D, M or F. |
@@ -53,8 +53,8 @@ is the `failure` red. Drop and myo are ink with an accent ring. Warm-up is `acce
 the page colour with its number in Geist Mono. The badge's props only allow a number on a working set.
 
 It comes in two sizes: the default 36pt circle, and `size="small"` (16pt), which sits in the corner of a
-reps tile on the workout screen. It is the only set badge: the workout screen and the warm-up editor use it
-too, so a set looks the same wherever it appears.
+reps tile on the workout screen. It is the only set badge: the workout screen, the routine editor and the
+warm-up editor use it too, so a set looks the same wherever it appears.
 
 ## Toasts
 

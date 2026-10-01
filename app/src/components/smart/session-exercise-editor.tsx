@@ -11,14 +11,13 @@ import { Platform } from 'react-native';
 import { useDispatch } from 'react-redux';
 import { useOnDismiss } from '@/hooks/useOnDismiss';
 
-export function getSessionExerciseEditorHref(sessionId: string, index: number, opts?: { isNew?: boolean }): Href {
-  return `/exercise-editor?sessionId=${encodeURIComponent(sessionId)}&index=${index}${opts?.isNew ? '&isNew=1' : ''}` as Href;
+export function getSessionExerciseEditorHref(sessionId: string, index: number): Href {
+  return `/exercise-editor?sessionId=${encodeURIComponent(sessionId)}&index=${index}` as Href;
 }
 
-export function SessionExerciseEditor(props: { sessionId: string; index: number; isNew?: boolean }) {
+export function SessionExerciseEditor(props: { sessionId: string; index: number }) {
   const { t } = useTranslate();
   const exerciseIndex = props.index;
-  const isNew = props.isNew;
   const useImperialUnits = useAppSelector((x) => x.settings.useImperialUnits);
   const session = useAppSelectorWithArg(selectSession, props.sessionId);
   const dispatch = useDispatch();
@@ -26,7 +25,7 @@ export function SessionExerciseEditor(props: { sessionId: string; index: number;
 
   const exercise = session?.recordedExercises[exerciseIndex]?.blueprint;
 
-  const title = isNew ? t('exercise.add.title') : t('exercise.edit.title');
+  const title = t('exercise.edit.title');
 
   // Hold the edited exercise locally and only apply it to the session when the route is dismissed
   const draftRef = useRef<ExerciseBlueprint | undefined>(undefined);

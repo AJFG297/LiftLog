@@ -153,8 +153,12 @@ counts towards:
 
 **D7. Sheets.**
 
-- Navigational sheets (the exercise list, set type, rest, update routine, the exercise picker) use
-  expo-router `presentation: 'formSheet'` with detents, so they're native.
+- Navigational sheets (the exercise list, set type, rest, update routine) use expo-router
+  `presentation: 'formSheet'` with detents, so they're native.
+- The exercise picker is the exception (PM-32): a `presentation: 'modal'` route with its own Cancel /
+  title / New header. That is still native, a page sheet on iOS and a full-screen page on Android. It needs
+  the whole height for the search, two chip rows, a long list and the Add bar, and a keyboard-driven list in
+  an Android form sheet risks the keyboard covering the Add bar and the list fighting the sheet's drag.
 - The number pad is an in-screen panel animated with Reanimated, not a sheet, so the set being edited
   stays visible.
 - Avoid a sheet library unless formSheet can't handle a case.
@@ -206,7 +210,8 @@ Each numbered step is one Linear issue (child of PM-16) and roughly one PR.
 
 11. **PM-24.** New tab structure (D4) and the Home screen: history, the Up next card, and the in-progress bar.
 12. **PM-26.** Routines tab and the routine editor, including the Advanced rest section. Weights and reps use
-    the number pad (D8). Related: PM-4.
+    the number pad (D8). Related: PM-4. Also fixes PM-35 (a tap through the old Plans screen's + could change
+    the active plan). How it works: [Routines.md](../Routines.md).
 13. **PM-32.** Exercise picker: search, muscle and equipment filters, recents, order of selection, create custom.
     From first use on a phone:
     - A new exercise must start with an empty name and a placeholder. Today `useAddExercise` and
@@ -257,3 +262,8 @@ Still open:
   no set length, and a session doesn't record its program or cycle, so showing progress needs a model change.
 - The live workout's All exercises sheet keeps its always-visible drag handles instead of the canvas's
   Reorder button. Mid-workout that's one drag, not a tap into reorder mode and then a drag.
+- The routine editor's weight column only shows what carries over: a routine plans no working weights
+  (Progression.md), so the number pad there edits reps and warm-up loads. Planning a starting weight would
+  need a model change to the blueprint and to session start.
+- The canvas's "My templates" includes routines outside the active program. Every routine belongs to a
+  program here, so the Routines screen lists the active program's routines and the other programs separately.

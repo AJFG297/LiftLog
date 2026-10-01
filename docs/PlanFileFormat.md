@@ -2,7 +2,7 @@
 
 LiftLog plans can be exported to, and imported from, `.liftlogplan` files. A plan file is plain JSON, so you can write one yourself, share one with a friend, keep one in version control - or have an AI write one for you.
 
-To import a plan, either tap a `.liftlogplan` file on your device (LiftLog is registered to open them), or open the app and go to `Plans -> Import`.
+To import a plan, either tap a `.liftlogplan` file on your device (LiftLog is registered to open them), or open the app and go to `Routines -> Import a plan`.
 
 To export one, open `Plans`, tap the `⋮` next to the plan and choose `Export to file`. LiftLog writes the `.liftlogplan` and hands it to the system share sheet, so you can save it to Files or Drive, AirDrop it, or mail it to yourself - whatever gets it somewhere you can reach it again.
 
@@ -55,7 +55,7 @@ Nothing about the format is Claude-specific. To use ChatGPT, Gemini, or anything
 > Rules that are easy to get wrong:
 >
 > - Treat every field in the schema as required, apart from the handful marked optional. Empty strings for `notes` and `link`.
-> - `"version": 3` on the root object, `"version": 9` on every session.
+> - `"version": 3` on the root object, `"version": 10` on every session.
 > - Weights, distances and progression steps are decimal **strings**: `"2.5"`, not `2.5`. Rep counts are plain integers.
 > - Rests and cardio times are ISO-8601 durations: `"PT3M"`, `"PT90S"`.
 > - A weighted exercise has no set count: one entry in `plannedSets` is one set, and each has a `kind` (`"working"` for a plain set). Cardio uses `sets`, an array of set objects.
@@ -77,7 +77,7 @@ A plan file is one JSON object: a name, a date, and a list of sessions. Each ses
   "lastEdited": "2026-07-12",
   "sessions": [
     {
-      "version": 9,
+      "version": 10,
       "name": "Push",
       "notes": "Chest, shoulders and triceps.",
       "exercises": [

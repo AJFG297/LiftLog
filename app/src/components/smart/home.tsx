@@ -37,6 +37,7 @@ import { selectActiveSessionId, selectHistoryPersonalRecords, selectSessions } f
 import { LocalDate } from '@js-joda/core';
 import { useTranslate } from '@tolgee/react';
 import { useFocusEffect, useRouter } from 'expo-router';
+import { useGoToRoutines } from '@/hooks/useGoToRoutines';
 import { useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -55,7 +56,8 @@ export function Home() {
   const { tokens } = useAppTheme();
   const insets = useSafeAreaInsets();
   const dispatch = useDispatch();
-  const { push, navigate } = useRouter();
+  const { push } = useRouter();
+  const goToRoutines = useGoToRoutines();
   const formatDate = useFormatDate();
   const weightSuffix = usePreferredWeightSuffix();
   const useImperialUnits = useAppSelector((x) => x.settings.useImperialUnits);
@@ -183,7 +185,7 @@ export function Home() {
             startLabel={t('home.up_next.start.button', { name: nextSession.blueprint.name })}
             otherLabel={t('home.up_next.other.button')}
             onStart={() => start(nextSession)}
-            onOther={() => (otherPlanWorkouts ? push('/other-workout') : navigate('/routines'))}
+            onOther={() => (otherPlanWorkouts ? push('/other-workout') : goToRoutines())}
           />
           <FreeformButton label={t('workout.freeform.title')} onPress={startFreeform} />
         </View>
@@ -202,7 +204,7 @@ export function Home() {
               icon="assignment"
               label={t('home.up_next.choose.button')}
               accessibilityLabel={t('home.up_next.choose.button')}
-              onPress={() => navigate('/routines')}
+              onPress={() => goToRoutines()}
             />
             <FreeformButton label={t('workout.freeform.title')} onPress={startFreeform} />
           </View>

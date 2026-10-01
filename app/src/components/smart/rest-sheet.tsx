@@ -205,6 +205,8 @@ function RestSheetContent({ session }: { session: Session }) {
             >
               {({ pressed }) => (
                 <View
+                  // Skip also closes the sheet; see ActionButton for why the label must not move.
+                  collapsable={false}
                   style={{
                     minHeight: 60,
                     borderRadius: 30,

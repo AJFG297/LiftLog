@@ -1,28 +1,10 @@
 import { describe, expect, it } from 'vitest';
+import { rootStateWith } from '@/models/home/__test__/root-state';
 import { NavigatorRoute, NavigatorState, resumeWorkoutActions } from '@/models/home/resume-workout';
 
-/** The app's root stack with the tabs on it, the Home stack holding `homeRoutes`. */
+/** `getRootState()` with the Home stack holding `homeRoutes`. */
 function rootWith(homeRoutes: NavigatorRoute[]): NavigatorState {
-  return {
-    key: 'root',
-    routes: [
-      {
-        key: 'tabs-route',
-        name: '(tabs)',
-        state: {
-          key: 'tabs',
-          routes: [
-            { key: 'home-tab', name: '(session)', state: { key: 'home', routes: homeRoutes } },
-            {
-              key: 'routines-tab',
-              name: 'routines',
-              state: { key: 'routines', routes: [{ key: 'r', name: 'index' }] },
-            },
-          ],
-        },
-      },
-    ],
-  };
+  return rootStateWith({ home: homeRoutes, routines: [{ key: 'r', name: 'index' }] });
 }
 
 const home = { key: 'index-1', name: 'index' };
