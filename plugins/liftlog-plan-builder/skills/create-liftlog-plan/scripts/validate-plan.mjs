@@ -31,9 +31,9 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
   mod
 ));
 
-// ../../node_modules/ajv-formats/dist/formats.js
+// ../../../../../../app/node_modules/ajv-formats/dist/formats.js
 var require_formats = __commonJS({
-  "../../node_modules/ajv-formats/dist/formats.js"(exports) {
+  "../../../../../../app/node_modules/ajv-formats/dist/formats.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.formatNames = exports.fastFormats = exports.fullFormats = void 0;
@@ -2030,8 +2030,8 @@ var require_validate_schema = __commonJS({
             }
             errors++;
           }
-          if (9 !== data0) {
-            const err5 = { instancePath: instancePath + "/version", schemaPath: "#/properties/version/const", keyword: "const", params: { allowedValue: 9 }, message: "must be equal to constant" };
+          if (10 !== data0) {
+            const err5 = { instancePath: instancePath + "/version", schemaPath: "#/properties/version/const", keyword: "const", params: { allowedValue: 10 }, message: "must be equal to constant" };
             if (vErrors === null) {
               vErrors = [err5];
             } else {
@@ -2082,12 +2082,23 @@ var require_validate_schema = __commonJS({
             errors++;
           }
         }
+        if (data.color !== void 0) {
+          if (typeof data.color !== "string") {
+            const err9 = { instancePath: instancePath + "/color", schemaPath: "#/properties/color/type", keyword: "type", params: { type: "string" }, message: "must be string" };
+            if (vErrors === null) {
+              vErrors = [err9];
+            } else {
+              vErrors.push(err9);
+            }
+            errors++;
+          }
+        }
       } else {
-        const err9 = { instancePath, schemaPath: "#/type", keyword: "type", params: { type: "object" }, message: "must be object" };
+        const err10 = { instancePath, schemaPath: "#/type", keyword: "type", params: { type: "object" }, message: "must be object" };
         if (vErrors === null) {
-          vErrors = [err9];
+          vErrors = [err10];
         } else {
-          vErrors.push(err9);
+          vErrors.push(err10);
         }
         errors++;
       }

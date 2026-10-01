@@ -11,7 +11,8 @@ import { useAppSelector } from '@/store';
 import { selectActiveProgram } from '@/store/program';
 import { selectSessions } from '@/store/stored-sessions';
 import { useTranslate } from '@tolgee/react';
-import { useRouter } from 'expo-router';
+import { useNavigation, useRouter } from 'expo-router';
+import { useGoToRoutines } from '@/hooks/useGoToRoutines';
 import { View } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -23,7 +24,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 export function OtherWorkoutSheet() {
   const { t } = useTranslate();
   const { tokens } = useAppTheme();
-  const { back, navigate } = useRouter();
+  const { back } = useRouter();
+  const navigation = useNavigation();
+  const goToRoutines = useGoToRoutines();
   const insets = useSafeAreaInsets();
   const formatDate = useFormatDate();
   const today = useToday();
@@ -71,8 +74,10 @@ export function OtherWorkoutSheet() {
           leading={<MsIconSrc name="assignment" size={20} color={tokens.muted} />}
           trailing={<MsIconSrc name="chevronRight" size={22} color={tokens.muted} />}
           onPress={() => {
-            back();
-            navigate('/routines');
+            // Closed right away rather than through the router's queue, which would run after the tab
+            // switch and go back from Routines instead.
+            navigation.goBack();
+            goToRoutines();
           }}
           style={{ borderRadius: 16 }}
         />

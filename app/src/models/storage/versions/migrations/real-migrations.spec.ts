@@ -163,7 +163,7 @@ describe('real migrations', () => {
     it('migrates a weighted exercise from v1 to latest: repsPerSet → plannedSets, weightIncrease → a load rule', () => {
       const result = sessionBlueprintMigrations.migrate(initialSessionBlueprint());
       const weighted = result.exercises[0]!;
-      expect(result.version).toBe(9);
+      expect(result.version).toBe(10);
       expect(weighted).toMatchObject({
         type: 'WeightedExerciseBlueprint',
         plannedSets: [
@@ -191,6 +191,15 @@ describe('real migrations', () => {
       expect(result.exercises[1]).toEqual(initialCardio());
     });
 
+    it('brings a v9 routine to v10 with no colour, and keeps a v10 colour', () => {
+      const v9 = sessionBlueprintMigrations.migrateUntil(initialSessionBlueprint(), 9);
+      const v10 = sessionBlueprintMigrations.migrate(v9);
+      expect(v10.version).toBe(10);
+      expect(v10.color).toBeUndefined();
+      const coloured = { ...v10, color: 'green' };
+      expect(sessionBlueprintMigrations.migrate(coloured).color).toBe('green');
+    });
+
     it('is idempotent', () => {
       const once = sessionBlueprintMigrations.migrate(initialSessionBlueprint());
       expect(sessionBlueprintMigrations.migrate(once)).toEqual(once);
@@ -202,7 +211,7 @@ describe('real migrations', () => {
       const result = programBlueprintMigrations.migrate(initialProgramBlueprint());
       expect(result.version).toBe(3);
       expect(result.name).toBe('PPL');
-      expect(result.sessions.every((s) => s.version === 9)).toBe(true);
+      expect(result.sessions.every((s) => s.version === 10)).toBe(true);
     });
 
     it('accepts embedded session blueprints at mixed versions and brings them all to latest', () => {
@@ -217,7 +226,7 @@ describe('real migrations', () => {
       });
 
       expect(result.sessions).toHaveLength(3);
-      expect(result.sessions.every((s) => s.version === 9)).toBe(true);
+      expect(result.sessions.every((s) => s.version === 10)).toBe(true);
       // every embedded session ends up identical to migrating it directly, regardless of the version it came in at
       const expected = sessionBlueprintMigrations.migrate(initialSessionBlueprint());
       for (const session of result.sessions) {
@@ -229,7 +238,7 @@ describe('real migrations', () => {
       // the wrapper stamps its own legacy pseudo-version; the child carries its own
       const result = programBlueprintMigrations.migrate(initialProgramBlueprint());
       expect(result.version).toBe(3);
-      expect(result.sessions[0]!.version).toBe(9);
+      expect(result.sessions[0]!.version).toBe(10);
     });
 
     it('is idempotent', () => {
@@ -336,7 +345,7 @@ describe('real migrations', () => {
 
       const result = sessionBlueprintMigrations.migrate(v7);
 
-      expect(result.version).toBe(9);
+      expect(result.version).toBe(10);
       expect(result.exercises[0]).toMatchObject({
         plannedSets: [
           { reps: { min: 10, max: 10 }, kind: 'working' },
@@ -461,7 +470,7 @@ describe('real migrations', () => {
       expect(result.name).toBe('Strength');
       expect(result.description).toBe('get strong');
       expect(result.blueprint.version).toBe(3);
-      expect(result.blueprint.sessions.every((s) => s.version === 9)).toBe(true);
+      expect(result.blueprint.sessions.every((s) => s.version === 10)).toBe(true);
     });
 
     it('stamps a v3 plan as v4, the contract the planner compares against', () => {
@@ -499,14 +508,14 @@ describe('real migrations', () => {
       const result = sharedProgramBlueprintMigrations.migrate(shared);
       expect(result.version).toBe(3);
       expect(result.programBlueprint.version).toBe(3);
-      expect(result.programBlueprint.sessions.every((s) => s.version === 9)).toBe(true);
+      expect(result.programBlueprint.sessions.every((s) => s.version === 10)).toBe(true);
     });
 
     it('followedFeedUser brings its currentPlan to latest', () => {
       const result = followedFeedUserMigrations.migrate(initialFollowedFeedUser(initialProgramBlueprint()));
       expect(result.version).toBe(3);
       expect(result.currentPlan?.version).toBe(3);
-      expect(result.currentPlan?.sessions.every((s) => s.version === 9)).toBe(true);
+      expect(result.currentPlan?.sessions.every((s) => s.version === 10)).toBe(true);
     });
 
     it('followedFeedUser leaves an absent currentPlan absent', () => {

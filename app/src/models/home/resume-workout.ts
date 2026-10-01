@@ -9,6 +9,7 @@ export interface NavigatorState {
 export interface NavigatorRoute {
   key?: string;
   name: string;
+  params?: object;
   state?: NavigatorState;
 }
 

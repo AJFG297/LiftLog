@@ -58,7 +58,7 @@
       "properties": {
         "version": {
           "type": "number",
-          "const": 9
+          "const": 10
         },
         "name": {
           "type": "string"
@@ -71,6 +71,10 @@
         },
         "notes": {
           "type": "string"
+        },
+        "color": {
+          "type": "string",
+          "description": "The routine's colour: one of vermilion, green, blue, ochre, purple or stone. Leave it out and the routine takes a colour from its place in the program. A name the app doesn't know is ignored."
         }
       },
       "required": [

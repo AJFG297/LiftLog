@@ -38,7 +38,7 @@ export const whatsNewEntries: WhatsNewEntry[] = [
     bodyKey: 'whats_new.plan_files.body',
     cta: {
       labelKey: 'whats_new.plan_files.cta',
-      route: '/settings/program-list',
+      route: '/routines',
     },
   },
   {

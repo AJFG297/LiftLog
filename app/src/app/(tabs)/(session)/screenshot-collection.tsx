@@ -101,7 +101,7 @@ function PrepareExerciseEditorPage() {
   return (
     <Redirect
       href={{
-        pathname: '/settings/manage-workouts/[programId]/manage-session/[sessionIndex]/exercise',
+        pathname: '/routines/manage-workouts/[programId]/manage-session/[sessionIndex]/exercise',
         params: { programId: activePlanId, sessionIndex: 0, exerciseIndex: 0 },
       }}
     />

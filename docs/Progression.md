@@ -58,7 +58,9 @@ the routine.
 
 ## Progressive overload
 
-Found under **Progressive Overload** in the exercise editor. A new exercise has no rules, so it stays
+In the routine editor, **Progression** offers Add weight, Reps then weight, or Off, which set these rules for
+you (see [Routines.md](./Routines.md#progression-presets)). **Advanced** there, and **Progressive Overload** in
+an exercise's More options, edit the rules themselves. A new exercise has no rules, so it stays
 where you leave it until you add one.
 
 **Rules only fire after a successful session**, and what counts as successful depends on the rule:

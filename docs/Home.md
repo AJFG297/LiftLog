@@ -5,12 +5,13 @@ The tab bar and the Home screen, PM-24 of the [redesign plan](./plans/redesign.m
 ## The tabs
 
 Home · Routines · Progress · You, in `app/src/app/(tabs)/_layout.tsx` (native tabs). The route folders
-kept their names, so every existing link still resolves:
+kept their names. What PM-26 moved out of `settings/` into `routines/` (a program's page, the routine editor and
+the plan import) opens in the Routines tab instead of switching to You:
 
 | Tab | Folder | What it holds |
 | --- | --- | --- |
 | Home | `(session)/` | Home, the workout screen and its sheets, and `history/`: All history (`/history`, the month list that used to be the History tab) and the workout editor (`/history/edit`). |
-| Routines | `routines/` | For now the plan list from `settings/program-list.tsx`, until PM-26 builds the Routines screen. Opening a plan still goes to `/settings/manage-workouts/...`, which is in the You tab's stack. |
+| Routines | `routines/` | The Routines screen; `manage-workouts/`, a program's page and the routine editor; `import-plan-info` and `import-plan`, the plan import; and `ai/planner` (see [Routines.md](./Routines.md)). |
 | Progress | `stats/` | The stats screens, relabelled. |
 | You | `settings/` | A profile card, then the settings, then Feed when `showFeed` is on. |
 
