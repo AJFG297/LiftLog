@@ -33,7 +33,7 @@ import { ExerciseDescriptor } from '@/models/exercise-models';
 import { useAppSelector } from '@/store';
 import { PickedExercise, setExerciseSearchResult } from '@/store/app';
 import { selectExercises, selectLatestExercises, selectMuscles, updateExercise } from '@/store/stored-sessions';
-import { translateExerciseMeta } from '@/utils/exercise-meta';
+import { exerciseMetaLabel } from '@/utils/exercise-meta';
 import { uuid } from '@/utils/uuid';
 import { LegendList } from '@legendapp/list';
 import { useTranslate } from '@tolgee/react';
@@ -141,8 +141,8 @@ export function ExerciseSearch({ requestId, mode, exerciseName, context }: Exerc
 
   const metaOf = (id: string, exercise: ExerciseDescriptor) =>
     [
-      exercise.muscles[0] ? capitalise(translateExerciseMeta(t, 'muscle', exercise.muscles[0])) : undefined,
-      exercise.equipment ? capitalise(translateExerciseMeta(t, 'equipment', exercise.equipment)) : undefined,
+      exercise.muscles[0] ? exerciseMetaLabel(t, 'muscle', exercise.muscles[0]) : undefined,
+      exercise.equipment ? exerciseMetaLabel(t, 'equipment', exercise.equipment) : undefined,
       alreadyIn.has(id)
         ? context?.name
           ? t('exercise_picker.row.already_in.label', { name: context.name })
@@ -199,7 +199,7 @@ export function ExerciseSearch({ requestId, mode, exerciseName, context }: Exerc
   ];
   const equipmentOptions: ChipOption<EquipmentChoice>[] = EQUIPMENT_CHOICES.map((choice) => ({
     value: choice,
-    label: equipmentLabel(t, choice),
+    label: exerciseMetaLabel(t, 'equipment', choice),
   }));
 
   const count = picked.length;
@@ -304,7 +304,7 @@ export function ExerciseSearch({ requestId, mode, exerciseName, context }: Exerc
             musclesHint={t('exercise_picker.create.muscles.hint')}
             muscleOptions={catalogMuscles.map((value) => ({
               value,
-              label: capitalise(translateExerciseMeta(t, 'muscle', value)),
+              label: exerciseMetaLabel(t, 'muscle', value),
             }))}
             muscles={creating.muscles}
             onMusclesChange={(muscles) => setCreating((now) => now && { ...now, muscles })}
@@ -476,13 +476,4 @@ function muscleGroupLabel(t: TranslateFn, group: MuscleGroup): string {
     case 'core':
       return t('exercise_picker.muscle.core');
   }
-}
-
-/** From the same keys as a row's equipment meta, so a chip and the rows it filters use one word. */
-export function equipmentLabel(t: TranslateFn, choice: EquipmentChoice): string {
-  return capitalise(translateExerciseMeta(t, 'equipment', choice));
-}
-
-function capitalise(text: string): string {
-  return text.charAt(0).toUpperCase() + text.slice(1);
 }

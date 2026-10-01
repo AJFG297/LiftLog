@@ -26,10 +26,9 @@ import ExerciseMuscleSelector from '@/components/presentation/workout-editor/exe
 import ExerciseFilterer from '@/components/presentation/workout-editor/exercise-filterer';
 import { ExerciseEquipmentChips } from '@/components/presentation/workout-editor/exercise-create-form';
 import { customExerciseOf, EQUIPMENT_CHOICES } from '@/components/presentation/workout-editor/exercise-picker';
-import { equipmentLabel } from '@/components/smart/exercise-search';
 import { LegendList } from '@legendapp/list';
 import { ExerciseDescriptor } from '@/models/exercise-models';
-import { translateExerciseMeta } from '@/utils/exercise-meta';
+import { exerciseMetaLabel, translateExerciseMeta } from '@/utils/exercise-meta';
 import { HeaderHeightContext } from 'expo-router/react-navigation';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -142,7 +141,7 @@ export default function ExerciseManager() {
     dispatch(
       updateExercise({
         id: newId,
-        // Starts unnamed, so the name field is empty with its placeholder rather than holding text to delete.
+        // Starts unnamed so the name field shows its placeholder; lists call it Unnamed exercise until it has one.
         exercise: customExerciseOf({ name: '', muscles: [], equipment: undefined }),
       }),
     );
@@ -272,8 +271,8 @@ function ExerciseEditSheet({ exercise, exerciseId }: { exercise: ExerciseDescrip
  * foam roll), so editing an exercise never shows it as having none.
  */
 function equipmentOptionsFor(t: ReturnType<typeof useTranslate>['t'], current: string | null) {
-  const options = EQUIPMENT_CHOICES.map((choice) => ({ value: choice as string, label: equipmentLabel(t, choice) }));
+  const options = EQUIPMENT_CHOICES.map((choice) => ({ value: choice as string, label: exerciseMetaLabel(t, 'equipment', choice) }));
   return current && !options.some((option) => option.value === current)
-    ? [...options, { value: current, label: translateExerciseMeta(t, 'equipment', current) }]
+    ? [...options, { value: current, label: exerciseMetaLabel(t, 'equipment', current) }]
     : options;
 }
