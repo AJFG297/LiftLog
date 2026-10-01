@@ -6,7 +6,8 @@ and the number pad, and PM-30 moved rest into the header.
 
 ## What is on screen
 
-- **Header** (`LiveWorkoutHeader`): minimise (back to Home, the workout keeps running), the workout name
+- **Header** (`LiveWorkoutHeader`): minimise (back to Home; the workout keeps running, and the
+  [workout-in-progress bar](./Home.md#the-workout-in-progress-bar) brings it back from any tab), the workout name
   (tap it to edit the name and notes), the elapsed time since the first set, the rest pill, and Finish.
   While resting, a thin line along the header's bottom edge shows the share of the rest still to go.
 - **Exercise strip** (`ExerciseStrip`): one tile per exercise with its label, name, sets done out of
@@ -81,7 +82,8 @@ Nothing on the screen is stored except which exercise is in focus. The rest come
   the notification shows. Otherwise the member with the fewest sets logged goes next.
 - **Focus** is `app.liveWorkoutFocus` (`{ sessionId, exerciseIndex }`) in the app slice, read through
   `useLiveWorkoutFocus`. It lives in the store so it survives minimising and so the sheet, a route of its
-  own, can move it. When nothing is stored the screen opens on the page of the next set and pins it, so
+  own, can move it. An effect mirrors it to the `LiveWorkoutFocus` key and puts it back once workouts load
+  (`store/app/live-workout-focus-storage.ts`), so a relaunch reopens the page left open. When nothing is stored the screen opens on the page of the next set and pins it, so
   finishing a page never moves the screen before the user taps Up next.
 - **Reordering** is `withGroupMoved`: whole groups move, so a superset travels as one unit, and the
   session's exercises and blueprint move together. A `supersetWithNext` left on the last exercise is

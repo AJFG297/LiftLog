@@ -1,11 +1,11 @@
 appId: com.ajfg297.liftlog
 ---
-# Readiness gate: gets from a cold launch to the Workout tab, clearing the first-run welcome wizard if
+# Readiness gate: gets from a cold launch to the Home tab, clearing the first-run welcome wizard if
 # it is up. Run after every `verify.sh up`; it is safe to re-run on an already-onboarded install.
 - launchApp
 # First bundle of a fresh Metro can take well over a minute
 - extendedWaitUntil:
-    visible: 'Next|Workout|Continue'
+    visible: 'Next|Home|Continue'
     timeout: 180000
 # A fresh install of the dev client opens its developer-menu intro sheet over the app once
 - runFlow:
@@ -20,7 +20,7 @@ appId: com.ajfg297.liftlog
     commands:
       - back
 - extendedWaitUntil:
-    visible: 'Next|Workout'
+    visible: 'Next|Home'
     timeout: 30000
 - repeat:
     while:
@@ -33,8 +33,9 @@ appId: com.ajfg297.liftlog
       visible: 'Get started'
     commands:
       - tapOn: 'Get started'
-# Matching is case-insensitive by default; `(?-i)` keeps this off the "Freeform Workout" plan cards.
+# The range switch is always on Home. `Freeform workout` is not: a workout in progress hides it.
 - extendedWaitUntil:
-    visible: '(?-i)Freeform workout'
+    visible:
+      id: 'home-range'
     timeout: 30000
 - takeScreenshot: ready

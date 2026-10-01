@@ -66,7 +66,7 @@ method or per-key effect. Keys with special needs use the `persist: false` / `hy
 A few non-settings blobs skip `PreferenceService` and use `extra.keyValueStore` directly - the hidden
 built-in exercise id list, the "built-in programs seeded" marker, and the running rest timer
 (`ActiveRestTimer`, versioned JSON written by the workout worker effects and read back after workouts
-hydrate, so a relaunch keeps the rest). That's the escape hatch for a value
+hydrate, so a relaunch keeps the rest), and the live workout's page (`LiveWorkoutFocus`, the same way). That's the escape hatch for a value
 that isn't a user-facing setting but is too small or too structurally awkward for a table. New
 _settings_ should go through `PreferenceService`.
 
@@ -264,7 +264,7 @@ Two things follow from that, and both matter when you touch this slice:
 
 - **Editing a session must not re-run every aggregate.** Streak, personal records, volume scales, the
   month list and the "previous performances" lookup all sweep the whole history, and screens that
-  subscribe to them stay mounted while you edit - the History tab sits behind the workout screen, and
+  subscribe to them stay mounted while you edit - Home sits behind the workout screen, and
   the History list sits behind `/history/edit`. Three things keep an edit off that path, and all three
   matter:
   - `selectSessions` returns only _finished_ sessions, so the workout in progress cannot move it.
