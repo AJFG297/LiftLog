@@ -10,7 +10,7 @@ import { formatCountdown } from '@/utils/format-time-span';
 import { Duration, OffsetDateTime } from '@js-joda/core';
 import { useTranslate } from '@tolgee/react';
 import { ReactNode } from 'react';
-import { Platform, Pressable, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, View } from 'react-native';
 
 const BAR_HEIGHT = 66;
 
@@ -48,49 +48,67 @@ export function WorkoutInProgressBar(props: WorkoutInProgressBarProps) {
       }}
     >
       <View style={[{ borderRadius: 20 }, Platform.OS === 'ios' ? floatingShadowStyle : undefined]}>
+        {/*
+          The resume target fills the slab from behind rather than wrapping it, so a screen reader sees
+          it, the rest chip and the menu as three elements instead of folding them into one button. The
+          content above lets touches through to it everywhere but the menu.
+        */}
         <Pressable
           testID="workout-in-progress-bar"
           onPress={props.onResume}
           accessibilityRole="button"
           accessibilityLabel={t('in_progress_bar.resume.label', { name: props.workoutName })}
           accessibilityHint={props.nextText}
+          style={({ pressed }) => [
+            StyleSheet.absoluteFill,
+            { borderRadius: 20, backgroundColor: pressed ? tokens.inverseRaised : tokens.inverse },
+          ]}
+        />
+        <View
+          style={{
+            minHeight: BAR_HEIGHT,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: spacing[3],
+            paddingLeft: spacing[4],
+            paddingRight: spacing[1],
+            paddingVertical: spacing[2],
+            pointerEvents: 'box-none',
+          }}
         >
-          {({ pressed }) => (
-            <View
-              style={{
-                minHeight: BAR_HEIGHT,
-                borderRadius: 20,
-                backgroundColor: pressed ? tokens.inverseRaised : tokens.inverse,
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: spacing[3],
-                paddingLeft: spacing[4],
-                paddingRight: spacing[1],
-                paddingVertical: spacing[2],
-              }}
-            >
-              <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: tokens.invAccent }} />
-              <View style={{ flex: 1, minWidth: 0, gap: 1 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: spacing[2] }}>
-                  <SurfaceText
-                    font="text-base"
-                    weight="700"
-                    numberOfLines={1}
-                    style={{ color: tokens.inverseInk, flexShrink: 1, fontSize: 15 }}
-                  >
-                    {props.workoutName}
-                  </SurfaceText>
-                  <ElapsedText startTime={props.startTime} />
-                </View>
-                <SurfaceText font="text-sm" numberOfLines={1} style={{ color: tokens.inverseMuted, fontSize: 13 }}>
-                  {props.nextText}
+          <View
+            accessibilityElementsHidden
+            importantForAccessibility="no-hide-descendants"
+            style={{
+              flex: 1,
+              minWidth: 0,
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: spacing[3],
+              pointerEvents: 'none',
+            }}
+          >
+            <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: tokens.invAccent }} />
+            <View style={{ flex: 1, minWidth: 0, gap: 1 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: spacing[2] }}>
+                <SurfaceText
+                  font="text-base"
+                  weight="700"
+                  numberOfLines={1}
+                  style={{ color: tokens.inverseInk, flexShrink: 1, fontSize: 15 }}
+                >
+                  {props.workoutName}
                 </SurfaceText>
+                <ElapsedText startTime={props.startTime} />
               </View>
-              <RestChip window={props.restWindow} overText={props.restOverText} />
-              {props.menu}
+              <SurfaceText font="text-sm" numberOfLines={1} style={{ color: tokens.inverseMuted, fontSize: 13 }}>
+                {props.nextText}
+              </SurfaceText>
             </View>
-          )}
-        </Pressable>
+          </View>
+          <RestChip window={props.restWindow} overText={props.restOverText} />
+          {props.menu}
+        </View>
       </View>
     </View>
   );
@@ -133,6 +151,7 @@ function RestChip({ window, overText }: { window: RestWindow | undefined; overTe
         flexDirection: 'row',
         alignItems: 'center',
         gap: 6,
+        pointerEvents: 'none',
       }}
     >
       <MsIconSrc name="timer" size={16} color={phase.kind === 'resting' ? tokens.inverseInk : tokens.onAccent} />
