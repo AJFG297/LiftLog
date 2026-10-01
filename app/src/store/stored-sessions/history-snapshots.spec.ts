@@ -6,16 +6,20 @@ import Enumerable from 'linq';
 import type { RootState } from '@/store/store';
 import {
   getSessionReferenceTime,
-  selectHistoryPersonalRecords,
   selectLatestExercises,
   selectPreviousComparableSession,
   selectRecentlyCompletedExercises,
   selectSessions,
-  selectSessionsBy,
-  selectSessionsInMonth,
   initializeStoredSessionsStateSlice,
 } from '@/store/stored-sessions';
-import { selectActivityMonth, selectStreakStats, selectVolumeScales } from '@/store/activity';
+import {
+  calculateStreak,
+  OWN_USER_KEY,
+  OwnActivity,
+  ownActivityOf,
+  selectActivityMonth,
+  trainingDatesOf,
+} from '@/store/activity';
 import { calculateStats } from '@/store/stats/calculate-stats';
 import { GranularStatisticView } from '@/store/stats';
 import { normalizeExerciseName } from '@/models/blueprint-models';
@@ -30,9 +34,11 @@ import { Session } from '@/models/session-models';
 import { describeExercise, describeSession, loadHistoryFixture, normalize } from '@/utils/__test__/history-fixture';
 
 /**
- * Characterization snapshots of every whole-history aggregate over the 420-session fixture. They pin what
- * the app computes today so the storage rewrite (docs/plans/relational-storage.md) can prove it computes
- * the same thing. Any snapshot change must be deliberate and listed in the PR that makes it.
+ * Characterization snapshots of every history aggregate over the 420-session fixture. They pin what the
+ * app computed from the whole history in Redux, so the storage rewrite (docs/plans/relational-storage.md)
+ * can prove it computes the same thing: the History, calendar, streak, records and stats cases are now fed
+ * by `WorkoutRepository`'s queries, the carry-over cases still by the selectors. Any snapshot change must
+ * be deliberate and listed in the PR that makes it.
  *
  * Selectors that read "today" take it as an argument; the rest of the clock dependence is the system zone,
  * which sessions without a recorded set fall back to, so that is pinned too.
@@ -43,7 +49,10 @@ vi.stubEnv('TZ', 'UTC');
 const TODAY = LocalDate.parse('2026-06-03');
 
 let sessions: Session[];
-let store: Awaited<ReturnType<typeof loadHistory>>;
+let store: Awaited<ReturnType<typeof loadHistory>>['store'];
+let repository: WorkoutRepository;
+/** What `useOwnActivity` would hand the calendar and streak. */
+let own: OwnActivity;
 
 const silentLogger = {
   info: vi.fn(),
@@ -77,7 +86,7 @@ async function loadHistory(history: Session[]) {
   harness.store.dispatch(initializeStoredSessionsStateSlice());
   await harness.settle();
   expect(silentLogger.error).not.toHaveBeenCalled();
-  return harness.store;
+  return { store: harness.store, workoutRepository };
 }
 
 const state = () => store.getState() as unknown as RootState;
@@ -110,7 +119,8 @@ function labelMovement(key: string): string {
 
 beforeAll(async () => {
   sessions = loadHistoryFixture();
-  store = await loadHistory(sessions);
+  ({ store, workoutRepository: repository } = await loadHistory(sessions));
+  own = ownActivityOf(await repository.dailyActivity(), await repository.volumeScale());
 });
 
 describe('history aggregates over the 420-session fixture', () => {
@@ -176,41 +186,39 @@ describe('history aggregates over the 420-session fixture', () => {
     expect(previous).toMatchSnapshot();
   });
 
-  it('sessions in each month', () => {
+  it('sessions in each month', async () => {
     const months: Record<string, string[]> = {};
     for (let ym = YearMonth.of(2023, 6); !ym.isAfter(YearMonth.of(2026, 6)); ym = ym.plusMonths(1)) {
-      months[ym.toString()] = selectSessionsInMonth(state(), ym).map(describeSession);
+      months[ym.toString()] = (await repository.finishedBetween(ym.atDay(1), ym.atEndOfMonth())).map(describeSession);
     }
     expect(months).toMatchSnapshot();
   });
 
-  it('sessions in a date range', () => {
+  it('sessions in a date range', async () => {
     const ranges: [string, string][] = [
       ['2023-07-05', '2023-07-05'],
       ['2024-01-01', '2024-03-31'],
       ['2025-12-25', '2026-01-07'],
       ['2026-05-01', '2026-06-03'],
     ];
-    expect(
-      Object.fromEntries(
-        ranges.map(([from, to]) => [
-          `${from}..${to}`,
-          selectSessionsBy(state(), LocalDate.parse(from), LocalDate.parse(to)).map(describeSession).sort(),
-        ]),
-      ),
-    ).toMatchSnapshot();
+    const inRange: Record<string, string[]> = {};
+    for (const [from, to] of ranges) {
+      const found = await repository.finishedBetween(LocalDate.parse(from), LocalDate.parse(to));
+      inRange[`${from}..${to}`] = found.map(describeSession).sort();
+    }
+    expect(inRange).toMatchSnapshot();
   });
 
   it('streak stats', () => {
     const days = ['2023-07-05', '2024-02-14', '2025-06-30', '2026-05-31', TODAY.toString(), '2026-07-01'];
     const streaks: Record<string, unknown> = {};
     for (const firstDay of [DayOfWeek.MONDAY, DayOfWeek.SUNDAY]) {
-      store.dispatch(setFirstDayOfWeek(firstDay));
       for (const day of days) {
-        streaks[`${firstDay.toString()} ${day}`] = normalize(selectStreakStats(state(), LocalDate.parse(day)));
+        streaks[`${firstDay.toString()} ${day}`] = normalize(
+          calculateStreak(trainingDatesOf(own), firstDay, LocalDate.parse(day)),
+        );
       }
     }
-    store.dispatch(setFirstDayOfWeek(DayOfWeek.MONDAY));
     expect(streaks).toMatchSnapshot();
   });
 
@@ -218,7 +226,7 @@ describe('history aggregates over the 420-session fixture', () => {
     const months = ['2023-07', '2024-11', '2025-08', '2026-05', '2026-06'].map((x) => YearMonth.parse(x));
     const calendar = Object.fromEntries(
       months.map((yearMonth) => {
-        const month = selectActivityMonth(state(), { yearMonth, today: TODAY });
+        const month = selectActivityMonth(state(), { own, yearMonth, today: TODAY });
         return [
           yearMonth.toString(),
           {
@@ -238,26 +246,27 @@ describe('history aggregates over the 420-session fixture', () => {
         ];
       }),
     );
-    expect({ scales: normalize(selectVolumeScales(state())), calendar }).toMatchSnapshot();
+    // The feed is empty here, so the scales are the user's own, keyed as the selectors key them.
+    expect({ scales: normalize(new Map([[OWN_USER_KEY, own.scale]])), calendar }).toMatchSnapshot();
   });
 
-  it('per-session personal records', () => {
-    expect(normalize(selectHistoryPersonalRecords(state()))).toMatchSnapshot();
+  it('per-session personal records', async () => {
+    expect(normalize(await repository.personalRecords())).toMatchSnapshot();
   });
 
-  it('overall stats, all-time and last 90 days', () => {
-    const earliest = state().storedSessions.earliestSession!.date;
+  it('overall stats, all-time and last 90 days', async () => {
+    const earliest = (await repository.earliestDate())!;
+    expect(earliest.toString()).toBe('2023-07-05');
     const unit = selectPreferredWeightUnit(state());
     const ranges = {
       allTime: { from: earliest, to: TODAY },
       last90Days: { from: TODAY.minusDays(90), to: TODAY },
     };
-    const stats = Object.fromEntries(
-      Object.entries(ranges).map(([name, range]) => [
-        name,
-        normalize(withoutIds(calculateStats(selectSessionsBy(state(), range.from, range.to), unit, range))),
-      ]),
-    );
+    const stats: Record<string, unknown> = {};
+    for (const [name, range] of Object.entries(ranges)) {
+      const inRange = await repository.finishedBetween(range.from, range.to);
+      stats[name] = normalize(withoutIds(calculateStats(inRange, unit, range)));
+    }
     expect(stats).toMatchSnapshot();
   });
 
