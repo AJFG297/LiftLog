@@ -1,4 +1,5 @@
-import { goToRoutinesActions, routinesHref } from '@/components/smart/routines-href';
+import { routinesHref } from '@/components/smart/routines-href';
+import { goToRoutinesActions } from '@/models/home/go-to-routines';
 import { useNavigationContainerRef, useRouter } from 'expo-router';
 
 /**

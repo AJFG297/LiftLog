@@ -21,8 +21,8 @@ new routine's Describe it and Import open on top of what's there and Back return
 To show the Routines screen from anywhere, use `useGoToRoutines()` (`hooks/useGoToRoutines.ts`), not a link to
 `/routines`. From another tab that link pushes a second Routines screen whenever a program or routine is open in
 this tab. The hook closes what's open over the tabs, cuts the Routines stack back to the Routines screen and
-selects the tab (`goToRoutinesActions`). Saving an import, an AI plan or a shared program goes there, on the new
-program. From the top:
+selects the tab (`goToRoutinesActions` in `models/home/go-to-routines.ts`). Saving an import, an AI plan or a
+shared program goes there, on the new program. From the top:
 
 - **Title row** with **New routine** (+), which opens an empty routine at the end of the active program.
 - **Active program**, a dark card: its progress, a tile per routine showing **Next** or the day it was last
