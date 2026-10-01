@@ -216,7 +216,7 @@ function screenshotsLine(l, suffix) {
   return `Screenshots: downscale them (sips -Z 800), add them to the pr-assets branch under ${l.folder}/${suffix ? ` with the suffix ${suffix}` : ''} from a temporary worktree (git worktree add /tmp/pr-assets-${l.folder} origin/pr-assets; fetch and rebase before you push, since other lanes push there too; never force-push; remove the temporary worktree after). Embed them in the PR body with <img src="https://raw.githubusercontent.com/AJFG297/LiftLog/<pr-assets commit SHA>/${l.folder}/<file>.png" width="200"> in before and after tables, light and dark.`
 }
 
-function livePrompt(l, b, head, apkPath, notes) {
+function livePrompt(l, b, head, apkPath) {
   return `${COMMON(l)}
 
 You run the one live proof for ${l.id} (${b.prUrl}) at ${head}, which code review has already cleared. Work only in the worktree ${b.worktree}.
@@ -227,9 +227,7 @@ ${l.ui ? `Before shots: git checkout --detach origin/${l.base}, restart, confirm
 Scenarios:
 ${l.live}
 ${screenshotsLine(l, '')}
-Update the PR body with gh pr edit --body-file: replace "Live proof follows after review." under ## Verification with each scenario's result, and add these review notes and your own notes under ## Open decisions:
-${notes.length ? notes.map((n) => `- ${n}`).join('\n') : '(no review notes)'}
-Return the structured result.`
+Update the PR body with gh pr edit --body-file: replace "Live proof follows after review." under ## Verification with each scenario's result, and add your own notes under ## Open decisions, keeping what is already there. Return the structured result.`
 }
 
 function retestPrompt(l, b, head, apkPath, failed, prevHead) {
@@ -242,7 +240,24 @@ ${l.fixture ? `Seed with verify.sh seed ${l.fixture} in place of ready.yaml, the
 Re-run only these scenarios, by replaying their saved flows with verify.sh flows <file>..., seeding again before a flow whose starting state an earlier one changed. Edit a flow only where the fix changed what the user sees, and say what you changed:
 ${failed.map((s) => `- ${s.name} (flow: ${s.flow || 'none saved; write one'}). Last time: ${s.evidence}`).join('\n')}
 Return only these scenarios.
-${screenshotsLine(l, `-r${prevHead.slice(0, 7)}`)} Replace only the after images for these scenarios and keep the before images already in the PR. Update ## Verification to say which scenarios were re-run at ${head}. Return the structured result.`
+${screenshotsLine(l, `-r${prevHead.slice(0, 7)}`)} Replace only the after images for these scenarios and keep the before images already in the PR. Update ## Verification to say which scenarios were re-run at ${head}, and add your own notes under ## Open decisions, keeping what is already there. Return the structured result.`
+}
+
+// Review notes and nits never block (PROCESS.md, "What blocks"), but they belong in the PR, whether or not
+// a live run follows, so they are written there as soon as each review loop ends.
+function notesPrompt(l, b, notes) {
+  return `${COMMON(l)}
+
+Record the non-blocking review notes for ${l.id} in its PR, ${b.prUrl}. Edit only the PR body: no code, no commits, no pushes. Read it with gh pr view ${b.prUrl} --json body, add each note below as a bullet under ## Open decisions (add that section before ## Blast Radius if it is missing), skip a note the body already covers, leave everything else unchanged, and write it back with gh pr edit ${b.prUrl} --body-file. Notes:
+${notes.map((n) => `- ${n}`).join('\n')}`
+}
+
+const nitLine = (n) => `nit: ${n.summary}${n.file ? ` (${n.file}${n.line ? ':' + n.line : ''})` : ''}`
+const reviewNotes = (r) => [...new Set([...r.notes, ...r.nits.map(nitLine)])]
+
+async function recordNotes(l, b, notes, tag) {
+  if (!notes.length) return
+  await agent(notesPrompt(l, b, notes), { model: OPUS, effort: 'medium', label: `${l.id} notes ${tag}`, phase: 'Review' })
 }
 
 const seriousOf = (vs) => vs.flatMap((v) => v.findings).filter((f) => f.severity !== 'nit')
@@ -302,7 +317,8 @@ async function runLane(l) {
   log(`${l.id} PR opened: ${b.prUrl} at ${b.headSha}.`)
 
   let review = await reviewLoop(l, b, `origin/${l.base}`, b.headSha, '', MAX_REVIEW_ROUNDS, '')
-  const notes = [...b.openDecisions, ...review.notes, ...review.nits.map((n) => `nit: ${n.summary}${n.file ? ` (${n.file}${n.line ? ':' + n.line : ''})` : ''}`)]
+  await recordNotes(l, b, reviewNotes(review), 'review')
+  const notes = [...b.openDecisions, ...reviewNotes(review)]
   let head = review.head
   const live = { runs: [], scenarios: [], problems: [], notes: [], skipped: '' }
   let apkPath = null
@@ -321,7 +337,7 @@ async function runLane(l) {
   }
   if (l.live && !live.skipped) {
     log(`${l.id} waiting for an emulator slot at ${head}.`)
-    const first = await withSlot(() => agent(livePrompt(l, b, head, apkPath, review.notes), { model: OPUS, effort: 'high', label: `${l.id} live`, phase: 'Live', schema: LIVE_SCHEMA }))
+    const first = await withSlot(() => agent(livePrompt(l, b, head, apkPath), { model: OPUS, effort: 'high', label: `${l.id} live`, phase: 'Live', schema: LIVE_SCHEMA }))
     live.runs.push({ head, runId: first ? first.runId : '', slot: first ? first.slot : '' })
     live.scenarios = first ? first.scenarios : [notRun('live proof', 'the live agent returned nothing')]
     live.problems = first ? first.problems : []
@@ -338,7 +354,8 @@ async function runLane(l) {
       if (!fix) break
       if (fix.nativeChanges) b.nativeChanges = true
       const fixReview = await reviewLoop(l, b, head, fix.headSha, items, MAX_REVIEW_ROUNDS, `live r${round} `)
-      notes.push(...fixReview.notes)
+      await recordNotes(l, b, reviewNotes(fixReview), `live r${round}`)
+      notes.push(...reviewNotes(fixReview))
       const prevHead = head
       head = fixReview.head
       review = { ...review, head, clean: fixReview.clean, open: fixReview.open }
