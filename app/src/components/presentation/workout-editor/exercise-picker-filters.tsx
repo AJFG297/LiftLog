@@ -114,6 +114,7 @@ export function ExercisePickerChipRow<T extends string | undefined>({
       horizontal
       showsHorizontalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
+      accessibilityRole="radiogroup"
       accessibilityLabel={accessibilityLabel}
       style={{ marginHorizontal: -spacing.pageHorizontalMargin }}
       // Chips carry a 4pt touch inset of their own, so the row's padding is that much less than the page's.

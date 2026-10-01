@@ -35,6 +35,7 @@ export function ExerciseEquipmentChips({ label, noneLabel, options, value, onCha
     <View style={{ gap: spacing[1] }}>
       <FieldLabel>{label}</FieldLabel>
       <View
+        accessibilityRole="radiogroup"
         accessibilityLabel={label}
         style={{ flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -spacing[1] }}
       >
@@ -116,10 +117,7 @@ export function ExerciseCreateForm({
           <SurfaceText font="text-sm" style={{ color: tokens.muted }}>
             {musclesHint}
           </SurfaceText>
-          <View
-            accessibilityLabel={musclesLabel}
-            style={{ flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -spacing[1] }}
-          >
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -spacing[1] }}>
             {muscleOptions.map((option) => (
               <Chip
                 key={option.value}
