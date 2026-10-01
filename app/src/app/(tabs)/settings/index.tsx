@@ -15,6 +15,8 @@ import { openUrl } from '@/utils/open-url';
 import { copyLogs } from '@/store/app';
 import { useAppSelector } from '@/store';
 import { selectHasUnseenWhatsNew } from '@/store/settings';
+import { YouProfile } from '@/components/smart/you-profile';
+import { selectFollowRequestCount } from '@/store/feed';
 
 export default function SettingsPageIndex() {
   const { t } = useTranslate();
@@ -23,6 +25,8 @@ export default function SettingsPageIndex() {
   const [appInfoOpen, setAppInfoOpen] = useState(false);
   const dispatch = useDispatch();
   const hasUnseenWhatsNew = useAppSelector(selectHasUnseenWhatsNew);
+  const showFeed = useAppSelector((x) => x.settings.showFeed);
+  const followRequestCount = useAppSelector(selectFollowRequestCount);
 
   const doCopyLogs = () => {
     dispatch(copyLogs());
@@ -35,13 +39,10 @@ export default function SettingsPageIndex() {
   const externalLink = <AppIcon source="openInBrowser" size={20} />;
 
   return (
-    <SettingsPage title={t('settings.settings.title')}>
+    <SettingsPage title={t('tabs.you.label')}>
+      <YouProfile />
+
       <SegmentedGroup>
-        <SegmentedListLink
-          label={t('plan.manage.title')}
-          icon={'assignment'}
-          onPress={() => push('/settings/program-list')}
-        />
         <SegmentedListLink
           label={t('exercise.manage.button')}
           icon={'directionsRun'}
@@ -78,6 +79,24 @@ export default function SettingsPageIndex() {
           onPress={() => push('/settings/backup-and-restore')}
         />
       </SegmentedGroup>
+
+      {showFeed ? (
+        <SegmentedGroup>
+          <SegmentedListLink
+            testID="you-feed"
+            label={t('feed.feed.title')}
+            supportingText={
+              followRequestCount
+                ? followRequestCount === 1
+                  ? t('you.feed.requests.one')
+                  : t('you.feed.requests.other', { count: followRequestCount.toString() })
+                : undefined
+            }
+            icon={'forum'}
+            onPress={() => push('/feed')}
+          />
+        </SegmentedGroup>
+      ) : undefined}
 
       <SegmentedGroup>
         <SegmentListFormElement

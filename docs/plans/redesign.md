@@ -120,6 +120,9 @@ tabular figures where a number has letters in it. Type sizes follow the existing
 - `stats/` becomes Progress.
 - Program management moves from `settings/program-list` and `manage-workouts` into Routines.
 - Settings and the feed move under You. The feed still only shows when `showFeed` is on.
+- Built in PM-24 (see [Home.md](../Home.md)). The route folders keep their names: `history/` moved inside
+  `(session)/`, Routines is a new `routines/` folder, and the feed left the tabs for the root stack, so
+  every URL still resolves.
 
 **D5. Rest.**
 

@@ -1,23 +1,29 @@
 # History
 
-The History tab shows a training streak card, a month calendar shaded by volume, and the sessions for the selected
-day or month. From a past session a user can edit it (including its date), delete it after confirming, share it, or
+Home shows the last 7 or 30 days: a summary card over a week strip or a calendar in routine colours, and a card
+per workout (rest days as thin rows in the 7-day view). Home → `All history` opens the full list: a training streak
+card, a month calendar shaded by volume, and the sessions for the selected day or month. From a past session a user can edit it (including its date), delete it after confirming, share it, or
 start it again as a new workout, and add a workout on a day that has none.
 
 ## Sub-features
+
+- `home-range` switches Home between `Last 7 days` and `Last 30 days` (`home-range-7` / `home-range-30`); a
+  `home-history-card` opens that workout.
 
 - `history-streak` shows `N week streak` and training days in the last 7.
 - `history-calendar` navigates months (`calendar-nav-previous-month` / `calendar-nav-next-month`) and selects a day.
 - `history-summary` lists each session's exercises as `reps @ weight` lines.
 - `history-edit` opens a past session in the editor; `session-date-input` changes its date.
 - `history-delete` removes a session after `Delete Workout?`.
-- `history-restart` starts a past session again (`Start this workout`), replacing any in-progress one after confirm.
+- `history-restart` starts a past session again (`Start this workout`), replacing any in-progress one after
+  `Replace current workout?`.
 - `history-add-on-day` adds a workout on an empty day (`history-add-workout-on-day`).
 
 ## How to get to it (user POV)
 
-- Bottom tab `History`.
-- Finishing a workout leads there naturally; see [Workout session](./workout-session.md).
+- Home tab, below the Up next card.
+- Home → `All history` (`home-all-history`) for the streak card, calendar and summaries.
+- Finishing a workout lands it on both; see [Workout session](./workout-session.md).
 
 ## Driving it with Maestro
 
@@ -26,7 +32,9 @@ Preconditions:
 - Baseline from the [index](./README.md), plus at least one finished session. If
   `verify.sh db "select count(*) from workout where active=0;"` is 0, run the workout-session flow first.
 
-- **Open.** `tapOn: 'History'` → `assertVisible: {id: 'session-summary-title'}` and `assertVisible: '.*week streak'`.
+- **Home range.** `tapOn: 'Home'` → `assertVisible: {id: 'history-week-strip'}`; `tapOn: {id: 'home-range-30'}` →
+  `assertVisible: {id: 'history-month-grid'}`.
+- **Open.** `tapOn: 'Home'`, `scrollUntilVisible: {element: {id: 'home-all-history'}}`, `tapOn: 'All history'` → `assertVisible: {id: 'session-summary-title'}` and `assertVisible: '.*week streak'`.
 - **Summary line.** `scrollUntilVisible: {element: {text: '.*7\.5kg'}, direction: DOWN}` for the session logged by
   `completing-a-session.yaml`.
 - **Calendar.** `tapOn: {id: 'calendar-nav-previous-month'}` → a month with no sessions shows

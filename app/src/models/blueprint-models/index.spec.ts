@@ -9,7 +9,7 @@ import {
   SessionBlueprint,
   normalizeExerciseName,
   progressionEquals,
-  RepsConfig,
+  WeightedExerciseBlueprintInit,
   WeightedExerciseBlueprint,
   cardioTargetEquals,
   formatPlannedSets,
@@ -182,28 +182,24 @@ describe('blueprint models', () => {
   // ---------------------------------------------------------------------------
 
   describe('progressionKey', () => {
-    it('weighted exercise key encodes sets and repsPerSet', () => {
+    it('keys a weighted exercise on the exercise alone', () => {
       const blueprint = WeightedExerciseBlueprint.empty().with({
         name: 'Squat',
         exerciseId: 'Squat',
         sets: 4,
         repsConfig: { type: 'fixed', reps: 8 },
       });
-      expect(blueprint.progressionKey()).toBe('Squat_WeightedExerciseBlueprint_4_8');
+      expect(blueprint.progressionKey()).toBe('Squat_WeightedExerciseBlueprint');
     });
 
-    it('two weighted blueprints with same name but different sets produce different keys', () => {
+    it('two weighted blueprints of one exercise with different set counts share a key', () => {
       const a = WeightedExerciseBlueprint.empty().with({
         name: 'Press',
         sets: 3,
         repsConfig: { type: 'fixed', reps: 10 },
       });
-      const b = WeightedExerciseBlueprint.empty().with({
-        name: 'Press',
-        sets: 5,
-        repsConfig: { type: 'fixed', reps: 10 },
-      });
-      expect(a.progressionKey()).not.toBe(b.progressionKey());
+      const b = a.with({ sets: 5 });
+      expect(a.progressionKey()).toBe(b.progressionKey());
     });
 
     it('cardio exercise key encodes the target type of the first set', () => {
@@ -229,128 +225,51 @@ describe('blueprint models', () => {
   // ---------------------------------------------------------------------------
 
   describe('progressionKey - exact strings', () => {
-    const cases: [label: string, config: RepsConfig, sets: number, key: string][] = [
-      ['fixed', { type: 'fixed', reps: 5 }, 3, 'Squat_WeightedExerciseBlueprint_3_5'],
-      ['range', { type: 'range', min: 8, max: 12 }, 4, 'Squat_WeightedExerciseBlueprint_4_8-12'],
-      [
-        'uniform perSet',
-        {
-          type: 'perSet',
-          targets: [
-            { min: 5, max: 5 },
-            { min: 5, max: 5 },
-            { min: 5, max: 5 },
-          ],
-        },
-        3,
-        'Squat_WeightedExerciseBlueprint_3_5',
-      ],
+    const cases: [label: string, init: WeightedExerciseBlueprintInit][] = [
+      ['fixed', { sets: 3, repsConfig: { type: 'fixed', reps: 5 } }],
+      ['range', { sets: 4, repsConfig: { type: 'range', min: 8, max: 12 } }],
       [
         'non-uniform perSet',
         {
-          type: 'perSet',
-          targets: [
-            { min: 12, max: 12 },
-            { min: 10, max: 10 },
-            { min: 8, max: 8 },
-          ],
+          sets: 3,
+          repsConfig: {
+            type: 'perSet',
+            targets: [
+              { min: 12, max: 12 },
+              { min: 10, max: 10 },
+              { min: 8, max: 8 },
+            ],
+          },
         },
-        3,
-        'Squat_WeightedExerciseBlueprint_3_12,10,8',
       ],
+      ['no load', { sets: 3, resistance: 'none' }],
       [
-        'perSet with a band',
+        'a rule that moves reps',
         {
-          type: 'perSet',
-          targets: [
-            { min: 8, max: 12 },
-            { min: 6, max: 10 },
+          sets: 3,
+          progression: [
+            ProgressionRule.of({ axis: 'reps', step: bn(1), ceiling: bn(12), onCeiling: 'reset' }),
+            ProgressionRule.load(bn(2.5)),
           ],
         },
-        2,
-        'Squat_WeightedExerciseBlueprint_2_8-12,6-10',
+      ],
+      ['only a load rule', { sets: 3, progression: [ProgressionRule.load(bn(2.5))] }],
+      ['warm-ups planned', { sets: 3, warmupSets: [{ load: { type: 'percent', percent: 50 }, reps: 5 }] }],
+      [
+        'a drop set planned',
+        {
+          plannedSets: [
+            { reps: { min: 8, max: 8 }, kind: 'working' },
+            { reps: { min: 12, max: 12 }, kind: 'drop' },
+          ],
+        },
       ],
     ];
 
-    it.each(cases)('%s', (_label, repsConfig, sets, key) => {
-      expect(
-        WeightedExerciseBlueprint.empty()
-          .with({ name: 'Squat', exerciseId: 'Squat', sets, repsConfig })
-          .progressionKey(),
-      ).toBe(key);
-    });
-
-    it('bands in a perSet key use the same separator as a range key', () => {
-      const range = WeightedExerciseBlueprint.empty().with({
-        name: 'Squat',
-        sets: 1,
-        repsConfig: { type: 'range', min: 8, max: 12 },
-      });
-      const perSet = range.with({ repsConfig: { type: 'perSet', targets: [{ min: 8, max: 12 }] } });
-      expect(perSet.progressionKey()).toBe(range.progressionKey());
-    });
-
-    it('a uniform perSet and the equivalent fixed config are one ladder', () => {
-      // They are the same prescription authored two ways, so they progress together.
-      const fixed = WeightedExerciseBlueprint.empty().with({
-        name: 'Squat',
-        sets: 3,
-        repsConfig: { type: 'fixed', reps: 5 },
-      });
-      const perSet = fixed.with({
-        repsConfig: {
-          type: 'perSet',
-          targets: [
-            { min: 5, max: 5 },
-            { min: 5, max: 5 },
-            { min: 5, max: 5 },
-          ],
-        },
-      });
-      expect(perSet.progressionKey()).toBe(fixed.progressionKey());
-    });
-
-    it('an exercise that tracks no load keys without its rep scheme', () => {
-      const crunch = WeightedExerciseBlueprint.of({
-        name: 'Crunch',
-        exerciseId: 'Crunch',
-        sets: 3,
-        resistance: 'none',
-      });
-      expect(crunch.progressionKey()).toBe('Crunch_WeightedExerciseBlueprint_3');
-      expect(crunch.with({ repsConfig: { type: 'fixed', reps: 25 } }).progressionKey()).toBe(crunch.progressionKey());
-      expect(crunch.withSets(4).progressionKey()).not.toBe(crunch.progressionKey());
-    });
-
-    it('a loaded exercise whose reps a rule moves also keys without its rep scheme', () => {
-      const doubleProgression = WeightedExerciseBlueprint.of({
-        name: 'Chin Up',
-        exerciseId: 'Chin Up',
-        sets: 3,
-        repsConfig: { type: 'fixed', reps: 8 },
-        progression: [
-          ProgressionRule.of({ axis: 'reps', step: bn(1), ceiling: bn(12), onCeiling: 'reset' }),
-          ProgressionRule.load(bn(2.5)),
-        ],
-      });
-
-      expect(doubleProgression.progressionKey()).toBe('Chin Up_WeightedExerciseBlueprint_3');
-      // Raising the plan's starting rung must not strand a ladder that has already climbed past it.
-      expect(doubleProgression.with({ repsConfig: { type: 'fixed', reps: 10 } }).progressionKey()).toBe(
-        doubleProgression.progressionKey(),
+    it.each(cases)('%s', (_label, init) => {
+      expect(WeightedExerciseBlueprint.of({ name: 'Squat', exerciseId: 'Squat', ...init }).progressionKey()).toBe(
+        'Squat_WeightedExerciseBlueprint',
       );
-    });
-
-    it('a loaded exercise with only a load rule still keys on its rep scheme', () => {
-      const linear = WeightedExerciseBlueprint.of({
-        name: 'Squat',
-        exerciseId: 'Squat',
-        sets: 3,
-        repsConfig: { type: 'fixed', reps: 5 },
-        progression: [ProgressionRule.load(bn(2.5))],
-      });
-
-      expect(linear.progressionKey()).toBe('Squat_WeightedExerciseBlueprint_3_5');
     });
   });
 
@@ -386,9 +305,9 @@ describe('blueprint models', () => {
     });
     const threeByEight = fiveByFive.with({ sets: 3, repsConfig: { type: 'fixed', reps: 8 } });
 
-    it('the same movement under two rep schemes is one movement but two progressions', () => {
+    it('the same movement under two rep schemes is one movement and one progression', () => {
       expect(fiveByFive.movementKey()).toBe(threeByEight.movementKey());
-      expect(fiveByFive.progressionKey()).not.toBe(threeByEight.progressionKey());
+      expect(fiveByFive.progressionKey()).toBe(threeByEight.progressionKey());
     });
 
     it('an unlinked name spelled differently is the same exercise, so one movement and one progression', () => {

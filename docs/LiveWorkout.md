@@ -6,7 +6,8 @@ and the number pad, and PM-30 moved rest into the header.
 
 ## What is on screen
 
-- **Header** (`LiveWorkoutHeader`): minimise (back to Home, the workout keeps running), the workout name
+- **Header** (`LiveWorkoutHeader`): minimise (back to Home; the workout keeps running, and the
+  [workout-in-progress bar](./Home.md#the-workout-in-progress-bar) brings it back from any tab), the workout name
   (tap it to edit the name and notes), the elapsed time since the first set, the rest pill, and Finish.
   While resting, a thin line along the header's bottom edge shows the share of the rest still to go.
 - **Exercise strip** (`ExerciseStrip`): one tile per exercise with its label, name, sets done out of
@@ -81,20 +82,21 @@ Nothing on the screen is stored except which exercise is in focus. The rest come
   the notification shows. Otherwise the member with the fewest sets logged goes next.
 - **Focus** is `app.liveWorkoutFocus` (`{ sessionId, exerciseIndex }`) in the app slice, read through
   `useLiveWorkoutFocus`. It lives in the store so it survives minimising and so the sheet, a route of its
-  own, can move it. When nothing is stored the screen opens on the page of the next set and pins it, so
+  own, can move it. An effect mirrors it to the `LiveWorkoutFocus` key and puts it back once workouts load
+  (`store/app/live-workout-focus-storage.ts`), so a relaunch reopens the page left open. When nothing is stored the screen opens on the page of the next set and pins it, so
   finishing a page never moves the screen before the user taps Up next.
 - **Reordering** is `withGroupMoved`: whole groups move, so a superset travels as one unit, and the
   session's exercises and blueprint move together. A `supersetWithNext` left on the last exercise is
   cleared once something follows it, because it would join that exercise.
 - **Today's target** is `todaysTarget` in `models/session-models/todays-target.ts`. Progression runs once,
   at session start, and keeps no record of what it did, so the card compares today's top set with the
-  performance it was carried from (`carriedFrom`: the latest with the key the routine gives the exercise,
-  as the session was built, so a set added or moved during the workout doesn't lose it). A routine can
-  plan a movement twice, so `plannedExerciseFor` pairs each with the routine exercise at the same place
-  among that movement's. The comparison reads: heavier, lighter, more reps, the same after a
-  success, or the same after a miss (naming the set that fell short). With nothing to compare against it
-  says it's the first time, or, when the movement was done with other sets or reps, that the scheme is new,
-  which is when Previous shows the latest performance instead. See [Progression.md](./Progression.md).
+  best set of the performance it was carried from (`carriedFrom`: the latest of the lineage the routine
+  gives the exercise, whatever its set count). A routine can plan a movement twice, so
+  `plannedExerciseFor` pairs each with the routine exercise at the same place among that movement's, and
+  `plannedLineageFor` gives each place its own lineage (see [Progression.md](./Progression.md)). The
+  comparison reads: heavier, lighter, more reps, the same after a success, or the same after a miss
+  (naming the set that fell short). With nothing to compare against it says it's the first time, or,
+  when last time had only drop or myo sets, that the scheme is new. See [Progression.md](./Progression.md).
 
 The workout worker's notification reads `Session.nextExercise` and the rest window above (see
 [WorkoutWorker.md](./WorkoutWorker.md)).
@@ -104,7 +106,7 @@ The workout worker's notification reads `Session.nextExercise` and the rest wind
 A weighted exercise's sets are a table (`SetTable` in `presentation/live-workout/`, wired up by
 `LiveSetTable`): the set badge, Previous, the weight (`kg`, `kg each` for dumbbells, `lb` in imperial),
 the reps, and a check. Warm-ups come first, then the working list. Previous is the same set of the
-performance Today's target compares against, or of the latest one when the set scheme changed.
+performance Today's target compares against, by position, so a set past last time's count has none.
 
 - **Placeholders.** An untouched weight and reps show today's target, `PotentialSet.weight` and the top of
   `PotentialSet.target`, in the `placeholder` grey. Typed or logged values are ink and bold. The check logs

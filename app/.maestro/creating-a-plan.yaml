@@ -1,13 +1,12 @@
 appId: com.ajfg297.liftlog
 ---
-# Settings tab -> Manage plans -> Add plan (opens straight into the new plan)
+# Routines tab -> Add plan (opens straight into the new plan)
 - launchApp
 # A cold dev-client launch can take up to a minute to fetch the bundle from Metro
 - extendedWaitUntil:
-    visible: 'Workout'
+    visible: 'Home'
     timeout: 60000
-- tapOn: 'Settings'
-- tapOn: 'Manage plans'
+- tapOn: 'Routines'
 - tapOn: 'Add plan'
 
 # Add a workout, which opens into the workout editor

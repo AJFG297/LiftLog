@@ -1,5 +1,5 @@
 import { RecordedExercise, Session } from '@/models/session-models';
-import { MovementKey, ProgressionKey } from '@/models/blueprint-models';
+import { lineageKeys, MovementKey, ProgressionKey } from '@/models/blueprint-models';
 import { LocalDate, OffsetDateTime, YearMonth, ZoneId } from '@js-joda/core';
 import { createAction, createSelector, createSlice, PayloadAction, WritableDraft } from '@reduxjs/toolkit';
 import { shallowEqual } from 'react-redux';
@@ -13,6 +13,7 @@ interface StoredSessionState {
   sessions: Record<string, Session>;
   // The workout in progress. It lives in `sessions` like any other; this only says which one it is.
   activeSessionId: string | undefined;
+  // The latest performance of each lineage, keyed by `lineageKeys`, which is what carry-over reads.
   latestExercises: Record<ProgressionKey, RecordedExercise | undefined>;
   // Read-only catalog resolved for the current locale, keyed by the exercise's English name.
   builtInExercises: Record<string, ExerciseDescriptor>;
@@ -115,7 +116,7 @@ const storedSessionsSlice = createSlice({
 
       if (!deletedSession) return;
 
-      recomputeLatestExercises(state, new Set(deletedSession.recordedExercises.map((e) => e.progressionKey())));
+      recomputeLatestExercises(state, new Set(lineageKeys(deletedSession.recordedExercises)));
       if (state.earliestSession?.id === deletedSession.id) {
         recomputeEarliestSession(state);
       }
@@ -206,8 +207,7 @@ function storeSession(state: WritableDraft<StoredSessionState>, session: Session
   // Only keys whose cached latest came from the replaced session can go stale. Logging a set moves the
   // latest time forward, so the common case swaps in the new exercise without scanning the history.
   const staleKeys = new Set<ProgressionKey>();
-  for (const exercise of previous.recordedExercises) {
-    const key = exercise.progressionKey();
+  for (const [key, exercise] of lineagesOf(previous)) {
     const cached = state.latestExercises[key] as RecordedExercise | undefined;
     if (cached !== exercise) {
       continue;
@@ -232,16 +232,24 @@ function storeSession(state: WritableDraft<StoredSessionState>, session: Session
 }
 
 function latestWithKey(session: Session, key: ProgressionKey): RecordedExercise | undefined {
-  let latest: RecordedExercise | undefined;
-  for (const exercise of session.recordedExercises) {
-    if (!exercise.latestTime || exercise.progressionKey() !== key) {
-      continue;
-    }
-    if (!latest?.latestTime || latest.latestTime.isBefore(exercise.latestTime)) {
-      latest = exercise;
+  const exercise = lineagesOf(session).find(([lineage]) => lineage === key)?.[1];
+  return exercise?.latestTime ? exercise : undefined;
+}
+
+/** Each of `session`'s exercises with its lineage (see {@link lineageKeys}). */
+function lineagesOf(session: Session): [ProgressionKey, RecordedExercise][] {
+  const keys = lineageKeys(session.recordedExercises);
+  return session.recordedExercises.map((exercise, index) => [keys[index]!, exercise]);
+}
+
+/** Moves `latest` forward to `session`'s performances that came after what it holds. */
+function recordLatest(latest: Record<ProgressionKey, RecordedExercise | undefined>, session: Session) {
+  for (const [key, exercise] of lineagesOf(session)) {
+    const current = latest[key];
+    if (exercise.latestTime && (!current?.latestTime || current.latestTime.isBefore(exercise.latestTime))) {
+      latest[key] = exercise;
     }
   }
-  return latest;
 }
 
 function recomputeLatestExercises(state: WritableDraft<StoredSessionState>, keys: Set<ProgressionKey>) {
@@ -250,8 +258,7 @@ function recomputeLatestExercises(state: WritableDraft<StoredSessionState>, keys
   }
   keys.forEach((key) => delete state.latestExercises[key]);
   for (const session of Object.values(state.sessions) as Session[]) {
-    for (const exercise of session.recordedExercises) {
-      const key = exercise.progressionKey();
+    for (const [key, exercise] of lineagesOf(session)) {
       if (!exercise.latestTime || !keys.has(key)) {
         continue;
       }
@@ -276,16 +283,7 @@ function updateDerivatives(state: WritableDraft<StoredSessionState>, session: Se
   if (!state.earliestSession || state.earliestSession.date.isAfter(session.date)) {
     state.earliestSession = session;
   }
-  session.recordedExercises.forEach((exercise) => {
-    if (!exercise.latestTime) {
-      return;
-    }
-    const key = exercise.progressionKey();
-    const latestExercise = state.latestExercises[key];
-    if (!latestExercise?.latestTime || latestExercise.latestTime.isBefore(exercise.latestTime)) {
-      state.latestExercises[key] = exercise;
-    }
-  });
+  recordLatest(state.latestExercises as Record<ProgressionKey, RecordedExercise | undefined>, session);
 }
 
 export const selectSessionsBy = createSelector(
@@ -364,6 +362,19 @@ const selectLatestOrderedRecordedExercises = createSelector(
 );
 
 const noRecordedExercises: RecordedExercise[] = [];
+
+/**
+ * The latest performance of each lineage before the session identified by `excludeSessionId`, keyed like
+ * `latestExercises`: what that session's exercises carried on from.
+ */
+export const selectPreviousLineages = createSelector(
+  [selectSessionsExcluding],
+  (sessions): Record<ProgressionKey, RecordedExercise | undefined> => {
+    const latest: Record<ProgressionKey, RecordedExercise | undefined> = {};
+    sessions.forEach((session) => recordLatest(latest, session));
+    return latest;
+  },
+);
 
 /**
  * Previous performances of each movement, for the session identified by `excludeSessionId` - which is
