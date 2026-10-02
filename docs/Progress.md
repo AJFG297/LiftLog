@@ -178,7 +178,8 @@ none the first time an exercise is done.
 - **Filter**: `RecordFilter` is `'all'` or a record kind (`heaviestWeight`, `estimatedOneRepMax`), shown as All ·
   Heaviest · Est. 1RM. The control is hidden while there are no records at all.
 - **Count**: "12 records since July" counts what the filter lets through, since the month the history starts
-  (`firstDate`), with the year once that month is in an earlier year.
+  (`firstDate`, the first started workout, so a planned workout where nothing was logged doesn't count), with
+  the year once that month is in an earlier year.
 - **Months**: an ordered list of `{ month: YearMonth, showYear, rows }`, newest first. Within a month the newest
   workout comes first, and a workout's records keep exercise order.
 - **A row**: the date, the exercise (under the name it was last logged with), the kind and value ("Heaviest ·

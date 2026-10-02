@@ -32,7 +32,7 @@ function session(id: string, date: LocalDate, exercises: RecordedWeightedExercis
   return new Session(id, new SessionBlueprint('Day', [], ''), exercises, date, undefined, undefined);
 }
 
-const history = buildProgressHistory([
+const sessions = [
   // The first time each is done: no records.
   session('s1', day(7, 1), [lift(bench, kg(80), 8), lift(squat, kg(100), 5)]),
   // Bench: 85 kg beats 80 kg. Squat: no heavier, but 100 × 8 beats the 100 × 5 estimate.
@@ -40,7 +40,8 @@ const history = buildProgressHistory([
   // Logged in pounds against a best in kilograms.
   session('s3', day(8, 3), [lift(bench, lbs(225), 1)]),
   session('s4', day(9, 28), [lift(squat, kg(105), 8), lift(bench, kg(80), 10)]),
-]);
+];
+const history = buildProgressHistory(sessions);
 
 // "102 kilograms": the value exactly as stored, so the rounding shows.
 const text = (weight: Weight) => `${weight.value.toString()} ${weight.unit}`;
@@ -188,6 +189,13 @@ describe('recordsListOf', () => {
     expect(now.sinceShowsYear).toBe(false);
     expect(nextYear.sinceShowsYear).toBe(true);
     expect(nextYear.months.map((month) => month.showYear)).toEqual([true, true, true]);
+  });
+
+  it('counts since the first started workout, not an earlier one where nothing was logged', () => {
+    const plannedOnly = new RecordedWeightedExercise(makeWeightedBlueprint({ name: 'Deadlift' }), [], undefined);
+    const withEmptyJune = buildProgressHistory([session('s0', day(6, 20), [plannedOnly]), ...sessions]);
+
+    expect(recordsListOf(withEmptyJune, today, 'all', 'kilograms').since).toEqual(YearMonth.of(2026, 7));
   });
 
   it('opens the exercise each record belongs to', () => {
