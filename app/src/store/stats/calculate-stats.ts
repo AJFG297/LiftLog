@@ -314,9 +314,9 @@ function toStatisticOverTime<T>(unsortedStats: TimeTrackedStatistic<T>[], ops: Q
 }
 
 /**
- * Which axis an exercise's progress is read on. Externally loaded, weight style exercises (squats)
- * return 'load'
+ * Which axis an exercise's progress is read on: reps for a movement that tracks no load (a crunch), load
+ * for everything else, bodyweight movements included since their load folds in the bodyweight.
  */
-function primaryAxisFor(blueprint: ExerciseBlueprint): StatAxis {
+export function primaryAxisFor(blueprint: ExerciseBlueprint): StatAxis {
   return blueprint.type === 'WeightedExerciseBlueprint' && blueprint.resistance === 'none' ? 'reps' : 'load';
 }
