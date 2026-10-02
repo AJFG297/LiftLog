@@ -73,17 +73,35 @@ describe('mostTrainedLifts', () => {
     });
   });
 
-  it('converts to the unit the user lifts in', () => {
-    const bench = mostTrainedLifts(history, since, 'pounds')[0]!;
+  it('converts to the unit the user lifts in, to the nearest half, with the change as shown', () => {
+    // 107.5 kg is 236.997 lbs and 100 kg is 220.462 lbs: 237 against 220.5.
+    expect(mostTrainedLifts(history, since, 'pounds')[0]).toMatchObject({ latest: 237, change: 16.5 });
+  });
 
-    expect(bench.latest).toBeCloseTo(237.0, 1);
-    expect(bench.change).toBeCloseTo(16.53, 2);
+  it('shows an estimate to the nearest half, and the change between the halves', () => {
+    const rough = historyOf({
+      exercises: [exerciseHistory('Bench', [point(day(9, 1), 3, kg(101.8)), point(day(9, 8), 3, kg(104.3))])],
+    });
+
+    expect(mostTrainedLifts(rough, since, 'kilograms')[0]).toMatchObject({ latest: 104.5, change: 2.5 });
+  });
+
+  it('shows a tiny change to a tenth rather than as none', () => {
+    const tiny = historyOf({
+      exercises: [exerciseHistory('Bench', [point(day(9, 1), 3, kg(100.1)), point(day(9, 8), 3, kg(100.2))])],
+    });
+
+    expect(mostTrainedLifts(tiny, since, 'kilograms')[0]).toMatchObject({ latest: 100.2, change: 0.1 });
   });
 
   it('has no change for a lift done once in the range', () => {
-    const once = historyOf({ exercises: [exerciseHistory('Curl', [point(day(9, 5), 3, kg(40))])] });
+    const once = historyOf({ exercises: [exerciseHistory('Curl', [point(day(9, 5), 3, kg(40.3))])] });
 
-    expect(mostTrainedLifts(once, since, 'kilograms')[0]).toMatchObject({ sessions: 1, latest: 40, change: undefined });
+    expect(mostTrainedLifts(once, since, 'kilograms')[0]).toMatchObject({
+      sessions: 1,
+      latest: 40.5,
+      change: undefined,
+    });
   });
 });
 
@@ -137,11 +155,12 @@ describe('recentRecords', () => {
         date: day(9, 15),
         name: 'Bench',
         kind: 'estimatedOneRepMax',
-        value: 97.3,
+        // 97.3 against 95.1, each to the nearest half.
+        value: 97.5,
         weight: 80,
         reps: 7,
-        previous: 95.1,
-        gain: 2.2,
+        previous: 95,
+        gain: 2.5,
       },
       {
         key: bench.key,
@@ -157,6 +176,13 @@ describe('recentRecords', () => {
         gain: 2.5,
       },
     ]);
+  });
+
+  it('converts a weight lifted in kilograms to the nearest half pound, and gains as shown', () => {
+    const converted = historyOf({ exercises: [bench], records: [record(1, kg(62.5), kg(60))] });
+
+    // 62.5 kg is 137.79 lbs and 60 kg is 132.28 lbs.
+    expect(recentRecords(converted, 'pounds')[0]).toMatchObject({ value: 138, weight: 138, previous: 132.5, gain: 5.5 });
   });
 
   it('is empty before any record', () => {

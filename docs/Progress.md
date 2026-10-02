@@ -86,6 +86,22 @@ file per part, and the components in `components/presentation/stats/progress/` o
 | `progress-strength.ts` | `mostTrainedLifts` and `recentRecords`. |
 | `progress-training.ts` | `buildWeeklyTable`, then `trainingView` over it. |
 | `progress-body.ts` | `weighInsOf` and `bodyView`. |
+| `progress-amounts.ts` | How a weight reads: `shownWeight` and `shownChange` (below). |
+
+### How amounts read
+
+`store/stats/progress-amounts.ts` is the one place a weight on these screens is rounded, so the same record
+reads the same on Strength and on Records:
+
+- An estimated 1RM (`'estimate'`) shows in the user's unit to the nearest half: "104.5 kg".
+- A weight that was on the bar (`'load'`) shows as lifted, to at most two places, in the unit it was lifted in.
+  Converted to the other unit, it shows to the nearest half too: 62.5 kg reads "138 lbs", not "137.79".
+- A gain or a change is always the difference of the two values as shown (`shownChange`), so a row adds up as
+  it reads. When the two would show alike although they differ, a real but tiny gain, both show to a tenth
+  instead and the gain reads "+0.1" rather than "+0".
+
+The view models hand the components amounts already rounded; the components only format them
+(`amountText`, `signedText`).
 
 ### Weeks and the range
 

@@ -8,7 +8,7 @@ import {
   useRowDivider,
   useToneColor,
 } from '@/components/presentation/stats/progress/progress-section';
-import { formatAmount, signedAmount } from '@/components/presentation/stats/progress/progress-format';
+import { amountText, signedText } from '@/components/presentation/stats/progress/progress-format';
 import { fontFamily, spacing, useAppTheme } from '@/hooks/useAppTheme';
 import { useFormatDate } from '@/hooks/useFormatDate';
 import type { LiftRow, RecentRecord } from '@/store/stats/progress-strength';
@@ -17,8 +17,6 @@ import { Pressable, Text, View } from 'react-native';
 
 const SPARKLINE_WIDTH = 64;
 const SPARKLINE_HEIGHT = 28;
-/** An estimated 1RM is a calculation, so a tenth is as fine as it gets. */
-const ONE_REP_MAX_DECIMALS = 1;
 
 interface StrengthSectionProps {
   lifts: readonly LiftRow[];
@@ -113,8 +111,8 @@ function LiftRowView({
       ? t('progress.tab.lifts.best_reps.one')
       : t('progress.tab.lifts.best_reps.other', { count: lift.sessions });
   const valueUnit = isLoad ? unit : t('progress.tab.lifts.reps.label');
-  const value = lift.latest === undefined ? '–' : formatAmount(lift.latest, isLoad ? ONE_REP_MAX_DECIMALS : 0);
-  const change = lift.change === undefined ? undefined : signedAmount(lift.change, isLoad ? ONE_REP_MAX_DECIMALS : 0);
+  const value = lift.latest === undefined ? '–' : amountText(lift.latest);
+  const change = lift.change === undefined ? undefined : signedText(lift.change);
   const changeText = change && (change.text ?? t('progress.tab.same.label'));
   const changeSpoken = change && (change.text ? `${change.text} ${valueUnit}` : changeText);
   return (
@@ -198,16 +196,15 @@ function RecordRowView({
   const formatDate = useFormatDate();
   const divider = useRowDivider();
   const heaviest = record.kind === 'heaviestWeight';
-  const decimals = heaviest ? 2 : ONE_REP_MAX_DECIMALS;
   const kind = heaviest ? t('progress.tab.records.heaviest.label') : t('progress.tab.records.one_rep_max.label');
-  const value = formatAmount(record.value, decimals);
-  const gain = signedAmount(record.gain, decimals);
+  const value = amountText(record.value);
+  const gain = signedText(record.gain);
   const weekday = formatDate(record.date, { weekday: 'short' });
   const fullDate = formatDate(record.date, { weekday: 'long', month: 'long', day: 'numeric' });
-  const weight = formatAmount(record.weight, 2);
+  const weight = amountText(record.weight);
   const set = `${weight} ${unit} × ${record.reps}`;
   const estimate = heaviest ? undefined : `${value} ${unit}`;
-  const was = t('progress.tab.records.was.label', { value: `${formatAmount(record.previous, decimals)} ${unit}` });
+  const was = t('progress.tab.records.was.label', { value: `${amountText(record.previous)} ${unit}` });
   const mono = { fontFamily: fontFamily.number, color: tokens.ink };
   return (
     <Pressable
