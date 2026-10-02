@@ -194,7 +194,8 @@ none the first time an exercise is done.
 
 An estimate's row also shows the set it comes from ("82.5 kg × 8 · was 102 kg"). The row is
 `RecordRow` (`components/presentation/stats/record-row.tsx`), which Strength's recent records draw too: there it
-`shows` the set after the kind and has no third line.
+`shows` the set after the kind and has no third line. Its gain badge ("+2.5 kg") is set in bold Geist Mono,
+unit included, as the board draws it: the one exception to keeping units in Geist ([Theming.md](./Theming.md#type)).
 
 ### All exercises
 
@@ -216,4 +217,7 @@ movement in `history.exercises`: only what the user has logged.
   difference). The change sets the colours: up is
   `positive` with an `accentInk` line, down `warmInk` for both, the same (or nothing to compare) muted with a
   `faint` line. Fewer than two sessions in the window shows a dash.
-- **Empty**: no match for the search, nothing under the chip, or nothing logged yet.
+- **Count**: "12 exercises, most recent first" ("best match first" during a search) and "Change over 12 weeks"
+  head the list. They stay when a search or chip matches nothing, and only go with nothing logged at all.
+- **Empty**: no match for the search, nothing under the chip, or nothing logged yet. A "same" change is a word,
+  so it stays in Geist while the numbers beside it are Geist Mono.

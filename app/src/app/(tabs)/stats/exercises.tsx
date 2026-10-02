@@ -83,43 +83,41 @@ export default function ExercisesScreen() {
             onSelect={setMuscle}
           />
         </View>
+        {history && list && history.exercises.size > 0 ? (
+          <View
+            style={{
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              alignItems: 'baseline',
+              gap: spacing[2],
+              paddingHorizontal: spacing[1],
+            }}
+          >
+            <SurfaceText style={{ flexShrink: 1, fontSize: 13, lineHeight: 18, color: tokens.muted }}>
+              {countText(t, list.rows.length, !!query.trim())}
+            </SurfaceText>
+            <SurfaceText style={{ flexShrink: 1, fontSize: 13, lineHeight: 18, color: tokens.muted }}>
+              {t('progress.exercises.change_heading.label', { weeks: TREND_WEEKS })}
+            </SurfaceText>
+          </View>
+        ) : null}
         {list && list.rows.length > 0 ? (
-          <>
-            <View
-              style={{
-                flexDirection: 'row',
-                justifyContent: 'space-between',
-                alignItems: 'baseline',
-                gap: spacing[2],
-                paddingHorizontal: spacing[1],
-              }}
-            >
-              <SurfaceText style={{ flexShrink: 1, fontSize: 13, lineHeight: 18, color: tokens.muted }}>
-                {list.rows.length === 1
-                  ? t('progress.exercises.count.one')
-                  : t('progress.exercises.count.other', { count: list.rows.length.toString() })}
-              </SurfaceText>
-              <SurfaceText style={{ flexShrink: 1, fontSize: 13, lineHeight: 18, color: tokens.muted }}>
-                {t('progress.exercises.change_heading.label', { weeks: TREND_WEEKS })}
-              </SurfaceText>
-            </View>
-            <ListCard>
-              {list.rows.map((row, index) => (
-                <ExerciseRow
-                  key={row.key}
-                  index={index}
-                  name={row.name}
-                  meta={`${lastDoneText(t, formatDate, row.lastDone, today)} · ${sessionsText(t, row.sessions)}`}
-                  trend={row.trend}
-                  tone={row.tone}
-                  value={row.current && { amount: amountOf(row.current), unit: unitOf(t, row.current) }}
-                  change={changeText(t, row)}
-                  accessibilityLabel={spokenExercise(t, formatDate, row, today)}
-                  onPress={() => openExerciseStats(row.exerciseId)}
-                />
-              ))}
-            </ListCard>
-          </>
+          <ListCard>
+            {list.rows.map((row, index) => (
+              <ExerciseRow
+                key={row.key}
+                index={index}
+                name={row.name}
+                meta={`${lastDoneText(t, formatDate, row.lastDone, today)} · ${sessionsText(t, row.sessions)}`}
+                trend={row.trend}
+                tone={row.tone}
+                value={row.current && { amount: amountOf(row.current), unit: unitOf(t, row.current) }}
+                change={changeText(t, row)}
+                accessibilityLabel={spokenExercise(t, formatDate, row, today)}
+                onPress={() => openExerciseStats(row.exerciseId)}
+              />
+            ))}
+          </ListCard>
         ) : null}
         {list && list.rows.length === 0 ? (
           <ListEmptyState
@@ -136,6 +134,18 @@ export default function ExercisesScreen() {
       </ScrollView>
     </SafeAreaView>
   );
+}
+
+/** "12 exercises, most recent first", or "best match first" while a search ranks them. */
+function countText(t: TranslateFn, count: number, searching: boolean): string {
+  if (searching) {
+    return count === 1
+      ? t('progress.exercises.count_search.one')
+      : t('progress.exercises.count_search.other', { count: count.toString() });
+  }
+  return count === 1
+    ? t('progress.exercises.count.one')
+    : t('progress.exercises.count.other', { count: count.toString() });
 }
 
 function lastDoneText(t: TranslateFn, formatDate: FormatDate, label: LastDoneLabel, today: LocalDate): string {

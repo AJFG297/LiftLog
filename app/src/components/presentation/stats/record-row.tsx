@@ -1,7 +1,6 @@
 import { PressableSurface } from '@/components/presentation/foundation/pressable-surface';
 import { SurfaceText } from '@/components/presentation/foundation/surface-text';
 import { amountText, signedText } from '@/components/presentation/stats/amount-format';
-import { AmountText } from '@/components/presentation/stats/amount-text';
 import { useRowDivider } from '@/components/presentation/stats/list-parts';
 import { numberStyle, useAppTheme } from '@/hooks/useAppTheme';
 import { shortFormatWeightUnit, Weight } from '@/models/weight';
@@ -88,12 +87,10 @@ export function RecordRow(props: RecordRowProps) {
           backgroundColor: tokens.accentSoft,
         }}
       >
-        <AmountText
-          amount={signedText(row.gain.value).text ?? amountText(row.gain.value)}
-          unit={unit}
-          style={{ fontSize: 12, lineHeight: 16, fontWeight: '600', color: tokens.accentSoftInk }}
-          unitStyle={{ fontWeight: '700' }}
-        />
+        {/* The board sets the whole badge, unit included, in bold Geist Mono, unlike other amounts. */}
+        <SurfaceText numeric weight="700" style={{ fontSize: 12, lineHeight: 16, color: tokens.accentSoftInk }}>
+          {`${signedText(row.gain.value).text ?? amountText(row.gain.value)} ${unit}`}
+        </SurfaceText>
       </View>
     </PressableSurface>
   );

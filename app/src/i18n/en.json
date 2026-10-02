@@ -844,6 +844,8 @@
   "progress.exercises.search.clear.button": "Clear search",
   "progress.exercises.count.one": "1 exercise, most recent first",
   "progress.exercises.count.other": "{count} exercises, most recent first",
+  "progress.exercises.count_search.one": "1 exercise, best match first",
+  "progress.exercises.count_search.other": "{count} exercises, best match first",
   "progress.exercises.change_heading.label": "Change over {weeks} weeks",
   "progress.exercises.last_done_today.label": "Today",
   "progress.exercises.last_done_yesterday.label": "Yesterday",
