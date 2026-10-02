@@ -182,7 +182,12 @@ describe('recentRecords', () => {
     const converted = historyOf({ exercises: [bench], records: [record(1, kg(62.5), kg(60))] });
 
     // 62.5 kg is 137.79 lbs and 60 kg is 132.28 lbs.
-    expect(recentRecords(converted, 'pounds')[0]).toMatchObject({ value: 138, weight: 138, previous: 132.5, gain: 5.5 });
+    expect(recentRecords(converted, 'pounds')[0]).toMatchObject({
+      value: 138,
+      weight: 138,
+      previous: 132.5,
+      gain: 5.5,
+    });
   });
 
   it('is empty before any record', () => {
