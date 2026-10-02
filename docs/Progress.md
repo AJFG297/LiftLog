@@ -16,7 +16,8 @@ then each screen.
   - `points`: one `ExercisePoint` per workout that started it, oldest first. A workout that logged the
     movement twice gives one point.
     - `oneRepMax`: the best Epley estimate over the sets that count towards records (working and failure),
-      with bodyweight folded in as records fold it. Undefined for a movement that tracks no load, and when
+      with bodyweight folded in as records fold it: the same scan as the record rules
+      (`bestOneRepMaxSet`). Undefined for a movement that tracks no load, and when
       only drop or myo sets were logged.
     - `bestReps`: the most reps in one of those sets, 0 if none: the axis of a movement that tracks no load.
     - `workingSets`: logged sets that count towards volume (every kind but warm-ups), as Stats' sets per
@@ -28,11 +29,12 @@ then each screen.
 - `firstDate`: the first started workout's date, the first of `workouts`. A workout where nothing was logged
   doesn't start the history, so "since" lines and Training's averages don't reach back to it.
 
-`progressSince(history, since)` gives one movement's points on or after `since` and its `change` over them:
-first against last estimated 1RM, or best reps for a movement that tracks no load (the axis comes from
-`primaryAxisFor`, as in Stats). `change` is undefined with fewer than two points that have a value. Its
-`delta` is a `Weight` in the last point's unit, so convert before showing it. `trendValues(progress, unit)`
-turns the window into the plain numbers a `Sparkline` draws.
+`progressSince(history, since)` gives one movement's points on or after `since`, their `values` on its axis
+(estimated 1RMs, or best reps for a movement that tracks no load; points with none are left out), and its
+`change` over them: first value against last. The axis comes from `primaryAxisFor`, as in Stats.
+`change` is undefined with fewer than two values. Its `delta` is a `Weight` in the last point's unit and is not
+rounded, so show it through `shownChange` (see [How amounts read](#how-amounts-read)). `trendValues(progress,
+unit)` turns the values into the plain numbers a `Sparkline` draws.
 
 ### The record ledger
 
@@ -110,17 +112,19 @@ The view models hand the components amounts already rounded; the components only
 
 Weeks start on the user's first day of the week. A range of N weeks is N bars, the last of them this week so
 far: N - 1 complete weeks and this week (1 year is 52 bars). "Since" is the first day of the oldest bar, and the
-lifts, the recent changes and Body start there too. Averages read the N - 1 complete weeks only, so this week's
-partial count doesn't drag them down, and only the weeks since the history began, so someone three weeks in
-isn't averaged over eleven. Averages count complete weeks only, so the week of the first started workout counts
-only if that workout was on the week's first day; otherwise averaging starts the week after. A change compares against the N - 1 complete weeks before the range, and is left
-out when those hold no history.
+lifts, their changes and Body start there too.
+
+Averages read complete weeks only. This week is left out, so its partial count doesn't drag them down, and so
+are the weeks before the history began, so someone three weeks in isn't averaged over eleven. The week of the
+first started workout counts only if that workout was on the week's first day; otherwise averaging starts the
+week after. A change compares against the N - 1 complete weeks before the range, and is left out when those
+hold no history.
 
 ### Strength
 
 - **Lifts**: the 4 movements done in the most workouts in the range (ties to the one done last, then by
   name), each with its latest estimated 1RM (best reps for a movement that tracks no load), the change over
-  the range from `progressSince`, the session count and a `Sparkline` of the range. There is no pinning yet.
+  the range from `progressSince` as shown, the session count and a `Sparkline` of the range. There is no pinning yet.
 - **Recent records**: the last 3 of `history.records`, whatever the range, with the gain over what each beat.
   A heaviest record shows its set; an estimated-1RM one shows the set the estimate comes from.
 - Lift and record rows open the expanded exercise view over all time (`useOpenExerciseStats`), since it
