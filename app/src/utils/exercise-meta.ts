@@ -1,8 +1,6 @@
-import { useTranslate } from '@tolgee/react';
+import type { TranslateFn } from '@/i18n/translate-fn';
 import type { TranslationKey } from '@tolgee/web';
 import type { MuscleGroup } from '@/models/muscle-groups';
-
-type TranslateFn = ReturnType<typeof useTranslate>['t'];
 
 export type ExerciseMetaKind = 'muscle' | 'category' | 'equipment' | 'force' | 'level' | 'mechanic';
 

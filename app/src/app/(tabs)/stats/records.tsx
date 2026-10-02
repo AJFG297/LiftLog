@@ -1,3 +1,4 @@
+import type { TranslateFn } from '@/i18n/translate-fn';
 import FullHeightScrollView from '@/components/layout/full-height-scroll-view';
 import { SegmentedControl } from '@/components/presentation/foundation/segmented-control';
 import { SurfaceText } from '@/components/presentation/foundation/surface-text';
@@ -5,7 +6,7 @@ import { amountText } from '@/components/presentation/stats/amount-format';
 import { ListCard, ListEmptyState, ListPageTitle } from '@/components/presentation/stats/list-parts';
 import { RecordRow } from '@/components/presentation/stats/record-row';
 import { spacing, useAppTheme } from '@/hooks/useAppTheme';
-import { useFormatDate } from '@/hooks/useFormatDate';
+import { FormatDate, useFormatDate } from '@/hooks/useFormatDate';
 import { usePreferredWeightUnit } from '@/hooks/usePreferredWeightUnit';
 import { useProgressHistory } from '@/hooks/useProgressHistory';
 import { shortFormatWeightUnit, Weight } from '@/models/weight';
@@ -16,9 +17,6 @@ import { Stack } from 'expo-router';
 import { useOpenExerciseStats } from '@/hooks/useOpenExerciseStats';
 import { useState } from 'react';
 import { View } from 'react-native';
-
-type TranslateFn = ReturnType<typeof useTranslate>['t'];
-type FormatDate = ReturnType<typeof useFormatDate>;
 
 export default function RecordsScreen() {
   const { t } = useTranslate();

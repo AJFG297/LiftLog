@@ -1,3 +1,4 @@
+import type { TranslateFn } from '@/i18n/translate-fn';
 import { SegmentedControl, SegmentedOption } from '@/components/presentation/foundation/segmented-control';
 import { BodySection } from '@/components/presentation/stats/progress/body-section';
 import { ProgressEmpty } from '@/components/presentation/stats/progress/progress-empty';
@@ -37,8 +38,6 @@ import { View } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDispatch } from 'react-redux';
-
-type TranslateFn = ReturnType<typeof useTranslate>['t'];
 
 /** One switch option per range, as a tuple as long as the ranges': the switch takes two to four. */
 type OptionPer<Ranges extends readonly unknown[]> = { [K in keyof Ranges]: SegmentedOption<ProgressRangeId> };

@@ -1,3 +1,4 @@
+import type { TranslateFn } from '@/i18n/translate-fn';
 import { SurfaceText } from '@/components/presentation/foundation/surface-text';
 import { amountText, signedText } from '@/components/presentation/stats/amount-format';
 import { ExerciseRow } from '@/components/presentation/stats/exercise-row';
@@ -5,7 +6,7 @@ import { ListCard, ListEmptyState, ListPageTitle } from '@/components/presentati
 import { type ChipOption, ChipRow } from '@/components/presentation/foundation/chip-row';
 import { SearchField } from '@/components/presentation/foundation/search-field';
 import { spacing, useAppTheme } from '@/hooks/useAppTheme';
-import { useFormatDate } from '@/hooks/useFormatDate';
+import { FormatDate, useFormatDate } from '@/hooks/useFormatDate';
 import { usePreferredWeightUnit } from '@/hooks/usePreferredWeightUnit';
 import { useProgressHistory } from '@/hooks/useProgressHistory';
 import { useScroll } from '@/hooks/useScrollListener';
@@ -24,9 +25,6 @@ import { useState } from 'react';
 import { View } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
-type TranslateFn = ReturnType<typeof useTranslate>['t'];
-type FormatDate = ReturnType<typeof useFormatDate>;
 
 export default function ExercisesScreen() {
   const { t } = useTranslate();
