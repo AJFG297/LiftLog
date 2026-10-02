@@ -16,9 +16,9 @@ import {
 } from '@/components/presentation/stats/progress/progress-section';
 import { spacing, useAppTheme } from '@/hooks/useAppTheme';
 import { useFormatDate } from '@/hooks/useFormatDate';
-import type { MuscleKey, TrainingView, WeeklyAverage } from '@/store/stats/progress-training';
+import { RUN_WORKOUTS, type MuscleKey, type TrainingView, type WeeklyAverage } from '@/store/stats/progress-training';
 import { useTranslate } from '@tolgee/react';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
 
 const BARS_HEIGHT = 48;
 const BAR_MAX_HEIGHT = 46;
@@ -59,6 +59,11 @@ function WeeklyCard({ view }: { view: TrainingView }) {
   const dense = view.bars.length > DENSE_BARS;
   const full = Math.max(BAR_FULL_WORKOUTS, ...view.bars.map((bar) => bar.workouts));
   const startLabel = firstBar ? formatDate(firstBar.start, { month: 'short', day: 'numeric' }) : '';
+  const runLabel = t('progress.tab.training.run.label', { count: RUN_WORKOUTS });
+  const runWeeks =
+    view.longestRun === 1
+      ? t('progress.tab.training.run_weeks.one')
+      : t('progress.tab.training.run_weeks.other', { count: view.longestRun });
   return (
     <Card style={{ gap: 14 }}>
       <View style={{ flexDirection: 'row', gap: spacing[3] }}>
@@ -113,15 +118,15 @@ function WeeklyCard({ view }: { view: TrainingView }) {
         </View>
       </View>
       <View style={{ height: 1, backgroundColor: tokens.line }} />
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[2] }}>
+      <View
+        accessible
+        accessibilityLabel={`${runLabel}, ${runWeeks}`}
+        style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[2] }}
+      >
         <MsIconSrc name="localFireDepartment" size={16} color={tokens.accentInk} />
-        <SurfaceText style={{ flexShrink: 1, fontSize: 13, lineHeight: 18, color: tokens.muted }}>
-          {`${t('progress.tab.training.run.label')} `}
-          <Text style={{ color: tokens.ink, fontWeight: '600' }}>
-            {view.longestRun === 1
-              ? t('progress.tab.training.run_weeks.one')
-              : t('progress.tab.training.run_weeks.other', { count: view.longestRun })}
-          </Text>
+        <SurfaceText style={{ flex: 1, fontSize: 13, lineHeight: 18, color: tokens.muted }}>{runLabel}</SurfaceText>
+        <SurfaceText weight="600" style={{ fontSize: 13, lineHeight: 18, color: tokens.ink }}>
+          {runWeeks}
         </SurfaceText>
       </View>
     </Card>

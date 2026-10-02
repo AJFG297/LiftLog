@@ -991,7 +991,7 @@
   "progress.tab.training.bars.spoken": "Workouts each week since {date}: {counts}",
   "progress.tab.training.this_week.label": "This week",
   "progress.tab.training.first_week.body": "Averages show after your first full week.",
-  "progress.tab.training.run.label": "Longest run of 3+ a week:",
+  "progress.tab.training.run.label": "Longest run of {count}+ a week",
   "progress.tab.training.run_weeks.one": "1 week",
   "progress.tab.training.run_weeks.other": "{count} weeks",
   "progress.tab.muscles.title": "Sets per muscle",
