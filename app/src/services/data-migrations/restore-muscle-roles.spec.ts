@@ -55,13 +55,13 @@ describe('restoreMuscleRoles', () => {
     const db = await createTestDb();
     const canonical = await loadCanonicalBuiltInExercises();
     const [id, builtIn] = Object.entries(canonical).find(([, x]) => x.secondaryMuscles.length > 0)!;
-    await db.insert(exercisesSchema).values({ id, payload: toExerciseDescriptorJSON(builtIn) });
+    // Rewriting the row would rebuild its payload from the descriptor's fields and drop this marker.
+    const payload = { ...toExerciseDescriptorJSON(builtIn), untouched: true };
+    await db.insert(exercisesSchema).values({ id, payload: payload as never });
 
     await restoreMuscleRoles(db);
 
-    expect((await storedMuscles(db))[id]).toEqual({
-      primaryMuscles: builtIn.primaryMuscles,
-      secondaryMuscles: builtIn.secondaryMuscles,
-    });
+    const [row] = await db.select().from(exercisesSchema);
+    expect(row?.payload).toEqual(payload);
   });
 });
