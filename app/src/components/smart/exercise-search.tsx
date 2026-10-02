@@ -28,7 +28,7 @@ import { ExerciseDescriptor } from '@/models/exercise-models';
 import { useAppSelector } from '@/store';
 import { PickedExercise, setExerciseSearchResult } from '@/store/app';
 import { selectExercises, selectLatestExercises, selectMuscles, updateExercise } from '@/store/stored-sessions';
-import { exerciseMetaLabel } from '@/utils/exercise-meta';
+import { exerciseMetaLabel, muscleGroupLabel } from '@/utils/exercise-meta';
 import { uuid } from '@/utils/uuid';
 import { LegendList } from '@legendapp/list';
 import { useTranslate } from '@tolgee/react';
@@ -454,22 +454,5 @@ function sectionLabel(t: TranslateFn, section: PickerSection): string {
       return t('exercise_picker.section.matches');
     default:
       return muscleGroupLabel(t, section);
-  }
-}
-
-function muscleGroupLabel(t: TranslateFn, group: MuscleGroup): string {
-  switch (group) {
-    case 'chest':
-      return t('exercise_picker.muscle.chest');
-    case 'back':
-      return t('exercise_picker.muscle.back');
-    case 'shoulders':
-      return t('exercise_picker.muscle.shoulders');
-    case 'arms':
-      return t('exercise_picker.muscle.arms');
-    case 'legs':
-      return t('exercise_picker.muscle.legs');
-    case 'core':
-      return t('exercise_picker.muscle.core');
   }
 }

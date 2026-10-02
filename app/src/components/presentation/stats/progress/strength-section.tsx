@@ -108,10 +108,10 @@ function LiftRowView({
     : lift.sessions === 1
       ? t('progress.tab.lifts.best_reps.one')
       : t('progress.tab.lifts.best_reps.other', { count: lift.sessions });
-  const valueUnit = isLoad ? unit : t('progress.tab.lifts.reps.label');
+  const valueUnit = isLoad ? unit : t('progress.reps_unit.label');
   const value = lift.latest === undefined ? '–' : amountText(lift.latest);
   const change = lift.change === undefined ? undefined : signedText(lift.change);
-  const changeSpoken = change && (change.text ? `${change.text} ${valueUnit}` : t('progress.tab.same.label'));
+  const changeSpoken = change && (change.text ? `${change.text} ${valueUnit}` : t('progress.same.label'));
   const changeStyle = {
     fontSize: 12,
     lineHeight: 16,
@@ -157,7 +157,7 @@ function LiftRowView({
         {change?.text ? (
           <AmountText amount={change.text} unit={valueUnit} style={changeStyle} />
         ) : change ? (
-          <SurfaceText style={changeStyle}>{t('progress.tab.same.label')}</SurfaceText>
+          <SurfaceText style={changeStyle}>{t('progress.same.label')}</SurfaceText>
         ) : null}
       </View>
       <MsIconSrc name="chevronRight" size={16} color={tokens.faint} />
@@ -184,7 +184,7 @@ function RecentRecordRow({
   const lifted = heaviest ? { weight: record.value, reps: record.reps } : record.estimatedFrom;
   const set = `${amountText(lifted.weight.value)} ${unit} × ${lifted.reps}`;
   const estimate = heaviest ? undefined : `${amountText(record.value.value)} ${unit}`;
-  const was = t('progress.tab.records.was.label', { value: `${amountText(record.previous.value)} ${unit}` });
+  const was = t('progress.was.label', { value: `${amountText(record.previous.value)} ${unit}` });
   return (
     <RecordRow
       testID={`progress-record-${index}`}

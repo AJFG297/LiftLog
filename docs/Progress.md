@@ -206,10 +206,11 @@ movement in `history.exercises`: only what the user has logged.
 - **Search**: the exercise picker's `fuzzyMatchScore` on the name, best match first as in the picker, then the
   most recently done.
 - **Muscle chips**: All · Chest · Back · Legs · Shoulders · Arms, and Core only when something logged files
-  under it. An exercise's chip is `muscleGroupOf` its catalog descriptor (`selectExercises()[exerciseId]`),
+  under it, labelled as the picker's chips are (`muscleGroupLabel` in `utils/exercise-meta.ts`). An exercise's chip is `muscleGroupOf` its catalog descriptor (`selectExercises()[exerciseId]`),
   the picker's rule: its first muscle. One missing from the catalog shows under All only.
 - **A row**: the name, when it was last done (today, yesterday, a weekday within the week, else a date) and
-  the session count over the whole history; a `Sparkline` of the last 12 weeks (`TREND_WEEKS`) with no end
+  the session count over the whole history; a `Sparkline` of the last 12 weeks (`TREND_WEEKS`, which the "Change over 12 weeks" heading and the spoken
+  change interpolate) with no end
   dot; the latest estimated 1RM, or best reps for a movement that tracks no load; and the change over the
   12 weeks from `progressSince`, as shown (`shownChange`: the estimates to the nearest half, the change their
   difference). The change sets the colours: up is

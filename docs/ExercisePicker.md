@@ -54,7 +54,7 @@ The routine or workout's name and exercise ids travel as route params, so a row 
   leads to a duplicate. If nothing the chips allow matches, the screen says so and offers Create "X", or
   Clear filters when the chips hide a match.
 - A new search or chip remounts the list, so it starts at the top.
-- **Muscle chips** (All, Chest, Back, Shoulders, Arms, Legs, Core) group the catalog's muscles (`muscleGroupOf`). An exercise
+- **Muscle chips** (All, Chest, Back, Shoulders, Arms, Legs, Core) group the catalog's muscles (`muscleGroupOf`), labelled by `muscleGroupLabel`, which All exercises' chips share. An exercise
   files under its first primary muscle (`ExerciseDescriptor.primaryMuscles`). Filing by any muscle would put
   every press and row under Arms, through their secondary muscles. Neck is under All only.
 - **Equipment chips** use the catalog's own words, labelled from the same `exercise.equipment.*` keys as

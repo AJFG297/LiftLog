@@ -144,7 +144,7 @@ function weightText(weight: Weight): string {
 }
 
 function wasText(t: TranslateFn, row: RecordListRow): string {
-  const was = t('progress.records.was.label', { value: weightText(row.previous) });
+  const was = t('progress.was.label', { value: weightText(row.previous) });
   return row.kind === 'estimatedOneRepMax'
     ? `${weightText(row.estimatedFrom.weight)} × ${row.estimatedFrom.reps} · ${was}`
     : was;

@@ -13,7 +13,8 @@ import { LastDoneLabel } from '@/models/home/up-next';
 import { MuscleGroup } from '@/models/muscle-groups';
 import { shortFormatWeightUnit } from '@/models/weight';
 import { useAppSelector } from '@/store';
-import { AxisAmount, ExerciseListRow, exercisesListOf } from '@/store/stats/exercises-list';
+import { AxisAmount, ExerciseListRow, exercisesListOf, TREND_WEEKS } from '@/store/stats/exercises-list';
+import { muscleGroupLabel } from '@/utils/exercise-meta';
 import { selectExercises } from '@/store/stored-sessions';
 import { LocalDate } from '@js-joda/core';
 import { useTranslate } from '@tolgee/react';
@@ -42,8 +43,8 @@ export default function ExercisesScreen() {
   const today = LocalDate.now();
   const list = history && exercisesListOf(history, catalog, today, { query, muscle }, unit);
   const muscleOptions: ChipOption<MuscleGroup | undefined>[] = [
-    { value: undefined, label: t('progress.exercises.muscle.all') },
-    ...(list?.muscles ?? []).map((group) => ({ value: group, label: muscleLabel(t, group) })),
+    { value: undefined, label: t('exercise_picker.muscle.all') },
+    ...(list?.muscles ?? []).map((group) => ({ value: group, label: muscleGroupLabel(t, group) })),
   ];
 
   return (
@@ -78,7 +79,7 @@ export default function ExercisesScreen() {
         <View style={{ marginVertical: -spacing[1] }}>
           <ChipRow
             testID="exercises-muscle"
-            accessibilityLabel={t('progress.exercises.muscle.label')}
+            accessibilityLabel={t('exercise_picker.muscle.label')}
             options={muscleOptions}
             selected={muscle}
             onSelect={setMuscle}
@@ -101,7 +102,7 @@ export default function ExercisesScreen() {
                   : t('progress.exercises.count.other', { count: list.rows.length.toString() })}
               </SurfaceText>
               <SurfaceText style={{ flexShrink: 1, fontSize: 13, lineHeight: 18, color: tokens.muted }}>
-                {t('progress.exercises.change_heading.label')}
+                {t('progress.exercises.change_heading.label', { weeks: TREND_WEEKS })}
               </SurfaceText>
             </View>
             <ListCard>
@@ -128,7 +129,7 @@ export default function ExercisesScreen() {
               query.trim()
                 ? t('progress.exercises.empty_search.title', { query: query.trim() })
                 : muscle
-                  ? t('progress.exercises.empty_muscle.title', { muscle: muscleLabel(t, muscle) })
+                  ? t('progress.exercises.empty_muscle.title', { muscle: muscleGroupLabel(t, muscle) })
                   : t('progress.exercises.empty_history.title')
             }
             body={t('progress.exercises.empty.body')}
@@ -137,23 +138,6 @@ export default function ExercisesScreen() {
       </ScrollView>
     </SafeAreaView>
   );
-}
-
-function muscleLabel(t: TranslateFn, group: MuscleGroup): string {
-  switch (group) {
-    case 'chest':
-      return t('progress.exercises.muscle.chest');
-    case 'back':
-      return t('progress.exercises.muscle.back');
-    case 'legs':
-      return t('progress.exercises.muscle.legs');
-    case 'shoulders':
-      return t('progress.exercises.muscle.shoulders');
-    case 'arms':
-      return t('progress.exercises.muscle.arms');
-    case 'core':
-      return t('progress.exercises.muscle.core');
-  }
 }
 
 function lastDoneText(t: TranslateFn, formatDate: FormatDate, label: LastDoneLabel, today: LocalDate): string {
@@ -185,7 +169,7 @@ function amountOf(amount: AxisAmount): string {
 }
 
 function unitOf(t: TranslateFn, amount: AxisAmount): string {
-  return amount.axis === 'reps' ? t('progress.exercises.reps_unit.label') : shortFormatWeightUnit(amount.value.unit);
+  return amount.axis === 'reps' ? t('progress.reps_unit.label') : shortFormatWeightUnit(amount.value.unit);
 }
 
 /** "+8.5", "−0.5" with a true minus sign, "same", or a dash with nothing to compare. */
@@ -194,8 +178,7 @@ function changeText(t: TranslateFn, row: ExerciseListRow): string {
     return '–';
   }
   return (
-    signedText(row.change.axis === 'reps' ? row.change.value : row.change.value.value).text ??
-    t('progress.exercises.change_same.label')
+    signedText(row.change.axis === 'reps' ? row.change.value : row.change.value.value).text ?? t('progress.same.label')
   );
 }
 
@@ -210,12 +193,12 @@ function spokenExercise(t: TranslateFn, formatDate: FormatDate, row: ExerciseLis
   const amount = row.change && `${changeText(t, row).replace(/^[+−]/, '')} ${unitOf(t, row.change)}`;
   const change =
     row.tone === 'gain'
-      ? t('progress.exercises.change_up_spoken.label', { amount })
+      ? t('progress.exercises.change_up_spoken.label', { amount, weeks: TREND_WEEKS })
       : row.tone === 'fall'
-        ? t('progress.exercises.change_down_spoken.label', { amount })
+        ? t('progress.exercises.change_down_spoken.label', { amount, weeks: TREND_WEEKS })
         : row.tone === 'none'
-          ? t('progress.exercises.change_same_spoken.label')
-          : t('progress.exercises.change_none_spoken.label');
+          ? t('progress.exercises.change_same_spoken.label', { weeks: TREND_WEEKS })
+          : t('progress.exercises.change_none_spoken.label', { weeks: TREND_WEEKS });
   return t('progress.exercises.row.spoken.label', {
     name: row.name,
     last: lastDoneText(t, formatDate, row.lastDone, today),
