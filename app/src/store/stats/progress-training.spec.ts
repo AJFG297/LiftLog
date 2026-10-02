@@ -11,14 +11,12 @@ import {
 } from '@/store/stats/__test__/progress-fixtures';
 import { buildWeeklyTable, muscleSharesOf, trainingView } from '@/store/stats/progress-training';
 
-// Weeks start on Monday. Over 4 weeks the complete weeks are Aug 31, Sep 7, 14 and 21; this week is Sep 28;
-// the period before is Aug 3, 10, 17 and 24.
+// Weeks start on Monday. 4 weeks is 4 bars: the complete weeks Sep 7, 14 and 21, then this week, Sep 28. The
+// period before is Aug 17, 24 and 31.
 const workoutsPerWeek: [number, number, number[]][] = [
-  [8, 3, [2]],
-  [8, 10, [2]],
   [8, 17, [2]],
   [8, 24, [2]],
-  [8, 31, [3]],
+  [8, 31, [2]],
   [9, 7, [2]],
   [9, 14, [4]],
   [9, 21, [3]],
@@ -44,20 +42,18 @@ const history = historyOf({
   workouts: workoutsFor(workoutsPerWeek),
   exercises: [
     exerciseHistory('Bench', [
-      point(day(8, 4), 2),
-      point(day(8, 11), 2),
       point(day(8, 18), 2),
       point(day(8, 25), 2),
-      point(day(9, 1), 4),
+      point(day(9, 1), 2),
       point(day(9, 8), 4),
       point(day(9, 15), 4),
       point(day(9, 22), 4),
       point(day(9, 29), 4),
     ]),
-    exerciseHistory('Row', [point(day(9, 2), 3), point(day(9, 16), 3)]),
-    exerciseHistory('Squat', [point(day(9, 3), 5)]),
-    exerciseHistory('Sled Push', [point(day(9, 3), 3)]),
-    exerciseHistory('Mystery', [point(day(9, 23), 10)]),
+    exerciseHistory('Row', [point(day(9, 9), 3), point(day(9, 16), 3)]),
+    exerciseHistory('Squat', [point(day(9, 10), 6)]),
+    exerciseHistory('Sled Push', [point(day(9, 10), 3)]),
+    exerciseHistory('Mystery', [point(day(9, 23), 9)]),
   ],
 });
 
@@ -93,32 +89,31 @@ describe('trainingView', () => {
   const view = trainingView(buildWeeklyTable(history, exercises, periodFor('4w')));
 
   it('averages workouts over complete weeks only, leaving out this week so far', () => {
-    // (3 + 2 + 4 + 3) / 4; with this week's one it would be 2.6.
+    // (2 + 4 + 3) / 3; with this week's one it would be 2.5.
     expect(view.workoutsPerWeek.average).toBe(3);
   });
 
   it('compares each average with the period before, of the same length', () => {
     expect(view.workoutsPerWeek.change).toBe(1);
-    // (15 + 4 + 7 + 14) / 4 against (2 + 2 + 2 + 2) / 4. The custom exercise with no muscles still counts here.
-    expect(view.setsPerWeek).toEqual({ average: 10, change: 8 });
+    // (16 + 7 + 13) / 3 against (2 + 2 + 2) / 3. The custom exercise with no muscles still counts here.
+    expect(view.setsPerWeek).toEqual({ average: 12, change: 10 });
   });
 
   it('averages working sets per muscle, a secondary muscle counting half', () => {
     expect(view.muscles).toEqual([
       { muscle: 'chest', setsPerWeek: 4 },
-      // Squat's 5 and the custom Sled Push's 3, over 4 weeks.
-      { muscle: 'quadriceps', setsPerWeek: 2 },
+      // Squat's 6 and the custom Sled Push's 3, over 3 weeks.
+      { muscle: 'quadriceps', setsPerWeek: 3 },
+      { muscle: 'back', setsPerWeek: 2 },
       { muscle: 'shoulders', setsPerWeek: 2 },
       { muscle: 'triceps', setsPerWeek: 2 },
-      { muscle: 'back', setsPerWeek: 1.5 },
-      { muscle: 'biceps', setsPerWeek: 0.75 },
-      { muscle: 'glutes', setsPerWeek: 0.625 },
+      { muscle: 'biceps', setsPerWeek: 1 },
+      { muscle: 'glutes', setsPerWeek: 1 },
     ]);
   });
 
-  it('draws a bar per complete week and one for this week', () => {
+  it('draws as many bars as the range has weeks, the last one this week', () => {
     expect(view.bars.map((bar) => [bar.start.toString(), bar.workouts, bar.isThisWeek])).toEqual([
-      ['2026-08-31', 3, false],
       ['2026-09-07', 2, false],
       ['2026-09-14', 4, false],
       ['2026-09-21', 3, false],
@@ -140,15 +135,14 @@ describe('trainingView', () => {
 
   it('averages only the weeks since the history began', () => {
     const recent = historyOf({
-      workouts: workoutsFor(workoutsPerWeek.slice(5)),
-      exercises: [exerciseHistory('Bench', [point(day(9, 8), 4), point(day(9, 15), 4), point(day(9, 22), 4)])],
-      firstDate: day(9, 9),
+      workouts: workoutsFor(workoutsPerWeek.slice(4)),
+      exercises: [exerciseHistory('Bench', [point(day(9, 15), 4), point(day(9, 22), 4)])],
     });
 
     const recentView = trainingView(buildWeeklyTable(recent, exercises, periodFor('4w')));
 
-    // Sep 7, 14 and 21: (2 + 4 + 3) / 3, with nothing before to compare against.
-    expect(recentView.workoutsPerWeek).toEqual({ average: 3, change: undefined });
+    // Sep 14 and 21: (4 + 3) / 2, with nothing before to compare against.
+    expect(recentView.workoutsPerWeek).toEqual({ average: 3.5, change: undefined });
     expect(recentView.muscles[0]).toEqual({ muscle: 'chest', setsPerWeek: 4 });
   });
 
@@ -161,8 +155,9 @@ describe('trainingView', () => {
 
     const yearView = trainingView(buildWeeklyTable(yearOfBench, exercises, periodFor('1y')));
 
-    // 13 sets over 52 weeks is a quarter of a set for chest; triceps and shoulders get half that.
-    expect(yearView.muscles).toEqual([{ muscle: 'chest', setsPerWeek: 0.25 }]);
+    // 13 sets over the year's 51 complete weeks is just over a quarter of a set for chest; triceps and
+    // shoulders get half that.
+    expect(yearView.muscles).toEqual([{ muscle: 'chest', setsPerWeek: 13 / 51 }]);
   });
 
   it('has no averages and no muscles before a complete week has passed', () => {
@@ -182,7 +177,7 @@ describe('trainingView', () => {
   it('is empty with no history at all', () => {
     const emptyView = trainingView(buildWeeklyTable(historyOf({}), exercises, periodFor('12w')));
 
-    expect(emptyView.bars).toHaveLength(13);
+    expect(emptyView.bars).toHaveLength(12);
     expect(emptyView.workoutsPerWeek.average).toBeUndefined();
     expect(emptyView.longestRun).toBe(0);
   });

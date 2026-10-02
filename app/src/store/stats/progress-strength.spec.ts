@@ -2,11 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { movementKeyFor, stubExerciseId } from '@/models/blueprint-models';
 import { makeWeightedBlueprint } from '@/models/session-models/__test__/helpers';
 import { Weight } from '@/models/weight';
-import { day, exerciseHistory, historyOf, kg, periodFor, point } from '@/store/stats/__test__/progress-fixtures';
+import { day, exerciseHistory, historyOf, kg, point } from '@/store/stats/__test__/progress-fixtures';
 import { DatedRecord } from '@/store/stats/progress-history';
 import { mostTrainedLifts, recentRecords } from '@/store/stats/progress-strength';
 
-const since = periodFor('4w').start; // Aug 31
+// A Monday, where a range starts.
+const since = day(8, 31);
 const key = (name: string) => movementKeyFor(stubExerciseId(name), 'WeightedExerciseBlueprint');
 
 describe('mostTrainedLifts', () => {

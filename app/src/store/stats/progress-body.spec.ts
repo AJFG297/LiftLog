@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { day, historyOf, periodFor, workout } from '@/store/stats/__test__/progress-fixtures';
+import { day, historyOf, workout } from '@/store/stats/__test__/progress-fixtures';
 import { bodyView, weighInsOf } from '@/store/stats/progress-body';
 
-const since = periodFor('4w').start; // Aug 31
+// A Monday, where a range starts.
+const since = day(8, 31);
 
 const history = historyOf({
   workouts: [

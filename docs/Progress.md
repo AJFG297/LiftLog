@@ -89,11 +89,12 @@ file per part, and the components in `components/presentation/stats/progress/` o
 
 ### Weeks and the range
 
-Weeks start on the user's first day of the week. A range of N weeks is N complete weeks plus this week so far,
-and "Since" is the first day of the oldest complete week. Averages read the complete weeks only, so this
-week's partial count doesn't drag them down, and only the weeks since the history began, so someone three
-weeks in isn't averaged over twelve. A change compares against the N complete weeks before the range, and is
-left out when those hold no history. Lifts, bars and the chart include this week.
+Weeks start on the user's first day of the week. A range of N weeks is N bars, the last of them this week so
+far: N - 1 complete weeks and this week (1 year is 52 bars). "Since" is the first day of the oldest bar, and the
+lifts, the recent changes and Body start there too. Averages read the N - 1 complete weeks only, so this week's
+partial count doesn't drag them down, and only the weeks since the history began, so someone three weeks in
+isn't averaged over eleven. A change compares against the N - 1 complete weeks before the range, and is left
+out when those hold no history.
 
 ### Strength
 

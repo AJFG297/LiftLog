@@ -90,7 +90,8 @@ export function buildWeeklyTable(
   const firstDayOfWeek = period.thisWeek.dayOfWeek();
   const weeks: MutableWeek[] = [];
   const byStart = new Map<string, MutableWeek>();
-  for (let ago = period.weeks * 2; ago >= 0; ago--) {
+  const { completeWeeks } = period;
+  for (let ago = completeWeeks * 2; ago >= 0; ago--) {
     const start = period.thisWeek.minusWeeks(ago);
     const week = { start, workouts: 0, sets: 0, muscleSets: new Map<MuscleKey, number>() };
     weeks.push(week);
@@ -119,9 +120,9 @@ export function buildWeeklyTable(
   }
 
   return {
-    previous: weeks.slice(0, period.weeks),
-    complete: weeks.slice(period.weeks, period.weeks * 2),
-    thisWeek: weeks[period.weeks * 2]!,
+    previous: weeks.slice(0, completeWeeks),
+    complete: weeks.slice(completeWeeks, completeWeeks * 2),
+    thisWeek: weeks[completeWeeks * 2]!,
     firstWeek: history.firstDate && weekStart(history.firstDate, firstDayOfWeek),
   };
 }
