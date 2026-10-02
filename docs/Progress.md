@@ -197,8 +197,8 @@ movement in `history.exercises`: only what the user has logged.
 
 - **Order**: most recently done first; exercises last done on the same day keep the order they were first
   done in.
-- **Search**: the exercise picker's `fuzzyMatchScore` on the name, keeping that order rather than ranking by
-  score.
+- **Search**: the exercise picker's `fuzzyMatchScore` on the name, best match first as in the picker, then the
+  most recently done.
 - **Muscle chips**: All · Chest · Back · Legs · Shoulders · Arms, and Core only when something logged files
   under it. An exercise's chip is `muscleGroupOf` its catalog descriptor (`selectExercises()[exerciseId]`),
   the picker's rule: its first muscle. One missing from the catalog shows under All only.

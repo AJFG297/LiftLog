@@ -54,8 +54,9 @@ export interface ExercisesList {
 const LOAD_DECIMALS = 1;
 
 /**
- * Every logged exercise the filters let through, most recently done first. Those last done on the same day
- * keep the order they were first done in, which mostly follows the routine.
+ * Every logged exercise the filters let through. With no search, most recently done first; those last done on
+ * the same day keep the order they were first done in, which mostly follows the routine. A search ranks the
+ * best match first, as the picker does, then the most recently done.
  */
 export function exercisesListOf(
   history: ProgressHistory,
@@ -72,13 +73,14 @@ export function exercisesListOf(
   const all = [...history.exercises.values()].filter((exercise) => exercise.points.length > 0);
 
   const rows = all
-    .map((exercise, firstDone) => ({ exercise, firstDone }))
-    .filter(
-      ({ exercise }) =>
-        (!filters.muscle || groupOf(exercise) === filters.muscle) &&
-        (!query || fuzzyMatchScore(query, exercise.name) !== null),
+    .flatMap((exercise, firstDone) => {
+      const score = query ? fuzzyMatchScore(query, exercise.name) : 0;
+      const shown = score !== null && (!filters.muscle || groupOf(exercise) === filters.muscle);
+      return shown ? [{ exercise, firstDone, score }] : [];
+    })
+    .sort(
+      (a, b) => b.score - a.score || lastDate(b.exercise).compareTo(lastDate(a.exercise)) || a.firstDone - b.firstDone,
     )
-    .sort((a, b) => lastDate(b.exercise).compareTo(lastDate(a.exercise)) || a.firstDone - b.firstDone)
     .map(({ exercise }) => rowOf(exercise, today, unit));
 
   const hasCore = all.some((exercise) => groupOf(exercise) === 'core');
