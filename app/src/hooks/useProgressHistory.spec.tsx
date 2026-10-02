@@ -44,7 +44,9 @@ describe('useProgressHistory', () => {
     const { result } = renderHook(() => useProgressHistory());
     expect(result.current).toBeUndefined();
 
-    await waitFor(() => expect(result.current).toEqual({ exercises: new Map(), records: [], firstDate: undefined }));
+    await waitFor(() =>
+      expect(result.current).toEqual({ exercises: new Map(), records: [], workouts: [], firstDate: undefined }),
+    );
   });
 
   it('walks every finished workout in the order they happened, whatever order they were written in', async () => {
@@ -59,6 +61,7 @@ describe('useProgressHistory', () => {
     await waitFor(() => expect(result.current).toBeDefined());
     expect(result.current?.firstDate).toEqual(LocalDate.of(2026, 3, 1));
     expect(result.current?.exercises.get(benchKey)?.points.map((x) => x.workoutId)).toEqual(['a', 'b', 'c']);
+    expect(result.current?.workouts.map((x) => x.workoutId)).toEqual(['a', 'b', 'c']);
     expect(result.current?.records.map((x) => [x.workoutId, x.record.kind])).toEqual([
       ['b', 'heaviestWeight'],
       ['c', 'heaviestWeight'],

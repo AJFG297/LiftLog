@@ -38,6 +38,14 @@ export interface DatedRecord {
   date: LocalDate;
 }
 
+/** A started workout: what Training counts per week and where Body reads the bodyweight from. */
+export interface WorkoutPoint {
+  workoutId: string;
+  date: LocalDate;
+  /** As entered with the workout. A new workout starts with the last one's, so a value often repeats. */
+  bodyweight: Weight | undefined;
+}
+
 /**
  * Everything the Progress screens read about lifting, from one walk over the finished history. Only weighted
  * exercises with a logged set count; cardio and exercises left untouched are not here.
@@ -46,6 +54,8 @@ export interface ProgressHistory {
   exercises: ReadonlyMap<MovementKey, ExerciseHistory>;
   /** Every record ever set, oldest first, and within a workout in exercise order. */
   records: readonly DatedRecord[];
+  /** Every started workout, cardio-only ones included, oldest first. */
+  workouts: readonly WorkoutPoint[];
   /** The earliest workout's date, started or not, as `WorkoutRepository.earliestDate` gives it. */
   firstDate: LocalDate | undefined;
 }
@@ -55,11 +65,15 @@ export function buildProgressHistory(sessionsOldestFirst: readonly Session[]): P
   const ledger = new RecordLedger();
   const exercises = new Map<MovementKey, ExerciseHistory>();
   const records: DatedRecord[] = [];
+  const workouts: WorkoutPoint[] = [];
   let firstDate: LocalDate | undefined;
 
   for (const session of sessionsOldestFirst) {
     if (!firstDate || session.date.isBefore(firstDate)) {
       firstDate = session.date;
+    }
+    if (session.isStarted) {
+      workouts.push({ workoutId: session.id, date: session.date, bodyweight: session.bodyweight });
     }
     for (const record of ledger.add(session)) {
       records.push({ record, workoutId: session.id, date: session.date });
@@ -76,7 +90,7 @@ export function buildProgressHistory(sessionsOldestFirst: readonly Session[]): P
     }
   }
 
-  return { exercises, records, firstDate };
+  return { exercises, records, workouts, firstDate };
 }
 
 function pointsOf(session: Session): Map<MovementKey, { blueprint: WeightedExerciseBlueprint; point: ExercisePoint }> {

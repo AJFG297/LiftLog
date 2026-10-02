@@ -115,8 +115,23 @@ describe('buildProgressHistory', () => {
     expect(progress.firstDate).toEqual(day(6, 28));
   });
 
+  it('lists every started workout with its bodyweight, leaving out one where nothing was logged', () => {
+    const weighed = history.map((x, i) => x.with({ bodyweight: kg(80 + i) }));
+
+    expect(buildProgressHistory(weighed).workouts).toEqual([
+      { workoutId: 's1', date: day(7, 1), bodyweight: kg(81) },
+      { workoutId: 's2', date: day(7, 8), bodyweight: kg(82) },
+      { workoutId: 's3', date: day(7, 15), bodyweight: kg(83) },
+    ]);
+  });
+
   it('is empty for no workouts', () => {
-    expect(buildProgressHistory([])).toEqual({ exercises: new Map(), records: [], firstDate: undefined });
+    expect(buildProgressHistory([])).toEqual({
+      exercises: new Map(),
+      records: [],
+      workouts: [],
+      firstDate: undefined,
+    });
   });
 });
 
