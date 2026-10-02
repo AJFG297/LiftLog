@@ -136,7 +136,9 @@ Body falls back to Strength (`shownTab`).
 ### Before the first workout
 
 With no finished workout there are no tabs: one card invites the first workout and opens Routines. A tab with
-nothing in the range says so in its card.
+nothing in the range says so in its card. Until the history covers a full week in the range (`averagedWeeks`
+is 0), Training's averages show "–" with a line saying they show after the first full week, and sets per
+muscle says the same rather than that there are no sets.
 
 ## Records and All exercises
 

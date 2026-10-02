@@ -75,6 +75,11 @@ function WeeklyCard({ view }: { view: TrainingView }) {
           change={(value) => signedAmount(value, 0)}
         />
       </View>
+      {view.averagedWeeks ? null : (
+        <SurfaceText style={{ fontSize: 13, lineHeight: 18, color: tokens.muted }}>
+          {t('progress.tab.training.first_week.body')}
+        </SurfaceText>
+      )}
       <View style={{ gap: 6 }}>
         <View
           accessible
@@ -226,7 +231,10 @@ function MusclesCard({ view, muscleLabel }: TrainingSectionProps) {
           );
         })
       ) : (
-        <ProgressEmptyLine text={t('progress.tab.muscles.empty.body')} inset={false} />
+        <ProgressEmptyLine
+          text={t(view.averagedWeeks ? 'progress.tab.muscles.empty.body' : 'progress.tab.muscles.first_week.body')}
+          inset={false}
+        />
       )}
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[2], paddingTop: spacing[0.5] }}>
         <View style={{ width: 18, height: 8, borderRadius: 4, backgroundColor: tokens.line2 }} />
