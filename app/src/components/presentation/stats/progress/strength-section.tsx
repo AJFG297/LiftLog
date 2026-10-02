@@ -1,16 +1,17 @@
 import { MsIconSrc } from '@/components/presentation/foundation/ms-icon-source';
 import { SurfaceText } from '@/components/presentation/foundation/surface-text';
 import { AmountText } from '@/components/presentation/stats/amount-text';
+import { RecordRow } from '@/components/presentation/stats/record-row';
 import { Sparkline } from '@/components/presentation/stats/sparkline';
 import { ListCard, ListEmptyLine, useRowDivider, useToneColor } from '@/components/presentation/stats/list-parts';
 import { ProgressSection } from '@/components/presentation/stats/progress/progress-section';
 import { amountText, signedText } from '@/components/presentation/stats/amount-format';
-import { fontFamily, spacing, useAppTheme } from '@/hooks/useAppTheme';
+import { spacing, useAppTheme } from '@/hooks/useAppTheme';
 import { useFormatDate } from '@/hooks/useFormatDate';
 import type { LiftRow } from '@/store/stats/progress-strength';
 import type { RecordListRow } from '@/store/stats/records-list';
 import { useTranslate } from '@tolgee/react';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 const SPARKLINE_WIDTH = 64;
 const SPARKLINE_HEIGHT = 28;
@@ -67,7 +68,7 @@ export function StrengthSection(props: StrengthSectionProps) {
         <ListCard>
           {props.records.length ? (
             props.records.map((record, index) => (
-              <RecordRowView
+              <RecentRecordRow
                 key={record.key}
                 record={record}
                 index={index}
@@ -164,7 +165,7 @@ function LiftRowView({
   );
 }
 
-function RecordRowView({
+function RecentRecordRow({
   record,
   index,
   unit,
@@ -176,74 +177,24 @@ function RecordRowView({
   onPress: () => void;
 }) {
   const { t } = useTranslate();
-  const { tokens } = useAppTheme();
   const formatDate = useFormatDate();
-  const divider = useRowDivider();
   const heaviest = record.kind === 'heaviestWeight';
   const kind = heaviest ? t('progress.tab.records.heaviest.label') : t('progress.tab.records.one_rep_max.label');
-  const value = amountText(record.value.value.toNumber());
-  const gain = signedText(record.gain.value.toNumber());
-  const weekday = formatDate(record.date, { weekday: 'short' });
   const fullDate = formatDate(record.date, { weekday: 'long', month: 'long', day: 'numeric' });
-  const lifted = record.kind === 'heaviestWeight' ? { weight: record.value, reps: record.reps } : record.estimatedFrom;
-  const weight = amountText(lifted.weight.value.toNumber());
-  const set = `${weight} ${unit} × ${lifted.reps}`;
-  const estimate = heaviest ? undefined : `${value} ${unit}`;
-  const was = t('progress.tab.records.was.label', {
-    value: `${amountText(record.previous.value.toNumber())} ${unit}`,
-  });
-  const mono = { fontFamily: fontFamily.number, color: tokens.ink };
+  const lifted = heaviest ? { weight: record.value, reps: record.reps } : record.estimatedFrom;
+  const set = `${amountText(lifted.weight.value)} ${unit} × ${lifted.reps}`;
+  const estimate = heaviest ? undefined : `${amountText(record.value.value)} ${unit}`;
+  const was = t('progress.tab.records.was.label', { value: `${amountText(record.previous.value)} ${unit}` });
   return (
-    <Pressable
+    <RecordRow
       testID={`progress-record-${index}`}
-      onPress={onPress}
-      accessibilityRole="button"
+      row={record}
+      index={index}
+      shows="set"
+      weekday={formatDate(record.date, { weekday: 'short' })}
+      kindLabel={kind}
       accessibilityLabel={[fullDate, record.exerciseName, kind, estimate, set, was].filter(Boolean).join(', ')}
-      style={({ pressed }) => [
-        {
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: 14,
-          paddingVertical: spacing[3],
-          paddingHorizontal: 14,
-          minHeight: 56,
-        },
-        divider(index),
-        pressed && { backgroundColor: tokens.track },
-      ]}
-    >
-      <View style={{ width: 40, alignItems: 'center' }}>
-        <SurfaceText
-          weight="600"
-          style={{ fontSize: 11, lineHeight: 14, color: tokens.muted, letterSpacing: 0.66, textTransform: 'uppercase' }}
-        >
-          {weekday}
-        </SurfaceText>
-        <SurfaceText numeric weight="600" font="text-xl" style={{ color: tokens.ink }}>
-          {record.date.dayOfMonth()}
-        </SurfaceText>
-      </View>
-      <View style={{ flex: 1, gap: spacing[0.5], minWidth: 0 }}>
-        <SurfaceText weight="600" numberOfLines={1} style={{ fontSize: 15, lineHeight: 20, color: tokens.ink }}>
-          {record.exerciseName}
-        </SurfaceText>
-        <SurfaceText numberOfLines={1} style={{ fontSize: 13, lineHeight: 18, color: tokens.muted }}>
-          {`${kind} · `}
-          <Text style={mono}>{weight}</Text>
-          <Text style={{ color: tokens.ink }}>{` ${unit} × `}</Text>
-          <Text style={mono}>{lifted.reps}</Text>
-        </SurfaceText>
-      </View>
-      {gain.text ? (
-        <View style={{ backgroundColor: tokens.accentSoft, borderRadius: 7, paddingVertical: 3, paddingHorizontal: 7 }}>
-          <AmountText
-            amount={gain.text}
-            unit={unit}
-            style={{ fontSize: 12, lineHeight: 16, fontWeight: '600', color: tokens.accentSoftInk }}
-            unitStyle={{ fontWeight: '700' }}
-          />
-        </View>
-      ) : null}
-    </Pressable>
+      onPress={onPress}
+    />
   );
 }

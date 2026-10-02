@@ -192,7 +192,9 @@ none the first time an exercise is done.
   same record reads the same gain on both.
 - **Empty**: "No records yet" with no records, or a line for the chosen kind pointing back to All.
 
-An estimate's row also shows the set it comes from ("82.5 kg × 8 · was 102 kg").
+An estimate's row also shows the set it comes from ("82.5 kg × 8 · was 102 kg"). The row is
+`RecordRow` (`components/presentation/stats/record-row.tsx`), which Strength's recent records draw too: there it
+`shows` the set after the kind and has no third line.
 
 ### All exercises
 

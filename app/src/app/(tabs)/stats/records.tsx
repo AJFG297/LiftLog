@@ -3,7 +3,7 @@ import { SegmentedControl } from '@/components/presentation/foundation/segmented
 import { SurfaceText } from '@/components/presentation/foundation/surface-text';
 import { amountText } from '@/components/presentation/stats/amount-format';
 import { ListCard, ListEmptyState, ListPageTitle } from '@/components/presentation/stats/list-parts';
-import { RecordRow } from '@/components/presentation/stats/lists/record-row';
+import { RecordRow } from '@/components/presentation/stats/record-row';
 import { spacing, useAppTheme } from '@/hooks/useAppTheme';
 import { useFormatDate } from '@/hooks/useFormatDate';
 import { usePreferredWeightUnit } from '@/hooks/usePreferredWeightUnit';
@@ -97,7 +97,8 @@ export default function RecordsScreen() {
                     index={index}
                     weekday={formatDate(row.date, { weekday: 'short' })}
                     kindLabel={kindLabel(t, row)}
-                    wasText={wasText(t, row)}
+                    shows="record"
+                    detail={wasText(t, row)}
                     accessibilityLabel={spokenRecord(t, formatDate, row)}
                     onPress={exerciseId ? () => openExerciseStats(exerciseId) : undefined}
                   />
