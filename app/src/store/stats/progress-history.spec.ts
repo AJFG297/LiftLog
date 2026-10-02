@@ -145,6 +145,7 @@ describe('progressSince', () => {
 
     expect(window.axis).toBe('load');
     expect(window.points.map((x) => x.workoutId)).toEqual(['s2', 's3']);
+    expect(window.values).toEqual([epley(85, 3), epley(82.5, 10)]);
     expect(window.change).toEqual({
       axis: 'load',
       first: epley(85, 3),
