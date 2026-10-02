@@ -25,7 +25,8 @@ then each screen.
   workout, each with the `workoutId` and `date` of the workout that set it.
 - `workouts`: one `WorkoutPoint` (id, date, bodyweight) per started workout, cardio-only ones included, for
   Training and Body.
-- `firstDate`: the earliest workout's date, started or not, as `WorkoutRepository.earliestDate()` gives it.
+- `firstDate`: the first started workout's date, the first of `workouts`. A workout where nothing was logged
+  doesn't start the history, so "since" lines and Training's averages don't reach back to it.
 
 `progressSince(history, since)` gives one movement's points on or after `since` and its `change` over them:
 first against last estimated 1RM, or best reps for a movement that tracks no load (the axis comes from

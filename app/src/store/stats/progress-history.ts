@@ -56,7 +56,10 @@ export interface ProgressHistory {
   records: readonly DatedRecord[];
   /** Every started workout, cardio-only ones included, oldest first. */
   workouts: readonly WorkoutPoint[];
-  /** The earliest workout's date, started or not, as `WorkoutRepository.earliestDate` gives it. */
+  /**
+   * The first started workout's date (the first of `workouts`): where the history begins for "since" lines
+   * and for averages. A workout where nothing was logged doesn't start it.
+   */
   firstDate: LocalDate | undefined;
 }
 
@@ -66,12 +69,8 @@ export function buildProgressHistory(sessionsOldestFirst: readonly Session[]): P
   const exercises = new Map<MovementKey, ExerciseHistory>();
   const records: DatedRecord[] = [];
   const workouts: WorkoutPoint[] = [];
-  let firstDate: LocalDate | undefined;
 
   for (const session of sessionsOldestFirst) {
-    if (!firstDate || session.date.isBefore(firstDate)) {
-      firstDate = session.date;
-    }
     if (session.isStarted) {
       workouts.push({ workoutId: session.id, date: session.date, bodyweight: session.bodyweight });
     }
@@ -90,7 +89,7 @@ export function buildProgressHistory(sessionsOldestFirst: readonly Session[]): P
     }
   }
 
-  return { exercises, records, workouts, firstDate };
+  return { exercises, records, workouts, firstDate: workouts[0]?.date };
 }
 
 function pointsOf(session: Session): Map<MovementKey, { blueprint: WeightedExerciseBlueprint; point: ExercisePoint }> {
