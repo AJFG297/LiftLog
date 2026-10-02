@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { DayOfWeek } from '@js-joda/core';
 import { stubExerciseId } from '@/models/blueprint-models';
 import {
   day,
@@ -146,6 +147,30 @@ describe('trainingView', () => {
     expect(recentView.muscles[0]).toEqual({ muscle: 'chest', setsPerWeek: 4 });
   });
 
+  it('skips the first week when the history starts partway through it', () => {
+    // Weeks start on Sunday: the first workout is on Saturday, Sep 12, then 3 a week.
+    const sundayWeeks = historyOf({
+      workouts: [day(9, 12), day(9, 14), day(9, 16), day(9, 18), day(9, 21), day(9, 23), day(9, 25)].map((date) =>
+        workout(date),
+      ),
+      exercises: [exerciseHistory('Bench', [point(day(9, 12), 6), point(day(9, 14), 3), point(day(9, 21), 3)])],
+    });
+
+    const sundayView = trainingView(buildWeeklyTable(sundayWeeks, exercises, periodFor('4w', DayOfWeek.SUNDAY)));
+
+    // Sep 13 and 20: (3 + 3) / 2. Counting the week of Sep 6 too would make it (1 + 3 + 3) / 3.
+    expect(sundayView.averagedWeeks).toBe(2);
+    expect(sundayView.workoutsPerWeek).toEqual({ average: 3, change: undefined });
+    expect(sundayView.setsPerWeek.average).toBe(3);
+    expect(sundayView.muscles[0]).toEqual({ muscle: 'chest', setsPerWeek: 3 });
+  });
+
+  it('counts the first week when the history starts on its first day', () => {
+    expect(view.averagedWeeks).toBe(3);
+    // The period before starts on Monday, Aug 17, with the first workout: all three of its weeks count.
+    expect(view.workoutsPerWeek.change).toBe(1);
+  });
+
   it('leaves out a muscle worked too little to show as half a set a week', () => {
     const yearOfBench = historyOf({
       workouts: [workout(day(9, 1))],
@@ -168,6 +193,7 @@ describe('trainingView', () => {
 
     const freshView = trainingView(buildWeeklyTable(fresh, exercises, periodFor('4w')));
 
+    expect(freshView.averagedWeeks).toBe(0);
     expect(freshView.workoutsPerWeek).toEqual({ average: undefined, change: undefined });
     expect(freshView.setsPerWeek).toEqual({ average: undefined, change: undefined });
     expect(freshView.muscles).toEqual([]);

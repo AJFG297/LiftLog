@@ -1,4 +1,4 @@
-import { LocalDate } from '@js-joda/core';
+import { DayOfWeek, LocalDate } from '@js-joda/core';
 import { ExerciseId } from '@/models/blueprint-models';
 import { ExerciseDescriptor } from '@/models/exercise-models';
 import { weekStart } from '@/store/activity/week-start';
@@ -71,8 +71,12 @@ export interface WeeklyTable {
   complete: readonly WeekTotals[];
   /** This week so far. */
   thisWeek: WeekTotals;
-  /** The week the history starts in. Weeks before it aren't averaged, as nobody was training yet. */
-  firstWeek: LocalDate | undefined;
+  /**
+   * The first week the history covers in full. Weeks before it aren't averaged, as nobody was training yet.
+   * The week of the first started workout only counts when that workout is on the week's first day: the days
+   * before it weren't rest, just before the history.
+   */
+  firstFullWeek: LocalDate | undefined;
 }
 
 interface MutableWeek {
@@ -123,8 +127,13 @@ export function buildWeeklyTable(
     previous: weeks.slice(0, completeWeeks),
     complete: weeks.slice(completeWeeks, completeWeeks * 2),
     thisWeek: weeks[completeWeeks * 2]!,
-    firstWeek: history.firstDate && weekStart(history.firstDate, firstDayOfWeek),
+    firstFullWeek: history.firstDate && firstFullWeekOf(history.firstDate, firstDayOfWeek),
   };
+}
+
+function firstFullWeekOf(firstDate: LocalDate, firstDayOfWeek: DayOfWeek): LocalDate {
+  const week = weekStart(firstDate, firstDayOfWeek);
+  return week.equals(firstDate) ? week : week.plusWeeks(1);
 }
 
 /** A weekly average and how far it moved against the period before, of the same length. */
@@ -148,6 +157,8 @@ export interface MuscleSets {
 }
 
 export interface TrainingView {
+  /** The complete weeks the averages read: 0 until the history covers a full week in the range. */
+  averagedWeeks: number;
   workoutsPerWeek: WeeklyAverage;
   setsPerWeek: WeeklyAverage;
   /** The range's complete weeks, then this week, oldest first. */
@@ -159,8 +170,8 @@ export interface TrainingView {
 }
 
 export function trainingView(table: WeeklyTable): TrainingView {
-  const current = coveredWeeks(table.complete, table.firstWeek);
-  const previous = coveredWeeks(table.previous, table.firstWeek);
+  const current = coveredWeeks(table.complete, table.firstFullWeek);
+  const previous = coveredWeeks(table.previous, table.firstFullWeek);
   const weekly = (pick: (week: WeekTotals) => number): WeeklyAverage => {
     const average = averageOf(current, pick);
     const before = averageOf(previous, pick);
@@ -188,6 +199,7 @@ export function trainingView(table: WeeklyTable): TrainingView {
     .sort((a, b) => b.setsPerWeek - a.setsPerWeek || a.muscle.localeCompare(b.muscle));
 
   return {
+    averagedWeeks: current.length,
     workoutsPerWeek: weekly((week) => week.workouts),
     setsPerWeek: weekly((week) => week.sets),
     bars: [...table.complete, table.thisWeek].map((week) => ({
@@ -200,8 +212,8 @@ export function trainingView(table: WeeklyTable): TrainingView {
   };
 }
 
-function coveredWeeks(weeks: readonly WeekTotals[], firstWeek: LocalDate | undefined): WeekTotals[] {
-  return firstWeek ? weeks.filter((week) => !week.start.isBefore(firstWeek)) : [];
+function coveredWeeks(weeks: readonly WeekTotals[], firstFullWeek: LocalDate | undefined): WeekTotals[] {
+  return firstFullWeek ? weeks.filter((week) => !week.start.isBefore(firstFullWeek)) : [];
 }
 
 function averageOf(weeks: readonly WeekTotals[], pick: (week: WeekTotals) => number): number | undefined {

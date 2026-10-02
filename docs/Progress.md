@@ -93,7 +93,8 @@ Weeks start on the user's first day of the week. A range of N weeks is N bars, t
 far: N - 1 complete weeks and this week (1 year is 52 bars). "Since" is the first day of the oldest bar, and the
 lifts, the recent changes and Body start there too. Averages read the N - 1 complete weeks only, so this week's
 partial count doesn't drag them down, and only the weeks since the history began, so someone three weeks in
-isn't averaged over eleven. A change compares against the N - 1 complete weeks before the range, and is left
+isn't averaged over eleven. Averages count complete weeks only, so the week of the first started workout counts
+only if that workout was on the week's first day; otherwise averaging starts the week after. A change compares against the N - 1 complete weeks before the range, and is left
 out when those hold no history.
 
 ### Strength

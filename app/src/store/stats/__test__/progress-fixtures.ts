@@ -12,8 +12,8 @@ export const day = (month: number, n: number) => LocalDate.of(2026, month, n);
 /** Thursday, Oct 1 2026: this week starts on Monday, Sep 28. */
 export const today = day(10, 1);
 
-export function periodFor(range: ProgressRangeId) {
-  return progressPeriod(today, progressRange(range), DayOfWeek.MONDAY);
+export function periodFor(range: ProgressRangeId, firstDayOfWeek = DayOfWeek.MONDAY) {
+  return progressPeriod(today, progressRange(range), firstDayOfWeek);
 }
 
 export function point(date: LocalDate, workingSets: number, oneRepMax?: Weight, bestReps = 5): ExercisePoint {
