@@ -82,13 +82,9 @@ export function RecordRow({ row, weekday, kindLabel, wasText, accessibilityLabel
     paddingHorizontal: 14,
     ...divider(index),
   } as const;
-  return onPress ? (
+  return (
     <PressableSurface surface={surface} onPress={onPress} accessibilityLabel={accessibilityLabel}>
       {content}
     </PressableSurface>
-  ) : (
-    <View style={surface} accessible accessibilityLabel={accessibilityLabel}>
-      {content}
-    </View>
   );
 }

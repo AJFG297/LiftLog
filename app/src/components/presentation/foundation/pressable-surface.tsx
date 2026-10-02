@@ -4,7 +4,11 @@ import { Pressable, StyleProp, View, ViewStyle } from 'react-native';
 
 /** Without `onPress` a surface is a plain view; with it, the whole surface is one button. */
 export type PressableSurfaceAction =
-  | { onPress?: undefined }
+  | {
+      onPress?: undefined;
+      /** Reads a plain surface out as one item, under this label, rather than its texts one by one. */
+      accessibilityLabel?: string;
+    }
   | {
       onPress: () => void;
       /** Read out instead of the surface's text, when that text alone doesn't say what a tap does. */
@@ -26,7 +30,12 @@ export function PressableSurface(props: PressableSurfaceProps) {
 
   if (!props.onPress) {
     return (
-      <View testID={props.testID} style={[props.surface, props.style]}>
+      <View
+        testID={props.testID}
+        accessible={props.accessibilityLabel !== undefined}
+        accessibilityLabel={props.accessibilityLabel}
+        style={[props.surface, props.style]}
+      >
         {props.children}
       </View>
     );
