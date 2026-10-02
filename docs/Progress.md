@@ -169,8 +169,10 @@ muscle says the same rather than that there are no sets.
 ## Records and All exercises
 
 Both are pushed from the Progress tab (`stats/records`, `stats/exercises`) and draw their own title under the
-native header's back button. Each calls `useProgressHistory()` once and hands it to a pure function that
-returns what the screen draws; a row opens the exercise's stats over all time (`useOpenExerciseStats`).
+native header's back button (`ListPageTitle`). Each calls `useProgressHistory()` once and hands it to a pure
+function that returns what the screen draws; a row opens the exercise's stats over all time
+(`useOpenExerciseStats`). They share the tab's list pieces (`list-parts.tsx`, `amount-format.ts`, `AmountText`)
+and its rounding (`progress-amounts.ts`), so a value reads the same on every screen.
 
 ### Records
 
@@ -184,18 +186,21 @@ none the first time an exercise is done.
   (`firstDate`, the first started workout, so a planned workout where nothing was logged doesn't count), with
   the year once that month is in an earlier year.
 - **Months**: an ordered list of `{ month: YearMonth, showYear, rows }`, newest first. Within a month the newest
-  workout comes first, and a workout's records keep exercise order.
-- **A row**: the date, the exercise (under the name it was last logged with), the kind and value ("Heaviest ·
-  130 kg × 3", "Est. 1RM · 104.5 kg"), what it beat ("was 127.5 kg") and the gain. Weights are in the
-  user's unit, so a record lifted in pounds against a best in kilograms reads in one unit, and are rounded as
-  [How amounts read](#how-amounts-read) says, through the same `shownChange` as Strength's recent records: the
-  same record reads the same gain on both.
-- **Empty**: "No records yet" with no records, or a line for the chosen kind pointing back to All.
+  workout comes first, and a workout's records keep exercise order (`newestWorkoutFirst`).
+- **A row** (`RecordListRow`, from `recordListRowOf`): a union on `kind`. A heaviest record carries its `reps`,
+  an estimate the set it comes from (`estimatedFrom`). It shows the date, the exercise (under the name it was
+  last logged with), the kind and value ("Heaviest · 130 kg × 3", "Est. 1RM · 104.5 kg"), what it beat ("was
+  127.5 kg", after the set for an estimate: "82.5 kg × 8 · was 102 kg") and the gain. Weights are in the user's
+  unit, so a record lifted in pounds against a best in kilograms reads in one unit, and are rounded as
+  [How amounts read](#how-amounts-read) says.
+- **Empty**: "No records yet" with no records, or a line for the chosen kind pointing back to All
+  (`ListEmptyState`).
 
-An estimate's row also shows the set it comes from ("82.5 kg × 8 · was 102 kg"). The row is
-`RecordRow` (`components/presentation/stats/record-row.tsx`), which Strength's recent records draw too: there it
-`shows` the set after the kind and has no third line. Its gain badge ("+2.5 kg") is set in bold Geist Mono,
-unit included, as the board draws it: the one exception to keeping units in Geist ([Theming.md](./Theming.md#type)).
+Strength's recent records are the list's first three rows, from the same `recordListRowOf`, and both screens
+draw them with one `RecordRow` (`components/presentation/stats/record-row.tsx`): so the same record reads the
+same value and gain on both. On Strength the row `shows` the set after the kind and has no third line. Its gain
+badge ("+2.5 kg") is set in bold Geist Mono, unit included, as the board draws it: the one exception to keeping
+units in Geist ([Theming.md](./Theming.md#type)).
 
 ### All exercises
 
@@ -204,20 +209,26 @@ movement in `history.exercises`: only what the user has logged.
 
 - **Order**: most recently done first; exercises last done on the same day keep the order they were first
   done in.
-- **Search**: the exercise picker's `fuzzyMatchScore` on the name, best match first as in the picker, then the
-  most recently done.
+- **Search**: the exercise picker's `fuzzyMatchScore` (`models/exercise-fuzzy-match.ts`) on the name, best
+  match first as in the picker, then the most recently done. The field is foundation's `SearchField`.
 - **Muscle chips**: All · Chest · Back · Legs · Shoulders · Arms, and Core only when something logged files
-  under it, labelled as the picker's chips are (`muscleGroupLabel` in `utils/exercise-meta.ts`). An exercise's chip is `muscleGroupOf` its catalog descriptor (`selectExercises()[exerciseId]`),
-  the picker's rule: its first muscle. One missing from the catalog shows under All only.
-- **A row**: the name, when it was last done (today, yesterday, a weekday within the week, else a date) and
-  the session count over the whole history; a `Sparkline` of the last 12 weeks (`TREND_WEEKS`, which the "Change over 12 weeks" heading and the spoken
-  change interpolate) with no end
-  dot; the latest estimated 1RM, or best reps for a movement that tracks no load; and the change over the
-  12 weeks from `progressSince`, as shown (`shownChange`: the estimates to the nearest half, the change their
-  difference). The change sets the colours: up is
-  `positive` with an `accentInk` line, down `warmInk` for both, the same (or nothing to compare) muted with a
-  `faint` line. Fewer than two sessions in the window shows a dash.
+  under it, in foundation's `ChipRow` and labelled as the picker's chips are (`muscleGroupLabel` in
+  `utils/exercise-meta.ts`). An exercise's chip is `muscleGroupOf` (`models/muscle-groups.ts`) its catalog
+  descriptor (`selectExercises()[exerciseId]`), the picker's rule: its first muscle. One missing from the
+  catalog shows under All only.
 - **Count**: "12 exercises, most recent first" ("best match first" during a search) and "Change over 12 weeks"
   head the list. They stay when a search or chip matches nothing, and only go with nothing logged at all.
-- **Empty**: no match for the search, nothing under the chip, or nothing logged yet. A "same" change is a word,
-  so it stays in Geist while the numbers beside it are Geist Mono.
+- **A row** (`ExerciseListRow`, drawn by `ExerciseRow`): the name, when it was last done (today, yesterday, a
+  weekday within the week, else a date) and the session count over the whole history; a `Sparkline` of the
+  last 12 weeks (`TREND_WEEKS`, which the heading and the spoken change interpolate) with no end dot; the
+  latest estimated 1RM, or best reps for a movement that tracks no load; and the change over the 12 weeks from
+  `progressSince`, through `shownChange`, so it is the difference of the values as shown. Its `tone` (a
+  `ChangeTone`) sets the colours: a gain is `positive` with an `accentInk` line, a fall `warmInk` for both, no
+  change (or nothing to compare) muted with a `faint` line. Fewer than two sessions in the window shows a
+  dash. A "same" change is a word, so it stays in Geist while the numbers beside it are Geist Mono.
+- **Empty**: no match for the search, nothing under the chip, or nothing logged yet.
+
+`ExerciseRow` and Strength's lift rows show the same things but stay two components: the board draws the lift
+rows larger (an 18pt value, a 64 × 28 sparkline in `accentInk` with an end dot, a chevron) and the exercise rows
+smaller, with the sparkline coloured by the change. They share `AmountText`, `signedText`, `useToneColor` and
+`useRowDivider`.
