@@ -12,7 +12,7 @@ the plan import) opens in the Routines tab instead of switching to You:
 | --- | --- | --- |
 | Home | `(session)/` | Home, the workout screen and its sheets, and `history/`: All history (`/history`, the month list that used to be the History tab) and the workout editor (`/history/edit`). |
 | Routines | `routines/` | The Routines screen; `manage-workouts/`, a program's page and the routine editor; `import-plan-info` and `import-plan`, the plan import; and `ai/planner` (see [Routines.md](./Routines.md)). |
-| Progress | `stats/` | The stats screens, relabelled. |
+| Progress | `stats/` | Strength, Training and Body over a chosen range, plus Records and All exercises ([Progress.md](./Progress.md)). |
 | You | `settings/` | A profile card, then the settings, then Feed when `showFeed` is on. |
 
 The feed isn't a tab any more. It lives in `app/src/app/feed/`, on the root stack over the tabs, so

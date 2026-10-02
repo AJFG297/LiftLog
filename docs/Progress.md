@@ -23,6 +23,8 @@ then each screen.
       week counts them.
 - `records`: every record ever set (`SessionRecord`, see below), oldest first and in exercise order within a
   workout, each with the `workoutId` and `date` of the workout that set it.
+- `workouts`: one `WorkoutPoint` (id, date, bodyweight) per started workout, cardio-only ones included, for
+  Training and Body.
 - `firstDate`: the earliest workout's date, started or not, as `WorkoutRepository.earliestDate()` gives it.
 
 `progressSince(history, since)` gives one movement's points on or after `since` and its `change` over them:
@@ -69,7 +71,69 @@ and the screens agree with each other and with the workout summary because they 
 
 ## The Progress tab
 
+`app/(tabs)/stats/index.tsx`. A header ("Since" the range's first day, then Progress), three text tabs
+(Strength, Training, Body) and one range switch (4 weeks, 12 weeks, 1 year) under them. The range applies to
+every tab and keeps its value when the tab changes; it resets to 12 weeks when the screen remounts. The tab is
+the `progressTab` preference, so the screen reopens on the one last used.
 
+The screen calls `useProgressHistory()` once. Every number comes from pure functions in `store/stats/`, one
+file per part, and the components in `components/presentation/stats/progress/` only format and draw them:
+
+| File | Gives |
+| --- | --- |
+| `progress-tab.ts` | The tabs, the range table, and `progressPeriod`: the weeks a range covers. |
+| `progress-strength.ts` | `mostTrainedLifts` and `recentRecords`. |
+| `progress-training.ts` | `buildWeeklyTable`, then `trainingView` over it. |
+| `progress-body.ts` | `weighInsOf` and `bodyView`. |
+
+### Weeks and the range
+
+Weeks start on the user's first day of the week. A range of N weeks is N complete weeks plus this week so far,
+and "Since" is the first day of the oldest complete week. Averages read the complete weeks only, so this
+week's partial count doesn't drag them down, and only the weeks since the history began, so someone three
+weeks in isn't averaged over twelve. A change compares against the N complete weeks before the range, and is
+left out when those hold no history. Lifts, bars and the chart include this week.
+
+### Strength
+
+- **Lifts**: the 4 movements done in the most workouts in the range (ties to the one done last, then by
+  name), each with its latest estimated 1RM (best reps for a movement that tracks no load), the change over
+  the range from `progressSince`, the session count and a `Sparkline` of the range. There is no pinning yet.
+- **Recent records**: the last 3 of `history.records`, whatever the range, with the gain over what each beat.
+  A heaviest record shows its set; an estimated-1RM one shows the set the estimate comes from.
+- Lift and record rows open the expanded exercise view over all time (`useOpenExerciseStats`), since it
+  otherwise covers only its own period and an older lift would open on "no data". All exercises and See all
+  open `/stats/exercises` and `/stats/records`.
+
+### Training
+
+`buildWeeklyTable` walks the history once into one `WeekTotals` per week (workouts, working sets, and
+working sets per muscle) for the range, this week and the period before. Workouts and sets a week, the bars,
+the longest run of weeks with 3 or more workouts (this week counts once it has 3) and sets per muscle all read
+that table, so they agree.
+
+Sets per muscle reads the exercise's `primaryMuscles` and `secondaryMuscles` (see
+[Migrations.md](./Migrations.md); the descriptor keeps them apart from version 2). A working set counts 1
+for a primary muscle and ½ for a secondary one. The catalog's back muscles (lats, middle and lower back,
+traps) are one Back, counted once per set. A custom exercise's muscles are all primary, and one with none
+counts towards sets a week but no muscle. Values show to the nearest half ("6½"); a light band marks 10 to 20
+sets a week, and bars under 10 use the lighter accent.
+
+### Body
+
+From `Session.bodyweight` on finished workouts. A new workout starts with the last one's bodyweight, so a
+workout whose bodyweight equals the weigh-in before isn't a new weigh-in. The change over the range is
+against the bodyweight carried in from before it (drawn at the range's start, without a dot), or else the
+first weigh-in in it, and is in `ink`: neither direction is good by default. Lowest, average and highest are
+over the chart's points. Weigh-ins lists the last 5, whatever the range.
+
+Someone who has never logged a bodyweight, or who hides bodyweight in settings, gets no Body tab, and a stored
+Body falls back to Strength (`shownTab`).
+
+### Before the first workout
+
+With no finished workout there are no tabs: one card invites the first workout and opens Routines. A tab with
+nothing in the range says so in its card.
 
 ## Records and All exercises
 
