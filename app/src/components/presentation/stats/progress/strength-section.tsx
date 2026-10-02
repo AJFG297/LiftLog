@@ -1,5 +1,6 @@
 import { MsIconSrc } from '@/components/presentation/foundation/ms-icon-source';
 import { SurfaceText } from '@/components/presentation/foundation/surface-text';
+import { AmountText } from '@/components/presentation/stats/amount-text';
 import { Sparkline } from '@/components/presentation/stats/sparkline';
 import {
   ProgressEmptyLine,
@@ -113,8 +114,13 @@ function LiftRowView({
   const valueUnit = isLoad ? unit : t('progress.tab.lifts.reps.label');
   const value = lift.latest === undefined ? '–' : amountText(lift.latest);
   const change = lift.change === undefined ? undefined : signedText(lift.change);
-  const changeText = change && (change.text ?? t('progress.tab.same.label'));
-  const changeSpoken = change && (change.text ? `${change.text} ${valueUnit}` : changeText);
+  const changeSpoken = change && (change.text ? `${change.text} ${valueUnit}` : t('progress.tab.same.label'));
+  const changeStyle = {
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: '600',
+    color: change ? toneColor(change.tone) : tokens.muted,
+  } as const;
   return (
     <Pressable
       testID={`progress-lift-${index}`}
@@ -145,34 +151,16 @@ function LiftRowView({
       </View>
       <Sparkline values={lift.trend} width={SPARKLINE_WIDTH} height={SPARKLINE_HEIGHT} />
       <View style={{ minWidth: 66, alignItems: 'flex-end', gap: 1 }}>
-        <Text
-          style={{
-            fontFamily: fontFamily.number,
-            fontSize: 18,
-            lineHeight: 24,
-            fontWeight: '600',
-            color: tokens.ink,
-            letterSpacing: -0.18,
-          }}
-        >
-          {value}
-          <Text style={{ fontFamily: fontFamily.text, fontSize: 12, fontWeight: '500', color: tokens.muted }}>
-            {` ${valueUnit}`}
-          </Text>
-        </Text>
-        {change ? (
-          <Text
-            style={{
-              fontFamily: fontFamily.number,
-              fontSize: 12,
-              lineHeight: 16,
-              fontWeight: '600',
-              color: toneColor(change.tone),
-            }}
-          >
-            {changeText}
-            {change.text ? <Text style={{ fontFamily: fontFamily.text }}>{` ${valueUnit}`}</Text> : null}
-          </Text>
+        <AmountText
+          amount={value}
+          unit={valueUnit}
+          style={{ fontSize: 18, lineHeight: 24, fontWeight: '600', color: tokens.ink, letterSpacing: -0.18 }}
+          unitStyle={{ fontSize: 12, fontWeight: '500', color: tokens.muted }}
+        />
+        {change?.text ? (
+          <AmountText amount={change.text} unit={valueUnit} style={changeStyle} />
+        ) : change ? (
+          <SurfaceText style={changeStyle}>{t('progress.tab.same.label')}</SurfaceText>
         ) : null}
       </View>
       <MsIconSrc name="chevronRight" size={16} color={tokens.faint} />
@@ -249,18 +237,12 @@ function RecordRowView({
       </View>
       {gain.text ? (
         <View style={{ backgroundColor: tokens.accentSoft, borderRadius: 7, paddingVertical: 3, paddingHorizontal: 7 }}>
-          <Text
-            style={{
-              fontFamily: fontFamily.number,
-              fontSize: 12,
-              lineHeight: 16,
-              fontWeight: '600',
-              color: tokens.accentSoftInk,
-            }}
-          >
-            {gain.text}
-            <Text style={{ fontFamily: fontFamily.text, fontWeight: '700' }}>{` ${unit}`}</Text>
-          </Text>
+          <AmountText
+            amount={gain.text}
+            unit={unit}
+            style={{ fontSize: 12, lineHeight: 16, fontWeight: '600', color: tokens.accentSoftInk }}
+            unitStyle={{ fontWeight: '700' }}
+          />
         </View>
       ) : null}
     </Pressable>

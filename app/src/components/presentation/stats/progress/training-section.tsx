@@ -161,7 +161,11 @@ function WeeklyStat({
         {stat.average === undefined ? '–' : format(stat.average)}
       </SurfaceText>
       {moved ? (
-        <SurfaceText numeric weight="600" style={{ fontSize: 13, lineHeight: 18, color: toneColor(moved.tone) }}>
+        <SurfaceText
+          numeric={!!moved.text}
+          weight="600"
+          style={{ fontSize: 13, lineHeight: 18, color: toneColor(moved.tone) }}
+        >
           {moved.text ?? t('progress.tab.same.label')}
         </SurfaceText>
       ) : null}
