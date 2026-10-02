@@ -13,32 +13,39 @@ export const RECORD_FILTERS = [
   'estimatedOneRepMax',
 ] as const satisfies readonly RecordFilter[];
 
-/** One record as the list shows it. Weights are in the user's unit and rounded as shown. */
-export interface RecordRow {
+interface RecordListRowBase {
   /** Unique in the list: a workout sets at most one record per movement. */
   key: string;
   workoutId: string;
   exerciseId: ExerciseId | undefined;
   exerciseName: string;
   date: LocalDate;
-  kind: SessionRecord['kind'];
   /** The heaviest weight, or the estimated 1RM. */
   value: Weight;
-  /** The reps at the heaviest weight; undefined for an estimated 1RM. */
-  reps: number | undefined;
-  /** The set an estimated 1RM comes from, as lifted; undefined for a heaviest weight. */
-  estimatedFrom: { weight: Weight; reps: number } | undefined;
   /** The best it beat. */
   previous: Weight;
   /** `value` less `previous`, so the row adds up as shown. Always positive. */
   gain: Weight;
 }
 
+/** One record as the list shows it. Weights are in the user's unit and rounded as shown. */
+export type RecordListRow =
+  | (RecordListRowBase & {
+      kind: 'heaviestWeight';
+      /** The reps at the heaviest weight. */
+      reps: number;
+    })
+  | (RecordListRowBase & {
+      kind: 'estimatedOneRepMax';
+      /** The set the estimate comes from, as lifted. */
+      estimatedFrom: { weight: Weight; reps: number };
+    });
+
 export interface RecordMonth {
   month: YearMonth;
   /** The month is in an earlier year than today's, so its heading needs the year. */
   showYear: boolean;
-  rows: RecordRow[];
+  rows: RecordListRow[];
 }
 
 export interface RecordsList {
@@ -100,7 +107,7 @@ function newestWorkoutFirst(records: readonly DatedRecord[]): DatedRecord[] {
   return result;
 }
 
-function rowOf(history: ProgressHistory, { record, workoutId, date }: DatedRecord, unit: WeightUnit): RecordRow {
+function rowOf(history: ProgressHistory, { record, workoutId, date }: DatedRecord, unit: WeightUnit): RecordListRow {
   const exercise = history.exercises.get(record.key);
   const base = {
     key: `${workoutId}|${record.key}`,
@@ -108,19 +115,18 @@ function rowOf(history: ProgressHistory, { record, workoutId, date }: DatedRecor
     exerciseId: exercise?.blueprint.exerciseId,
     exerciseName: exercise?.name ?? record.exerciseName,
     date,
-    kind: record.kind,
   };
   if (record.kind === 'heaviestWeight') {
     return {
       ...base,
+      kind: record.kind,
       reps: record.reps,
-      estimatedFrom: undefined,
       ...amounts(record.weight, record.previous, unit, HEAVIEST_DECIMALS),
     };
   }
   return {
     ...base,
-    reps: undefined,
+    kind: record.kind,
     estimatedFrom: { weight: rounded(record.weight, unit, HEAVIEST_DECIMALS), reps: record.reps },
     ...amounts(record.oneRepMax, record.previous, unit, ESTIMATE_DECIMALS),
   };

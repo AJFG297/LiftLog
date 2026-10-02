@@ -53,7 +53,7 @@ const summary = (unit: WeightUnit, list = recordsListOf(history, today, 'all', u
       row.exerciseName,
       row.kind,
       text(row.value),
-      row.reps ?? (row.estimatedFrom && `${text(row.estimatedFrom.weight)} × ${row.estimatedFrom.reps}`),
+      row.kind === 'heaviestWeight' ? row.reps : `${text(row.estimatedFrom.weight)} × ${row.estimatedFrom.reps}`,
       text(row.previous),
       text(row.gain),
     ]),

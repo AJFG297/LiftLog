@@ -28,7 +28,7 @@ export type AxisAmount = { axis: 'load'; value: Weight } | { axis: 'reps'; value
 /** Up, down or flat over the window, as shown (rounded): what colours the line and the change. */
 export type TrendDirection = 'up' | 'down' | 'same';
 
-export interface ExerciseRow {
+export interface ExerciseListRow {
   key: MovementKey;
   exerciseId: ExerciseId;
   name: string;
@@ -46,7 +46,7 @@ export interface ExerciseRow {
 
 export interface ExercisesList {
   /** Most recently done first. */
-  rows: ExerciseRow[];
+  rows: ExerciseListRow[];
   /** The chips to offer after All. */
   muscles: MuscleGroup[];
 }
@@ -91,7 +91,7 @@ function lastDate(exercise: ExerciseHistory): LocalDate {
   return exercise.points.at(-1)!.date;
 }
 
-function rowOf(exercise: ExerciseHistory, today: LocalDate, unit: WeightUnit): ExerciseRow {
+function rowOf(exercise: ExerciseHistory, today: LocalDate, unit: WeightUnit): ExerciseListRow {
   const progress = progressSince(exercise, today.minusWeeks(TREND_WEEKS));
   const change = changeOf(progress.change, unit);
   return {

@@ -2,12 +2,12 @@ import { PressableSurface } from '@/components/presentation/foundation/pressable
 import { SurfaceText } from '@/components/presentation/foundation/surface-text';
 import { numberStyle, useAppTheme } from '@/hooks/useAppTheme';
 import { shortFormatWeightUnit, Weight } from '@/models/weight';
-import { RecordRow as RecordRowModel } from '@/store/stats/records-list';
+import { RecordListRow } from '@/store/stats/records-list';
 import { localeFormatBigNumber } from '@/utils/locale-bignumber';
 import { Text, View } from 'react-native';
 
 interface RecordRowProps {
-  row: RecordRowModel;
+  row: RecordListRow;
   /** The day's short name ("Mon"). */
   weekday: string;
   /** "Heaviest" or "Est. 1RM". */
@@ -51,7 +51,7 @@ export function RecordRow({ row, weekday, kindLabel, wasText, accessibilityLabel
           <Text style={{ color: tokens.ink }}>
             <Text style={numberStyle}>{amountText(row.value)}</Text>
             {` ${unit}`}
-            {row.reps === undefined ? null : <Text style={numberStyle}>{` × ${row.reps}`}</Text>}
+            {row.kind === 'heaviestWeight' ? <Text style={numberStyle}>{` × ${row.reps}`}</Text> : null}
           </Text>
         </SurfaceText>
         <SurfaceText style={{ fontSize: 12, lineHeight: 16, color: tokens.muted }}>{wasText}</SurfaceText>

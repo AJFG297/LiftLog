@@ -8,7 +8,7 @@ import { useFormatDate } from '@/hooks/useFormatDate';
 import { usePreferredWeightUnit } from '@/hooks/usePreferredWeightUnit';
 import { useProgressHistory } from '@/hooks/useProgressHistory';
 import { shortFormatWeightUnit, Weight } from '@/models/weight';
-import { RecordFilter, RecordRow as RecordRowModel, recordsListOf } from '@/store/stats/records-list';
+import { RecordFilter, RecordListRow, recordsListOf } from '@/store/stats/records-list';
 import { LocalDate, YearMonth } from '@js-joda/core';
 import { useTranslate } from '@tolgee/react';
 import { Stack } from 'expo-router';
@@ -131,7 +131,7 @@ function RecordsEmptyState({ t, filter }: { t: TranslateFn; filter: RecordFilter
   }
 }
 
-function kindLabel(t: TranslateFn, row: RecordRowModel): string {
+function kindLabel(t: TranslateFn, row: RecordListRow): string {
   return row.kind === 'heaviestWeight'
     ? t('progress.records.kind.heaviest.label')
     : t('progress.records.kind.one_rep_max.label');
@@ -141,17 +141,18 @@ function weightText(weight: Weight): string {
   return `${amountText(weight)} ${shortFormatWeightUnit(weight.unit)}`;
 }
 
-function wasText(t: TranslateFn, row: RecordRowModel): string {
+function wasText(t: TranslateFn, row: RecordListRow): string {
   const was = t('progress.records.was.label', { value: weightText(row.previous) });
-  return row.estimatedFrom ? `${weightText(row.estimatedFrom.weight)} × ${row.estimatedFrom.reps} · ${was}` : was;
+  return row.kind === 'estimatedOneRepMax'
+    ? `${weightText(row.estimatedFrom.weight)} × ${row.estimatedFrom.reps} · ${was}`
+    : was;
 }
 
-function spokenRecord(t: TranslateFn, formatDate: FormatDate, row: RecordRowModel): string {
-  const set = row.reps ?? row.estimatedFrom?.reps;
+function spokenRecord(t: TranslateFn, formatDate: FormatDate, row: RecordListRow): string {
   const value =
-    weightText(row.value) +
-    (row.estimatedFrom ? `, ${weightText(row.estimatedFrom.weight)}` : '') +
-    (set === undefined ? '' : ` × ${set}`);
+    row.kind === 'heaviestWeight'
+      ? `${weightText(row.value)} × ${row.reps}`
+      : `${weightText(row.value)}, ${weightText(row.estimatedFrom.weight)} × ${row.estimatedFrom.reps}`;
   return t('progress.records.row.spoken.label', {
     exercise: row.exerciseName,
     kind: kindLabel(t, row),

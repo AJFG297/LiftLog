@@ -12,7 +12,7 @@ import { LastDoneLabel } from '@/models/home/up-next';
 import { MuscleGroup } from '@/models/muscle-groups';
 import { shortFormatWeightUnit } from '@/models/weight';
 import { useAppSelector } from '@/store';
-import { AxisAmount, ExerciseRow as ExerciseRowModel, exercisesListOf } from '@/store/stats/exercises-list';
+import { AxisAmount, ExerciseListRow, exercisesListOf } from '@/store/stats/exercises-list';
 import { selectExercises } from '@/store/stored-sessions';
 import { localeFormatBigNumber } from '@/utils/locale-bignumber';
 import { LocalDate } from '@js-joda/core';
@@ -189,7 +189,7 @@ function unitOf(t: TranslateFn, amount: AxisAmount): string {
 }
 
 /** "+8.5", "−0.5" with a true minus sign, "same", or a dash with nothing to compare. */
-function changeText(t: TranslateFn, row: ExerciseRowModel): string {
+function changeText(t: TranslateFn, row: ExerciseListRow): string {
   if (!row.change || !row.direction) {
     return '–';
   }
@@ -203,7 +203,7 @@ function changeText(t: TranslateFn, row: ExerciseRowModel): string {
   return `${row.direction === 'up' ? '+' : '−'}${magnitude}`;
 }
 
-function spokenExercise(t: TranslateFn, formatDate: FormatDate, row: ExerciseRowModel, today: LocalDate): string {
+function spokenExercise(t: TranslateFn, formatDate: FormatDate, row: ExerciseListRow, today: LocalDate): string {
   const value = row.current
     ? row.current.axis === 'reps'
       ? t('progress.exercises.best_reps_spoken.label', { count: amountOf(row.current) })
