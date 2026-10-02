@@ -7,7 +7,8 @@ import { ProgressSection } from '@/components/presentation/stats/progress/progre
 import { amountText, signedText } from '@/components/presentation/stats/amount-format';
 import { fontFamily, spacing, useAppTheme } from '@/hooks/useAppTheme';
 import { useFormatDate } from '@/hooks/useFormatDate';
-import type { LiftRow, RecentRecord } from '@/store/stats/progress-strength';
+import type { LiftRow } from '@/store/stats/progress-strength';
+import type { RecordListRow } from '@/store/stats/records-list';
 import { useTranslate } from '@tolgee/react';
 import { Pressable, Text, View } from 'react-native';
 
@@ -16,11 +17,11 @@ const SPARKLINE_HEIGHT = 28;
 
 interface StrengthSectionProps {
   lifts: readonly LiftRow[];
-  records: readonly RecentRecord[];
+  records: readonly RecordListRow[];
   /** "kg" or "lbs". */
   unit: string;
   onOpenLift: (lift: LiftRow) => void;
-  onOpenRecord: (record: RecentRecord) => void;
+  onOpenRecord: (record: RecordListRow) => void;
   onAllExercises: () => void;
   onAllRecords: () => void;
 }
@@ -67,7 +68,7 @@ export function StrengthSection(props: StrengthSectionProps) {
           {props.records.length ? (
             props.records.map((record, index) => (
               <RecordRowView
-                key={`${record.workoutId}-${record.key}`}
+                key={record.key}
                 record={record}
                 index={index}
                 unit={props.unit}
@@ -169,7 +170,7 @@ function RecordRowView({
   unit,
   onPress,
 }: {
-  record: RecentRecord;
+  record: RecordListRow;
   index: number;
   unit: string;
   onPress: () => void;
@@ -180,21 +181,24 @@ function RecordRowView({
   const divider = useRowDivider();
   const heaviest = record.kind === 'heaviestWeight';
   const kind = heaviest ? t('progress.tab.records.heaviest.label') : t('progress.tab.records.one_rep_max.label');
-  const value = amountText(record.value);
-  const gain = signedText(record.gain);
+  const value = amountText(record.value.value.toNumber());
+  const gain = signedText(record.gain.value.toNumber());
   const weekday = formatDate(record.date, { weekday: 'short' });
   const fullDate = formatDate(record.date, { weekday: 'long', month: 'long', day: 'numeric' });
-  const weight = amountText(record.weight);
-  const set = `${weight} ${unit} × ${record.reps}`;
+  const lifted = record.kind === 'heaviestWeight' ? { weight: record.value, reps: record.reps } : record.estimatedFrom;
+  const weight = amountText(lifted.weight.value.toNumber());
+  const set = `${weight} ${unit} × ${lifted.reps}`;
   const estimate = heaviest ? undefined : `${value} ${unit}`;
-  const was = t('progress.tab.records.was.label', { value: `${amountText(record.previous)} ${unit}` });
+  const was = t('progress.tab.records.was.label', {
+    value: `${amountText(record.previous.value.toNumber())} ${unit}`,
+  });
   const mono = { fontFamily: fontFamily.number, color: tokens.ink };
   return (
     <Pressable
       testID={`progress-record-${index}`}
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={[fullDate, record.name, kind, estimate, set, was].filter(Boolean).join(', ')}
+      accessibilityLabel={[fullDate, record.exerciseName, kind, estimate, set, was].filter(Boolean).join(', ')}
       style={({ pressed }) => [
         {
           flexDirection: 'row',
@@ -221,13 +225,13 @@ function RecordRowView({
       </View>
       <View style={{ flex: 1, gap: spacing[0.5], minWidth: 0 }}>
         <SurfaceText weight="600" numberOfLines={1} style={{ fontSize: 15, lineHeight: 20, color: tokens.ink }}>
-          {record.name}
+          {record.exerciseName}
         </SurfaceText>
         <SurfaceText numberOfLines={1} style={{ fontSize: 13, lineHeight: 18, color: tokens.muted }}>
           {`${kind} · `}
           <Text style={mono}>{weight}</Text>
           <Text style={{ color: tokens.ink }}>{` ${unit} × `}</Text>
-          <Text style={mono}>{record.reps}</Text>
+          <Text style={mono}>{lifted.reps}</Text>
         </SurfaceText>
       </View>
       {gain.text ? (

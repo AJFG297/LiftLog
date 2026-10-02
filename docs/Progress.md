@@ -125,8 +125,9 @@ hold no history.
 - **Lifts**: the 4 movements done in the most workouts in the range (ties to the one done last, then by
   name), each with its latest estimated 1RM (best reps for a movement that tracks no load), the change over
   the range from `progressSince` as shown, the session count and a `Sparkline` of the range. There is no pinning yet.
-- **Recent records**: the last 3 of `history.records`, whatever the range, with the gain over what each beat.
-  A heaviest record shows its set; an estimated-1RM one shows the set the estimate comes from.
+- **Recent records**: the newest 3 records, whatever the range: the first three rows of the Records list, built
+  by the same `recordListRowOf`, with the gain over what each beat. A heaviest record shows its set; an
+  estimated-1RM one shows the set the estimate comes from.
 - Lift and record rows open the expanded exercise view over all time (`useOpenExerciseStats`), since it
   otherwise covers only its own period and an older lift would open on "no data". All exercises and See all
   open `/stats/exercises` and `/stats/records`.

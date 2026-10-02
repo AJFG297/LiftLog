@@ -68,7 +68,7 @@ export function recordsListOf(
 ): RecordsList {
   const rows = newestWorkoutFirst(history.records)
     .filter(({ record }) => filter === 'all' || record.kind === filter)
-    .map((dated) => rowOf(history, dated, unit));
+    .map((dated) => recordListRowOf(history, dated, unit));
 
   const months: RecordMonth[] = [];
   for (const row of rows) {
@@ -86,10 +86,11 @@ export function recordsListOf(
 }
 
 /**
- * Reverses the workouts, which the history holds in the order they happened, but keeps each workout's
- * records in exercise order. A workout's records are contiguous, since one ledger step adds them all.
+ * The records the newest workout first, as the lists show them: reverses the workouts, which the history holds
+ * in the order they happened, but keeps each workout's records in exercise order. A workout's records are
+ * contiguous, since one ledger step adds them all.
  */
-function newestWorkoutFirst(records: readonly DatedRecord[]): DatedRecord[] {
+export function newestWorkoutFirst(records: readonly DatedRecord[]): DatedRecord[] {
   const result: DatedRecord[] = [];
   let end = records.length;
   while (end > 0) {
@@ -103,7 +104,12 @@ function newestWorkoutFirst(records: readonly DatedRecord[]): DatedRecord[] {
   return result;
 }
 
-function rowOf(history: ProgressHistory, { record, workoutId, date }: DatedRecord, unit: WeightUnit): RecordListRow {
+/** A record as a list row, shown in `unit`: on Records and in Strength's recent records alike. */
+export function recordListRowOf(
+  history: ProgressHistory,
+  { record, workoutId, date }: DatedRecord,
+  unit: WeightUnit,
+): RecordListRow {
   const exercise = history.exercises.get(record.key);
   const base = {
     key: `${workoutId}|${record.key}`,

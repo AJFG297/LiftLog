@@ -152,18 +152,18 @@ describe('recordsListOf', () => {
     ]);
   });
 
-  it("gives each record the gain the Strength tab's recent records show for it", () => {
+  it("starts with Strength's recent records, each with the same value and gain", () => {
     for (const unit of ['kilograms', 'pounds'] as const) {
       const listed = recordsListOf(history, today, 'all', unit).months.flatMap((month) => month.rows);
-      const gainOf = (workoutId: string, name: string) =>
-        listed.find((row) => row.workoutId === workoutId && row.exerciseName === name)?.gain.value.toNumber();
 
-      for (const record of recentRecords(history, unit)) {
-        expect(record.gain).toBe(gainOf(record.workoutId, record.name));
-      }
+      expect(recentRecords(history, unit)).toEqual(listed.slice(0, 3));
     }
-    // The newest three: Bench's estimate of 1 kg and Squat's 5 kg on Sep 28, and Bench's 17 kg in August.
-    expect(recentRecords(history, 'kilograms').map((record) => record.gain)).toEqual([1, 5, 17]);
+    // The newest three: Squat's 5 kg and Bench's estimate of 1 kg on Sep 28, and Bench's 17 kg in August.
+    expect(recentRecords(history, 'kilograms').map((record) => text(record.gain))).toEqual([
+      '5 kilograms',
+      '1 kilograms',
+      '17 kilograms',
+    ]);
   });
 
   it('filters to one kind and counts what it lets through', () => {
