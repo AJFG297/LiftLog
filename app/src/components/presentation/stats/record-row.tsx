@@ -36,6 +36,7 @@ export function RecordRow(props: RecordRowProps) {
   const divider = useRowDivider();
   const unit = shortFormatWeightUnit(row.value.unit);
   const amount = amountOf(row, props.shows);
+  const gain = signedText(row.gain.value).text;
   return (
     <PressableSurface
       testID={props.testID}
@@ -66,7 +67,7 @@ export function RecordRow(props: RecordRowProps) {
         <SurfaceText numberOfLines={1} weight="600" style={{ fontSize: 15, lineHeight: 20, color: tokens.ink }}>
           {row.exerciseName}
         </SurfaceText>
-        <SurfaceText style={{ fontSize: 13, lineHeight: 18, color: tokens.muted }}>
+        <SurfaceText numberOfLines={1} style={{ fontSize: 13, lineHeight: 18, color: tokens.muted }}>
           {`${props.kindLabel} · `}
           <Text style={{ color: tokens.ink }}>
             <Text style={numberStyle}>{amountText(amount.weight.value)}</Text>
@@ -78,20 +79,22 @@ export function RecordRow(props: RecordRowProps) {
           <SurfaceText style={{ fontSize: 12, lineHeight: 16, color: tokens.muted }}>{props.detail}</SurfaceText>
         ) : null}
       </View>
-      <View
-        style={{
-          flexShrink: 0,
-          paddingVertical: 3,
-          paddingHorizontal: 7,
-          borderRadius: 7,
-          backgroundColor: tokens.accentSoft,
-        }}
-      >
-        {/* The board sets the whole badge, unit included, in bold Geist Mono, unlike other amounts. */}
-        <SurfaceText numeric weight="700" style={{ fontSize: 12, lineHeight: 16, color: tokens.accentSoftInk }}>
-          {`${signedText(row.gain.value).text ?? amountText(row.gain.value)} ${unit}`}
-        </SurfaceText>
-      </View>
+      {gain ? (
+        <View
+          style={{
+            flexShrink: 0,
+            paddingVertical: 3,
+            paddingHorizontal: 7,
+            borderRadius: 7,
+            backgroundColor: tokens.accentSoft,
+          }}
+        >
+          {/* The board sets the whole badge, unit included, in bold Geist Mono, unlike other amounts. */}
+          <SurfaceText numeric weight="700" style={{ fontSize: 12, lineHeight: 16, color: tokens.accentSoftInk }}>
+            {`${gain} ${unit}`}
+          </SurfaceText>
+        </View>
+      ) : null}
     </PressableSurface>
   );
 }
