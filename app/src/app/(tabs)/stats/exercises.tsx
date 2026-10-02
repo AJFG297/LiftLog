@@ -1,6 +1,7 @@
 import { SurfaceText } from '@/components/presentation/foundation/surface-text';
-import { ExerciseRow } from '@/components/presentation/stats/lists/exercise-row';
-import { ListCard, ListEmptyState, ListPageTitle } from '@/components/presentation/stats/lists/list-page-parts';
+import { amountText, signedText } from '@/components/presentation/stats/amount-format';
+import { ExerciseRow } from '@/components/presentation/stats/exercise-row';
+import { ListCard, ListEmptyState, ListPageTitle } from '@/components/presentation/stats/list-parts';
 import { type ChipOption, ChipRow } from '@/components/presentation/foundation/chip-row';
 import { SearchField } from '@/components/presentation/foundation/search-field';
 import { spacing, useAppTheme } from '@/hooks/useAppTheme';
@@ -14,7 +15,6 @@ import { shortFormatWeightUnit } from '@/models/weight';
 import { useAppSelector } from '@/store';
 import { AxisAmount, ExerciseListRow, exercisesListOf } from '@/store/stats/exercises-list';
 import { selectExercises } from '@/store/stored-sessions';
-import { localeFormatBigNumber } from '@/utils/locale-bignumber';
 import { LocalDate } from '@js-joda/core';
 import { useTranslate } from '@tolgee/react';
 import { Stack } from 'expo-router';
@@ -108,11 +108,11 @@ export default function ExercisesScreen() {
               {list.rows.map((row, index) => (
                 <ExerciseRow
                   key={row.key}
-                  first={index === 0}
+                  index={index}
                   name={row.name}
                   meta={`${lastDoneText(t, formatDate, row.lastDone, today)} · ${sessionsText(t, row.sessions)}`}
                   trend={row.trend}
-                  direction={row.direction}
+                  tone={row.tone}
                   value={row.current && { amount: amountOf(row.current), unit: unitOf(t, row.current) }}
                   change={changeText(t, row)}
                   accessibilityLabel={spokenExercise(t, formatDate, row, today)}
@@ -181,7 +181,7 @@ function sessionsText(t: TranslateFn, sessions: number): string {
 }
 
 function amountOf(amount: AxisAmount): string {
-  return amount.axis === 'reps' ? amount.value.toString() : localeFormatBigNumber(amount.value.value);
+  return amountText(amount.axis === 'reps' ? amount.value : amount.value.value);
 }
 
 function unitOf(t: TranslateFn, amount: AxisAmount): string {
@@ -190,17 +190,13 @@ function unitOf(t: TranslateFn, amount: AxisAmount): string {
 
 /** "+8.5", "−0.5" with a true minus sign, "same", or a dash with nothing to compare. */
 function changeText(t: TranslateFn, row: ExerciseListRow): string {
-  if (!row.change || !row.direction) {
+  if (!row.change) {
     return '–';
   }
-  if (row.direction === 'same') {
-    return t('progress.exercises.change_same.label');
-  }
-  const magnitude =
-    row.change.axis === 'reps'
-      ? Math.abs(row.change.value).toString()
-      : localeFormatBigNumber(row.change.value.value.abs());
-  return `${row.direction === 'up' ? '+' : '−'}${magnitude}`;
+  return (
+    signedText(row.change.axis === 'reps' ? row.change.value : row.change.value.value).text ??
+    t('progress.exercises.change_same.label')
+  );
 }
 
 function spokenExercise(t: TranslateFn, formatDate: FormatDate, row: ExerciseListRow, today: LocalDate): string {
@@ -213,11 +209,11 @@ function spokenExercise(t: TranslateFn, formatDate: FormatDate, row: ExerciseLis
     : undefined;
   const amount = row.change && `${changeText(t, row).replace(/^[+−]/, '')} ${unitOf(t, row.change)}`;
   const change =
-    row.direction === 'up'
+    row.tone === 'gain'
       ? t('progress.exercises.change_up_spoken.label', { amount })
-      : row.direction === 'down'
+      : row.tone === 'fall'
         ? t('progress.exercises.change_down_spoken.label', { amount })
-        : row.direction === 'same'
+        : row.tone === 'none'
           ? t('progress.exercises.change_same_spoken.label')
           : t('progress.exercises.change_none_spoken.label');
   return t('progress.exercises.row.spoken.label', {

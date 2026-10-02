@@ -1,9 +1,10 @@
 import { PressableSurface } from '@/components/presentation/foundation/pressable-surface';
 import { SurfaceText } from '@/components/presentation/foundation/surface-text';
 import { numberStyle, useAppTheme } from '@/hooks/useAppTheme';
-import { shortFormatWeightUnit, Weight } from '@/models/weight';
+import { shortFormatWeightUnit } from '@/models/weight';
 import { RecordListRow } from '@/store/stats/records-list';
-import { localeFormatBigNumber } from '@/utils/locale-bignumber';
+import { amountText } from '@/components/presentation/stats/amount-format';
+import { useRowDivider } from '@/components/presentation/stats/list-parts';
 import { Text, View } from 'react-native';
 
 interface RecordRowProps {
@@ -15,13 +16,14 @@ interface RecordRowProps {
   /** "was 127.5 kg". */
   wasText: string;
   accessibilityLabel: string;
-  first: boolean;
+  index: number;
   onPress: (() => void) | undefined;
 }
 
 /** A record: the day it was set, the exercise, the kind and value, what it beat, and the gain. */
-export function RecordRow({ row, weekday, kindLabel, wasText, accessibilityLabel, first, onPress }: RecordRowProps) {
+export function RecordRow({ row, weekday, kindLabel, wasText, accessibilityLabel, index, onPress }: RecordRowProps) {
   const { tokens } = useAppTheme();
+  const divider = useRowDivider();
   const unit = shortFormatWeightUnit(row.value.unit);
   const content = (
     <>
@@ -49,7 +51,7 @@ export function RecordRow({ row, weekday, kindLabel, wasText, accessibilityLabel
         <SurfaceText style={{ fontSize: 13, lineHeight: 18, color: tokens.muted }}>
           {`${kindLabel} · `}
           <Text style={{ color: tokens.ink }}>
-            <Text style={numberStyle}>{amountText(row.value)}</Text>
+            <Text style={numberStyle}>{amountText(row.value.value)}</Text>
             {` ${unit}`}
             {row.kind === 'heaviestWeight' ? <Text style={numberStyle}>{` × ${row.reps}`}</Text> : null}
           </Text>
@@ -66,7 +68,7 @@ export function RecordRow({ row, weekday, kindLabel, wasText, accessibilityLabel
         }}
       >
         <SurfaceText weight="600" style={{ fontSize: 12, lineHeight: 16, color: tokens.accentSoftInk }}>
-          <Text style={[numberStyle, { fontWeight: '600' }]}>{`+${amountText(row.gain)}`}</Text>
+          <Text style={[numberStyle, { fontWeight: '600' }]}>{`+${amountText(row.gain.value)}`}</Text>
           {` ${unit}`}
         </SurfaceText>
       </View>
@@ -78,8 +80,7 @@ export function RecordRow({ row, weekday, kindLabel, wasText, accessibilityLabel
     gap: 14,
     paddingVertical: 12,
     paddingHorizontal: 14,
-    borderTopWidth: first ? 0 : 1,
-    borderTopColor: tokens.line,
+    ...divider(index),
   } as const;
   return onPress ? (
     <PressableSurface surface={surface} onPress={onPress} accessibilityLabel={accessibilityLabel}>
@@ -90,8 +91,4 @@ export function RecordRow({ row, weekday, kindLabel, wasText, accessibilityLabel
       {content}
     </View>
   );
-}
-
-export function amountText(weight: Weight): string {
-  return localeFormatBigNumber(weight.value);
 }

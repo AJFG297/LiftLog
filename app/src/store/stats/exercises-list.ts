@@ -5,7 +5,7 @@ import { ExerciseDescriptor } from '@/models/exercise-models';
 import { MuscleGroup, muscleGroupOf } from '@/models/muscle-groups';
 import { LastDoneLabel, lastDoneLabelOf } from '@/models/home/up-next';
 import { Weight, WeightUnit } from '@/models/weight';
-import { shownChange, shownWeight } from '@/store/stats/progress-amounts';
+import { ChangeTone, shownChange, shownWeight, toneOf } from '@/store/stats/progress-amounts';
 import {
   ExerciseHistory,
   ExerciseProgress,
@@ -33,9 +33,6 @@ export interface ExerciseFilters {
 /** An amount on the exercise's axis: an estimated 1RM, or reps for a movement that tracks no load. */
 export type AxisAmount = { axis: 'load'; value: Weight } | { axis: 'reps'; value: number };
 
-/** Up, down or flat over the window, as shown (rounded): what colours the line and the change. */
-export type TrendDirection = 'up' | 'down' | 'same';
-
 export interface ExerciseListRow {
   key: MovementKey;
   exerciseId: ExerciseId;
@@ -49,7 +46,8 @@ export interface ExerciseListRow {
   current: AxisAmount | undefined;
   /** The window's last value less its first, as shown. Undefined with fewer than two values. */
   change: AxisAmount | undefined;
-  direction: TrendDirection | undefined;
+  /** Which way the change went, as shown: what colours the line and the change. */
+  tone: ChangeTone | undefined;
 }
 
 export interface ExercisesList {
@@ -109,7 +107,7 @@ function rowOf(exercise: ExerciseHistory, today: LocalDate, unit: WeightUnit): E
     trend: trendValues(progress, unit),
     current,
     change,
-    direction: change && directionOf(change),
+    tone: change && toneOf(change.axis === 'reps' ? change.value : change.value.value),
   };
 }
 
@@ -146,9 +144,4 @@ function latestOf(exercise: ExerciseHistory, axis: StatAxis, unit: WeightUnit): 
     }
   }
   return undefined;
-}
-
-function directionOf(change: AxisAmount): TrendDirection {
-  const sign = change.axis === 'reps' ? Math.sign(change.value) : change.value.value.toNumber();
-  return sign > 0 ? 'up' : sign < 0 ? 'down' : 'same';
 }

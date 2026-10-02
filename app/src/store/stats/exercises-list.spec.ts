@@ -88,17 +88,17 @@ describe('exercisesListOf', () => {
     const rows = exercisesListOf(history, catalog, today, all, 'kilograms').rows;
 
     expect(
-      rows.map((row) => [row.name, row.lastDone, row.sessions, amount(row.current), amount(row.change), row.direction]),
+      rows.map((row) => [row.name, row.lastDone, row.sessions, amount(row.current), amount(row.change), row.tone]),
     ).toEqual([
-      ['Crunch', { kind: 'yesterday' }, 2, '25 reps', '5 reps', 'up'],
+      ['Crunch', { kind: 'yesterday' }, 2, '25 reps', '5 reps', 'gain'],
       // 85 × 10 ≈ 113.33 against 80 × 10 ≈ 106.67 on July 15, each to the nearest half; June is before the
       // window.
-      ['Bench Press', { kind: 'weekday', date: day(9, 30) }, 3, '113.5 kilograms', '7 kilograms', 'up'],
-      ['Overhead Press', { kind: 'weekday', date: day(9, 29) }, 2, '64 kilograms', '-6 kilograms', 'down'],
+      ['Bench Press', { kind: 'weekday', date: day(9, 30) }, 3, '113.5 kilograms', '7 kilograms', 'gain'],
+      ['Overhead Press', { kind: 'weekday', date: day(9, 29) }, 2, '64 kilograms', '-6 kilograms', 'fall'],
       // One session in the window: nothing to compare.
       ['Squat', { kind: 'date', date: day(9, 1) }, 1, '116.5 kilograms', undefined, undefined],
       ['Mystery Lift', { kind: 'date', date: day(8, 20) }, 1, '58.5 kilograms', undefined, undefined],
-      ['Lateral Raise', { kind: 'date', date: day(8, 15) }, 2, '13.5 kilograms', '0 kilograms', 'same'],
+      ['Lateral Raise', { kind: 'date', date: day(8, 15) }, 2, '13.5 kilograms', '0 kilograms', 'none'],
     ]);
   });
 

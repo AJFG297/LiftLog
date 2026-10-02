@@ -82,8 +82,10 @@ the `progressTab` preference, so the screen reopens on the one last used.
 The screen calls `useProgressHistory()` once. Every number comes from pure functions in `store/stats/`, one
 file per part, and the components in `components/presentation/stats/progress/` only format and draw them. What
 the Records and All exercises lists share with the tab sits one folder up, in `components/presentation/stats/`:
-`list-parts.tsx` (`ListCard`, `useRowDivider`, `useToneColor`, `ListEmptyLine`), `amount-format.ts` (`amountText`,
-`signedText`, `signedAmount`) and `amount-text.tsx` (`AmountText`).
+`list-parts.tsx` (`ListCard`, `useRowDivider`, `useToneColor`, `ListEmptyLine`, and the list pages' `ListPageTitle`
+and `ListEmptyState`), `amount-format.ts` (`amountText`, `signedText`, `signedAmount`) and `amount-text.tsx`
+(`AmountText`). A change's direction is one `ChangeTone` (`gain`, `fall`, `none`, from `toneOf` in
+`progress-amounts.ts`) on every screen.
 
 | File | Gives |
 | --- | --- |

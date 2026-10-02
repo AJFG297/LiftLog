@@ -1,8 +1,9 @@
 import FullHeightScrollView from '@/components/layout/full-height-scroll-view';
 import { SegmentedControl } from '@/components/presentation/foundation/segmented-control';
 import { SurfaceText } from '@/components/presentation/foundation/surface-text';
-import { ListCard, ListEmptyState, ListPageTitle } from '@/components/presentation/stats/lists/list-page-parts';
-import { amountText, RecordRow } from '@/components/presentation/stats/lists/record-row';
+import { amountText } from '@/components/presentation/stats/amount-format';
+import { ListCard, ListEmptyState, ListPageTitle } from '@/components/presentation/stats/list-parts';
+import { RecordRow } from '@/components/presentation/stats/lists/record-row';
 import { spacing, useAppTheme } from '@/hooks/useAppTheme';
 import { useFormatDate } from '@/hooks/useFormatDate';
 import { usePreferredWeightUnit } from '@/hooks/usePreferredWeightUnit';
@@ -93,7 +94,7 @@ export default function RecordsScreen() {
                   <RecordRow
                     key={row.key}
                     row={row}
-                    first={index === 0}
+                    index={index}
                     weekday={formatDate(row.date, { weekday: 'short' })}
                     kindLabel={kindLabel(t, row)}
                     wasText={wasText(t, row)}
@@ -138,7 +139,7 @@ function kindLabel(t: TranslateFn, row: RecordListRow): string {
 }
 
 function weightText(weight: Weight): string {
-  return `${amountText(weight)} ${shortFormatWeightUnit(weight.unit)}`;
+  return `${amountText(weight.value)} ${shortFormatWeightUnit(weight.unit)}`;
 }
 
 function wasText(t: TranslateFn, row: RecordListRow): string {
