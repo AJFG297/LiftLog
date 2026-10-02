@@ -2,8 +2,8 @@ import { LocalDate } from '@js-joda/core';
 import { MovementKey, WeightedExerciseBlueprint } from '@/models/blueprint-models';
 import { RecordedWeightedExercise, Session } from '@/models/session-models';
 import { Weight, WeightUnit } from '@/models/weight';
-import { calculateOneRepMax, primaryAxisFor } from '@/store/stats/calculate-stats';
-import { RecordLedger, SessionRecord } from '@/store/stats/personal-records';
+import { primaryAxisFor } from '@/store/stats/calculate-stats';
+import { bestOneRepMaxSet, RecordLedger, SessionRecord } from '@/store/stats/personal-records';
 import { StatAxis } from '@/store/stats/quantity';
 
 /** One movement in one finished workout. A workout that logged the movement twice gives one point. */
@@ -107,26 +107,12 @@ function pointsOf(session: Session): Map<MovementKey, { blueprint: WeightedExerc
 }
 
 function pointOf(session: Session, exercise: RecordedWeightedExercise): ExercisePoint {
-  let oneRepMax: Weight | undefined;
-  let bestReps = 0;
-  for (const potentialSet of exercise.setsCountingTowards('countsTowardsPrs')) {
-    const reps = potentialSet.set?.repsCompleted;
-    if (!reps) {
-      continue;
-    }
-    bestReps = Math.max(bestReps, reps);
-    if (exercise.tracksResistance) {
-      const estimate = calculateOneRepMax(potentialSet, exercise.effectiveWeight(potentialSet, session.bodyweight));
-      if (!oneRepMax || estimate.isGreaterThan(oneRepMax)) {
-        oneRepMax = estimate;
-      }
-    }
-  }
+  const counted = exercise.setsCountingTowards('countsTowardsPrs');
   return {
     workoutId: session.id,
     date: session.date,
-    oneRepMax,
-    bestReps,
+    oneRepMax: bestOneRepMaxSet(exercise, session.bodyweight)?.oneRepMax,
+    bestReps: Math.max(0, ...counted.map((potentialSet) => potentialSet.set?.repsCompleted ?? 0)),
     workingSets: exercise.setsCountingTowards('countsTowardsVolume').filter((x) => x.set).length,
   };
 }
