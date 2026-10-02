@@ -30,19 +30,23 @@ export interface ShownChange {
 
 /**
  * `value` against `previous`, both as shown, with the change as their difference as shown. A row then adds up
- * as it reads, and a record's gain reads the same wherever the record is listed. When the two would show alike
- * although they differ (a real but tiny gain), both show a place finer, to a tenth and then a hundredth,
- * rather than "+0".
+ * as it reads, and a record's gain reads the same wherever the record is listed. When rounding would hide or
+ * flip the change (a real but tiny gain, or a converted load set against one shown as lifted), both show a
+ * place finer, to a tenth and then a hundredth, rather than "+0" or a gain that reads as a fall.
  */
 export function shownChange(value: Weight, previous: Weight, kind: AmountKind, unit: WeightUnit): ShownChange {
-  const differs = !value.equals(previous, true);
-  let shown = shownPair(value, previous, kind, unit, 'half');
+  const direction = value.convertTo(unit).value.comparedTo(previous.convertTo(unit).value);
+  let shown = withChange(shownPair(value, previous, kind, unit, 'half'));
   for (const step of STEPS.slice(1)) {
-    if (!differs || !shown.value.value.eq(shown.previous.value)) {
+    if (shown.change.value.comparedTo(0) === direction) {
       break;
     }
-    shown = shownPair(value, previous, kind, unit, step);
+    shown = withChange(shownPair(value, previous, kind, unit, step));
   }
+  return shown;
+}
+
+function withChange(shown: { value: Weight; previous: Weight }): ShownChange {
   return { ...shown, change: shown.value.minus(shown.previous) };
 }
 

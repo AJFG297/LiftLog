@@ -71,6 +71,13 @@ describe('shownChange', () => {
     expect(shownChange(kg(100.2), kg(100.2), 'estimate', 'kilograms').change).toEqual(kg(0));
   });
 
+  it('never shows a heavier converted load as a fall against one shown as lifted', () => {
+    // 220.9 lb is 100.198 kg, which rounds to 100 kg, below the 100.1 kg shown as lifted.
+    const shown = shownChange(new Weight(220.9, 'pounds'), kg(100.1), 'load', 'kilograms');
+
+    expect([shown.value, shown.previous, shown.change]).toEqual([kg(100.2), kg(100.1), kg(0.1)]);
+  });
+
   it('subtracts loads as lifted', () => {
     expect(shownChange(kg(102.25), kg(100), 'load', 'kilograms').change).toEqual(kg(2.25));
   });
