@@ -46,6 +46,10 @@ work to find the docs relevant to your area, and update it whenever you add, rem
 - [ExercisePicker.md](./ExercisePicker.md) - choosing exercises for a routine or a workout: add (many, in
   tap order, optionally as a superset) and swap (one), how the pick comes back through the store, the list
   (Recent, fuzzy matches, muscle and equipment chips), creating a custom exercise, and the catalog's limits.
+- [Progress.md](./Progress.md) - the Progress tab, Records and All exercises, and the model they share:
+  `buildProgressHistory`'s one walk over the finished history (points per movement and workout, dated
+  records), the `RecordLedger` that is the one implementation of the record rules, `progressSince` for a
+  window's change, and where `useProgressHistory` loads it from.
 - [FeedProcess.md](./FeedProcess.md) - the opt-in social feed: the follow/accept flow, what is and isn't
   visible to the server, and the end-to-end encryption model (AES-CBC payloads, RSA-PSS signatures).
 - [Progression.md](./Progression.md) - how last session's numbers carry into today from the best set,
