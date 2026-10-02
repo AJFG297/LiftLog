@@ -20,8 +20,6 @@ export interface BodyChartGeometry {
   gridDecimals: number;
   /** Where the line's area ends on the right; the grid labels sit past it. */
   right: number;
-  /** The baseline the date labels sit under. */
-  bottom: number;
 }
 
 /**
@@ -69,6 +67,5 @@ export function bodyChartGeometry(
     grid,
     gridDecimals: step < 1 ? 1 : 0,
     right,
-    bottom,
   };
 }
