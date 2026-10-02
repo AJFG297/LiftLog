@@ -9,7 +9,9 @@ import { Weight, WeightUnit } from '@/models/weight';
  */
 export type AmountKind = 'estimate' | 'load';
 
-type Step = 'half' | 'tenth';
+/** The steps a value can show to, coarsest first. Halves unless that would hide a real difference. */
+const STEPS = ['half', 'tenth', 'hundredth'] as const;
+type Step = (typeof STEPS)[number];
 
 const AS_LIFTED_DECIMALS = 2;
 
@@ -28,17 +30,28 @@ export interface ShownChange {
 
 /**
  * `value` against `previous`, both as shown, with the change as their difference as shown. A row then adds up
- * as it reads, and a record's gain reads the same wherever the record is listed. When the two would show alike
- * although they differ (a real but tiny gain), both show to a tenth instead, rather than "+0".
+ * as it reads, and a record's gain reads the same wherever the record is listed. When rounding would hide or
+ * flip the change (a real but tiny gain, or a converted load set against one shown as lifted), both show a
+ * place finer, to a tenth and then a hundredth, rather than "+0" or a gain that reads as a fall.
  */
 export function shownChange(value: Weight, previous: Weight, kind: AmountKind, unit: WeightUnit): ShownChange {
-  let shownValue = shownTo(value, kind, unit, 'half');
-  let shownPrevious = shownTo(previous, kind, unit, 'half');
-  if (shownValue.value.eq(shownPrevious.value) && !value.equals(previous, true)) {
-    shownValue = shownTo(value, kind, unit, 'tenth');
-    shownPrevious = shownTo(previous, kind, unit, 'tenth');
+  const direction = value.convertTo(unit).value.comparedTo(previous.convertTo(unit).value);
+  let shown = withChange(shownPair(value, previous, kind, unit, 'half'));
+  for (const step of STEPS.slice(1)) {
+    if (shown.change.value.comparedTo(0) === direction) {
+      break;
+    }
+    shown = withChange(shownPair(value, previous, kind, unit, step));
   }
-  return { value: shownValue, previous: shownPrevious, change: shownValue.minus(shownPrevious) };
+  return shown;
+}
+
+function withChange(shown: { value: Weight; previous: Weight }): ShownChange {
+  return { ...shown, change: shown.value.minus(shown.previous) };
+}
+
+function shownPair(value: Weight, previous: Weight, kind: AmountKind, unit: WeightUnit, step: Step) {
+  return { value: shownTo(value, kind, unit, step), previous: shownTo(previous, kind, unit, step) };
 }
 
 /** Which way a change went: a gain reads in `positive`, a fall in `warmInk`, no change in `muted`. */
@@ -55,7 +68,9 @@ function shownTo(weight: Weight, kind: AmountKind, unit: WeightUnit, step: Step)
   if (kind === 'load' && asLifted) {
     return converted.with({ value: converted.value.decimalPlaces(AS_LIFTED_DECIMALS) });
   }
-  return converted.with({ value: step === 'half' ? toHalf(converted.value) : converted.value.decimalPlaces(1) });
+  return converted.with({
+    value: step === 'half' ? toHalf(converted.value) : converted.value.decimalPlaces(step === 'tenth' ? 1 : 2),
+  });
 }
 
 function toHalf(value: BigNumber): BigNumber {
