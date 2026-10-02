@@ -1,8 +1,8 @@
 import { LocalDate } from '@js-joda/core';
-import { fuzzyMatchScore } from '@/components/presentation/workout-editor/exercise-fuzzy-match';
-import { MuscleGroup, muscleGroupOf } from '@/components/presentation/workout-editor/exercise-picker';
+import { fuzzyMatchScore } from '@/models/exercise-fuzzy-match';
 import { ExerciseId, MovementKey } from '@/models/blueprint-models';
 import { ExerciseDescriptor } from '@/models/exercise-models';
+import { MuscleGroup, muscleGroupOf } from '@/models/muscle-groups';
 import { LastDoneLabel, lastDoneLabelOf } from '@/models/home/up-next';
 import { Weight, WeightUnit } from '@/models/weight';
 import { ExerciseHistory, ProgressHistory, progressSince, trendValues } from '@/store/stats/progress-history';

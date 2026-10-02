@@ -1,18 +1,15 @@
 import { SurfaceText } from '@/components/presentation/foundation/surface-text';
 import { ExerciseRow } from '@/components/presentation/stats/lists/exercise-row';
 import { ListCard, ListEmptyState, ListPageTitle } from '@/components/presentation/stats/lists/list-page-parts';
-import { MuscleGroup } from '@/components/presentation/workout-editor/exercise-picker';
-import {
-  type ChipOption,
-  ExercisePickerChipRow,
-  ExercisePickerSearchField,
-} from '@/components/presentation/workout-editor/exercise-picker-filters';
+import { type ChipOption, ChipRow } from '@/components/presentation/foundation/chip-row';
+import { SearchField } from '@/components/presentation/foundation/search-field';
 import { spacing, useAppTheme } from '@/hooks/useAppTheme';
 import { useFormatDate } from '@/hooks/useFormatDate';
 import { usePreferredWeightUnit } from '@/hooks/usePreferredWeightUnit';
 import { useProgressHistory } from '@/hooks/useProgressHistory';
 import { useScroll } from '@/hooks/useScrollListener';
 import { LastDoneLabel } from '@/models/home/up-next';
+import { MuscleGroup } from '@/models/muscle-groups';
 import { shortFormatWeightUnit } from '@/models/weight';
 import { useAppSelector } from '@/store';
 import { AxisAmount, ExerciseRow as ExerciseRowModel, exercisesListOf } from '@/store/stats/exercises-list';
@@ -69,7 +66,8 @@ export default function ExercisesScreen() {
         }}
       >
         <ListPageTitle title={t('progress.exercises.title')} />
-        <ExercisePickerSearchField
+        <SearchField
+          testID="exercises-search"
           value={query}
           onChange={setQuery}
           placeholder={t('progress.exercises.search.placeholder')}
@@ -78,7 +76,7 @@ export default function ExercisesScreen() {
         />
         {/* Chips carry a 4pt touch inset, which would otherwise widen the gaps around the row. */}
         <View style={{ marginVertical: -spacing[1] }}>
-          <ExercisePickerChipRow
+          <ChipRow
             testID="exercises-muscle"
             accessibilityLabel={t('progress.exercises.muscle.label')}
             options={muscleOptions}

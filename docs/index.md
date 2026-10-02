@@ -21,9 +21,9 @@ work to find the docs relevant to your area, and update it whenever you add, rem
   Match wallpaper, and how the Paper scheme for unconverted screens is mapped from them. Also the type:
   Geist and Geist Mono embedded at build time, and when to use `numeric` / `numberStyle` / `tabularText`.
 - [Components.md](./Components.md) - the redesign's own primitives in `components/presentation/foundation/`
-  (Card, Chip, SegmentedControl, RoundIconButton, ListRow, SetBadge, ProgressBar, Toast), their
-  accessibility rules (roles, labels, 44pt targets via `hitSlopFor`), the native-sheet convention
-  (`formSheetOptions` + `SheetHeader`), haptics, and the `liftlog://dev/components` screen.
+  (Card, Chip, ChipRow, SearchField, SegmentedControl, RoundIconButton, ListRow, SetBadge, ProgressBar,
+  Toast), their accessibility rules (roles, labels, 44pt targets via `hitSlopFor`), the native-sheet
+  convention (`formSheetOptions` + `SheetHeader`), haptics, and the `liftlog://dev/components` screen.
 
 ## Features
 
