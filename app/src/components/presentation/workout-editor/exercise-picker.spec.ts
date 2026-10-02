@@ -17,8 +17,23 @@ import {
   withPickAppended,
 } from './exercise-picker';
 
-function exercise(name: string, muscles: string[], equipment: string | null = null): ExerciseDescriptor {
-  return { name, muscles, equipment, force: null, level: '', mechanic: null, instructions: '', category: '' };
+function exercise(
+  name: string,
+  primaryMuscles: string[],
+  equipment: string | null = null,
+  secondaryMuscles: string[] = [],
+): ExerciseDescriptor {
+  return {
+    name,
+    primaryMuscles,
+    secondaryMuscles,
+    equipment,
+    force: null,
+    level: '',
+    mechanic: null,
+    instructions: '',
+    category: '',
+  };
 }
 
 const exercises: Record<string, ExerciseDescriptor> = {
@@ -50,6 +65,11 @@ describe('muscleGroupOf', () => {
     expect(muscleGroupOf(exercises.bench!)).toBe('chest');
     expect(muscleGroupOf(exercises.row!)).toBe('back');
     expect(muscleGroupOf(exercise('Squat', ['Quadriceps']))).toBe('legs');
+  });
+
+  it('files an exercise by its primary muscles only', () => {
+    expect(muscleGroupOf(exercise('Close-Grip Bench Press', ['triceps'], 'barbell', ['chest']))).toBe('arms');
+    expect(muscleGroupOf(exercise('Helper only', [], null, ['chest']))).toBeUndefined();
   });
 
   it('files neck and no muscle under no chip', () => {
@@ -185,7 +205,7 @@ describe('toggledPick', () => {
 });
 
 describe('customExerciseOf', () => {
-  it('trims the name and keeps the muscles and equipment', () => {
+  it('trims the name and keeps the muscles, all primary, and the equipment', () => {
     expect(customExerciseOf({ name: '  Zercher Squat ', muscles: ['quadriceps'], equipment: 'barbell' })).toEqual({
       name: 'Zercher Squat',
       category: '',
@@ -194,7 +214,8 @@ describe('customExerciseOf', () => {
       instructions: '',
       level: 'beginner',
       mechanic: null,
-      muscles: ['quadriceps'],
+      primaryMuscles: ['quadriceps'],
+      secondaryMuscles: [],
     });
     expect(customExerciseOf({ name: 'Plank', muscles: [], equipment: undefined }).equipment).toBeNull();
   });

@@ -20,12 +20,13 @@ const baseSample: BuiltInExerciseJSON[] = [
 ];
 
 describe('resolveCatalog', () => {
-  it('takes name from the id and the instructions from the overlay, merging muscles from the base', () => {
+  it('takes name from the id and the instructions from the overlay, keeping primary and secondary muscles apart', () => {
     const catalog = resolveCatalog(baseSample, { Squat: { instructions: 'Stand up\nSit down' } });
     expect(catalog['Squat']).toMatchObject({
       name: 'Squat',
       instructions: 'Stand up\nSit down',
-      muscles: ['quadriceps', 'glutes'],
+      primaryMuscles: ['quadriceps'],
+      secondaryMuscles: ['glutes'],
     });
   });
 

@@ -29,11 +29,11 @@ const MUSCLE_GROUP_OF: Record<string, MuscleGroup> = {
 };
 
 /**
- * The chip an exercise files under, from its first muscle. The catalog lists primary muscles first, and
- * filtering on any muscle would put every press and row under Arms through their secondary muscles.
+ * The chip an exercise files under, from its first primary muscle. Filing by any muscle would put every press
+ * and row under Arms through their secondary muscles.
  */
 export function muscleGroupOf(exercise: ExerciseDescriptor): MuscleGroup | undefined {
-  const first = exercise.muscles[0]?.trim().toLowerCase();
+  const first = exercise.primaryMuscles[0]?.trim().toLowerCase();
   return first === undefined ? undefined : MUSCLE_GROUP_OF[first];
 }
 
@@ -197,7 +197,8 @@ export function customExerciseOf(input: {
     instructions: '',
     level: 'beginner',
     mechanic: null,
-    muscles: input.muscles,
+    primaryMuscles: input.muscles,
+    secondaryMuscles: [],
   };
 }
 

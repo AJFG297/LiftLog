@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm';
 import { KeyValueStore } from '../key-value-store';
 import { writeAtomically } from '@/db/helpers';
 import { dataMigrationsSchema, exercisesSchema } from '@/db/schema';
-import { ExerciseDescriptor } from '@/models/exercise-models';
+import { ExerciseDescriptor, musclesOf } from '@/models/exercise-models';
 import { exerciseDescriptorMigrations } from '@/models/storage/versions/migrations';
 import { loadCanonicalBuiltInExercises } from '@/services/exercise-catalog';
 
@@ -22,9 +22,13 @@ function descriptorsEqual(a: ExerciseDescriptor, b: ExerciseDescriptor): boolean
     a.equipment === b.equipment &&
     a.category === b.category &&
     a.instructions === b.instructions &&
-    a.muscles.length === b.muscles.length &&
-    a.muscles.every((m, i) => m === b.muscles[i])
+    sameList(musclesOf(a), musclesOf(b))
   );
+}
+
+// Compares the muscles as one list: copies stored before primary and secondary were split hold both in one.
+function sameList(a: readonly string[], b: readonly string[]): boolean {
+  return a.length === b.length && a.every((value, i) => value === b[i]);
 }
 
 /**

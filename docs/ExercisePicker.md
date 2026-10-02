@@ -52,8 +52,8 @@ The routine or workout's name and exercise ids travel as route params, so a row 
   Clear filters when the chips hide a match.
 - A new search or chip remounts the list, so it starts at the top.
 - **Muscle chips** (All, Chest, Back, Shoulders, Arms, Legs, Core) group the catalog's muscles. An exercise
-  files under its first muscle, which the catalog lists first among the primary ones. Filtering on any muscle
-  would put every press and row under Arms, through their secondary muscles. Neck is under All only.
+  files under its first primary muscle (`ExerciseDescriptor.primaryMuscles`). Filing by any muscle would put
+  every press and row under Arms, through their secondary muscles. Neck is under All only.
 - **Equipment chips** use the catalog's own words, labelled from the same `exercise.equipment.*` keys as
   each row's meta, so a chip and its rows read alike ("Bodyweight" for `body only`). An E-Z bar counts as a
   barbell, and anything outside the list (foam roll, medicine ball, none) as Other.
@@ -61,7 +61,7 @@ The routine or workout's name and exercise ids travel as route params, so a row 
 ## New exercises
 
 **New**, or Create "X", opens a form in the picker with the name (prefilled with the search), the muscles
-(the first one tapped is the main one) and the equipment. The muscle and equipment chips that were on start
+(all primary; the first one tapped is the main one) and the equipment. The muscle and equipment chips that were on start
 it off when they name one. Create saves it as a custom exercise and picks it: added to the selection, or,
 when swapping, picked straight away.
 

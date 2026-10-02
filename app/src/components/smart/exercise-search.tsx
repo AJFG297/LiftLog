@@ -141,7 +141,7 @@ export function ExerciseSearch({ requestId, mode, exerciseName, context }: Exerc
 
   const metaOf = (id: string, exercise: ExerciseDescriptor) =>
     [
-      exercise.muscles[0] ? exerciseMetaLabel(t, 'muscle', exercise.muscles[0]) : undefined,
+      exercise.primaryMuscles[0] ? exerciseMetaLabel(t, 'muscle', exercise.primaryMuscles[0]) : undefined,
       exercise.equipment ? exerciseMetaLabel(t, 'equipment', exercise.equipment) : undefined,
       alreadyIn.has(id)
         ? context?.name

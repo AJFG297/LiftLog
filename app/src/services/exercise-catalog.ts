@@ -36,7 +36,8 @@ function builtInToDescriptor(
     equipment: json.equipment,
     category: json.category,
     instructions: translation?.instructions ?? '',
-    muscles: json.primaryMuscles.concat(json.secondaryMuscles),
+    primaryMuscles: json.primaryMuscles,
+    secondaryMuscles: json.secondaryMuscles,
   };
 }
 

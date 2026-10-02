@@ -155,7 +155,8 @@ export function stubDescriptor(name: string): ExerciseDescriptor {
     level: '',
     mechanic: null,
     equipment: null,
-    muscles: [],
+    primaryMuscles: [],
+    secondaryMuscles: [],
     instructions: '',
     category: '',
   };

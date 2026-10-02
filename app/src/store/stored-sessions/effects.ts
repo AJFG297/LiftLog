@@ -28,6 +28,7 @@ import { samePersistedContent } from '@/services/workout-rows';
 import { eq, sql } from 'drizzle-orm';
 import { toRecord } from '@/utils/reduce';
 import { fromExerciseDescriptorJSON, toExerciseDescriptorJSON } from '@/models/exercise-models';
+import { exerciseDescriptorMigrations } from '@/models/storage/versions/migrations';
 import { loadBuiltInExercises } from '@/services/exercise-catalog';
 import { missingStubs } from '@/models/exercise-resolver';
 
@@ -57,7 +58,7 @@ export function applyStoredSessionsEffects(addEffect: AddEffectFn) {
       const savedExercises = (await db.select().from(exercisesSchema)).reduce(
         toRecord(
           (x) => x.id,
-          (x) => fromExerciseDescriptorJSON(x.payload),
+          (x) => fromExerciseDescriptorJSON(exerciseDescriptorMigrations.migrate(x.payload)),
         ),
         {},
       );
