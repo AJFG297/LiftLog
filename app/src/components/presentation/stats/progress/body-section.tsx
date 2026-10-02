@@ -1,19 +1,17 @@
 import { Card } from '@/components/presentation/foundation/card';
 import { SurfaceText } from '@/components/presentation/foundation/surface-text';
-import { bodyChartGeometry } from '@/components/presentation/stats/progress/body-chart-geometry';
-import { formatFixed, signedAmount } from '@/components/presentation/stats/progress/progress-format';
-import {
-  ProgressListCard,
-  ProgressSection,
-  useRowDivider,
-} from '@/components/presentation/stats/progress/progress-section';
+import { AmountText } from '@/components/presentation/stats/amount-text';
+import { bodyChartGeometry } from '@/components/presentation/stats/geometry/body-chart-geometry';
+import { formatFixed, signedAmount } from '@/components/presentation/stats/amount-format';
+import { ListCard, useRowDivider } from '@/components/presentation/stats/list-parts';
+import { ProgressSection } from '@/components/presentation/stats/progress/progress-section';
 import { fontFamily, spacing, useAppTheme } from '@/hooks/useAppTheme';
 import { useFormatDate } from '@/hooks/useFormatDate';
 import type { BodyView } from '@/store/stats/progress-body';
 import { LocalDate } from '@js-joda/core';
 import { useTranslate } from '@tolgee/react';
 import { useState } from 'react';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
 import Svg, { Circle, Line, Path, Text as SvgText } from 'react-native-svg';
 
 const CHART_HEIGHT = 150;
@@ -37,6 +35,7 @@ export function BodySection({ view, from, to, unit, overRange }: BodySectionProp
   const formatDate = useFormatDate();
   const divider = useRowDivider();
   const change = view.change === undefined ? undefined : signedAmount(view.change, DECIMALS, { fixed: true });
+  const changeStyle = { fontSize: 15, lineHeight: 20, fontWeight: '600', color: tokens.ink } as const;
   const longDate = (date: LocalDate) => formatDate(date, { weekday: 'short', month: 'short', day: 'numeric' });
   return (
     <View style={{ gap: spacing[4] }}>
@@ -48,40 +47,24 @@ export function BodySection({ view, from, to, unit, overRange }: BodySectionProp
             <SurfaceText font="text-xs" weight="500" style={{ color: tokens.muted }}>
               {t('progress.tab.body.bodyweight.label')}
             </SurfaceText>
-            <Text
+            <AmountText
               testID="progress-bodyweight"
-              style={{
-                fontFamily: fontFamily.number,
-                fontSize: 34,
-                lineHeight: 40,
-                fontWeight: '600',
-                letterSpacing: -0.68,
-                color: tokens.ink,
-              }}
-            >
-              {formatFixed(view.current, DECIMALS)}
-              <Text style={{ fontFamily: fontFamily.text, fontSize: 15, fontWeight: '500', color: tokens.muted }}>
-                {` ${unit}`}
-              </Text>
-            </Text>
+              amount={formatFixed(view.current, DECIMALS)}
+              unit={unit}
+              style={{ fontSize: 34, lineHeight: 40, fontWeight: '600', letterSpacing: -0.68, color: tokens.ink }}
+              unitStyle={{ fontSize: 15, fontWeight: '500', color: tokens.muted }}
+            />
             <SurfaceText style={{ fontSize: 13, lineHeight: 18, color: tokens.muted }}>
               {t('progress.tab.body.last_weighed.label', { date: longDate(view.lastWeighed) })}
             </SurfaceText>
           </View>
           {change ? (
             <View style={{ alignItems: 'flex-end', gap: spacing[0.5], paddingTop: spacing[0.5] }}>
-              <Text
-                style={{
-                  fontFamily: fontFamily.number,
-                  fontSize: 15,
-                  lineHeight: 20,
-                  fontWeight: '600',
-                  color: tokens.ink,
-                }}
-              >
-                {change.text ?? t('progress.tab.same.label')}
-                {change.text ? <Text style={{ fontFamily: fontFamily.text }}>{` ${unit}`}</Text> : null}
-              </Text>
+              {change.text ? (
+                <AmountText amount={change.text} unit={unit} style={changeStyle} />
+              ) : (
+                <SurfaceText style={changeStyle}>{t('progress.tab.same.label')}</SurfaceText>
+              )}
               <SurfaceText font="text-xs" style={{ color: tokens.muted }}>
                 {overRange}
               </SurfaceText>
@@ -97,7 +80,7 @@ export function BodySection({ view, from, to, unit, overRange }: BodySectionProp
       </Card>
 
       <ProgressSection title={t('progress.tab.weigh_ins.title')} subtitle={t('progress.tab.weigh_ins.subtitle')}>
-        <ProgressListCard>
+        <ListCard>
           {view.recent.map((weighIn, index) => {
             const moved =
               weighIn.change === undefined ? undefined : signedAmount(weighIn.change, DECIMALS, { fixed: true });
@@ -135,26 +118,23 @@ export function BodySection({ view, from, to, unit, overRange }: BodySectionProp
                     {moved.text}
                   </SurfaceText>
                 ) : null}
-                <Text
+                <AmountText
+                  amount={formatFixed(weighIn.weight, DECIMALS)}
+                  unit={unit}
                   style={{
                     minWidth: 72,
                     textAlign: 'right',
-                    fontFamily: fontFamily.number,
                     fontSize: 16,
                     lineHeight: 22,
                     fontWeight: '600',
                     color: tokens.ink,
                   }}
-                >
-                  {formatFixed(weighIn.weight, DECIMALS)}
-                  <Text style={{ fontFamily: fontFamily.text, fontSize: 12, fontWeight: '500', color: tokens.muted }}>
-                    {` ${unit}`}
-                  </Text>
-                </Text>
+                  unitStyle={{ fontSize: 12, fontWeight: '500', color: tokens.muted }}
+                />
               </View>
             );
           })}
-        </ProgressListCard>
+        </ListCard>
       </ProgressSection>
     </View>
   );

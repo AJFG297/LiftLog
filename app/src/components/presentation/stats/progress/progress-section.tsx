@@ -1,10 +1,8 @@
-import { Card } from '@/components/presentation/foundation/card';
 import { SurfaceText } from '@/components/presentation/foundation/surface-text';
 import { MIN_TOUCH_TARGET } from '@/components/presentation/foundation/touch-target';
 import { spacing, useAppTheme } from '@/hooks/useAppTheme';
-import type { ChangeTone } from '@/components/presentation/stats/progress/progress-format';
 import { ReactNode } from 'react';
-import { Pressable, StyleProp, View, ViewStyle } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 interface ProgressSectionProps {
   title: string;
@@ -56,35 +54,5 @@ export function ProgressSection({ title, subtitle, action, children }: ProgressS
       </View>
       {children}
     </View>
-  );
-}
-
-/** The card the rows of a section sit in: no padding of its own, so each row is full width. */
-export function ProgressListCard({ children, style }: { children: ReactNode; style?: StyleProp<ViewStyle> }) {
-  return <Card style={[{ padding: 0, overflow: 'hidden' }, style]}>{children}</Card>;
-}
-
-/** The hairline between rows: none above the first. */
-export function useRowDivider() {
-  const { tokens } = useAppTheme();
-  return (index: number): ViewStyle => (index ? { borderTopWidth: 1, borderTopColor: tokens.line } : {});
-}
-
-/** A gain in `positive`, a fall in `warmInk` (doing less isn't an error), no change in `muted`. */
-export function useToneColor() {
-  const { tokens } = useAppTheme();
-  return (tone: ChangeTone) => (tone === 'gain' ? tokens.positive : tone === 'fall' ? tokens.warmInk : tokens.muted);
-}
-
-/**
- * A short muted line for a section with nothing to show in the range. It pads itself unless the card it is
- * in already does (`inset={false}`).
- */
-export function ProgressEmptyLine({ text, inset = true }: { text: string; inset?: boolean }) {
-  const { tokens } = useAppTheme();
-  return (
-    <SurfaceText font="text-sm" style={{ color: tokens.muted, padding: inset ? spacing[4] : 0 }}>
-      {text}
-    </SurfaceText>
   );
 }

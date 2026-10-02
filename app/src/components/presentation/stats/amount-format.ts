@@ -1,5 +1,11 @@
 import BigNumber from 'bignumber.js';
+import { ChangeTone, toneOf } from '@/store/stats/progress-amounts';
 import { localeFormatBigNumber } from '@/utils/locale-bignumber';
+
+/** A number already rounded for showing, as it is: "80", "82.5", "102.25". */
+export function amountText(value: number): string {
+  return localeFormatBigNumber(new BigNumber(value));
+}
 
 /** A number to at most `decimals` places: "80", "82.5". */
 export function formatAmount(value: number, decimals: number): string {
@@ -11,25 +17,28 @@ export function formatFixed(value: number, decimals: number): string {
   return localeFormatBigNumber(new BigNumber(value), decimals);
 }
 
-/** A gain reads in `positive`, a fall in `warmInk`, no change in `muted`. */
-export type ChangeTone = 'gain' | 'fall' | 'none';
-
 export interface SignedText {
-  /** "+2.5", "−1"; undefined when it rounds to nothing, for the caller to say "same". */
+  /** "+2.5", "−1"; undefined when it is nothing, for the caller to say "same". */
   text: string | undefined;
   tone: ChangeTone;
 }
 
 /** A change with its sign, rounded as the number beside it is. The minus is a real one, not a hyphen. */
 export function signedAmount(value: number, decimals: number, { fixed = false } = {}): SignedText {
-  const rounded = new BigNumber(value).decimalPlaces(decimals);
-  if (rounded.isZero()) {
-    return { text: undefined, tone: 'none' };
-  }
-  const size = fixed
-    ? formatFixed(rounded.abs().toNumber(), decimals)
-    : formatAmount(rounded.abs().toNumber(), decimals);
-  return rounded.isPositive() ? { text: `+${size}`, tone: 'gain' } : { text: `−${size}`, tone: 'fall' };
+  return signed(new BigNumber(value).decimalPlaces(decimals), (size) =>
+    fixed ? formatFixed(size, decimals) : formatAmount(size, decimals),
+  );
+}
+
+/** A change already rounded for showing, with its sign: the difference of two amounts as shown. */
+export function signedText(value: number): SignedText {
+  return signed(new BigNumber(value), amountText);
+}
+
+function signed(value: BigNumber, format: (size: number) => string): SignedText {
+  const tone = toneOf(value);
+  const size = format(value.abs().toNumber());
+  return { text: tone === 'none' ? undefined : `${tone === 'gain' ? '+' : '−'}${size}`, tone };
 }
 
 /** Rounds to the nearest half. */

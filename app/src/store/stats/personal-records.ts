@@ -1,5 +1,5 @@
 import { MovementKey } from '@/models/blueprint-models';
-import { Session } from '@/models/session-models';
+import { RecordedWeightedExercise, Session } from '@/models/session-models';
 import { Weight } from '@/models/weight';
 import { calculateOneRepMax } from '@/store/stats/calculate-stats';
 
@@ -9,32 +9,57 @@ export interface PersonalRecord {
 }
 
 /** A movement's best estimated 1RM in one workout, with the set it came from. */
-interface BestOneRepMax extends PersonalRecord {
+interface BestOneRepMax extends PersonalRecord, OneRepMaxSet {}
+
+/** An estimated 1RM and the set it comes from, as lifted. */
+export interface OneRepMaxSet {
+  oneRepMax: Weight;
   weight: Weight;
   reps: number;
+}
+
+/**
+ * The set with the best Epley estimate in `exercise`, over the logged sets that count towards records, with
+ * bodyweight folded in. Undefined for a movement that tracks no load, or with no such set logged.
+ */
+export function bestOneRepMaxSet(
+  exercise: RecordedWeightedExercise,
+  bodyweight: Weight | undefined,
+): OneRepMaxSet | undefined {
+  if (!exercise.tracksResistance) {
+    return undefined;
+  }
+  let best: OneRepMaxSet | undefined;
+  for (const potentialSet of exercise.setsCountingTowards('countsTowardsPrs')) {
+    const reps = potentialSet.set?.repsCompleted;
+    if (!reps) {
+      continue;
+    }
+    const oneRepMax = calculateOneRepMax(potentialSet, exercise.effectiveWeight(potentialSet, bodyweight));
+    if (!best || oneRepMax.isGreaterThan(best.oneRepMax)) {
+      best = { oneRepMax, weight: potentialSet.weight, reps };
+    }
+  }
+  return best;
 }
 
 function bestOneRepMax(session: Session): Map<MovementKey, BestOneRepMax> {
   const best = new Map<MovementKey, BestOneRepMax>();
 
   for (const exercise of session.recordedExercises) {
-    if (exercise.type !== 'RecordedWeightedExercise' || !exercise.isStarted || !exercise.tracksResistance) {
+    if (exercise.type !== 'RecordedWeightedExercise' || !exercise.isStarted) {
+      continue;
+    }
+    const candidate = bestOneRepMaxSet(exercise, session.bodyweight);
+    if (!candidate) {
       continue;
     }
 
     // Same key selectRecentlyCompletedExercises uses; it already guards the cardio/weighted name collision.
     const key = exercise.movementKey();
-
-    for (const potentialSet of exercise.setsCountingTowards('countsTowardsPrs')) {
-      const reps = potentialSet.set?.repsCompleted;
-      if (!reps) {
-        continue;
-      }
-      const oneRepMax = calculateOneRepMax(potentialSet, exercise.effectiveWeight(potentialSet, session.bodyweight));
-      const current = best.get(key);
-      if (!current || oneRepMax.isGreaterThan(current.oneRepMax)) {
-        best.set(key, { exerciseName: exercise.blueprint.name, oneRepMax, weight: potentialSet.weight, reps });
-      }
+    const current = best.get(key);
+    if (!current || candidate.oneRepMax.isGreaterThan(current.oneRepMax)) {
+      best.set(key, { exerciseName: exercise.blueprint.name, ...candidate });
     }
   }
 

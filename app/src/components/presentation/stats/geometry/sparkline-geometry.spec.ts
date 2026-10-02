@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { sparklineGeometry } from '@/utils/sparkline';
+import { sparklineGeometry } from '@/components/presentation/stats/geometry/sparkline-geometry';
 
 describe('sparklineGeometry', () => {
   it('spreads the values across the width, lowest at the bottom and highest at the top', () => {

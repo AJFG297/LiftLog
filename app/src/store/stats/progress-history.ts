@@ -2,8 +2,8 @@ import { LocalDate } from '@js-joda/core';
 import { MovementKey, WeightedExerciseBlueprint } from '@/models/blueprint-models';
 import { RecordedWeightedExercise, Session } from '@/models/session-models';
 import { Weight, WeightUnit } from '@/models/weight';
-import { calculateOneRepMax, primaryAxisFor } from '@/store/stats/calculate-stats';
-import { RecordLedger, SessionRecord } from '@/store/stats/personal-records';
+import { primaryAxisFor } from '@/store/stats/calculate-stats';
+import { bestOneRepMaxSet, RecordLedger, SessionRecord } from '@/store/stats/personal-records';
 import { StatAxis } from '@/store/stats/quantity';
 
 /** One movement in one finished workout. A workout that logged the movement twice gives one point. */
@@ -56,7 +56,10 @@ export interface ProgressHistory {
   records: readonly DatedRecord[];
   /** Every started workout, cardio-only ones included, oldest first. */
   workouts: readonly WorkoutPoint[];
-  /** The earliest workout's date, started or not, as `WorkoutRepository.earliestDate` gives it. */
+  /**
+   * The first started workout's date (the first of `workouts`): where the history begins for "since" lines
+   * and for averages. A workout where nothing was logged doesn't start it.
+   */
   firstDate: LocalDate | undefined;
 }
 
@@ -66,12 +69,8 @@ export function buildProgressHistory(sessionsOldestFirst: readonly Session[]): P
   const exercises = new Map<MovementKey, ExerciseHistory>();
   const records: DatedRecord[] = [];
   const workouts: WorkoutPoint[] = [];
-  let firstDate: LocalDate | undefined;
 
   for (const session of sessionsOldestFirst) {
-    if (!firstDate || session.date.isBefore(firstDate)) {
-      firstDate = session.date;
-    }
     if (session.isStarted) {
       workouts.push({ workoutId: session.id, date: session.date, bodyweight: session.bodyweight });
     }
@@ -90,7 +89,7 @@ export function buildProgressHistory(sessionsOldestFirst: readonly Session[]): P
     }
   }
 
-  return { exercises, records, workouts, firstDate };
+  return { exercises, records, workouts, firstDate: workouts[0]?.date };
 }
 
 function pointsOf(session: Session): Map<MovementKey, { blueprint: WeightedExerciseBlueprint; point: ExercisePoint }> {
@@ -108,26 +107,12 @@ function pointsOf(session: Session): Map<MovementKey, { blueprint: WeightedExerc
 }
 
 function pointOf(session: Session, exercise: RecordedWeightedExercise): ExercisePoint {
-  let oneRepMax: Weight | undefined;
-  let bestReps = 0;
-  for (const potentialSet of exercise.setsCountingTowards('countsTowardsPrs')) {
-    const reps = potentialSet.set?.repsCompleted;
-    if (!reps) {
-      continue;
-    }
-    bestReps = Math.max(bestReps, reps);
-    if (exercise.tracksResistance) {
-      const estimate = calculateOneRepMax(potentialSet, exercise.effectiveWeight(potentialSet, session.bodyweight));
-      if (!oneRepMax || estimate.isGreaterThan(oneRepMax)) {
-        oneRepMax = estimate;
-      }
-    }
-  }
+  const counted = exercise.setsCountingTowards('countsTowardsPrs');
   return {
     workoutId: session.id,
     date: session.date,
-    oneRepMax,
-    bestReps,
+    oneRepMax: bestOneRepMaxSet(exercise, session.bodyweight)?.oneRepMax,
+    bestReps: Math.max(0, ...counted.map((potentialSet) => potentialSet.set?.repsCompleted ?? 0)),
     workingSets: exercise.setsCountingTowards('countsTowardsVolume').filter((x) => x.set).length,
   };
 }
@@ -143,52 +128,53 @@ function merged(a: ExercisePoint, b: ExercisePoint): ExercisePoint {
 }
 
 /** First against last over a window, on the exercise's axis. `delta` is in `last`'s unit. */
-export type ProgressChange =
-  | { axis: 'load'; first: Weight; last: Weight; delta: Weight }
-  | { axis: 'reps'; first: number; last: number; delta: number };
+export type ProgressChange = LoadChange | RepsChange;
+type LoadChange = { axis: 'load'; first: Weight; last: Weight; delta: Weight };
+type RepsChange = { axis: 'reps'; first: number; last: number; delta: number };
 
-export interface ExerciseProgress {
+interface WindowOf<Axis extends StatAxis, Value, Change> {
   /** Read off the blueprint it was last logged with: reps for a movement that tracks no load, else load. */
-  axis: StatAxis;
+  axis: Axis;
   /** The points on or after the window's start, oldest first. */
   points: readonly ExercisePoint[];
-  /** Undefined with fewer than two points in the window that have a value on the axis. */
-  change: ProgressChange | undefined;
+  /** The points' values on the axis, oldest first, leaving out points with none. */
+  values: readonly Value[];
+  /** Undefined with fewer than two values. */
+  change: Change | undefined;
 }
+
+export type ExerciseProgress = WindowOf<'load', Weight, LoadChange> | WindowOf<'reps', number, RepsChange>;
 
 /**
  * An exercise's points since `since` (inclusive) and how far it moved over them: the first point's estimated
  * 1RM against the last's, or best reps for a movement that tracks no load.
  */
 export function progressSince(history: ExerciseHistory, since: LocalDate): ExerciseProgress {
-  const axis = primaryAxisFor(history.blueprint);
   const points = history.points.filter((point) => !point.date.isBefore(since));
-  if (axis === 'reps') {
-    const valued = points.flatMap((point) => (point.bestReps > 0 ? [point.bestReps] : []));
-    const first = valued[0];
-    const last = valued.at(-1);
+  if (primaryAxisFor(history.blueprint) === 'reps') {
+    const values = points.flatMap((point) => (point.bestReps > 0 ? [point.bestReps] : []));
+    const first = values[0];
+    const last = values.at(-1);
     const change =
-      valued.length >= 2 && first !== undefined && last !== undefined
-        ? { axis, first, last, delta: last - first }
+      values.length >= 2 && first !== undefined && last !== undefined
+        ? { axis: 'reps' as const, first, last, delta: last - first }
         : undefined;
-    return { axis, points, change };
+    return { axis: 'reps', points, values, change };
   }
-  const valued = points.flatMap((point) => (point.oneRepMax ? [point.oneRepMax] : []));
-  const first = valued[0];
-  const last = valued.at(-1);
-  const change = valued.length >= 2 && first && last ? { axis, first, last, delta: last.minus(first) } : undefined;
-  return { axis, points, change };
+  const values = points.flatMap((point) => (point.oneRepMax ? [point.oneRepMax] : []));
+  const first = values[0];
+  const last = values.at(-1);
+  const change =
+    values.length >= 2 && first && last ? { axis: 'load' as const, first, last, delta: last.minus(first) } : undefined;
+  return { axis: 'load', points, values, change };
 }
 
 /**
- * The window's values on its axis as plain numbers, oldest first, for a sparkline: estimated 1RMs in `unit`,
- * or best reps. Points with no value on the axis are left out.
+ * The window's values as plain numbers, oldest first, for a sparkline: estimated 1RMs in `unit`, or best
+ * reps.
  */
 export function trendValues(progress: ExerciseProgress, unit: WeightUnit): number[] {
-  if (progress.axis === 'reps') {
-    return progress.points.flatMap((point) => (point.bestReps > 0 ? [point.bestReps] : []));
-  }
-  return progress.points.flatMap((point) =>
-    point.oneRepMax ? [point.oneRepMax.convertTo(unit).value.toNumber()] : [],
-  );
+  return progress.axis === 'reps'
+    ? [...progress.values]
+    : progress.values.map((value) => value.convertTo(unit).value.toNumber());
 }

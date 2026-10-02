@@ -1,7 +1,7 @@
 import { DayOfWeek, Instant } from '@js-joda/core';
 import { match, P } from 'ts-pattern';
 import type { PerUnit } from '@/models/weight';
-import type { ProgressTab } from '@/store/stats/progress-tab';
+import { PROGRESS_TABS, type ProgressTab } from '@/store/stats/progress-tab';
 
 export type ColorSchemeSeed = 'default' | `#${string}`;
 
@@ -63,10 +63,7 @@ export const plansSortOrderCodec: Codec<PlansSortOrder> = {
 };
 
 export const progressTabCodec: Codec<ProgressTab> = {
-  deserialize: (raw) =>
-    match(raw)
-      .with('strength', 'training', 'body', (v) => v)
-      .otherwise(() => undefined),
+  deserialize: (raw) => PROGRESS_TABS.find((tab) => tab === raw),
   serialize: (value) => value,
 };
 

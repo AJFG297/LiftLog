@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { LocalDate } from '@js-joda/core';
-import { bodyChartGeometry } from './body-chart-geometry';
+import { bodyChartGeometry } from '@/components/presentation/stats/geometry/body-chart-geometry';
 
 const day = (n: number) => LocalDate.of(2026, 9, n);
 

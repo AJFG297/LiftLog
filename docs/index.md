@@ -49,7 +49,8 @@ work to find the docs relevant to your area, and update it whenever you add, rem
 - [Progress.md](./Progress.md) - the Progress tab, Records and All exercises, and the model they share:
   `buildProgressHistory`'s one walk over the finished history (points per movement and workout, dated
   records), the `RecordLedger` that is the one implementation of the record rules, `progressSince` for a
-  window's change, and where `useProgressHistory` loads it from.
+  window's change, where `useProgressHistory` loads it from, how a range's weeks and averages are counted,
+  and how amounts are rounded (`progress-amounts.ts`).
 - [FeedProcess.md](./FeedProcess.md) - the opt-in social feed: the follow/accept flow, what is and isn't
   visible to the server, and the end-to-end encryption model (AES-CBC payloads, RSA-PSS signatures).
 - [Progression.md](./Progression.md) - how last session's numbers carry into today from the best set,

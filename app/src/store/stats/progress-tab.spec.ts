@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DayOfWeek } from '@js-joda/core';
+import { DayOfWeek, LocalDate } from '@js-joda/core';
 import { day, historyOf, today, workout } from '@/store/stats/__test__/progress-fixtures';
 import { hasBodyweight, progressPeriod, progressRange, progressTabs, shownTab } from '@/store/stats/progress-tab';
 
@@ -29,13 +29,18 @@ describe('hasBodyweight', () => {
 });
 
 describe('progressPeriod', () => {
-  it('covers the range in complete weeks before this one', () => {
+  it('covers the range in bars ending with this week', () => {
+    // 4 bars: Sep 7, 14 and 21, then this week.
     expect(progressPeriod(today, progressRange('4w'), DayOfWeek.MONDAY)).toEqual({
-      weeks: 4,
+      completeWeeks: 3,
       thisWeek: day(9, 28),
-      start: day(8, 31),
+      start: day(9, 7),
       today,
     });
-    expect(progressPeriod(today, progressRange('1y'), DayOfWeek.SUNDAY).start).toEqual(day(9, 27).minusWeeks(52));
+    // 52 bars, from the Sunday 51 weeks before this one.
+    expect(progressPeriod(today, progressRange('1y'), DayOfWeek.SUNDAY)).toMatchObject({
+      completeWeeks: 51,
+      start: LocalDate.of(2025, 10, 5),
+    });
   });
 });

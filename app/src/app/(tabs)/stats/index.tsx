@@ -1,4 +1,4 @@
-import { SegmentedControl } from '@/components/presentation/foundation/segmented-control';
+import { SegmentedControl, SegmentedOption } from '@/components/presentation/foundation/segmented-control';
 import { BodySection } from '@/components/presentation/stats/progress/body-section';
 import { ProgressEmpty } from '@/components/presentation/stats/progress/progress-empty';
 import { ProgressHeader } from '@/components/presentation/stats/progress/progress-header';
@@ -29,7 +29,7 @@ import {
 } from '@/store/stats/progress-tab';
 import { buildWeeklyTable, MuscleKey, trainingView } from '@/store/stats/progress-training';
 import { exerciseMetaLabel } from '@/utils/exercise-meta';
-import { useTranslate } from '@tolgee/react';
+import { TranslationKey, useTranslate } from '@tolgee/react';
 import { Stack, useRouter } from 'expo-router';
 import { useOpenExerciseStats } from '@/hooks/useOpenExerciseStats';
 import { useState } from 'react';
@@ -39,6 +39,17 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDispatch } from 'react-redux';
 
 type TranslateFn = ReturnType<typeof useTranslate>['t'];
+
+/** One switch option per range, as a tuple as long as the ranges': the switch takes two to four. */
+type OptionPer<Ranges extends readonly unknown[]> = { [K in keyof Ranges]: SegmentedOption<ProgressRangeId> };
+type RangeOptions = OptionPer<typeof PROGRESS_RANGES>;
+
+/** Each range's label on the switch, and the words Body's change reads "over". */
+const RANGE_LABELS: Record<ProgressRangeId, { option: TranslationKey; over: TranslationKey }> = {
+  '4w': { option: 'progress.tab.range.four_weeks.label', over: 'progress.tab.body.over.four_weeks.label' },
+  '12w': { option: 'progress.tab.range.twelve_weeks.label', over: 'progress.tab.body.over.twelve_weeks.label' },
+  '1y': { option: 'progress.tab.range.one_year.label', over: 'progress.tab.body.over.one_year.label' },
+};
 
 /**
  * The Progress tab: Strength, Training and Body over one range. It loads the history once and every
@@ -110,7 +121,7 @@ export default function ProgressScreen() {
             from={period.start}
             to={today}
             unit={unitLabel}
-            overRange={overRangeLabel(t, rangeId)}
+            overRange={t(RANGE_LABELS[rangeId].over)}
           />
         ) : null;
       }
@@ -150,11 +161,13 @@ export default function ProgressScreen() {
             />
             <SegmentedControl<ProgressRangeId>
               testID="progress-range"
-              options={[
-                rangeOption(t, PROGRESS_RANGES[0]),
-                rangeOption(t, PROGRESS_RANGES[1]),
-                rangeOption(t, PROGRESS_RANGES[2]),
-              ]}
+              options={
+                // `map` widens the ranges' tuple to an array.
+                PROGRESS_RANGES.map((range) => ({
+                  value: range.id,
+                  label: t(RANGE_LABELS[range.id].option),
+                })) as unknown as RangeOptions
+              }
               value={rangeId}
               onChange={setRangeId}
               accessibilityLabel={t('progress.tab.range.label')}
@@ -175,28 +188,6 @@ function tabLabel(t: TranslateFn, tab: ProgressTab): string {
       return t('progress.tab.training.tab.label');
     case 'body':
       return t('progress.tab.body.tab.label');
-  }
-}
-
-function rangeOption(t: TranslateFn, range: (typeof PROGRESS_RANGES)[number]) {
-  switch (range.id) {
-    case '4w':
-      return { value: range.id, label: t('progress.tab.range.four_weeks.label') };
-    case '12w':
-      return { value: range.id, label: t('progress.tab.range.twelve_weeks.label') };
-    case '1y':
-      return { value: range.id, label: t('progress.tab.range.one_year.label') };
-  }
-}
-
-function overRangeLabel(t: TranslateFn, range: ProgressRangeId): string {
-  switch (range) {
-    case '4w':
-      return t('progress.tab.body.over.four_weeks.label');
-    case '12w':
-      return t('progress.tab.body.over.twelve_weeks.label');
-    case '1y':
-      return t('progress.tab.body.over.one_year.label');
   }
 }
 

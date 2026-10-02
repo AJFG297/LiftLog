@@ -25,6 +25,9 @@ export async function restoreMuscleRoles(db: ExpoSQLiteDatabase) {
     }
     const stored = fromExerciseDescriptorJSON(exerciseDescriptorMigrations.migrate(row.payload));
     const { primaryMuscles, secondaryMuscles } = withMuscles(builtIn, musclesOf(stored));
+    if (sameList(primaryMuscles, stored.primaryMuscles) && sameList(secondaryMuscles, stored.secondaryMuscles)) {
+      return [];
+    }
     return [{ id: row.id, payload: toExerciseDescriptorJSON({ ...stored, primaryMuscles, secondaryMuscles }) }];
   });
 
@@ -32,4 +35,8 @@ export async function restoreMuscleRoles(db: ExpoSQLiteDatabase) {
     ...updates.map(({ id, payload }) => tx.update(exercisesSchema).set({ payload }).where(eq(exercisesSchema.id, id))),
     tx.insert(dataMigrationsSchema).values({ id: restoreMuscleRolesDataMigration }),
   ]);
+}
+
+function sameList(a: readonly string[], b: readonly string[]): boolean {
+  return a.length === b.length && a.every((value, index) => value === b[index]);
 }

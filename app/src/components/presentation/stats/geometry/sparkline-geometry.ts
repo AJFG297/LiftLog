@@ -1,3 +1,5 @@
+import { linePath } from '@/components/presentation/stats/geometry/line-path';
+
 /** A sparkline's line as an SVG path, and where it ends (for the end dot). */
 export interface SparklineGeometry {
   path: string;
@@ -31,7 +33,7 @@ export function sparklineGeometry(
         ]
       : values.map((value, index) => ({ x: inset + (index / (values.length - 1)) * innerWidth, y: yOf(value) }));
   return {
-    path: points.map((p, index) => `${index ? 'L' : 'M'}${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' '),
+    path: linePath(points),
     end: points[points.length - 1]!,
   };
 }

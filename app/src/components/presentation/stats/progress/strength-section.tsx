@@ -1,14 +1,10 @@
 import { MsIconSrc } from '@/components/presentation/foundation/ms-icon-source';
 import { SurfaceText } from '@/components/presentation/foundation/surface-text';
+import { AmountText } from '@/components/presentation/stats/amount-text';
 import { Sparkline } from '@/components/presentation/stats/sparkline';
-import {
-  ProgressEmptyLine,
-  ProgressListCard,
-  ProgressSection,
-  useRowDivider,
-  useToneColor,
-} from '@/components/presentation/stats/progress/progress-section';
-import { formatAmount, signedAmount } from '@/components/presentation/stats/progress/progress-format';
+import { ListCard, ListEmptyLine, useRowDivider, useToneColor } from '@/components/presentation/stats/list-parts';
+import { ProgressSection } from '@/components/presentation/stats/progress/progress-section';
+import { amountText, signedText } from '@/components/presentation/stats/amount-format';
 import { fontFamily, spacing, useAppTheme } from '@/hooks/useAppTheme';
 import { useFormatDate } from '@/hooks/useFormatDate';
 import type { LiftRow, RecentRecord } from '@/store/stats/progress-strength';
@@ -17,8 +13,6 @@ import { Pressable, Text, View } from 'react-native';
 
 const SPARKLINE_WIDTH = 64;
 const SPARKLINE_HEIGHT = 28;
-/** An estimated 1RM is a calculation, so a tenth is as fine as it gets. */
-const ONE_REP_MAX_DECIMALS = 1;
 
 interface StrengthSectionProps {
   lifts: readonly LiftRow[];
@@ -44,7 +38,7 @@ export function StrengthSection(props: StrengthSectionProps) {
           testID: 'progress-all-exercises',
         }}
       >
-        <ProgressListCard>
+        <ListCard>
           {props.lifts.length ? (
             props.lifts.map((lift, index) => (
               <LiftRowView
@@ -56,9 +50,9 @@ export function StrengthSection(props: StrengthSectionProps) {
               />
             ))
           ) : (
-            <ProgressEmptyLine text={t('progress.tab.lifts.empty.body')} />
+            <ListEmptyLine text={t('progress.tab.lifts.empty.body')} />
           )}
-        </ProgressListCard>
+        </ListCard>
       </ProgressSection>
 
       <ProgressSection
@@ -69,7 +63,7 @@ export function StrengthSection(props: StrengthSectionProps) {
           testID: 'progress-all-records',
         }}
       >
-        <ProgressListCard>
+        <ListCard>
           {props.records.length ? (
             props.records.map((record, index) => (
               <RecordRowView
@@ -81,9 +75,9 @@ export function StrengthSection(props: StrengthSectionProps) {
               />
             ))
           ) : (
-            <ProgressEmptyLine text={t('progress.tab.records.empty.body')} />
+            <ListEmptyLine text={t('progress.tab.records.empty.body')} />
           )}
-        </ProgressListCard>
+        </ListCard>
       </ProgressSection>
     </View>
   );
@@ -113,10 +107,15 @@ function LiftRowView({
       ? t('progress.tab.lifts.best_reps.one')
       : t('progress.tab.lifts.best_reps.other', { count: lift.sessions });
   const valueUnit = isLoad ? unit : t('progress.tab.lifts.reps.label');
-  const value = lift.latest === undefined ? '–' : formatAmount(lift.latest, isLoad ? ONE_REP_MAX_DECIMALS : 0);
-  const change = lift.change === undefined ? undefined : signedAmount(lift.change, isLoad ? ONE_REP_MAX_DECIMALS : 0);
-  const changeText = change && (change.text ?? t('progress.tab.same.label'));
-  const changeSpoken = change && (change.text ? `${change.text} ${valueUnit}` : changeText);
+  const value = lift.latest === undefined ? '–' : amountText(lift.latest);
+  const change = lift.change === undefined ? undefined : signedText(lift.change);
+  const changeSpoken = change && (change.text ? `${change.text} ${valueUnit}` : t('progress.tab.same.label'));
+  const changeStyle = {
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: '600',
+    color: change ? toneColor(change.tone) : tokens.muted,
+  } as const;
   return (
     <Pressable
       testID={`progress-lift-${index}`}
@@ -147,34 +146,16 @@ function LiftRowView({
       </View>
       <Sparkline values={lift.trend} width={SPARKLINE_WIDTH} height={SPARKLINE_HEIGHT} />
       <View style={{ minWidth: 66, alignItems: 'flex-end', gap: 1 }}>
-        <Text
-          style={{
-            fontFamily: fontFamily.number,
-            fontSize: 18,
-            lineHeight: 24,
-            fontWeight: '600',
-            color: tokens.ink,
-            letterSpacing: -0.18,
-          }}
-        >
-          {value}
-          <Text style={{ fontFamily: fontFamily.text, fontSize: 12, fontWeight: '500', color: tokens.muted }}>
-            {` ${valueUnit}`}
-          </Text>
-        </Text>
-        {change ? (
-          <Text
-            style={{
-              fontFamily: fontFamily.number,
-              fontSize: 12,
-              lineHeight: 16,
-              fontWeight: '600',
-              color: toneColor(change.tone),
-            }}
-          >
-            {changeText}
-            {change.text ? <Text style={{ fontFamily: fontFamily.text }}>{` ${valueUnit}`}</Text> : null}
-          </Text>
+        <AmountText
+          amount={value}
+          unit={valueUnit}
+          style={{ fontSize: 18, lineHeight: 24, fontWeight: '600', color: tokens.ink, letterSpacing: -0.18 }}
+          unitStyle={{ fontSize: 12, fontWeight: '500', color: tokens.muted }}
+        />
+        {change?.text ? (
+          <AmountText amount={change.text} unit={valueUnit} style={changeStyle} />
+        ) : change ? (
+          <SurfaceText style={changeStyle}>{t('progress.tab.same.label')}</SurfaceText>
         ) : null}
       </View>
       <MsIconSrc name="chevronRight" size={16} color={tokens.faint} />
@@ -198,16 +179,15 @@ function RecordRowView({
   const formatDate = useFormatDate();
   const divider = useRowDivider();
   const heaviest = record.kind === 'heaviestWeight';
-  const decimals = heaviest ? 2 : ONE_REP_MAX_DECIMALS;
   const kind = heaviest ? t('progress.tab.records.heaviest.label') : t('progress.tab.records.one_rep_max.label');
-  const value = formatAmount(record.value, decimals);
-  const gain = signedAmount(record.gain, decimals);
+  const value = amountText(record.value);
+  const gain = signedText(record.gain);
   const weekday = formatDate(record.date, { weekday: 'short' });
   const fullDate = formatDate(record.date, { weekday: 'long', month: 'long', day: 'numeric' });
-  const weight = formatAmount(record.weight, 2);
+  const weight = amountText(record.weight);
   const set = `${weight} ${unit} × ${record.reps}`;
   const estimate = heaviest ? undefined : `${value} ${unit}`;
-  const was = t('progress.tab.records.was.label', { value: `${formatAmount(record.previous, decimals)} ${unit}` });
+  const was = t('progress.tab.records.was.label', { value: `${amountText(record.previous)} ${unit}` });
   const mono = { fontFamily: fontFamily.number, color: tokens.ink };
   return (
     <Pressable
@@ -252,18 +232,12 @@ function RecordRowView({
       </View>
       {gain.text ? (
         <View style={{ backgroundColor: tokens.accentSoft, borderRadius: 7, paddingVertical: 3, paddingHorizontal: 7 }}>
-          <Text
-            style={{
-              fontFamily: fontFamily.number,
-              fontSize: 12,
-              lineHeight: 16,
-              fontWeight: '600',
-              color: tokens.accentSoftInk,
-            }}
-          >
-            {gain.text}
-            <Text style={{ fontFamily: fontFamily.text, fontWeight: '700' }}>{` ${unit}`}</Text>
-          </Text>
+          <AmountText
+            amount={gain.text}
+            unit={unit}
+            style={{ fontSize: 12, lineHeight: 16, fontWeight: '600', color: tokens.accentSoftInk }}
+            unitStyle={{ fontWeight: '700' }}
+          />
         </View>
       ) : null}
     </Pressable>

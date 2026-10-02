@@ -41,7 +41,7 @@ function session(id: string, date: LocalDate, exercises: RecordedWeightedExercis
 }
 
 const history = [
-  // Nothing logged: no points, but it is still the first workout.
+  // Nothing logged: no points, and it doesn't start the history.
   session('s0', day(6, 28), []),
   session('s1', day(7, 1), [lift(bench, [set(80, 8), set(80, 8)]), makeRecordedExercise(crunch, [20, 15])]),
   session('s2', day(7, 8), [
@@ -111,8 +111,8 @@ describe('buildProgressHistory', () => {
     ]);
   });
 
-  it('starts at the first workout, logged or not', () => {
-    expect(progress.firstDate).toEqual(day(6, 28));
+  it('starts at the first started workout, not an earlier one where nothing was logged', () => {
+    expect(progress.firstDate).toEqual(day(7, 1));
   });
 
   it('lists every started workout with its bodyweight, leaving out one where nothing was logged', () => {
@@ -145,6 +145,7 @@ describe('progressSince', () => {
 
     expect(window.axis).toBe('load');
     expect(window.points.map((x) => x.workoutId)).toEqual(['s2', 's3']);
+    expect(window.values).toEqual([epley(85, 3), epley(82.5, 10)]);
     expect(window.change).toEqual({
       axis: 'load',
       first: epley(85, 3),

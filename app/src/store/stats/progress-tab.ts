@@ -39,19 +39,22 @@ export function hasBodyweight(history: ProgressHistory): boolean {
 }
 
 /**
- * The weeks a range covers. It is `weeks` complete weeks and this week so far, so averages can leave this
- * week's partial count out while the bars and the lifts still include it.
+ * The weeks a range covers. A range of N weeks is N bars on the board, the last of them this week so far:
+ * N - 1 complete weeks and this week. Averages leave this week's partial count out, while the bars and the
+ * lifts include it.
  */
 export interface ProgressPeriod {
-  weeks: number;
+  /** The range's complete weeks, one fewer than its weeks. Averages and their change read this many. */
+  completeWeeks: number;
   /** The first day of this week, by the user's first day of the week. */
   thisWeek: LocalDate;
-  /** The first day of the range: the start of its oldest complete week. "Since" this date. */
+  /** The first day of the range: the start of its oldest week. "Since" this date. */
   start: LocalDate;
   today: LocalDate;
 }
 
 export function progressPeriod(today: LocalDate, range: ProgressRange, firstDayOfWeek: DayOfWeek): ProgressPeriod {
   const thisWeek = weekStart(today, firstDayOfWeek);
-  return { weeks: range.weeks, thisWeek, start: thisWeek.minusWeeks(range.weeks), today };
+  const completeWeeks = range.weeks - 1;
+  return { completeWeeks, thisWeek, start: thisWeek.minusWeeks(completeWeeks), today };
 }
