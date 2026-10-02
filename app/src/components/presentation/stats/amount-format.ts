@@ -1,4 +1,5 @@
 import BigNumber from 'bignumber.js';
+import { ChangeTone, toneOf } from '@/store/stats/progress-amounts';
 import { localeFormatBigNumber } from '@/utils/locale-bignumber';
 
 /** A number already rounded for showing, as it is: "80", "82.5", "102.25". */
@@ -15,9 +16,6 @@ export function formatAmount(value: number, decimals: number): string {
 export function formatFixed(value: number, decimals: number): string {
   return localeFormatBigNumber(new BigNumber(value), decimals);
 }
-
-/** A gain reads in `positive`, a fall in `warmInk`, no change in `muted`. */
-export type ChangeTone = 'gain' | 'fall' | 'none';
 
 export interface SignedText {
   /** "+2.5", "−1"; undefined when it is nothing, for the caller to say "same". */
@@ -38,11 +36,9 @@ export function signedText(value: number): SignedText {
 }
 
 function signed(value: BigNumber, format: (size: number) => string): SignedText {
-  if (value.isZero()) {
-    return { text: undefined, tone: 'none' };
-  }
+  const tone = toneOf(value);
   const size = format(value.abs().toNumber());
-  return value.isPositive() ? { text: `+${size}`, tone: 'gain' } : { text: `−${size}`, tone: 'fall' };
+  return { text: tone === 'none' ? undefined : `${tone === 'gain' ? '+' : '−'}${size}`, tone };
 }
 
 /** Rounds to the nearest half. */

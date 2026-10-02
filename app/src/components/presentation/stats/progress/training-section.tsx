@@ -8,12 +8,9 @@ import {
   signedAmount,
   SignedText,
   toHalf,
-} from '@/components/presentation/stats/progress/progress-format';
-import {
-  ProgressEmptyLine,
-  ProgressSection,
-  useToneColor,
-} from '@/components/presentation/stats/progress/progress-section';
+} from '@/components/presentation/stats/amount-format';
+import { ListEmptyLine, useToneColor } from '@/components/presentation/stats/list-parts';
+import { ProgressSection } from '@/components/presentation/stats/progress/progress-section';
 import { spacing, useAppTheme } from '@/hooks/useAppTheme';
 import { useFormatDate } from '@/hooks/useFormatDate';
 import { RUN_WORKOUTS, type MuscleKey, type TrainingView, type WeeklyAverage } from '@/store/stats/progress-training';
@@ -240,7 +237,7 @@ function MusclesCard({ view, muscleLabel }: TrainingSectionProps) {
           );
         })
       ) : (
-        <ProgressEmptyLine
+        <ListEmptyLine
           text={t(view.averagedWeeks ? 'progress.tab.muscles.empty.body' : 'progress.tab.muscles.first_week.body')}
           inset={false}
         />

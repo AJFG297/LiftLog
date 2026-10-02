@@ -2,14 +2,9 @@ import { MsIconSrc } from '@/components/presentation/foundation/ms-icon-source';
 import { SurfaceText } from '@/components/presentation/foundation/surface-text';
 import { AmountText } from '@/components/presentation/stats/amount-text';
 import { Sparkline } from '@/components/presentation/stats/sparkline';
-import {
-  ProgressEmptyLine,
-  ProgressListCard,
-  ProgressSection,
-  useRowDivider,
-  useToneColor,
-} from '@/components/presentation/stats/progress/progress-section';
-import { amountText, signedText } from '@/components/presentation/stats/progress/progress-format';
+import { ListCard, ListEmptyLine, useRowDivider, useToneColor } from '@/components/presentation/stats/list-parts';
+import { ProgressSection } from '@/components/presentation/stats/progress/progress-section';
+import { amountText, signedText } from '@/components/presentation/stats/amount-format';
 import { fontFamily, spacing, useAppTheme } from '@/hooks/useAppTheme';
 import { useFormatDate } from '@/hooks/useFormatDate';
 import type { LiftRow, RecentRecord } from '@/store/stats/progress-strength';
@@ -43,7 +38,7 @@ export function StrengthSection(props: StrengthSectionProps) {
           testID: 'progress-all-exercises',
         }}
       >
-        <ProgressListCard>
+        <ListCard>
           {props.lifts.length ? (
             props.lifts.map((lift, index) => (
               <LiftRowView
@@ -55,9 +50,9 @@ export function StrengthSection(props: StrengthSectionProps) {
               />
             ))
           ) : (
-            <ProgressEmptyLine text={t('progress.tab.lifts.empty.body')} />
+            <ListEmptyLine text={t('progress.tab.lifts.empty.body')} />
           )}
-        </ProgressListCard>
+        </ListCard>
       </ProgressSection>
 
       <ProgressSection
@@ -68,7 +63,7 @@ export function StrengthSection(props: StrengthSectionProps) {
           testID: 'progress-all-records',
         }}
       >
-        <ProgressListCard>
+        <ListCard>
           {props.records.length ? (
             props.records.map((record, index) => (
               <RecordRowView
@@ -80,9 +75,9 @@ export function StrengthSection(props: StrengthSectionProps) {
               />
             ))
           ) : (
-            <ProgressEmptyLine text={t('progress.tab.records.empty.body')} />
+            <ListEmptyLine text={t('progress.tab.records.empty.body')} />
           )}
-        </ProgressListCard>
+        </ListCard>
       </ProgressSection>
     </View>
   );

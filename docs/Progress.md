@@ -78,7 +78,10 @@ every tab and keeps its value when the tab changes; it resets to 12 weeks when t
 the `progressTab` preference, so the screen reopens on the one last used.
 
 The screen calls `useProgressHistory()` once. Every number comes from pure functions in `store/stats/`, one
-file per part, and the components in `components/presentation/stats/progress/` only format and draw them:
+file per part, and the components in `components/presentation/stats/progress/` only format and draw them. What
+the Records and All exercises lists share with the tab sits one folder up, in `components/presentation/stats/`:
+`list-parts.tsx` (`ListCard`, `useRowDivider`, `useToneColor`, `ListEmptyLine`), `amount-format.ts` (`amountText`,
+`signedText`, `signedAmount`) and `amount-text.tsx` (`AmountText`).
 
 | File | Gives |
 | --- | --- |

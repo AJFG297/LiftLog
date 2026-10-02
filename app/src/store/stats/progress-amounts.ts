@@ -41,6 +41,14 @@ export function shownChange(value: Weight, previous: Weight, kind: AmountKind, u
   return { value: shownValue, previous: shownPrevious, change: shownValue.minus(shownPrevious) };
 }
 
+/** Which way a change went: a gain reads in `positive`, a fall in `warmInk`, no change in `muted`. */
+export type ChangeTone = 'gain' | 'fall' | 'none';
+
+export function toneOf(change: BigNumber | number): ChangeTone {
+  const sign = new BigNumber(change);
+  return sign.isZero() ? 'none' : sign.isPositive() ? 'gain' : 'fall';
+}
+
 function shownTo(weight: Weight, kind: AmountKind, unit: WeightUnit, step: Step): Weight {
   const converted = weight.convertTo(unit);
   const asLifted = weight.unit === converted.unit || weight.unit === 'nil';

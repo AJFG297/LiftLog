@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Weight } from '@/models/weight';
-import { shownChange, shownWeight } from '@/store/stats/progress-amounts';
+import { shownChange, shownWeight, toneOf } from '@/store/stats/progress-amounts';
 
 const kg = (n: number) => new Weight(n, 'kilograms');
 const lbs = (n: number) => new Weight(n, 'pounds');
@@ -65,5 +65,11 @@ describe('shownChange', () => {
 
   it('subtracts loads as lifted', () => {
     expect(shownChange(kg(102.25), kg(100), 'load', 'kilograms').change).toEqual(kg(2.25));
+  });
+});
+
+describe('toneOf', () => {
+  it('reads a change as a gain, a fall or none', () => {
+    expect([toneOf(2.5), toneOf(-0.1), toneOf(0)]).toEqual(['gain', 'fall', 'none']);
   });
 });

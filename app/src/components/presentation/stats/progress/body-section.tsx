@@ -2,12 +2,9 @@ import { Card } from '@/components/presentation/foundation/card';
 import { SurfaceText } from '@/components/presentation/foundation/surface-text';
 import { AmountText } from '@/components/presentation/stats/amount-text';
 import { bodyChartGeometry } from '@/components/presentation/stats/progress/body-chart-geometry';
-import { formatFixed, signedAmount } from '@/components/presentation/stats/progress/progress-format';
-import {
-  ProgressListCard,
-  ProgressSection,
-  useRowDivider,
-} from '@/components/presentation/stats/progress/progress-section';
+import { formatFixed, signedAmount } from '@/components/presentation/stats/amount-format';
+import { ListCard, useRowDivider } from '@/components/presentation/stats/list-parts';
+import { ProgressSection } from '@/components/presentation/stats/progress/progress-section';
 import { fontFamily, spacing, useAppTheme } from '@/hooks/useAppTheme';
 import { useFormatDate } from '@/hooks/useFormatDate';
 import type { BodyView } from '@/store/stats/progress-body';
@@ -83,7 +80,7 @@ export function BodySection({ view, from, to, unit, overRange }: BodySectionProp
       </Card>
 
       <ProgressSection title={t('progress.tab.weigh_ins.title')} subtitle={t('progress.tab.weigh_ins.subtitle')}>
-        <ProgressListCard>
+        <ListCard>
           {view.recent.map((weighIn, index) => {
             const moved =
               weighIn.change === undefined ? undefined : signedAmount(weighIn.change, DECIMALS, { fixed: true });
@@ -137,7 +134,7 @@ export function BodySection({ view, from, to, unit, overRange }: BodySectionProp
               </View>
             );
           })}
-        </ProgressListCard>
+        </ListCard>
       </ProgressSection>
     </View>
   );

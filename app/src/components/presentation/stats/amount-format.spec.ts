@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { amountText, formatHalves, signedText } from './progress-format';
+import { amountText, formatHalves, signedText } from '@/components/presentation/stats/amount-format';
 
 vi.mock('expo-localization', () => ({ getLocales: () => [{ decimalSeparator: '.' }] }));
 
