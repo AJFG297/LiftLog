@@ -1,4 +1,5 @@
 import { LocalDate } from '@js-joda/core';
+import { linePath } from '@/components/presentation/stats/geometry/line-path';
 import type { BodyChartPoint } from '@/store/stats/progress-body';
 
 /** Room on the right for the grid labels, and below for the dates. */
@@ -59,7 +60,7 @@ export function bodyChartGeometry(
   const laid = drawn.map((point) => ({ x: xOf(point.date), y: yOf(point.weight), carried: point.carried }));
   const end = laid.at(-1)!;
   return {
-    path: laid.map((p, i) => `${i ? 'L' : 'M'}${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' '),
+    path: linePath(laid),
     dots: laid
       .slice(0, -1)
       .filter((p) => !p.carried)

@@ -1,5 +1,5 @@
 import { useAppTheme } from '@/hooks/useAppTheme';
-import { sparklineGeometry } from '@/utils/sparkline';
+import { sparklineGeometry } from '@/components/presentation/stats/geometry/sparkline-geometry';
 import { View } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
 
