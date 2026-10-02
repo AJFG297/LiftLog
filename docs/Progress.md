@@ -137,4 +137,47 @@ nothing in the range says so in its card.
 
 ## Records and All exercises
 
+Both are pushed from the Progress tab (`stats/records`, `stats/exercises`) and draw their own title under the
+native header's back button. Each calls `useProgressHistory()` once and hands it to a pure function that
+returns what the screen draws; a row opens the exercise's stats over all time (`useOpenExerciseStats`).
 
+### Records
+
+`recordsListOf(history, today, filter, unit)` (`store/stats/records-list.ts`) reads `history.records`, so the
+list follows the [record ledger](#the-record-ledger)'s rules: at most one record per exercise per workout, and
+none the first time an exercise is done.
+
+- **Filter**: `RecordFilter` is `'all'` or a record kind (`heaviestWeight`, `estimatedOneRepMax`), shown as All ·
+  Heaviest · Est. 1RM. The control is hidden while there are no records at all.
+- **Count**: "12 records since July" counts what the filter lets through, since the month the history starts
+  (`firstDate`), with the year once that month is in an earlier year.
+- **Months**: an ordered list of `{ month: YearMonth, showYear, rows }`, newest first. Within a month the newest
+  workout comes first, and a workout's records keep exercise order.
+- **A row**: the date, the exercise (under the name it was last logged with), the kind and value ("Heaviest ·
+  130 kg × 3", "Est. 1RM · 104.5 kg"), what it beat ("was 127.5 kg") and the gain. Weights are converted to
+  the user's unit, so a record lifted in pounds against a best in kilograms reads in one unit. A heaviest
+  weight is rounded to two places and an estimate to one; the gain is the difference of the rounded values,
+  so the row adds up. An estimate that would round to its old best gets a second place instead of "+0".
+- **Empty**: "No records yet" with no records, or a line for the chosen kind pointing back to All.
+
+An estimate's row also shows the set it comes from ("82.5 kg × 8 · was 102 kg").
+
+### All exercises
+
+`exercisesListOf(history, catalog, today, filters, unit)` (`store/stats/exercises-list.ts`) lists every
+movement in `history.exercises`: only what the user has logged.
+
+- **Order**: most recently done first; exercises last done on the same day keep the order they were first
+  done in.
+- **Search**: the exercise picker's `fuzzyMatchScore` on the name, keeping that order rather than ranking by
+  score.
+- **Muscle chips**: All · Chest · Back · Legs · Shoulders · Arms, and Core only when something logged files
+  under it. An exercise's chip is `muscleGroupOf` its catalog descriptor (`selectExercises()[exerciseId]`),
+  the picker's rule: its first muscle. One missing from the catalog shows under All only.
+- **A row**: the name, when it was last done (today, yesterday, a weekday within the week, else a date) and
+  the session count over the whole history; a `Sparkline` of the last 12 weeks (`TREND_WEEKS`) with no end
+  dot; the latest estimated 1RM, or best reps for a movement that tracks no load; and the change over the
+  12 weeks from `progressSince`, rounded to a tenth on each end. The change sets the colours: up is
+  `positive` with an `accentInk` line, down `warmInk` for both, the same (or nothing to compare) muted with a
+  `faint` line. Fewer than two sessions in the window shows a dash.
+- **Empty**: no match for the search, nothing under the chip, or nothing logged yet.
