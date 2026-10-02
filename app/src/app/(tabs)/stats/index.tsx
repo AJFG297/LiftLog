@@ -1,152 +1,205 @@
-import FullHeightScrollView from '@/components/layout/full-height-scroll-view';
-import Icon from '@/components/presentation/foundation/icon';
-import { Remote } from '@/components/presentation/foundation/remote';
-import { ExerciseListSummary } from '@/components/presentation/stats/exercise-list-summary';
-import SingleValueStatisticCard from '@/components/presentation/stats/single-value-statistic-card';
-import { SingleValueStatisticsGrid } from '@/components/presentation/stats/single-value-statistics-grid';
-import { TimePeriodSelector } from '@/components/presentation/stats/time-period-selector';
-import { TitledSection } from '@/components/presentation/stats/titled-section';
-import { StatisticLineChart } from '@/components/presentation/stats/statistic-line-chart';
-import { useLoadAxis } from '@/components/presentation/stats/quantity-axis';
+import { SegmentedControl } from '@/components/presentation/foundation/segmented-control';
+import { BodySection } from '@/components/presentation/stats/progress/body-section';
+import { ProgressEmpty } from '@/components/presentation/stats/progress/progress-empty';
+import { ProgressHeader } from '@/components/presentation/stats/progress/progress-header';
+import { ProgressTabBar } from '@/components/presentation/stats/progress/progress-tab-bar';
+import { StrengthSection } from '@/components/presentation/stats/progress/strength-section';
+import { TrainingSection } from '@/components/presentation/stats/progress/training-section';
 import { spacing, useAppTheme } from '@/hooks/useAppTheme';
-import { Weight } from '@/models/weight';
+import { useFormatDate } from '@/hooks/useFormatDate';
+import { useGoToRoutines } from '@/hooks/useGoToRoutines';
+import { usePreferredWeightSuffix, usePreferredWeightUnit } from '@/hooks/usePreferredWeightUnit';
+import { useProgressHistory } from '@/hooks/useProgressHistory';
+import { useToday } from '@/hooks/useToday';
+import { ExerciseId } from '@/models/blueprint-models';
 import { useAppSelector } from '@/store';
-import { fetchOverallStats, GranularStatisticView, selectOverallView, setOverallViewTime } from '@/store/stats';
-import { formatDuration } from '@/utils/format-date';
+import { setProgressTab } from '@/store/settings';
+import { bodyView } from '@/store/stats/progress-body';
+import { mostTrainedLifts, recentRecords } from '@/store/stats/progress-strength';
+import {
+  DEFAULT_PROGRESS_RANGE,
+  hasBodyweight,
+  PROGRESS_RANGES,
+  progressPeriod,
+  progressRange,
+  ProgressRangeId,
+  ProgressTab,
+  progressTabs,
+  shownTab,
+} from '@/store/stats/progress-tab';
+import { buildWeeklyTable, MuscleKey, trainingView } from '@/store/stats/progress-training';
+import { exerciseMetaLabel } from '@/utils/exercise-meta';
 import { useTranslate } from '@tolgee/react';
-import { Stack, useFocusEffect } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
+import { useOpenExerciseStats } from '@/hooks/useOpenExerciseStats';
 import { useState } from 'react';
 import { View } from 'react-native';
-import { Card, Text } from 'react-native-paper';
+import { ScrollView } from 'react-native-gesture-handler';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDispatch } from 'react-redux';
-import { match } from 'ts-pattern';
 
-export default function StatsPage() {
+type TranslateFn = ReturnType<typeof useTranslate>['t'];
+
+/**
+ * The Progress tab: Strength, Training and Body over one range. It loads the history once and every
+ * number comes from the pure view models in `store/stats/progress-*.ts`.
+ */
+export default function ProgressScreen() {
   const { t } = useTranslate();
-  const timePeriod = useAppSelector((x) => x.stats.overallViewTime);
+  const { tokens } = useAppTheme();
+  const insets = useSafeAreaInsets();
+  const router = useRouter();
+  const openExerciseStats = useOpenExerciseStats();
   const dispatch = useDispatch();
-  useFocusEffect(() => {
-    dispatch(fetchOverallStats());
-  });
-  const stats = useAppSelector(selectOverallView);
-  return (
-    <FullHeightScrollView contentContainerStyle={{ gap: spacing[2] }}>
-      <Stack.Screen
-        options={{
-          title: t('tabs.progress.label'),
-        }}
-      />
-      <View style={{ flexDirection: 'row', justifyContent: 'flex-end', paddingRight: spacing[2] }}>
-        <TimePeriodSelector timePeriod={timePeriod} setTimePeriod={(value) => dispatch(setOverallViewTime(value))} />
-      </View>
-      <Remote value={stats} success={(stats) => <LoadedStats stats={stats} />} />
-    </FullHeightScrollView>
-  );
-}
+  const goToRoutines = useGoToRoutines();
+  const formatDate = useFormatDate();
+  const unit = usePreferredWeightUnit();
+  const unitLabel = usePreferredWeightSuffix();
+  const today = useToday();
+  const firstDayOfWeek = useAppSelector((x) => x.settings.firstDayOfWeek);
+  const showBodyweight = useAppSelector((x) => x.settings.showBodyweight);
+  const lastTab = useAppSelector((x) => x.settings.progressTab);
+  const builtInExercises = useAppSelector((x) => x.storedSessions.builtInExercises);
+  const savedExercises = useAppSelector((x) => x.storedSessions.savedExercises);
+  const [rangeId, setRangeId] = useState<ProgressRangeId>(DEFAULT_PROGRESS_RANGE);
+  const history = useProgressHistory();
 
-function LoadedStats({ stats }: { stats: GranularStatisticView }) {
+  const period = progressPeriod(today, progressRange(rangeId), firstDayOfWeek);
+  const hasHistory = !!history?.firstDate;
+  const tabs = progressTabs(showBodyweight && !!history && hasBodyweight(history));
+  const tab = shownTab(lastTab, tabs);
+  const shortDate = (date: Parameters<typeof formatDate>[0]) => formatDate(date, { month: 'short', day: 'numeric' });
+  const openExercise = (exerciseId: ExerciseId | undefined) => {
+    if (exerciseId) {
+      openExerciseStats(exerciseId);
+    }
+  };
+
+  const content = () => {
+    if (!history) {
+      return null;
+    }
+    switch (tab) {
+      case 'strength':
+        return (
+          <StrengthSection
+            lifts={mostTrainedLifts(history, period.start, unit)}
+            records={recentRecords(history, unit)}
+            unit={unitLabel}
+            onOpenLift={(lift) => openExercise(lift.exerciseId)}
+            onOpenRecord={(record) => openExercise(record.exerciseId)}
+            onAllExercises={() => router.push('/stats/exercises')}
+            onAllRecords={() => router.push('/stats/records')}
+          />
+        );
+      case 'training': {
+        // Saved exercises override the built-in ones, hidden or not: a hidden exercise was still trained.
+        const exercises = { ...builtInExercises, ...savedExercises };
+        return (
+          <TrainingSection
+            view={trainingView(buildWeeklyTable(history, exercises, period))}
+            muscleLabel={(muscle) => muscleLabelOf(t, muscle)}
+          />
+        );
+      }
+      case 'body': {
+        const body = bodyView(history, period.start, unit);
+        return body ? (
+          <BodySection
+            view={body}
+            from={period.start}
+            to={today}
+            unit={unitLabel}
+            overRange={overRangeLabel(t, rangeId)}
+          />
+        ) : null;
+      }
+    }
+  };
+
   return (
-    <View>
-      <OverallStatsGrid stats={stats} />
-      <ExerciseListSummary stats={stats} />
+    <View style={{ flex: 1, backgroundColor: tokens.bg }}>
+      <Stack.Screen options={{ headerShown: false, title: t('progress.tab.title') }} />
+      <ScrollView
+        testID="progress-screen"
+        contentContainerStyle={{
+          paddingTop: insets.top + spacing[4],
+          paddingHorizontal: spacing.pageHorizontalMargin,
+          paddingBottom: spacing[8],
+          gap: spacing[4],
+        }}
+      >
+        <ProgressHeader
+          since={hasHistory ? t('progress.tab.since.label', { date: shortDate(period.start) }) : undefined}
+          title={t('progress.tab.title')}
+        />
+        {history && !hasHistory ? (
+          <ProgressEmpty
+            title={t('progress.tab.empty.title')}
+            body={t('progress.tab.empty.body')}
+            action={{ label: t('progress.tab.empty.button'), onPress: () => goToRoutines() }}
+          />
+        ) : null}
+        {hasHistory ? (
+          <>
+            <ProgressTabBar<ProgressTab>
+              options={tabs.map((value) => ({ value, label: tabLabel(t, value) }))}
+              value={tab}
+              onChange={(next) => dispatch(setProgressTab(next))}
+              accessibilityLabel={t('progress.tab.sections.label')}
+            />
+            <SegmentedControl<ProgressRangeId>
+              testID="progress-range"
+              options={[
+                rangeOption(t, PROGRESS_RANGES[0]),
+                rangeOption(t, PROGRESS_RANGES[1]),
+                rangeOption(t, PROGRESS_RANGES[2]),
+              ]}
+              value={rangeId}
+              onChange={setRangeId}
+              accessibilityLabel={t('progress.tab.range.label')}
+            />
+            {content()}
+          </>
+        ) : null}
+      </ScrollView>
     </View>
   );
 }
 
-function OverallStatsGrid({ stats }: { stats: GranularStatisticView }) {
-  const { t } = useTranslate();
-  const { colors } = useAppTheme();
-  const loadAxis = useLoadAxis();
-  const showBodyweight = useAppSelector((x) => x.settings.showBodyweight);
-  const [showBodyweightGraph, setShowBodyweightGraph] = useState(false);
-  const canShowBodyweightGraph = showBodyweight && stats.bodyweightStats.statistics.length > 0;
-  return (
-    <>
-      <TitledSection title={t('stats.overview.title')}>
-        <SingleValueStatisticsGrid>
-          <SingleValueStatisticCard
-            title={t('stats.workouts_per_week.label')}
-            value={formatWeeklyRate(stats.workoutsPerWeek)}
-            icon={'assignment'}
-          />
-          <SingleValueStatisticCard
-            title={t('stats.sets_per_week.label')}
-            value={formatWeeklyRate(stats.setsPerWeek)}
-            icon={'function'}
-          />
-          <SingleValueStatisticCard
-            title={t('stats.max_weight_in_workout.label')}
-            value={stats.maxWeightLiftedInAWorkout?.shortLocaleFormat(0) ?? '-'}
-            icon={'weight'}
-          />
-          <SingleValueStatisticCard
-            title={t('workout.average_length.label')}
-            icon={'avgTime'}
-            value={formatDuration(stats.averageSessionLength, 'mins')}
-          />
-          <SingleValueStatisticCard
-            title={t('stats.bodyweight_change.label')}
-            icon={'monitorWeight'}
-            value={<BodyweightStatValue stats={stats} />}
-            onPress={canShowBodyweightGraph ? () => setShowBodyweightGraph((x) => !x) : undefined}
-          />
-          <SingleValueStatisticCard
-            title={t('stats.heaviest_lift.label')}
-            icon={'fitnessCenter'}
-            value={
-              stats.heaviestLift
-                ? stats.heaviestLift.exerciseName + ' - ' + stats.heaviestLift.weight.shortLocaleFormat(0)
-                : '-'
-            }
-          />
-        </SingleValueStatisticsGrid>
-      </TitledSection>
-
-      {showBodyweightGraph && canShowBodyweightGraph && (
-        <TitledSection title={t('exercise.bodyweight.label')}>
-          <Card
-            mode="contained"
-            style={{
-              backgroundColor: colors.surfaceContainer,
-              marginBottom: spacing[2],
-            }}
-          >
-            <Card.Content>
-              <StatisticLineChart statistics={stats.bodyweightStats} axis={loadAxis} />
-            </Card.Content>
-          </Card>
-        </TitledSection>
-      )}
-    </>
-  );
-}
-
-function formatWeeklyRate(value: number) {
-  const rounded = Math.abs(value - Math.round(value)) < 0.05 ? Math.round(value).toString() : value.toFixed(1);
-  return rounded;
-}
-
-function BodyweightStatValue({ stats: { bodyweightStats } }: { stats: GranularStatisticView }) {
-  const showBodyweight = useAppSelector((x) => x.settings.showBodyweight);
-  if (!showBodyweight) {
-    return <Text>-</Text>;
+function tabLabel(t: TranslateFn, tab: ProgressTab): string {
+  switch (tab) {
+    case 'strength':
+      return t('progress.tab.strength.tab.label');
+    case 'training':
+      return t('progress.tab.training.tab.label');
+    case 'body':
+      return t('progress.tab.body.tab.label');
   }
-  const currentValue = bodyweightStats.currentValue;
-  const earliestValue = bodyweightStats.statistics[0]?.value ?? Weight.NIL;
-  const change = currentValue.minus(earliestValue);
-  const changeDirection = match({
-    zero: change.value.isZero(),
-    positive: change.value.isPositive(),
-  })
-    .with({ zero: true }, () => <Icon source={'plusMinus'} size={12} />)
-    .with({ positive: true }, () => <Icon source={'plus'} size={12} />)
-    .with({ positive: false }, () => <Icon source={'minus'} size={12} />)
-    .exhaustive();
+}
 
-  return (
-    <Text>
-      {currentValue.shortLocaleFormat(0)} ({changeDirection}
-      {change.abs().shortLocaleFormat(2)})
-    </Text>
-  );
+function rangeOption(t: TranslateFn, range: (typeof PROGRESS_RANGES)[number]) {
+  switch (range.id) {
+    case '4w':
+      return { value: range.id, label: t('progress.tab.range.four_weeks.label') };
+    case '12w':
+      return { value: range.id, label: t('progress.tab.range.twelve_weeks.label') };
+    case '1y':
+      return { value: range.id, label: t('progress.tab.range.one_year.label') };
+  }
+}
+
+function overRangeLabel(t: TranslateFn, range: ProgressRangeId): string {
+  switch (range) {
+    case '4w':
+      return t('progress.tab.body.over.four_weeks.label');
+    case '12w':
+      return t('progress.tab.body.over.twelve_weeks.label');
+    case '1y':
+      return t('progress.tab.body.over.one_year.label');
+  }
+}
+
+function muscleLabelOf(t: TranslateFn, muscle: MuscleKey): string {
+  return muscle === 'back' ? t('progress.tab.muscles.back.label') : exerciseMetaLabel(t, 'muscle', muscle);
 }
