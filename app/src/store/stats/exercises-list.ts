@@ -5,7 +5,15 @@ import { ExerciseDescriptor } from '@/models/exercise-models';
 import { MuscleGroup, muscleGroupOf } from '@/models/muscle-groups';
 import { LastDoneLabel, lastDoneLabelOf } from '@/models/home/up-next';
 import { Weight, WeightUnit } from '@/models/weight';
-import { ExerciseHistory, ProgressHistory, progressSince, trendValues } from '@/store/stats/progress-history';
+import { shownChange, shownWeight } from '@/store/stats/progress-amounts';
+import {
+  ExerciseHistory,
+  ExerciseProgress,
+  ProgressHistory,
+  progressSince,
+  trendValues,
+} from '@/store/stats/progress-history';
+import { StatAxis } from '@/store/stats/quantity';
 
 /** How far back the trend line and the change reach. */
 export const TREND_WEEKS = 12;
@@ -37,9 +45,9 @@ export interface ExerciseListRow {
   sessions: number;
   /** The window's values, oldest first, for the sparkline. */
   trend: number[];
-  /** The latest estimated 1RM (in the user's unit, to a tenth), or best reps. */
+  /** The latest estimated 1RM, as shown (in the user's unit, to the nearest half), or best reps. */
   current: AxisAmount | undefined;
-  /** First against last over the window, rounded as `current` is. Undefined with fewer than two values. */
+  /** The window's last value less its first, as shown. Undefined with fewer than two values. */
   change: AxisAmount | undefined;
   direction: TrendDirection | undefined;
 }
@@ -50,8 +58,6 @@ export interface ExercisesList {
   /** The chips to offer after All. */
   muscles: MuscleGroup[];
 }
-
-const LOAD_DECIMALS = 1;
 
 /**
  * Every logged exercise the filters let through. With no search, most recently done first; those last done on
@@ -93,7 +99,7 @@ function lastDate(exercise: ExerciseHistory): LocalDate {
 
 function rowOf(exercise: ExerciseHistory, today: LocalDate, unit: WeightUnit): ExerciseListRow {
   const progress = progressSince(exercise, today.minusWeeks(TREND_WEEKS));
-  const change = changeOf(progress.change, unit);
+  const { current, change } = currentAndChange(exercise, progress, unit);
   return {
     key: exercise.key,
     exerciseId: exercise.blueprint.exerciseId,
@@ -101,42 +107,48 @@ function rowOf(exercise: ExerciseHistory, today: LocalDate, unit: WeightUnit): E
     lastDone: lastDoneLabelOf(lastDate(exercise), today),
     sessions: exercise.points.length,
     trend: trendValues(progress, unit),
-    current: currentOf(exercise, progress.axis, unit),
+    current,
     change,
     direction: change && directionOf(change),
   };
 }
 
-function currentOf(exercise: ExerciseHistory, axis: 'load' | 'reps', unit: WeightUnit): AxisAmount | undefined {
+/**
+ * The latest value and the change over the window, as shown. With a change, the latest value is the window's
+ * last, shown as the change shows it.
+ */
+function currentAndChange(
+  exercise: ExerciseHistory,
+  progress: ExerciseProgress,
+  unit: WeightUnit,
+): Pick<ExerciseListRow, 'current' | 'change'> {
+  if (progress.change?.axis === 'reps') {
+    return {
+      current: { axis: 'reps', value: progress.change.last },
+      change: { axis: 'reps', value: progress.change.delta },
+    };
+  }
+  if (progress.change?.axis === 'load') {
+    const shown = shownChange(progress.change.last, progress.change.first, 'estimate', unit);
+    return { current: { axis: 'load', value: shown.value }, change: { axis: 'load', value: shown.change } };
+  }
+  return { current: latestOf(exercise, progress.axis, unit), change: undefined };
+}
+
+function latestOf(exercise: ExerciseHistory, axis: StatAxis, unit: WeightUnit): AxisAmount | undefined {
   for (let i = exercise.points.length - 1; i >= 0; i--) {
     const point = exercise.points[i]!;
     if (axis === 'reps' && point.bestReps > 0) {
       return { axis, value: point.bestReps };
     }
     if (axis === 'load' && point.oneRepMax) {
-      return { axis, value: rounded(point.oneRepMax, unit) };
+      return { axis, value: shownWeight(point.oneRepMax, 'estimate', unit) };
     }
   }
   return undefined;
 }
 
-function changeOf(change: ReturnType<typeof progressSince>['change'], unit: WeightUnit): AxisAmount | undefined {
-  if (!change) {
-    return undefined;
-  }
-  if (change.axis === 'reps') {
-    return { axis: 'reps', value: change.delta };
-  }
-  // Rounded on each end, so the change agrees with the current value beside it.
-  return { axis: 'load', value: rounded(change.last, unit).minus(rounded(change.first, unit)) };
-}
-
 function directionOf(change: AxisAmount): TrendDirection {
   const sign = change.axis === 'reps' ? Math.sign(change.value) : change.value.value.toNumber();
   return sign > 0 ? 'up' : sign < 0 ? 'down' : 'same';
-}
-
-function rounded(weight: Weight, unit: WeightUnit): Weight {
-  const converted = weight.convertTo(unit);
-  return converted.with({ value: converted.value.decimalPlaces(LOAD_DECIMALS) });
 }

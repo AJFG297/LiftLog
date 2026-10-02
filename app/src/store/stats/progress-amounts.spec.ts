@@ -59,6 +59,14 @@ describe('shownChange', () => {
     ]);
   });
 
+  it('goes to a hundredth when a tenth still shows the two alike', () => {
+    const shown = shownChange(kg(116.74), kg(116.71), 'estimate', 'kilograms');
+
+    expect([shown.value.value.toNumber(), shown.previous.value.toNumber(), shown.change.value.toNumber()]).toEqual([
+      116.74, 116.71, 0.03,
+    ]);
+  });
+
   it('keeps halves when the two are really equal', () => {
     expect(shownChange(kg(100.2), kg(100.2), 'estimate', 'kilograms').change).toEqual(kg(0));
   });

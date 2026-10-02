@@ -6,6 +6,7 @@ import { makeWeightedBlueprint } from '@/models/session-models/__test__/helpers'
 import { Weight, WeightUnit } from '@/models/weight';
 import { buildProgressHistory, ProgressHistory } from '@/store/stats/progress-history';
 import { recordsListOf } from '@/store/stats/records-list';
+import { recentRecords } from '@/store/stats/progress-strength';
 
 const kg = (n: number) => new Weight(n, 'kilograms');
 const lbs = (n: number) => new Weight(n, 'pounds');
@@ -41,7 +42,7 @@ const history = buildProgressHistory([
   session('s4', day(9, 28), [lift(squat, kg(105), 8), lift(bench, kg(80), 10)]),
 ]);
 
-// "102.06 kilograms": the value exactly as stored, so the rounding shows.
+// "102 kilograms": the value exactly as stored, so the rounding shows.
 const text = (weight: Weight) => `${weight.value.toString()} ${weight.unit}`;
 
 const summary = (unit: WeightUnit, list = recordsListOf(history, today, 'all', unit)) =>
@@ -67,15 +68,15 @@ describe('recordsListOf', () => {
         showYear: false,
         rows: [
           ['2026-09-28', 'Squat', 'heaviestWeight', '105 kilograms', 8, '100 kilograms', '5 kilograms'],
-          // 80 × 10 ≈ 106.67 beats 225 lb × 1 ≈ 105.46 kg.
+          // 80 × 10 ≈ 106.67 beats 225 lb × 1 ≈ 105.46 kg: estimates show to the nearest half.
           [
             '2026-09-28',
             'Bench Press',
             'estimatedOneRepMax',
-            '106.7 kilograms',
+            '106.5 kilograms',
             '80 kilograms × 10',
             '105.5 kilograms',
-            '1.2 kilograms',
+            '1 kilograms',
           ],
         ],
       },
@@ -83,7 +84,8 @@ describe('recordsListOf', () => {
         month: '2026-08',
         showYear: false,
         rows: [
-          ['2026-08-03', 'Bench Press', 'heaviestWeight', '102.06 kilograms', 1, '85 kilograms', '17.06 kilograms'],
+          // 225 lb is 102.06 kg: converted, it shows to the nearest half.
+          ['2026-08-03', 'Bench Press', 'heaviestWeight', '102 kilograms', 1, '85 kilograms', '17 kilograms'],
         ],
       },
       {
@@ -95,9 +97,9 @@ describe('recordsListOf', () => {
             '2026-07-08',
             'Squat',
             'estimatedOneRepMax',
-            '126.7 kilograms',
+            '126.5 kilograms',
             '100 kilograms × 8',
-            '116.7 kilograms',
+            '116.5 kilograms',
             '10 kilograms',
           ],
         ],
@@ -109,11 +111,12 @@ describe('recordsListOf', () => {
     const august = summary('pounds').find((month) => month.month === '2026-08');
 
     expect(august?.rows).toEqual([
-      ['2026-08-03', 'Bench Press', 'heaviestWeight', '225 pounds', 1, '187.39 pounds', '37.61 pounds'],
+      // 225 lb as lifted; 85 kg is 187.39 lb, to the nearest half.
+      ['2026-08-03', 'Bench Press', 'heaviestWeight', '225 pounds', 1, '187.5 pounds', '37.5 pounds'],
     ]);
   });
 
-  it('gives an estimate that rounds to its old best another decimal place', () => {
+  it('shows an estimate that would read as its old best to a finer place, rather than as no gain', () => {
     const tiny: ProgressHistory = {
       exercises: new Map(),
       workouts: [],
@@ -146,6 +149,20 @@ describe('recordsListOf', () => {
         '0.03 kilograms',
       ],
     ]);
+  });
+
+  it("gives each record the gain the Strength tab's recent records show for it", () => {
+    for (const unit of ['kilograms', 'pounds'] as const) {
+      const listed = recordsListOf(history, today, 'all', unit).months.flatMap((month) => month.rows);
+      const gainOf = (workoutId: string, name: string) =>
+        listed.find((row) => row.workoutId === workoutId && row.exerciseName === name)?.gain.value.toNumber();
+
+      for (const record of recentRecords(history, unit)) {
+        expect(record.gain).toBe(gainOf(record.workoutId, record.name));
+      }
+    }
+    // The newest three: Bench's estimate of 1 kg and Squat's 5 kg on Sep 28, and Bench's 17 kg in August.
+    expect(recentRecords(history, 'kilograms').map((record) => record.gain)).toEqual([1, 5, 17]);
   });
 
   it('filters to one kind and counts what it lets through', () => {

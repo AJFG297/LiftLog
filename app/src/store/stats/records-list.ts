@@ -1,6 +1,7 @@
 import { LocalDate, YearMonth } from '@js-joda/core';
 import { ExerciseId } from '@/models/blueprint-models';
 import { Weight, WeightUnit } from '@/models/weight';
+import { shownChange, shownWeight } from '@/store/stats/progress-amounts';
 import { DatedRecord, ProgressHistory } from '@/store/stats/progress-history';
 import { SessionRecord } from '@/store/stats/personal-records';
 
@@ -28,7 +29,7 @@ interface RecordListRowBase {
   gain: Weight;
 }
 
-/** One record as the list shows it. Weights are in the user's unit and rounded as shown. */
+/** One record as the list shows it. Weights are in the user's unit and rounded as shown (`progress-amounts`). */
 export type RecordListRow =
   | (RecordListRowBase & {
       kind: 'heaviestWeight';
@@ -57,11 +58,6 @@ export interface RecordsList {
   /** Newest month first, and in each the newest workout first. */
   months: RecordMonth[];
 }
-
-// A heaviest weight is what was on the bar, so it keeps the precision plates allow; an estimate is a
-// derived number, shown to a tenth.
-const HEAVIEST_DECIMALS = 2;
-const ESTIMATE_DECIMALS = 1;
 
 /** Every record in the history that `filter` lets through, grouped by month, newest first. */
 export function recordsListOf(
@@ -117,33 +113,23 @@ function rowOf(history: ProgressHistory, { record, workoutId, date }: DatedRecor
     date,
   };
   if (record.kind === 'heaviestWeight') {
+    const shown = shownChange(record.weight, record.previous, 'load', unit);
     return {
       ...base,
       kind: record.kind,
       reps: record.reps,
-      ...amounts(record.weight, record.previous, unit, HEAVIEST_DECIMALS),
+      value: shown.value,
+      previous: shown.previous,
+      gain: shown.change,
     };
   }
+  const shown = shownChange(record.oneRepMax, record.previous, 'estimate', unit);
   return {
     ...base,
     kind: record.kind,
-    estimatedFrom: { weight: rounded(record.weight, unit, HEAVIEST_DECIMALS), reps: record.reps },
-    ...amounts(record.oneRepMax, record.previous, unit, ESTIMATE_DECIMALS),
+    estimatedFrom: { weight: shownWeight(record.weight, 'load', unit), reps: record.reps },
+    value: shown.value,
+    previous: shown.previous,
+    gain: shown.change,
   };
-}
-
-function amounts(value: Weight, previous: Weight, unit: WeightUnit, decimals: number) {
-  let shown = rounded(value, unit, decimals);
-  let was = rounded(previous, unit, decimals);
-  // An estimate that rounds to its old best gets the extra place it needs, rather than reading "+0".
-  if (decimals < HEAVIEST_DECIMALS && !shown.isGreaterThan(was)) {
-    shown = rounded(value, unit, HEAVIEST_DECIMALS);
-    was = rounded(previous, unit, HEAVIEST_DECIMALS);
-  }
-  return { value: shown, previous: was, gain: shown.minus(was) };
-}
-
-function rounded(weight: Weight, unit: WeightUnit, decimals: number): Weight {
-  const converted = weight.convertTo(unit);
-  return converted.with({ value: converted.value.decimalPlaces(decimals) });
 }

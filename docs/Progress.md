@@ -102,8 +102,8 @@ reads the same on Strength and on Records:
 - A weight that was on the bar (`'load'`) shows as lifted, to at most two places, in the unit it was lifted in.
   Converted to the other unit, it shows to the nearest half too: 62.5 kg reads "138 lbs", not "137.79".
 - A gain or a change is always the difference of the two values as shown (`shownChange`), so a row adds up as
-  it reads. When the two would show alike although they differ, a real but tiny gain, both show to a tenth
-  instead and the gain reads "+0.1" rather than "+0".
+  it reads. When the two would show alike although they differ, a real but tiny gain, both show a place finer,
+  to a tenth and then a hundredth, and the gain reads "+0.1" or "+0.03" rather than "+0".
 
 The view models hand the components amounts already rounded; the components only format them
 (`amountText`, `signedText`).
@@ -182,10 +182,10 @@ none the first time an exercise is done.
 - **Months**: an ordered list of `{ month: YearMonth, showYear, rows }`, newest first. Within a month the newest
   workout comes first, and a workout's records keep exercise order.
 - **A row**: the date, the exercise (under the name it was last logged with), the kind and value ("Heaviest ·
-  130 kg × 3", "Est. 1RM · 104.5 kg"), what it beat ("was 127.5 kg") and the gain. Weights are converted to
-  the user's unit, so a record lifted in pounds against a best in kilograms reads in one unit. A heaviest
-  weight is rounded to two places and an estimate to one; the gain is the difference of the rounded values,
-  so the row adds up. An estimate that would round to its old best gets a second place instead of "+0".
+  130 kg × 3", "Est. 1RM · 104.5 kg"), what it beat ("was 127.5 kg") and the gain. Weights are in the
+  user's unit, so a record lifted in pounds against a best in kilograms reads in one unit, and are rounded as
+  [How amounts read](#how-amounts-read) says, through the same `shownChange` as Strength's recent records: the
+  same record reads the same gain on both.
 - **Empty**: "No records yet" with no records, or a line for the chosen kind pointing back to All.
 
 An estimate's row also shows the set it comes from ("82.5 kg × 8 · was 102 kg").
@@ -205,7 +205,8 @@ movement in `history.exercises`: only what the user has logged.
 - **A row**: the name, when it was last done (today, yesterday, a weekday within the week, else a date) and
   the session count over the whole history; a `Sparkline` of the last 12 weeks (`TREND_WEEKS`) with no end
   dot; the latest estimated 1RM, or best reps for a movement that tracks no load; and the change over the
-  12 weeks from `progressSince`, rounded to a tenth on each end. The change sets the colours: up is
+  12 weeks from `progressSince`, as shown (`shownChange`: the estimates to the nearest half, the change their
+  difference). The change sets the colours: up is
   `positive` with an `accentInk` line, down `warmInk` for both, the same (or nothing to compare) muted with a
   `faint` line. Fewer than two sessions in the window shows a dash.
 - **Empty**: no match for the search, nothing under the chip, or nothing logged yet.
