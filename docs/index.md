@@ -7,9 +7,10 @@ work to find the docs relevant to your area, and update it whenever you add, rem
 
 - [Storage.md](./Storage.md) - the two on-device storage layers: preferences (`PreferenceService`, one
   file per key) and user data (SQLite via Drizzle). Both are injected into Redux effects via `extra`.
-  Covers which to use, how to add to each, the relational workout tables behind `WorkoutRepository`, how
-  workouts reference exercises by id (the `ExerciseResolver` and the key columns), the startup hydration
-  order, and the history snapshots and startup benchmark that guard it.
+  Covers which to use, how to add to each, the relational workout tables behind `WorkoutRepository` and
+  its reads, how workouts reference exercises by id (the `ExerciseResolver` and the key columns), what
+  startup loads (only the workout in progress and the carry-over cache), the editing slot past workouts
+  are opened into, and the snapshots, startup-reads test and benchmark that guard it.
 - [Migrations.md](./Migrations.md) - the `createMigrations()` chain in `app/src/models/storage/versions/`
   that brings previously-persisted JSON up to the shape the app expects. Read alongside `Storage.md`.
 - [WorkoutWorker.md](./WorkoutWorker.md) - the platform-specific, message-driven execution environment
@@ -64,7 +65,8 @@ work to find the docs relevant to your area, and update it whenever you add, rem
   exported (exercises linked by name, `exerciseId` optional), and the Claude skill that authors plan files
   against the schema.
 - [PlaintextExport.md](./PlaintextExport.md) — CSV/JSON export of workout data, including which fields
-  are included. Explicitly _not_ a backup mechanism; LiftLog cannot read these files back.
+  are included, their order and how it is read in batches. Explicitly _not_ a backup mechanism; LiftLog
+  cannot read these files back.
 - [CsvImport.md](./CsvImport.md) — user guide for Import from other apps (FitNotes-style and
   StrongLifts-style CSV); contributor notes at the end. Separate from plaintext export.
 - [RemoteBackup.md](./RemoteBackup.md) — the automatic remote backup: the app-side settings, the HTTPS
@@ -90,13 +92,17 @@ work to find the docs relevant to your area, and update it whenever you add, rem
 - [adr/0002-own-visual-language.md](./adr/0002-own-visual-language.md) - content surfaces are
   our own components on the theme tokens; system chrome (tabs, sheets, menus, switches, pickers) stays
   native via expo-ui; react-native-paper is phased out screen by screen.
+- [adr/0003-relational-workout-storage.md](./adr/0003-relational-workout-storage.md) - workouts are
+  relational rows with the blueprint as JSON, exercises have stable ids, history is read on demand through
+  `WorkoutRepository`, and Redux holds only the workout in progress, an editing slot and small caches
+  (relational-storage plan decisions D1-D7).
 
 ## Plans
 
 - [plans/relational-storage.md](./plans/relational-storage.md) - the plan (assuming no existing users,
   own backend only) to replace session JSON blobs with relational tables and put stable exercise IDs on
-  blueprints, in progress: phases 0 and 1 are done, phase 2 (history reads from SQL) is next. Key
-  decisions, target schema, phases, and the formats that must keep working.
+  blueprints, done (PM-9 to PM-14): key decisions, target schema, each phase with what was settled while
+  doing it, the formats that must keep working, and the follow-ups left.
 - [plans/redesign.md](./plans/redesign.md) - the plan for the "Clarity" UI redesign, in progress: design
   summary, key decisions (own visual language, a user-chosen accent over fixed neutrals, fonts, new tabs,
   set types, sheets, number pad), the phased screen-by-screen rollout and where it stands, verification

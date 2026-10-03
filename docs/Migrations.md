@@ -76,6 +76,11 @@ was written at. `services/workout-rows.ts` puts the two back together as a `Sess
 runs `sessionBlueprintMigrations` over it. A session version bump that only changes recorded sets
 doesn't touch storage; the change becomes a SQL migration on the set tables instead.
 
+The workout tables' query columns (`movement_key`, `progression_key`, `lineage`, ...) are computed on write
+and never migrated on read. Adding or changing one is a SQL migration that also fills it for the rows
+already stored, as `0013_exercise_lineage.sql` does for `lineage`; and a data migration that rewrites the
+columns it is derived from (`REKEY_PROGRESSION_BY_EXERCISE` rewrites `progression_key`) must derive it again.
+
 Because the payload is typed as the any-version union rather than the latest
 shape, `fromJSON` (which wants the latest shape) **won't compile until you
 migrate** - the type system points you at every read site. Writes always

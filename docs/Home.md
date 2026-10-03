@@ -61,9 +61,10 @@ The time estimate (`estimatedMinutesOf`) is the median of the last five times th
 already reflects how long this person rests. A workout never done is estimated from its plan: each set at
 40 seconds plus its rest. Both round to 5 minutes.
 
-Home stays mounted under the workout screen, so it reads the whole-history selectors with
-`useAppSelectorWhenFocused` and the workout in progress only as "is there one", and a logged set doesn't
-make it recompute.
+Home stays mounted under the workout screen, so it reads the tables through `useWorkoutQuery`, which
+re-queries only once Home is focused again, and the workout in progress only as "is there one", and a
+logged set doesn't make it recompute. Home's Other sheet reads the last ten runs of each of its workouts the
+same way (`latestNamed`).
 
 ### Routine colours
 

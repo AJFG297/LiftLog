@@ -96,7 +96,7 @@ importFromExternal({ format })
   → getExternalImporter(format)(bytes, { defaultWeightUnit })
        → format-specific parse + group → NormalizedImportSession[]
        → sessionsFromNormalized() → BackupData { workouts, programs: {} }
-  → filter session ids already in storedSessions
+  → filter session ids already stored (WorkoutRepository.existingIds)
   → importBackupData(...); setStatsIsDirty(true)   // external path only
 ```
 
@@ -106,5 +106,6 @@ importFromExternal({ format })
   - `csv-to-sessions.ts` — `sessionsFromNormalized`, `sessionIdFromCsvContent`
   - `importers.ts` — `getImportForFitNotes` / `getImportForStrongLifts`
   - `csv-parse-utils.ts` — shared cell/number/Papa preamble helpers
-- Settings effect: `import-external-effects.ts` uses the registry; filters existing session IDs;
+- Settings effect: `import-external-effects.ts` uses the registry; filters the session IDs already in the
+  workout tables (`existingIds`);
   dispatches `importBackupData` + `setStatsIsDirty` (or already-imported snackbar).
