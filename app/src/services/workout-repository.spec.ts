@@ -638,6 +638,19 @@ describe('WorkoutRepository', () => {
       });
     });
 
+    it('startedCount counts the finished workouts with a working set logged', async () => {
+      expect(await repository.startedCount()).toBe(0);
+
+      await repository.putMany([
+        lifted('A', april(1)),
+        lifted('B', april(2)),
+        lifted('Opened', april(3), { reps: [undefined] }),
+      ]);
+      await repository.setActive(lifted('Running', april(4)));
+
+      expect(await repository.startedCount()).toBe(2);
+    });
+
     it('dailyActivity counts and sums the started workouts of each day', async () => {
       await repository.putMany([
         lifted('A', april(10), { kg: 100, reps: [10], time: '08:00' }),

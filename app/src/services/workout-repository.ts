@@ -474,6 +474,12 @@ export class WorkoutRepository {
     return row?.date ? LocalDate.parse(row.date) : undefined;
   }
 
+  /** How many finished workouts were started (`Session.isStarted`). */
+  async startedCount(): Promise<number> {
+    const [row] = await this.db.select({ count: count() }).from(workoutsSchema).where(and(finished, started));
+    return row?.count ?? 0;
+  }
+
   /** Each day with a started, finished workout, oldest first: how many, and the volume moved. */
   async dailyActivity(): Promise<DailyActivity[]> {
     const rows = await this.db
