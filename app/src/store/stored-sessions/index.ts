@@ -5,7 +5,7 @@ import { createAction, createSelector, createSlice, PayloadAction, WritableDraft
 import { shallowEqual } from 'react-redux';
 import Enumerable from 'linq';
 import { TemporalComparer } from '@/models/comparers';
-import { ExerciseDescriptor } from '@/models/exercise-models';
+import { ExerciseDescriptor, musclesOf } from '@/models/exercise-models';
 
 interface StoredSessionState {
   isHydrated: boolean;
@@ -410,7 +410,7 @@ export const selectSessionsBefore = createSelector(
 
 export const selectMuscles = createSelector([selectExercises], (exercises) =>
   Enumerable.from(Object.entries(exercises))
-    .selectMany(([, x]) => x.muscles)
+    .selectMany(([, x]) => musclesOf(x))
     .distinct()
     .orderBy((x) => x)
     .toArray(),

@@ -36,6 +36,7 @@ import {
 } from '@/models/session-models/__test__/helpers';
 import type { RootState } from '@/store/store';
 import { stubDescriptor } from '@/models/exercise-resolver';
+import { toExerciseDescriptorJSON } from '@/models/exercise-models';
 
 async function createTestDb(): Promise<ExpoSQLiteDatabase> {
   const expoDb = await openDatabaseAsync(':memory:');
@@ -169,7 +170,8 @@ describe('stored-sessions effects', () => {
       level: '',
       mechanic: null,
       equipment: null,
-      muscles: [],
+      primaryMuscles: [],
+      secondaryMuscles: [],
       instructions: '',
       category: '',
     };
@@ -178,7 +180,7 @@ describe('stored-sessions effects', () => {
     await testBed.dispatchHandled(upsertExercises({ custom: exercise }));
 
     const [row] = await db.select().from(exercisesSchema).where(eq(exercisesSchema.id, 'custom'));
-    expect(row?.payload).toEqual(exercise);
+    expect(row?.payload).toEqual({ version: 2, ...exercise, muscles: [] });
   });
 
   describe('setExercises', () => {
@@ -188,7 +190,8 @@ describe('stored-sessions effects', () => {
       level: '',
       mechanic: null,
       equipment: null,
-      muscles: [],
+      primaryMuscles: [],
+      secondaryMuscles: [],
       instructions: '',
       category: '',
     });
@@ -197,7 +200,7 @@ describe('stored-sessions effects', () => {
     } as Partial<RootState>;
 
     it('replaces the stored exercises', async () => {
-      await db.insert(exercisesSchema).values({ id: 'old', payload: exercise('Old') });
+      await db.insert(exercisesSchema).values({ id: 'old', payload: toExerciseDescriptorJSON(exercise('Old')) });
 
       await bed({ state: hydrated }).dispatchHandled(setExercises({ fresh: exercise('Fresh') }));
 
@@ -205,7 +208,7 @@ describe('stored-sessions effects', () => {
     });
 
     it('clears the table when given no exercises', async () => {
-      await db.insert(exercisesSchema).values({ id: 'old', payload: exercise('Old') });
+      await db.insert(exercisesSchema).values({ id: 'old', payload: toExerciseDescriptorJSON(exercise('Old')) });
 
       await bed({ state: hydrated }).dispatchHandled(setExercises({}));
 
@@ -213,7 +216,7 @@ describe('stored-sessions effects', () => {
     });
 
     it('keeps the old exercises when writing the new ones fails', async () => {
-      await db.insert(exercisesSchema).values({ id: 'old', payload: exercise('Old') });
+      await db.insert(exercisesSchema).values({ id: 'old', payload: toExerciseDescriptorJSON(exercise('Old')) });
       // A genuine SQLite failure partway through: the delete succeeds, then the insert aborts.
       // Typed as the synchronous expo driver; under Vitest `run()` returns a promise.
       await Promise.resolve(

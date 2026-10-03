@@ -96,7 +96,9 @@ What to use, all from `useAppTheme.tsx`:
 | A number with letters in it ("100kg", "1 hrs 23 mins", "3 × 5 60kg") | Geist with `tabularText`, whose digits share one width without going mono |
 | A number in a sentence | nothing special |
 
-To keep a unit out of mono, split it into its own span, as `WeightFormat` does.
+To keep a unit out of mono, split it into its own span, as `WeightFormat` does. On the Progress screens,
+`AmountText` (`components/presentation/stats/amount-text.tsx`) is a number in Geist Mono with its unit after
+it in Geist. A word in a number's place, such as "same", stays in Geist.
 
 - The `font[...]` sizes carry no family. `SurfaceText` sets it, so a nested span that spreads a size keeps
   its parent's family.

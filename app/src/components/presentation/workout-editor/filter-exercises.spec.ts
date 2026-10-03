@@ -2,8 +2,18 @@ import { describe, expect, it } from 'vitest';
 import { ExerciseDescriptor } from '@/models/exercise-models';
 import { filterExercises, searchSeedFor } from './filter-exercises';
 
-function exercise(name: string, muscles: string[] = []): ExerciseDescriptor {
-  return { name, muscles, force: null, level: '', mechanic: null, equipment: null, instructions: '', category: '' };
+function exercise(name: string, primaryMuscles: string[] = [], secondaryMuscles: string[] = []): ExerciseDescriptor {
+  return {
+    name,
+    primaryMuscles,
+    secondaryMuscles,
+    force: null,
+    level: '',
+    mechanic: null,
+    equipment: null,
+    instructions: '',
+    category: '',
+  };
 }
 
 const exercises = {
@@ -36,7 +46,7 @@ describe('filterExercises', () => {
   it('suggests a new exercise when no name matches the query exactly', () => {
     const result = filterExercises(exercises, '  Cable Fly ', ['chest']);
 
-    expect(result.suggestion).toMatchObject({ name: 'Cable Fly', muscles: ['chest'] });
+    expect(result.suggestion).toMatchObject({ name: 'Cable Fly', primaryMuscles: ['chest'] });
   });
 });
 

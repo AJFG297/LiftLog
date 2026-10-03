@@ -94,6 +94,7 @@ export const {
   setFirstDayOfWeek,
   setProToken,
   setPlansSortOrder,
+  setProgressTab,
   setPreferredLanguage,
   setNotesExpandedByDefault,
   setKeepScreenAwakeDuringWorkout,

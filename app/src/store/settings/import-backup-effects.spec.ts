@@ -118,7 +118,8 @@ describe('import-backup-effects', () => {
         level: '',
         mechanic: null,
         equipment: null,
-        muscles: [],
+        primaryMuscles: [],
+        secondaryMuscles: [],
         instructions: '',
         category: '',
       },
@@ -210,13 +211,14 @@ describe('export then restore', () => {
       lastEdited: '2026-04-10' as never,
     });
     await db.insert(programsSchema).values({ id: 'program', active: true, payload: program.toJSON() });
+    // Stored before primary and secondary muscles were split, so the restore migrates it.
     const exercise = {
       name: 'Custom exercise',
       force: null,
       level: '',
       mechanic: null,
       equipment: null,
-      muscles: [],
+      muscles: ['chest'],
       instructions: '',
       category: '',
     };
@@ -228,7 +230,17 @@ describe('export then restore', () => {
     expect(restored.workouts.map((x) => x.toJSON())).toEqual(expect.arrayContaining(expected.map((x) => x.toJSON())));
     expect(restored.workouts).toHaveLength(expected.length);
     expect(restored.programs.program?.toJSON()).toEqual(program.toJSON());
-    expect(restored.exercises?.custom).toEqual(exercise);
+    expect(restored.exercises?.custom).toEqual({
+      name: 'Custom exercise',
+      force: null,
+      level: '',
+      mechanic: null,
+      equipment: null,
+      primaryMuscles: ['chest'],
+      secondaryMuscles: [],
+      instructions: '',
+      category: '',
+    });
     expect(restored.feed).toBeUndefined();
   });
 

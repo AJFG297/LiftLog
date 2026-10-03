@@ -107,7 +107,8 @@ function exerciseDescriptor(overrides: Partial<ExerciseDescriptor> = {}): Exerci
     level: 'beginner',
     mechanic: null,
     equipment: null,
-    muscles: ['quads'],
+    primaryMuscles: ['quads'],
+    secondaryMuscles: [],
     instructions: '',
     category: 'strength',
     ...overrides,
@@ -487,8 +488,8 @@ describe('storedSessions reducer', () => {
   });
 
   it('manages saved exercises', () => {
-    const squat = exerciseDescriptor({ name: 'Squat', muscles: ['quads'] });
-    const bench = exerciseDescriptor({ name: 'Bench', muscles: ['chest'] });
+    const squat = exerciseDescriptor({ name: 'Squat', primaryMuscles: ['quads'] });
+    const bench = exerciseDescriptor({ name: 'Bench', primaryMuscles: ['chest'] });
 
     let state = reduce(updateExercise({ id: '1', exercise: squat }), updateExercise({ id: '2', exercise: bench }));
     expect(state.savedExercises['1']).toBe(squat);
@@ -706,13 +707,16 @@ describe('storedSessions selectors', () => {
   it('selectMuscles returns sorted distinct muscles and selectExerciseById reads one', () => {
     const state = {
       storedSessions: reduce(
-        updateExercise({ id: '1', exercise: exerciseDescriptor({ muscles: ['quads', 'glutes'] }) }),
-        updateExercise({ id: '2', exercise: exerciseDescriptor({ muscles: ['glutes', 'chest'] }) }),
+        updateExercise({
+          id: '1',
+          exercise: exerciseDescriptor({ primaryMuscles: ['quads'], secondaryMuscles: ['glutes'] }),
+        }),
+        updateExercise({ id: '2', exercise: exerciseDescriptor({ primaryMuscles: ['glutes', 'chest'] }) }),
       ),
     };
 
     expect(selectMuscles(state)).toEqual(['chest', 'glutes', 'quads']);
-    expect(selectExerciseById(state, '1')!.muscles).toEqual(['quads', 'glutes']);
+    expect(selectExerciseById(state, '1')!.secondaryMuscles).toEqual(['glutes']);
   });
 });
 
