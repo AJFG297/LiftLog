@@ -26,6 +26,7 @@ import {
   setActiveSessionId,
   updateStoredSession,
   upsertStoredSessions,
+  openSessionForEditing,
 } from '@/store/stored-sessions';
 import type { RootState } from '@/store/store';
 import type { UnknownAction } from '@reduxjs/toolkit';
@@ -90,6 +91,12 @@ async function startApp(sessions: Session[]) {
 
 const march = { from: LocalDate.of(2026, 3, 1), to: LocalDate.of(2026, 3, 31) };
 
+/** Opens a past workout for editing, as the history editor does when it mounts. */
+async function openForEditing(app: Awaited<ReturnType<typeof startApp>>, sessionId: string) {
+  app.store.dispatch(openSessionForEditing(sessionId));
+  await app.settle();
+}
+
 describe('history read from SQL', () => {
   beforeEach(() => {
     // Only the clock: `fetchOverallStats` waits on a real timer.
@@ -113,6 +120,7 @@ describe('history read from SQL', () => {
     expect([...(await repository.personalRecords()).keys()]).toEqual(['week-1', 'week-2']);
 
     // The middle week gets a heavier top set: 120 kg for 10, the best of the three by a distance.
+    await openForEditing(app, 'week-1');
     app.store.dispatch(
       updateStoredSession({
         sessionId: 'week-1',
@@ -161,6 +169,41 @@ describe('history read from SQL', () => {
     );
   });
 
+  it('startup loads none of the history; the editor loads one past workout by id, saves and deletes it', async () => {
+    const app = await startApp(history());
+    const { workoutRepository: repository } = app;
+    expect(app.getState().storedSessions.sessions).toEqual({});
+
+    await openForEditing(app, 'week-1');
+    expect(Object.keys(app.getState().storedSessions.sessions)).toEqual(['week-1']);
+    expect(app.getState().storedSessions.editingSessionId).toBe('week-1');
+
+    app.store.dispatch(
+      updateStoredSession({ sessionId: 'week-1', update: (s) => s.withUpdatedDate(LocalDate.of(2026, 3, 10)) }),
+    );
+    app.store.dispatch(sessionFinished('week-1'));
+    await app.settle();
+    expect((await repository.get('week-1'))?.date.toString()).toBe('2026-03-10');
+
+    // Opening another past workout closes this one: only one is held in memory at a time.
+    await openForEditing(app, 'week-0');
+    expect(Object.keys(app.getState().storedSessions.sessions)).toEqual(['week-0']);
+
+    app.store.dispatch(deleteStoredSession('week-0'));
+    await app.settle();
+    expect(await repository.get('week-0')).toBeUndefined();
+    expect(app.getState().storedSessions).toMatchObject({ sessions: {}, editingSessionId: undefined });
+    expect((await repository.finishedBetween(march.from, march.to)).map((x) => x.id)).toEqual(['week-2', 'week-1']);
+  });
+
+  it('opening a missing workout for editing opens nothing', async () => {
+    const app = await startApp(history());
+
+    await openForEditing(app, 'deleted-elsewhere');
+
+    expect(app.getState().storedSessions).toMatchObject({ sessions: {}, editingSessionId: undefined });
+  });
+
   it('deleting the earliest workout moves the all-time stats start', async () => {
     const app = await startApp(history());
     const { workoutRepository: repository } = app;
@@ -190,6 +233,7 @@ describe('history read from SQL', () => {
     const heaviest = () => app.getState().stats.overallView.unwrapOr(undefined)?.heaviestLift?.weight;
     expect(heaviest()).toEqual(new Weight(105, 'kilograms'));
 
+    await openForEditing(app, 'week-1');
     // The persist effect's write waits on the test, as a big import or a slow device would make it.
     let commit = () => {};
     const putMany = repository.putMany.bind(repository);
@@ -266,6 +310,7 @@ describe('history read from SQL', () => {
       expect(nextSquatKg(app)).toEqual([107.5, 107.5, 107.5]);
 
       // Week 2's sets are cleared: week 1 (102.5 kg) is the latest Squat again.
+      await openForEditing(app, 'week-2');
       app.store.dispatch(
         updateStoredSession({
           sessionId: 'week-2',

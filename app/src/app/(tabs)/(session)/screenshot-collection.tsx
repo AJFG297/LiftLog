@@ -19,7 +19,7 @@ import { AiPlan } from '@/models/ai-models';
 import { setStatsIsDirty, fetchOverallStats } from '@/store/stats';
 import { savePlan, setSavedPlans } from '@/store/program';
 import { ProgramBlueprint } from '@/models/blueprint-models';
-import { upsertStoredSessions, setStoredSessions } from '@/store/stored-sessions';
+import { upsertStoredSessions } from '@/store/stored-sessions';
 import {
   setColorSchemeSeed,
   setLastSeenWhatsNewId,
@@ -254,7 +254,6 @@ function buildStatsSessionData(dispatch: ReturnType<typeof useDispatch>) {
     return legs(daysAgo, i);
   });
 
-  dispatch(setStoredSessions({}));
   dispatch(upsertStoredSessions(sessions));
   dispatch(setStatsIsDirty(true));
   dispatch(fetchOverallStats());

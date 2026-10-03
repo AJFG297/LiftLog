@@ -5,7 +5,7 @@ import {
   selectActiveSession,
   setActiveSessionId,
   setIsHydrated as setStoredSessionsIsHydrated,
-  setStoredSessions,
+  setActiveSession,
   updateStoredSession,
 } from '@/store/stored-sessions';
 import { AddEffectFn } from '@/store/store';
@@ -25,7 +25,7 @@ const sessionMutations = [
   putStoredSession,
   updateStoredSession,
   deleteStoredSession,
-  setStoredSessions,
+  setActiveSession,
 ];
 
 export function applyWorkoutWorkerEffects(addEffect: AddEffectFn) {

@@ -7,7 +7,6 @@ import type { RootState } from '@/store/store';
 import {
   getSessionReferenceTime,
   selectLatestExercises,
-  selectSessions,
   initializeStoredSessionsStateSlice,
 } from '@/store/stored-sessions';
 import {
@@ -46,6 +45,8 @@ vi.stubEnv('TZ', 'UTC');
 const TODAY = LocalDate.parse('2026-06-03');
 
 let sessions: Session[];
+/** Every workout as startup linked and stored it; the store holds none of them. */
+let stored: Session[];
 let store: Awaited<ReturnType<typeof loadHistory>>['store'];
 let repository: WorkoutRepository;
 /** What `useOwnActivity` would hand the calendar and streak. */
@@ -117,14 +118,17 @@ function labelMovement(key: string): string {
 beforeAll(async () => {
   sessions = loadHistoryFixture();
   ({ store, workoutRepository: repository } = await loadHistory(sessions));
+  stored = (await repository.loadAll()).workouts;
   own = ownActivityOf(await repository.dailyActivity(), await repository.volumeScale());
 });
 
 describe('history aggregates over the 420-session fixture', () => {
-  it('loads every session as finished history', () => {
+  it('stores every session as finished history, and loads none of it into the store', async () => {
     expect(sessions).toHaveLength(420);
-    expect(selectSessions(state())).toHaveLength(420);
-    expect(state().storedSessions.earliestSession?.date.toString()).toBe('2023-07-05');
+    expect(stored).toHaveLength(420);
+    expect(await repository.startedCount()).toBe(417);
+    expect((await repository.earliestDate())?.toString()).toBe('2023-07-05');
+    expect(state().storedSessions.sessions).toEqual({});
   });
 
   it('latest recorded exercise per progression key', () => {
@@ -143,7 +147,7 @@ describe('history aggregates over the 420-session fixture', () => {
 
   it('recently completed exercises per movement', async () => {
     // From the stored sessions, whose exercises startup linked; the fixture's own are still unlinked.
-    const movementKeys = Enumerable.from(selectSessions(state()))
+    const movementKeys = Enumerable.from(stored)
       .selectMany((x) => x.recordedExercises)
       .select((x) => x.movementKey())
       .distinct()
@@ -156,7 +160,7 @@ describe('history aggregates over the 420-session fixture', () => {
   });
 
   it('recently completed exercises leave out the session being viewed', async () => {
-    const newest = Enumerable.from(selectSessions(state()))
+    const newest = Enumerable.from(stored)
       .orderByDescending((x) => getSessionReferenceTime(x).toEpochSecond())
       .first();
     const lookup = await repository.previousPerformances(

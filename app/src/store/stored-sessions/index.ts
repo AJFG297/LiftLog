@@ -2,16 +2,20 @@ import { RecordedExercise, Session } from '@/models/session-models';
 import { lineageKeys, ProgressionKey } from '@/models/blueprint-models';
 import { OffsetDateTime, ZoneId } from '@js-joda/core';
 import { createAction, createSelector, createSlice, PayloadAction, WritableDraft } from '@reduxjs/toolkit';
-import { shallowEqual } from 'react-redux';
 import Enumerable from 'linq';
 import { ExerciseDescriptor, musclesOf } from '@/models/exercise-models';
 import type { LatestPerformance } from '@/services/workout-repository';
 
 interface StoredSessionState {
   isHydrated: boolean;
+  // The workouts open in memory, by id: the one in progress and the one in the editing slot, no others.
+  // The rest of the history stays in the workout tables until a screen reads it (`WorkoutRepository`).
   sessions: Record<string, Session>;
-  // The workout in progress. It lives in `sessions` like any other; this only says which one it is.
+  // The workout in progress, if any.
   activeSessionId: string | undefined;
+  // The other open workout: a past one loaded to be edited (`openSessionForEditing`), the last one put, or
+  // the one just finished, which its summary still shows. Opening another replaces it.
+  editingSessionId: string | undefined;
   // The latest performance of each lineage, keyed by `lineageKeys`, which is what carry-over reads. Loaded
   // from the workout tables at startup (`WorkoutRepository.latestPerLineage`), moved forward by the
   // reducers below, and re-read for a lineage a write may have moved back (see `staleLineages`).
@@ -26,20 +30,19 @@ interface StoredSessionState {
   // Built-in ids the user deleted, hidden from the merged list.
   hiddenBuiltInIds: string[];
   filteredExerciseIds: string[];
-  earliestSession: Session | undefined;
 }
 
 const initialState: StoredSessionState = {
   isHydrated: false,
   sessions: {},
   activeSessionId: undefined,
+  editingSessionId: undefined,
   latestExercises: {},
   latestExerciseWorkoutIds: {},
   builtInExercises: {},
   savedExercises: {},
   hiddenBuiltInIds: [],
   filteredExerciseIds: [],
-  earliestSession: undefined,
 };
 
 function mergeExercises(
@@ -52,21 +55,6 @@ function mergeExercises(
   return Object.fromEntries(Object.entries(merged).sort((a, b) => a[1].name.localeCompare(b[1].name)));
 }
 
-/**
- * Every session the user has finished with. The workout in progress is deliberately absent, because
- * this is the input to every whole-history aggregate - streak, personal records, volume scales, the
- * month list - and the History tab stays mounted behind the workout screen.
- *
- * The shallow result check is what makes that hold: `sessions` changes identity on each tap, so this
- * recomputes, but handing back the previous array keeps everything downstream memoized. Use
- * `selectSession` to look a session up by id, active or not.
- */
-const selectFinishedSessions = createSelector(
-  [(state: StoredSessionState) => state.sessions, (state: StoredSessionState) => state.activeSessionId],
-  (sessions, activeSessionId) => Object.values(sessions).filter((session) => session.id !== activeSessionId),
-  { memoizeOptions: { resultEqualityCheck: shallowEqual } },
-);
-
 const storedSessionsSlice = createSlice({
   name: 'storedSessions',
   initialState,
@@ -74,14 +62,24 @@ const storedSessionsSlice = createSlice({
     setIsHydrated(state, action: PayloadAction<boolean>) {
       state.isHydrated = action.payload;
     },
-    setStoredSessions(state, action: PayloadAction<Record<string, Session>>) {
-      state.sessions = action.payload;
-      state.latestExercises = {};
-      state.latestExerciseWorkoutIds = {};
-      state.earliestSession = undefined;
-      Object.values(action.payload).forEach((session) => {
-        recordEarliest(state, session);
-      });
+    /** Startup: the workout in progress as stored, or none. Nothing else of the history is loaded. */
+    setActiveSession(state, action: PayloadAction<Session | undefined>) {
+      const session = action.payload;
+      state.sessions = session ? { [session.id]: session } : {};
+      state.activeSessionId = session?.id;
+      state.editingSessionId = undefined;
+    },
+
+    /**
+     * Opens a workout read from the tables in the editing slot. A copy already open is newer than the tables
+     * can be, so it is kept.
+     */
+    openSession(state, action: PayloadAction<Session>) {
+      const session = action.payload;
+      if (!state.sessions[session.id]) {
+        state.sessions[session.id] = session;
+      }
+      openForEditing(state, session.id);
     },
 
     /** The whole carry-over cache, as read from the workout tables. */
@@ -99,14 +97,18 @@ const storedSessionsSlice = createSlice({
       setLatestFor(state, action.payload.keys, action.payload.latest);
     },
 
+    /** Writes many workouts, for a restore or an import. They are not opened; one already open is updated. */
     upsertStoredSessions(state, action: PayloadAction<Session[]>) {
       action.payload.forEach((session) => {
         storeSession(state, session);
       });
     },
 
+    /** Writes a workout and opens it: in the editing slot, unless it is the workout in progress. */
     putStoredSession(state, action: PayloadAction<Session>) {
+      state.sessions[action.payload.id] = action.payload;
       storeSession(state, action.payload);
+      openForEditing(state, action.payload.id);
     },
 
     /** Applies an edit to one session, addressed by id so it cannot land on the wrong one. */
@@ -124,21 +126,25 @@ const storedSessionsSlice = createSlice({
       storeSession(state, action.payload.update(session));
     },
 
+    /** The workout that stops being in progress moves to the editing slot, where its summary reads it. */
     setActiveSessionId(state, action: PayloadAction<string | undefined>) {
+      const previous = state.activeSessionId;
       state.activeSessionId = action.payload;
+      if (previous !== undefined && previous !== action.payload && state.sessions[previous]) {
+        state.editingSessionId = previous;
+      }
+      closeOthers(state);
     },
 
     // Cache entries that came from the deleted workout are left for the effect, which re-reads those
     // lineages from the tables once the delete has landed (see `staleLineages`).
     deleteStoredSession(state, action: PayloadAction<string>) {
-      const deletedSession = state.sessions[action.payload];
       delete state.sessions[action.payload];
       if (state.activeSessionId === action.payload) {
         state.activeSessionId = undefined;
       }
-
-      if (deletedSession && state.earliestSession?.id === deletedSession.id) {
-        recomputeEarliestSession(state);
+      if (state.editingSessionId === action.payload) {
+        state.editingSessionId = undefined;
       }
     },
     updateExercise(state, action: PayloadAction<{ id: string; exercise: ExerciseDescriptor }>) {
@@ -180,7 +186,7 @@ const storedSessionsSlice = createSlice({
     selectLatestExercises: createSelector([(state: StoredSessionState) => state.latestExercises], (exercises) =>
       Object.fromEntries(Object.entries(exercises).map(([key, exercise]) => [key, exercise ? exercise : undefined])),
     ),
-    selectSessions: selectFinishedSessions,
+    /** An open workout by id: the one in progress, or the one in the editing slot. */
     selectSession: createSelector(
       [(state: StoredSessionState) => state.sessions, (_, id: string) => id],
       (sessions, id) => sessions[id],
@@ -202,15 +208,16 @@ const storedSessionsSlice = createSlice({
 });
 
 /**
- * Stores a session, new or replacing one, and moves the carry-over cache forward. An entry that came from
- * the replaced session is swapped for what the new version holds at that lineage when that is as late or
- * later; logging a set is that case, so it never reads the tables. Anything else that came from this
- * session (an exercise moved earlier, cleared or removed) is stale now: {@link staleLineages} finds those
- * for the effect, which re-reads them once the write has landed.
+ * Stores a session, new or replacing one: in memory only if it is open, and in the carry-over cache, which it
+ * moves forward. An entry that came from the replaced session is swapped for what the new version holds at
+ * that lineage when that is as late or later; logging a set is that case, so it never reads the tables.
+ * Anything else that came from this session (an exercise moved earlier, cleared or removed) is stale now:
+ * {@link staleLineages} finds those for the effect, which re-reads them once the write has landed.
  */
 function storeSession(state: WritableDraft<StoredSessionState>, session: Session) {
-  const previous = state.sessions[session.id] as Session | undefined;
-  state.sessions[session.id] = session;
+  if (state.sessions[session.id]) {
+    state.sessions[session.id] = session;
+  }
 
   for (const [key, cached] of Object.entries(state.latestExercises) as [ProgressionKey, RecordedExercise][]) {
     if (state.latestExerciseWorkoutIds[key] !== session.id) {
@@ -222,15 +229,23 @@ function storeSession(state: WritableDraft<StoredSessionState>, session: Session
     }
   }
   recordLatest(state, session);
+}
 
-  if (previous && state.earliestSession?.id === session.id) {
-    if (session.date.isAfter(previous.date)) {
-      recomputeEarliestSession(state);
-    } else {
-      state.earliestSession = session;
+/** Puts an open workout in the editing slot, unless it is the one in progress, and closes any other. */
+function openForEditing(state: WritableDraft<StoredSessionState>, sessionId: string) {
+  if (sessionId !== state.activeSessionId) {
+    state.editingSessionId = sessionId;
+  }
+  closeOthers(state);
+}
+
+/** Drops from memory every workout but the one in progress and the one in the editing slot. */
+function closeOthers(state: WritableDraft<StoredSessionState>) {
+  for (const id of Object.keys(state.sessions)) {
+    if (id !== state.activeSessionId && id !== state.editingSessionId) {
+      delete state.sessions[id];
     }
   }
-  recordEarliest(state, session);
 }
 
 /**
@@ -304,24 +319,15 @@ function setLatestFor(
   }
 }
 
-function recomputeEarliestSession(state: WritableDraft<StoredSessionState>) {
-  state.earliestSession = undefined;
-  for (const session of Object.values(state.sessions) as Session[]) {
-    recordEarliest(state, session);
-  }
-}
-
-function recordEarliest(state: WritableDraft<StoredSessionState>, session: Session) {
-  if (!state.earliestSession || state.earliestSession.date.isAfter(session.date)) {
-    state.earliestSession = session;
-  }
-}
-
 export const initializeStoredSessionsStateSlice = createAction('initializeStoredSessionsStateSlice');
+
+/** Loads a workout from the tables into the editing slot, for the screen that edits it. */
+export const openSessionForEditing = createAction<string>('openSessionForEditing');
 
 export const {
   setIsHydrated,
-  setStoredSessions,
+  setActiveSession,
+  openSession,
   setLatestExercises,
   setLatestExercisesFor,
   upsertStoredSessions,
@@ -339,14 +345,8 @@ export const {
   setFilteredExerciseIds,
 } = storedSessionsSlice.actions;
 
-export const {
-  selectSessions,
-  selectSession,
-  selectActiveSession,
-  selectActiveSessionId,
-  selectExercises,
-  selectLatestExercises,
-} = storedSessionsSlice.selectors;
+export const { selectSession, selectActiveSession, selectActiveSessionId, selectExercises, selectLatestExercises } =
+  storedSessionsSlice.selectors;
 
 /** Fired when a session is done being edited: publish it, export it, and re-derive what depends on it. */
 export const sessionFinished = createAction<string>('sessionFinished');

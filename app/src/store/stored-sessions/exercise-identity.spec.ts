@@ -26,7 +26,6 @@ import {
   selectExerciseById,
   selectExercises,
   selectLatestExercises,
-  selectSessions,
   deleteExercise,
   updateExercise,
 } from '@/store/stored-sessions';
@@ -81,6 +80,11 @@ async function migratedDb(): Promise<ExpoSQLiteDatabase> {
 }
 
 /** Starts the app's stored-sessions, program and import effects over `db`, the way startup does. */
+/** Every workout as stored: the history lives in the tables, not in the store. */
+async function storedWorkouts(db: ExpoSQLiteDatabase): Promise<Session[]> {
+  return (await new WorkoutRepository(db).loadAll()).workouts;
+}
+
 async function startApp(db: ExpoSQLiteDatabase) {
   const workoutRepository = new WorkoutRepository(db);
   let getState: () => RootState = () => {
@@ -266,7 +270,7 @@ describe('exercise identity through the store', () => {
     app.store.dispatch(importBackupData({ source: 'external', workouts, programs: {}, successMessage: 'done' }));
     await app.settle();
 
-    const imported = selectSessions(app.getState()).filter((x) => x.blueprint.name === 'Imported');
+    const imported = (await storedWorkouts(db)).filter((x) => x.blueprint.name === 'Imported');
     expect(imported).toHaveLength(2);
     for (const session of imported) {
       expect(session.recordedExercises.map((x) => x.blueprint.exerciseId)).toEqual([
@@ -306,7 +310,7 @@ describe('exercise identity through the store', () => {
 
     expect(selectExerciseById(app.getState(), id)).toEqual(renamed);
     expect(
-      selectSessions(app.getState()).find((x) => x.blueprint.name === 'Imported')?.recordedExercises[0]?.blueprint
+      (await storedWorkouts(db)).find((x) => x.blueprint.name === 'Imported')?.recordedExercises[0]?.blueprint
         .exerciseId,
     ).toBe(id);
     expect(selectExerciseById((await startApp(db)).getState(), id)).toEqual(renamed);
@@ -356,7 +360,7 @@ describe('exercise identity through the store', () => {
     ]);
 
     const restored = await startApp(db);
-    const sessions = selectSessions(restored.getState());
+    const sessions = await storedWorkouts(db);
     expect(
       sessions
         .filter((x) => workouts.some((workout) => workout.id === x.id))

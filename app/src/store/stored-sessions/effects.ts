@@ -3,10 +3,13 @@ import {
   deleteExercise,
   deleteStoredSession,
   initializeStoredSessionsStateSlice,
+  openSession,
+  openSessionForEditing,
   putStoredSession,
   restoreExercise,
   selectSession,
   sessionFinished,
+  setActiveSession,
   setActiveSessionId,
   setBuiltInExercises,
   setExercises,
@@ -14,7 +17,6 @@ import {
   setIsHydrated,
   setLatestExercises,
   setLatestExercisesFor,
-  setStoredSessions,
   staleLineages,
   updateExercise,
   updateStoredSession,
@@ -52,19 +54,12 @@ export function applyStoredSessionsEffects(addEffect: AddEffectFn) {
       if (!getState().settings.isHydrated) {
         throw new Error('Settings must be hydrated before stored sessions');
       }
+      // All startup reads of the history: the workout in progress and the carry-over cache. Neither grows
+      // with the number of workouts; every screen reads the rest from the tables when it is shown.
       await logger.time('initializeStoredSessions', async () => {
-        // The carry-over cache comes from its own query, so it no longer depends on the whole history
-        // being in memory; `loadAll` goes with the full hydration (PM-14).
-        const [{ workouts, activeWorkoutId }, latest] = await Promise.all([
-          workoutRepository.loadAll(),
-          workoutRepository.latestPerLineage(),
-        ]);
-        dispatch(setStoredSessions(Object.fromEntries(workouts.map((x) => [x.id, x]))));
+        const [active, latest] = await Promise.all([workoutRepository.active(), workoutRepository.latestPerLineage()]);
+        dispatch(setActiveSession(active));
         dispatch(setLatestExercises(latest));
-        // Only when there is one: dispatching `undefined` would clear every flag in the table.
-        if (activeWorkoutId) {
-          dispatch(setActiveSessionId(activeWorkoutId));
-        }
       });
 
       const savedExercises = (await db.select().from(exercisesSchema)).reduce(
@@ -88,6 +83,16 @@ export function applyStoredSessionsEffects(addEffect: AddEffectFn) {
       dispatch(fetchUpcomingSessions());
     },
   );
+
+  addEffect(openSessionForEditing, async (action, { getState, dispatch, extra: { workoutRepository } }) => {
+    const sessionId = action.payload;
+    const open = selectSession(getState(), sessionId);
+    // The read waits for any write before it, so a workout put just before it is opened is read as put.
+    const session = open ?? (await workoutRepository.get(sessionId));
+    if (session) {
+      dispatch(openSession(session));
+    }
+  });
 
   // Re-resolve the built-in catalog when the language changes (startup load is handled above).
   addEffect(setPreferredLanguage, async (action, { getState, dispatch }) => {
