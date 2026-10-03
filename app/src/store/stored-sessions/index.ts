@@ -234,13 +234,14 @@ function storeSession(state: WritableDraft<StoredSessionState>, session: Session
 }
 
 /**
- * The lineages whose cached latest came from `workoutId` and may not hold any more: the workout is gone,
- * or its exercise there is unlogged or earlier than what is cached. Another workout may be the latest
- * now, so they have to be re-read from the tables.
+ * The lineages a write to `workoutId` leaves in doubt, to be re-read from the tables: those whose cached
+ * latest came from that workout and may not hold any more (the workout is gone, or its exercise there is
+ * unlogged or earlier than what is cached), and those the workout now ties with another workout's entry to
+ * the instant, since the tables, not the order of writes, break that tie.
  */
 export function staleLineages(state: StoredSessionState, workoutId: string): ProgressionKey[] {
   const session = state.sessions[workoutId] as Session | undefined;
-  return (Object.keys(state.latestExerciseWorkoutIds) as ProgressionKey[]).filter((key) => {
+  const stale = (Object.keys(state.latestExerciseWorkoutIds) as ProgressionKey[]).filter((key) => {
     if (state.latestExerciseWorkoutIds[key] !== workoutId) {
       return false;
     }
@@ -248,6 +249,17 @@ export function staleLineages(state: StoredSessionState, workoutId: string): Pro
     const current = session && latestWithKey(session, key);
     return !(current?.latestTime && cached?.latestTime && !current.latestTime.isBefore(cached.latestTime));
   });
+  for (const [key, exercise] of session ? lineagesOf(session) : []) {
+    const cached = state.latestExercises[key];
+    if (
+      state.latestExerciseWorkoutIds[key] !== workoutId &&
+      exercise.latestTime &&
+      cached?.latestTime?.isEqual(exercise.latestTime)
+    ) {
+      stale.push(key);
+    }
+  }
+  return stale;
 }
 
 function latestWithKey(session: Session, key: ProgressionKey): RecordedExercise | undefined {
@@ -261,7 +273,10 @@ function lineagesOf(session: Session): [ProgressionKey, RecordedExercise][] {
   return session.recordedExercises.map((exercise, index) => [keys[index]!, exercise]);
 }
 
-/** Moves the cache forward to `session`'s performances that came after what it holds. */
+/**
+ * Moves the cache forward to `session`'s performances that came after what it holds. A performance at the
+ * same instant as another workout's entry is left to {@link staleLineages}, so the tables decide the tie.
+ */
 function recordLatest(state: WritableDraft<StoredSessionState>, session: Session) {
   for (const [key, exercise] of lineagesOf(session)) {
     const current = state.latestExercises[key];

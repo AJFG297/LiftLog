@@ -227,8 +227,10 @@ only: the one in progress (`active = 1`) is left out, as `selectSessions` leaves
   over _every_ workout, the one in progress included: the carry-over cache below. With `excludeWorkoutId`
   it is what that workout's exercises carried on from (Today's target).
 
-Writes and `latestPerLineage` run in the order they were issued, on one queue inside the repository, so
-the read that corrects the carry-over cache after a write sees every write before it.
+Writes, `latestPerLineage` and `latestPlanned` run in the order they were issued, on one queue inside the
+repository, so the reads the store builds on see every write before them: the read that corrects the
+carry-over cache after a write, and the plan position that finishing a workout asks for as soon as it has
+dispatched the write.
 - `earliestDate()` - `MIN(date)`: where all-time stats start, so deleting the first workout moves it.
 - `dailyActivity()` - one row per day with a started workout: how many and `SUM(volume_kg)`. The
   calendar's counts and levels, the week strips, the streak and "last workout" all derive from it.
@@ -398,7 +400,8 @@ Two things follow from that, and both matter when you touch this slice:
   workout that held it was deleted, or its exercise there was cleared, removed or moved earlier - is left
   in place, and after the write has landed the effect re-reads just those lineages
   (`staleLineages` + `refreshStaleLineages` in `stored-sessions/effects.ts`) and re-fetches the upcoming
-  workouts. `latestExerciseWorkoutIds` records which workout each entry came from, which is how a write
+  workouts. A lineage two workouts logged at the same instant is re-read too, so the tables' tie-break
+  (then by reference time, workout id and position) decides rather than the order the writes came in. `latestExerciseWorkoutIds` records which workout each entry came from, which is how a write
   knows what it can have changed. A restore or import re-reads the whole cache. `earliestSession` is still
   derived from the hydrated sessions (its one reader, the You profile, moves in PM-14); stats ask the
   table (`earliestDate()`).
