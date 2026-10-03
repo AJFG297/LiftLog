@@ -10,16 +10,17 @@ import {
   workoutsSchema,
 } from '@/db/schema';
 import { Transaction, writeAtomically } from '@/db/helpers';
-import { Session } from '@/models/session-models';
+import { FREEFORM_WORKOUT_NAME, RecordedExercise, Session } from '@/models/session-models';
 import { effectiveLoad } from '@/models/session-models/recorded-weighted-exercise';
 import { SET_KIND_RULES, SetKind } from '@/models/session-models/set-kind';
-import { Resistance } from '@/models/blueprint-models';
+import { MovementKey, ProgressionKey, Resistance } from '@/models/blueprint-models';
 import { Weight } from '@/models/weight';
 import { BigNumberJSON, LocalDateJSON, WeightUnitJSON, fromBigNumberJSON } from '@/models/storage/versions/latest';
 import { DailyActivity, VolumeScale } from '@/store/activity/activity-types';
 import { volumeScaleOf } from '@/store/activity/volume';
-import { PersonalRecord } from '@/store/stats/personal-records';
+import { PersonalRecord, PreviousBest, PreviousBests } from '@/store/stats/personal-records';
 import { oneRepMaxOf } from '@/store/stats/calculate-stats';
+import { getSessionReferenceTime } from '@/store/stored-sessions';
 import {
   CardioSetRow,
   WarmupSetRow,
@@ -47,6 +48,18 @@ export interface WorkoutWrite {
   activeChanged: boolean;
 }
 
+/** The latest performance of a lineage, and the workout it was done in. */
+export interface LatestPerformance {
+  workoutId: string;
+  exercise: RecordedExercise;
+}
+
+/** One recorded exercise's place in the tables. */
+interface ExerciseRef {
+  workoutId: string;
+  position: number;
+}
+
 /** Finished history: the workout in progress is left out of every read below. */
 const finished = eq(workoutsSchema.active, false);
 
@@ -71,6 +84,36 @@ interface PersonalRecordRow {
   bodyweightUnit: WeightUnitJSON | null;
 }
 
+/** A movement's best set before a workout, from {@link WorkoutRepository.bestsBefore}'s query. */
+interface BestSetRow {
+  kind: 'oneRepMax' | 'heaviest';
+  movementKey: MovementKey;
+  weightValue: BigNumberJSON;
+  weightUnit: WeightUnitJSON;
+  reps: number;
+  bodyweightValue: BigNumberJSON | null;
+  bodyweightUnit: WeightUnitJSON | null;
+  resistance: Resistance;
+}
+
+/**
+ * The reference time a workout must fall short of to count as before `session`, in epoch milliseconds.
+ * Compared to the second, as the selectors this replaces compared them, so a workout logged in the same
+ * second is not before it.
+ */
+function beforeMs(session: Session): number {
+  return getSessionReferenceTime(session).toEpochSecond() * 1000;
+}
+
+/** Workouts done before `session`: not itself, and with a reference time short of {@link beforeMs}. */
+function earlierThan(session: Session): SQL[] {
+  return [sql`${workoutsSchema.id} != ${session.id}`, sql`${workoutsSchema.referenceTimeMs} < ${beforeMs(session)}`];
+}
+
+function refKey({ workoutId, position }: ExerciseRef): string {
+  return `${workoutId}\u0000${position}`;
+}
+
 /**
  * Owns every read and write of the workout tables. Each write is one transaction that touches only the rows
  * of the workouts it is given: the workout row is upserted, and its exercises and sets are replaced.
@@ -83,6 +126,10 @@ interface PersonalRecordRow {
  */
 export class WorkoutRepository {
   private readonly listeners = new Set<(write: WorkoutWrite) => void>();
+  // Writes and the carry-over read ({@link latestPerLineage}) run one after another, in the order they
+  // were issued: the effect that re-reads a lineage after a write must see every write issued before it.
+  // The device driver queues statements that way itself; the async driver under test does not.
+  private queue: Promise<unknown> = Promise.resolve();
 
   constructor(private readonly db: ExpoSQLiteDatabase) {}
 
@@ -119,18 +166,199 @@ export class WorkoutRepository {
     );
   }
 
-  /** The last `limit` finished workouts named `name` that were started, latest first. */
-  async latestNamed(name: string, limit: number): Promise<Session[]> {
+  /**
+   * The last `limit` finished workouts named `name` that were started, latest first. With `before`, only
+   * those done before that workout: the previous comparable workouts for a comparison or a summary.
+   * `includeUnstarted` counts a workout with nothing logged too, as the post-workout comparison always has.
+   */
+  async latestNamed(
+    name: string,
+    limit: number,
+    { before, includeUnstarted = false }: { before?: Session; includeUnstarted?: boolean } = {},
+  ): Promise<Session[]> {
     const workouts = await this.db
       .select(readColumns.workout)
       .from(workoutsSchema)
-      .where(and(finished, eq(workoutsSchema.name, name), started))
+      .where(
+        and(
+          finished,
+          eq(workoutsSchema.name, name),
+          includeUnstarted ? undefined : started,
+          ...(before ? earlierThan(before) : []),
+        ),
+      )
       .orderBy(desc(workoutsSchema.referenceTimeMs), asc(workoutsSchema.id))
       .limit(limit);
     return this.assemble(
       workouts,
       workouts.map((x) => x.id),
     );
+  }
+
+  /** The most recent finished workout that was not freeform: where the plan is up to. */
+  async latestPlanned(): Promise<Session | undefined> {
+    const workouts = await this.db
+      .select(readColumns.workout)
+      .from(workoutsSchema)
+      .where(and(finished, sql`${workoutsSchema.name} != ${FREEFORM_WORKOUT_NAME}`))
+      .orderBy(desc(workoutsSchema.referenceTimeMs), asc(workoutsSchema.id))
+      .limit(1);
+    return (
+      await this.assemble(
+        workouts,
+        workouts.map((x) => x.id),
+      )
+    )[0];
+  }
+
+  /**
+   * The latest performance of each lineage (see `lineageKeys`): what carry-over reads. Every workout
+   * counts, the one in progress included, but only exercises with a working set logged. `progressionKeys`
+   * limits it to those keys' lineages, and `excludeWorkoutId` leaves one workout out, for what that
+   * workout's exercises carried on from.
+   */
+  latestPerLineage(
+    options: { progressionKeys?: readonly ProgressionKey[]; excludeWorkoutId?: string } = {},
+  ): Promise<Record<ProgressionKey, LatestPerformance>> {
+    return this.inOrder(() => this.readLatestPerLineage(options));
+  }
+
+  private async readLatestPerLineage({
+    progressionKeys,
+    excludeWorkoutId,
+  }: {
+    progressionKeys?: readonly ProgressionKey[];
+    excludeWorkoutId?: string;
+  }): Promise<Record<ProgressionKey, LatestPerformance>> {
+    if (progressionKeys?.length === 0) {
+      return {};
+    }
+    const refs = await Promise.resolve(
+      this.db.all<ExerciseRef & { lineage: ProgressionKey }>(sql`
+        with placed as (
+          -- A repeat of a key within one workout is its own lineage, numbered by position over every
+          -- exercise of the workout, logged or not, as lineageKeys numbers them.
+          select e.workout_id, e.position, e.progression_key, e.latest_time_ms,
+            row_number() over (partition by e.workout_id, e.progression_key order by e.position) as repeat
+          from ${workoutExercisesSchema} e
+          ${progressionKeys ? sql`where e.progression_key in ${progressionKeys}` : sql``}
+        ),
+        lineages as (
+          select p.workout_id, p.position, p.latest_time_ms, w.reference_time_ms,
+            case when p.repeat = 1 then p.progression_key else p.progression_key || '#' || p.repeat end as lineage
+          from placed p
+          join ${workoutsSchema} w on w.id = p.workout_id
+          where p.latest_time_ms is not null
+          ${excludeWorkoutId === undefined ? sql`` : sql`and w.id != ${excludeWorkoutId}`}
+        ),
+        ranked as (
+          select *, row_number() over (
+            partition by lineage order by latest_time_ms desc, reference_time_ms desc, workout_id, position
+          ) as rank
+          from lineages
+        )
+        select workout_id as "workoutId", position, lineage from ranked where rank = 1
+      `),
+    );
+    const exercises = await this.exercises(refs);
+    return Object.fromEntries(
+      refs.map((ref) => [ref.lineage, { workoutId: ref.workoutId, exercise: exercises.get(refKey(ref))! }]),
+    );
+  }
+
+  /**
+   * The previous performances of each of `movements`, newest first: exercises with a working set logged,
+   * in finished workouts other than `excludeWorkoutId` (the one being viewed, which is not its own
+   * previous). `limit` caps each movement's list.
+   */
+  async previousPerformances(
+    movements: readonly MovementKey[],
+    { excludeWorkoutId, limit }: { excludeWorkoutId?: string; limit?: number } = {},
+  ): Promise<Map<MovementKey, RecordedExercise[]>> {
+    const byMovement = new Map<MovementKey, RecordedExercise[]>();
+    if (!movements.length) {
+      return byMovement;
+    }
+    const refs = await Promise.resolve(
+      this.db.all<ExerciseRef & { movementKey: MovementKey }>(sql`
+        with ranked as (
+          select e.workout_id, e.position, e.movement_key, row_number() over (
+            partition by e.movement_key order by e.latest_time_ms desc, w.reference_time_ms desc, w.id, e.position
+          ) as rank
+          from ${workoutExercisesSchema} e
+          join ${workoutsSchema} w on w.id = e.workout_id
+          where w.active = 0 and e.latest_time_ms is not null and e.movement_key in ${movements}
+          ${excludeWorkoutId === undefined ? sql`` : sql`and w.id != ${excludeWorkoutId}`}
+        )
+        select workout_id as "workoutId", position, movement_key as "movementKey" from ranked
+        ${limit === undefined ? sql`` : sql`where rank <= ${limit}`}
+        order by movement_key, rank
+      `),
+    );
+    const exercises = await this.exercises(refs);
+    for (const ref of refs) {
+      const list = byMovement.get(ref.movementKey);
+      const exercise = exercises.get(refKey(ref))!;
+      if (list) {
+        list.push(exercise);
+      } else {
+        byMovement.set(ref.movementKey, [exercise]);
+      }
+    }
+    return byMovement;
+  }
+
+  /**
+   * For each of `session`'s movements, the best it had done in the finished workouts before `session`:
+   * the best estimated 1RM, and the heaviest set on an externally loaded exercise, as `RecordLedger`
+   * keeps them. Sets are scored as in {@link personalRecords}, and the exact figure is rebuilt in JS from
+   * the set that scored best.
+   */
+  async bestsBefore(session: Session): Promise<PreviousBests> {
+    const bests = new Map<MovementKey, PreviousBest>();
+    const movements = [...new Set(session.recordedExercises.map((x) => x.movementKey()))];
+    if (!movements.length) {
+      return bests;
+    }
+    const rows = await Promise.resolve(
+      this.db.all<BestSetRow>(sql`
+        with sets as (
+          select e.movement_key,
+            -- Blueprints written before resistance existed carry usesBodyweight, as the migration reads it.
+            coalesce(json_extract(e.blueprint, '$.resistance'),
+              case when json_extract(e.blueprint, '$.usesBodyweight') then 'bodyweight' else 'external' end) as resistance,
+            w.bodyweight_value, w.bodyweight_unit,
+            s.weight_value, s.weight_unit, s.weight_kg, s.reps, s.effective_weight_kg * (30 + s.reps) as score
+          from ${weightedSetsSchema} s
+          join ${workoutExercisesSchema} e on e.workout_id = s.workout_id and e.position = s.exercise_position
+          join ${workoutsSchema} w on w.id = e.workout_id
+          where w.active = 0 and w.id != ${session.id} and w.reference_time_ms < ${beforeMs(session)} and e.kind = 'weighted'
+            and e.movement_key in ${movements} and s.reps > 0 and s.kind in ${prSetKinds}
+        )
+        select 'oneRepMax' as kind, movement_key as "movementKey", max(score) as best, weight_value as "weightValue",
+          weight_unit as "weightUnit", reps, bodyweight_value as "bodyweightValue", bodyweight_unit as "bodyweightUnit",
+          resistance
+        from sets where resistance != 'none' group by movement_key
+        union all
+        select 'heaviest', movement_key, max(weight_kg), weight_value, weight_unit, reps, null, null, resistance
+        from sets where resistance = 'external' group by movement_key
+      `),
+    );
+    for (const row of rows) {
+      const weight = new Weight(fromBigNumberJSON(row.weightValue), row.weightUnit);
+      const best = bests.get(row.movementKey) ?? {};
+      if (row.kind === 'heaviest') {
+        best.heaviest = weight;
+      } else {
+        const bodyweight =
+          row.bodyweightValue !== null && row.bodyweightUnit !== null
+            ? new Weight(fromBigNumberJSON(row.bodyweightValue), row.bodyweightUnit)
+            : undefined;
+        best.oneRepMax = oneRepMaxOf(effectiveLoad(row.resistance, weight, bodyweight), row.reps);
+      }
+      bests.set(row.movementKey, best);
+    }
+    return bests;
   }
 
   /** The date of the earliest finished workout, started or not: where all-time stats begin. */
@@ -295,29 +523,40 @@ export class WorkoutRepository {
   }
 
   private async write(build: (tx: Transaction) => Statement[], write: WorkoutWrite): Promise<void> {
-    await writeAtomically(this.db, build);
+    await this.inOrder(() => writeAtomically(this.db, build));
     this.listeners.forEach((listener) => listener(write));
+  }
+
+  /** Runs `task` after everything queued before it, and makes what follows wait for it. */
+  private inOrder<T>(task: () => Promise<T>): Promise<T> {
+    const run = this.queue.then(task, task);
+    this.queue = run.catch(() => undefined);
+    return run;
   }
 
   /**
    * Rebuilds `workouts` from their child rows, in the order given. `workoutIds` limits the child reads to
    * those workouts; `undefined` reads every table whole, which is cheaper for hydration.
    */
-  private async assemble(workouts: WorkoutReadRow[], workoutIds: string[] | undefined): Promise<Session[]> {
+  private async assemble(
+    workouts: WorkoutReadRow[],
+    workoutIds: string[] | undefined,
+    keep: (ref: { workoutId: string; exercisePosition: number }) => boolean = () => true,
+  ): Promise<Session[]> {
     const { db } = this;
     const [exercises, weightedSets, warmupSets, cardioSets] = await Promise.all([
       children(workoutIds, workoutExercisesSchema.workoutId, (where) =>
         db.select(readColumns.exercise).from(workoutExercisesSchema).where(where),
-      ),
+      ).then((rows) => rows.filter((row) => keep({ workoutId: row.workoutId, exercisePosition: row.position }))),
       children(workoutIds, weightedSetsSchema.workoutId, (where) =>
         db.select(readColumns.weightedSet).from(weightedSetsSchema).where(where),
-      ),
+      ).then((rows) => rows.filter(keep)),
       children(workoutIds, warmupSetsSchema.workoutId, (where) =>
         db.select(readColumns.warmupSet).from(warmupSetsSchema).where(where),
-      ),
+      ).then((rows) => rows.filter(keep)),
       children(workoutIds, cardioSetsSchema.workoutId, (where) =>
         db.select(readColumns.cardioSet).from(cardioSetsSchema).where(where),
-      ),
+      ).then((rows) => rows.filter(keep)),
     ]);
     const exercisesByWorkout = groupByWorkout(exercises);
     const weightedSetsByWorkout = groupByWorkout(weightedSets);
@@ -332,6 +571,36 @@ export class WorkoutRepository {
         cardioSets: cardioSetsByWorkout.get(workout.id) ?? [],
       }),
     );
+  }
+
+  /**
+   * Rebuilds just the exercises at `refs`, keyed by {@link refKey}. Their workouts' rows are read, but a
+   * workout is rebuilt with only the exercises asked for: the blueprint migration is per exercise, so each
+   * comes out as it would from the whole workout.
+   */
+  private async exercises(refs: readonly ExerciseRef[]): Promise<Map<string, RecordedExercise>> {
+    const exercises = new Map<string, RecordedExercise>();
+    if (!refs.length) {
+      return exercises;
+    }
+    const wanted = new Set(refs.map(refKey));
+    const workoutIds = [...new Set(refs.map((x) => x.workoutId))];
+    const workouts = await children(workoutIds, workoutsSchema.id, (where) =>
+      this.db.select(readColumns.workout).from(workoutsSchema).where(where),
+    );
+    const sessions = await this.assemble(workouts, workoutIds, (row) =>
+      wanted.has(refKey({ workoutId: row.workoutId, position: row.exercisePosition })),
+    );
+    for (const session of sessions) {
+      // Positions are kept by `fromWorkoutRows`' sort, so the i-th exercise is the i-th wanted position.
+      const positions = [...new Set(refs.filter((x) => x.workoutId === session.id).map((x) => x.position))].sort(
+        (a, b) => a - b,
+      );
+      session.recordedExercises.forEach((exercise, index) => {
+        exercises.set(refKey({ workoutId: session.id, position: positions[index]! }), exercise);
+      });
+    }
+    return exercises;
   }
 }
 

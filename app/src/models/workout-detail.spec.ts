@@ -13,7 +13,7 @@ import {
   sessionSetRows,
   uniqueRoutineName,
 } from '@/models/workout-detail';
-import { sessionRecords } from '@/store/stats/personal-records';
+import { RecordLedger, sessionRecords } from '@/store/stats/personal-records';
 
 const kg = (n: number) => new Weight(n, 'kilograms');
 const at = OffsetDateTime.parse('2026-09-23T18:04:00Z');
@@ -175,9 +175,16 @@ describe('uniqueRoutineName', () => {
   });
 });
 
+/** The bests after `earlier`, as `WorkoutRepository.bestsBefore` reads them from the tables. */
+function bestsAfter(earlier: Session) {
+  const ledger = new RecordLedger();
+  ledger.add(earlier);
+  return ledger.bests;
+}
+
 describe('sessionSetRows', () => {
   it('lists logged sets with labels, RPE, e1RM and the set that set each record', () => {
-    const rows = sessionSetRows(today, sessionRecords(today, [lastWeek]));
+    const rows = sessionSetRows(today, sessionRecords(today, bestsAfter(lastWeek)));
 
     expect(rows.map(describeRows)).toEqual([
       [
@@ -197,7 +204,7 @@ describe('sessionSetRows', () => {
   });
 
   it('tags nothing when there is no earlier workout to beat', () => {
-    const rows = sessionSetRows(lastWeek, sessionRecords(lastWeek, []));
+    const rows = sessionSetRows(lastWeek, sessionRecords(lastWeek, new Map()));
 
     expect(rows.flatMap((x) => x ?? []).filter((row) => row.pr)).toEqual([]);
   });

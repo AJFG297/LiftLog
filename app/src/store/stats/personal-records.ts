@@ -117,17 +117,21 @@ export type SessionRecord =
       previous: Weight;
     };
 
+/** What a movement's earlier workouts hold against a new one: a {@link RecordLedger}'s state for it. */
+export interface PreviousBest {
+  oneRepMax?: Weight;
+  heaviest?: Weight;
+}
+export type PreviousBests = ReadonlyMap<MovementKey, PreviousBest>;
+
 /**
- * The records `session` sets against `earlier`, the workouts before it (in any order). As in
- * {@link findPersonalRecords}, an exercise seen for the first time sets none. See {@link RecordLedger} for
- * the rules; to walk a whole history, keep one ledger rather than calling this per workout.
+ * The records `session` sets against `before`, the bests of the workouts before it
+ * (`WorkoutRepository.bestsBefore`). As in {@link findPersonalRecords}, an exercise seen for the first time
+ * sets none. See {@link RecordLedger} for the rules; to walk a whole history, keep one ledger rather than
+ * calling this per workout.
  */
-export function sessionRecords(session: Session, earlier: readonly Session[]): SessionRecord[] {
-  const ledger = new RecordLedger();
-  for (const past of earlier) {
-    ledger.add(past);
-  }
-  return ledger.add(session);
+export function sessionRecords(session: Session, before: PreviousBests): SessionRecord[] {
+  return new RecordLedger(before).add(session);
 }
 
 /**
@@ -143,6 +147,30 @@ export function sessionRecords(session: Session, earlier: readonly Session[]): S
 export class RecordLedger {
   private readonly bestOneRepMax = new Map<MovementKey, Weight>();
   private readonly heaviest = new Map<MovementKey, Weight>();
+
+  /** Starts from `before`, the bests of workouts already walked, or from nothing. */
+  constructor(before: PreviousBests = new Map()) {
+    for (const [key, best] of before) {
+      if (best.oneRepMax) {
+        this.bestOneRepMax.set(key, best.oneRepMax);
+      }
+      if (best.heaviest) {
+        this.heaviest.set(key, best.heaviest);
+      }
+    }
+  }
+
+  /** The bests so far, as {@link sessionRecords} takes them. */
+  get bests(): PreviousBests {
+    const bests = new Map<MovementKey, PreviousBest>();
+    for (const [key, oneRepMax] of this.bestOneRepMax) {
+      bests.set(key, { oneRepMax });
+    }
+    for (const [key, heaviest] of this.heaviest) {
+      bests.set(key, { ...bests.get(key), heaviest });
+    }
+    return bests;
+  }
 
   add(session: Session): SessionRecord[] {
     const oneRepMaxToday = bestOneRepMax(session);

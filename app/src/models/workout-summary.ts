@@ -4,7 +4,7 @@ import { setKindHas } from '@/models/session-models/set-kind';
 import { Weight } from '@/models/weight';
 
 /** How many earlier workouts of the same routine make up its usual length. */
-const USUAL_DURATION_SAMPLE = 5;
+export const USUAL_DURATION_SAMPLE = 5;
 
 export type DurationComparison = { type: 'none' } | { type: 'same' } | { type: 'longer' | 'shorter'; minutes: number };
 

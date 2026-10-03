@@ -179,12 +179,22 @@ describe('findPersonalRecords for exercises that track no load', () => {
   });
 });
 
+/** The bests after walking `earlier`, as `WorkoutRepository.bestsBefore` reads them from the tables. */
+function bestsOf(earlier: Session[]) {
+  const ledger = new RecordLedger();
+  earlier.forEach((past) => ledger.add(past));
+  return ledger.bests;
+}
+
 describe('sessionRecords', () => {
   it('reports a heavier set than ever with the weight it beat', () => {
-    const records = sessionRecords(session('s3', day(15), [exercise('Bench', kg(90), 4)]), [
-      session('s1', day(1), [exercise('Bench', kg(85), 5)]),
-      session('s2', day(8), [exercise('Bench', kg(80), 5)]),
-    ]);
+    const records = sessionRecords(
+      session('s3', day(15), [exercise('Bench', kg(90), 4)]),
+      bestsOf([
+        session('s1', day(1), [exercise('Bench', kg(85), 5)]),
+        session('s2', day(8), [exercise('Bench', kg(80), 5)]),
+      ]),
+    );
 
     expect(records).toEqual([
       {
@@ -200,9 +210,10 @@ describe('sessionRecords', () => {
 
   it('reports a better estimated 1RM at a weight lifted before', () => {
     // Epley: 100kg x 5 = 116.7; 100kg x 6 = 120.
-    const records = sessionRecords(session('s2', day(8), [exercise('Squat', kg(100), 6)]), [
-      session('s1', day(1), [exercise('Squat', kg(100), 5)]),
-    ]);
+    const records = sessionRecords(
+      session('s2', day(8), [exercise('Squat', kg(100), 6)]),
+      bestsOf([session('s1', day(1), [exercise('Squat', kg(100), 5)])]),
+    );
 
     expect(records).toEqual([
       {
@@ -218,7 +229,7 @@ describe('sessionRecords', () => {
   });
 
   it('reports nothing for a first sighting, a match or a regression', () => {
-    const earlier = [session('s1', day(1), [exercise('Squat', kg(100), 5)])];
+    const earlier = bestsOf([session('s1', day(1), [exercise('Squat', kg(100), 5)])]);
 
     expect(sessionRecords(session('s2', day(8), [exercise('Bench', kg(60), 5)]), earlier)).toEqual([]);
     expect(sessionRecords(session('s2', day(8), [exercise('Squat', kg(100), 5)]), earlier)).toEqual([]);

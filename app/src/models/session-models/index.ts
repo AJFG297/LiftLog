@@ -1,4 +1,4 @@
-import { EmptySession, Session } from '@/models/session-models/session';
+import { EmptySession, FREEFORM_WORKOUT_NAME, Session } from '@/models/session-models/session';
 import {
   PotentialSet,
   RecordedSet,
@@ -20,6 +20,7 @@ export {
   RecordedExercise,
   RecordedSet,
   EmptySession,
+  FREEFORM_WORKOUT_NAME,
   fromRecordedExerciseJSON,
   WeightAppliesTo,
   SESSION_FEELS,
