@@ -1,6 +1,6 @@
 # Plan: relational storage and stable exercise identity
 
-Status: **in progress**. Phase 0 (PM-9) and phase 1 (PM-10, PM-11) are done: workouts live in relational tables and blueprints carry stable exercise IDs. Phase 2, reading history from SQL, is under way: the History tab, calendar, feed strips and Stats read from SQL (PM-13); the workout screen's hot path (PM-12) and the rest (PM-14) remain.
+Status: **in progress**. Phase 0 (PM-9) and phase 1 (PM-10, PM-11) are done: workouts live in relational tables and blueprints carry stable exercise IDs. Phase 2, reading history from SQL, is under way: the History tab, calendar, feed strips and Stats read from SQL (PM-13), and so do the workout screen, the summary, the workout detail and carry-over (PM-12); the rest, and the full hydration itself, remain (PM-14).
 
 This plan rests on two assumptions:
 
@@ -228,7 +228,7 @@ Move one consumer group at a time, each gated by the phase 0 snapshots. Add a `u
 that refreshes on repository write events. Use Drizzle's `useLiveQuery` only if it works under the
 libsql Vitest shim; otherwise wrap it.
 
-**Steps 2–3 done in PM-13**, with the query layer step 1 reuses (see `docs/Storage.md`, "Workouts").
+**Steps 2–3 done in PM-13**, with the query layer step 1 reused (see `docs/Storage.md`, "Workouts").
 Settled differences from the steps below:
 - Drizzle's `useLiveQuery` was not used: it needs expo-sqlite's `addDatabaseChangeListener`, which the
   libsql shim doesn't have, and it fires on any table change. `WorkoutRepository.subscribe` notifies after
@@ -250,9 +250,35 @@ Settled differences from the steps below:
   charted. The series order in `sessionStats` follows: most recently done workout first.
 - Home's Up next detail reads `latestNamed(name, 10)` rather than the whole history; its estimate takes
   the last five with a length.
-- Left for PM-12: the workout screen, post-workout comparison, carry-over and `selectSessionsBefore`.
-  For PM-14: You-tab profile counts, export, CSV dedupe, feed publishing, exercise history, and the full
-  hydration itself.
+- For PM-14: You-tab profile counts, export, CSV dedupe, feed publishing, and the full hydration itself.
+
+**Step 1 done in PM-12.** Settled differences from the step below:
+- The carry-over cache stays in the `storedSessions` slice (`latestExercises`), where `SessionService`,
+  the routine editor and the exercise picker already read it, loaded at startup by `latestPerLineage()`
+  alongside `loadAll()`. The reducer still moves it forward synchronously (a logged set never reads the
+  tables), and only a write that can have moved a lineage back - a delete, or an edit that clears, removes
+  or moves the latest performance earlier - makes the effect re-read those lineages after the write has
+  landed, by the workout id each entry records (`latestExerciseWorkoutIds`). The repository runs its
+  writes and that read in issue order so the read never misses an earlier write; a lineage the reducer
+  has moved on meanwhile is left to the later write's own refresh. A restore or import re-reads the whole
+  cache. The reducer no longer sweeps the history, which is what PM-14 needs.
+- `lineageKeys`' numbering of a repeated exercise is reproduced in SQL by a window over the workout's
+  exercises by position, so no lineage column was added.
+- "Previous comparable" is `latestNamed(name, 1, { before, includeUnstarted })`: the bound is the
+  reference time to the second, as the selector compared, and an unlogged workout still counts, as it
+  did. The summary's usual duration takes the five started ones before.
+- The records a workout set (`sessionRecords`) take the per-movement bests from `bestsBefore(session)`
+  rather than every earlier session; `RecordLedger` seeds from them. The query scores sets as
+  `personalRecords()` does, so the two agree except on an exact e1RM tie.
+- "Last time" is `previousPerformances(movements, { excludeWorkoutId, limit })`, fetched once per
+  screen by `PreviousPerformancesProvider` (limit 10) rather than per card. The exercise history sheet
+  moved too (no limit; pagination can follow in PM-14). `useWorkoutQuery` grew an `ignoreWrite` option so
+  the workout in progress's own writes don't re-run it.
+- The whole-history selectors (`selectRecentlyCompletedExercises`, `selectPreviousLineages`,
+  `selectPreviousComparableSession`, `selectSessionsBefore`) are gone. `selectSessions`,
+  `ProgressRepository` and `earliestSession` remain for PM-14's consumers.
+- No snapshot changed: the tie-breaks for equal times (`reference_time_ms desc`, then id and position)
+  matched the fixture.
 
 1. **Hot path:**
    - Build `latestExercises` at startup from "latest `workout_exercise` per `progression_key`", including

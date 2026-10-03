@@ -117,8 +117,9 @@ move and does nothing at all.
 
 For the code behind this: `progressionKey()`, `lineageKeys` and `latestInLineage` (a repeat within a
 session), `applyProgression`, `applyEarnedProgression` and `ProgressionRule.isEarnedBy` in
-`app/src/models/blueprint-models/index.ts`; the store's `latestExercises` and `selectPreviousLineages`,
-keyed by lineage, in `app/src/store/stored-sessions/index.ts`; the best set
+`app/src/models/blueprint-models/index.ts`; the store's `latestExercises`, keyed by lineage, in
+`app/src/store/stored-sessions/index.ts`, loaded from `WorkoutRepository.latestPerLineage` (see
+[Storage.md](./Storage.md)); the best set
 (`bestSetIndex`, `bestSetMetTarget`) and fitting last time onto today's sets
 (`RecordedWeightedExercise.carriedInto`) in `app/src/models/session-models/recorded-weighted-exercise.ts`;
 what each set kind carries in `app/src/models/session-models/set-kind.ts`; session start in
