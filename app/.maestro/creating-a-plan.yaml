@@ -67,7 +67,9 @@ appId: com.ajfg297.liftlog
     element:
       text: 'New plan'
     direction: DOWN
-- tapOn:
-    id: 'more-program-btn'
-    rightOf: 'New plan'
+# Each plan's more button is named for its plan. Picking one by position (rightOf the name) can land
+# on another plan's button, which removes the wrong plan.
+- tapOn: 'More for New plan'
 - tapOn: 'Remove'
+- assertVisible: 'Plan deleted'
+- assertNotVisible: 'New plan'
