@@ -1,7 +1,9 @@
 import { AppConfiguration, Translations, WorkoutMessage } from '@/models/workout-worker-messages';
 import WorkoutWorkerModule from '~/modules/workout-worker/src/WorkoutWorkerModule';
 import { RootState } from '@/store';
-import { selectActiveSessionId, sessionFinished } from '@/store/stored-sessions';
+import { finishWorkout } from '@/store/finish-workout';
+import { selectPendingPlanDiff } from '@/store/program';
+import { selectActiveSessionId } from '@/store/stored-sessions';
 import { Dispatch } from '@reduxjs/toolkit';
 import { TolgeeInstance, TranslationKey } from '@tolgee/react';
 
@@ -12,6 +14,7 @@ export class WorkoutWorker {
     private dispatch: Dispatch,
     private getState: () => RootState,
     private tolgee: TolgeeInstance,
+    private offerPlanUpdate: (stillPending: () => boolean) => void,
   ) {
     WorkoutWorkerModule.addListener('on', (encodedEvent) => {
       const decoded = JSON.parse(encodedEvent.jsonString) as WorkoutMessage;
@@ -40,8 +43,9 @@ export class WorkoutWorker {
 
   private handleFinishWorkout() {
     const activeSessionId = selectActiveSessionId(this.getState());
-    if (activeSessionId) {
-      this.dispatch(sessionFinished(activeSessionId));
+    if (activeSessionId && finishWorkout(activeSessionId)(this.dispatch, this.getState)) {
+      const diff = selectPendingPlanDiff(this.getState());
+      this.offerPlanUpdate(() => selectPendingPlanDiff(this.getState()) === diff);
     }
   }
 

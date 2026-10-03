@@ -16,6 +16,7 @@ import { SessionService } from '@/services/session-service';
 import { StringSharer } from '@/services/string-sharer';
 import { getTolgee } from '@/services/tolgee';
 import { WorkoutWorker } from '@/services/workout-worker';
+import { offerPlanUpdateInForeground } from '@/services/plan-update-offer';
 import { RootState } from '@/store';
 import { Store } from '@reduxjs/toolkit';
 import { HealthExportService } from './health-export-service';
@@ -45,7 +46,7 @@ export function createServices(store: Store<RootState>, db: ExpoSQLiteDatabase, 
   const preferenceService = new PreferenceService(keyValueStore);
   const aiChatService = new AiChatServiceV2(new HubConnectionFactory(), store.getState);
   const tolgee = getTolgee(preferenceService);
-  const workoutWorkerService = new WorkoutWorker(store.dispatch, store.getState, tolgee);
+  const workoutWorkerService = new WorkoutWorker(store.dispatch, store.getState, tolgee, offerPlanUpdateInForeground);
   const healthExportService: HES = new HealthExportService();
   const workoutRepository = new WorkoutRepository(db);
   const databaseMigrationService = new DatabaseMigrationService(

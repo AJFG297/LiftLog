@@ -127,6 +127,12 @@ changes. See [LiveWorkout.md](./LiveWorkout.md#rest).
 3. The command is dispatched back to the app via the event bridge
 4. The app handles the command (e.g. dispatches Redux action to finish workout)
 
+`FinishWorkoutCommand` finishes through `finishWorkout` in `store/finish-workout.ts`, the same operation as
+the in-app Finish, so a workout that differs from the active plan leaves the same pending plan diff. The
+"Update your routine?" sheet then opens over Home, at once if the app is in the foreground, otherwise the
+next time it is (`services/plan-update-offer.ts`). The diff is held in memory only, so if the app is killed
+before then the offer is lost.
+
 ---
 
 ## Lifecycle guarantees
