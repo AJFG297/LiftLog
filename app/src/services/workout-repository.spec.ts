@@ -335,6 +335,22 @@ describe('WorkoutRepository', () => {
       });
     });
 
+    describe('active', () => {
+      it('is the workout in progress, read whole', async () => {
+        const running = lifted('Running', april(2));
+        await repository.putMany([lifted('Done', april(1)), lifted('Other', april(3))]);
+        await repository.setActive(running);
+
+        expect((await repository.active())?.toJSON()).toEqual(running.toJSON());
+      });
+
+      it('is undefined with no workout in progress', async () => {
+        await repository.put(lifted('Done', april(1)));
+
+        expect(await repository.active()).toBeUndefined();
+      });
+    });
+
     describe('get', () => {
       it('reads one workout by id, finished or in progress', async () => {
         const done = lifted('Done', april(1));

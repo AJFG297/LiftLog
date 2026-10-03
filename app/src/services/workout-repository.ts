@@ -133,7 +133,9 @@ function refKey({ workoutId, position }: ExerciseRef): string {
  * The `active` flag has a single writer, {@link setActive}. Content writes never change it: a new row
  * starts inactive, and an existing one keeps its flag.
  *
- * Reads other than {@link loadAll} cover finished history only, and leave the workout in progress out.
+ * Reads cover finished history only, and leave the workout in progress out, unless they say otherwise:
+ * {@link active}, {@link get}, {@link existingIds}, {@link inExportOrder}, {@link latestPerLineage} and
+ * {@link loadAll} include it.
  * {@link subscribe} tells screens when any write has landed, so what they show can be re-queried.
  */
 export class WorkoutRepository {
@@ -157,7 +159,25 @@ export class WorkoutRepository {
     };
   }
 
-  /** Every stored workout, and which one (if any) is in progress. */
+  /** The workout in progress, if there is one: all that startup loads of the history. */
+  async active(): Promise<Session | undefined> {
+    const workouts = await this.db
+      .select(readColumns.workout)
+      .from(workoutsSchema)
+      .where(eq(workoutsSchema.active, true));
+    return (
+      await this.assemble(
+        workouts,
+        workouts.map((x) => x.id),
+      )
+    )[0];
+  }
+
+  /**
+   * Every stored workout, and which one (if any) is in progress. For the jobs that must touch every
+   * workout once - a data migration rewriting them all, reading a backup file to restore it - and never
+   * for what a screen shows.
+   */
   async loadAll(): Promise<{ workouts: Session[]; activeWorkoutId: string | undefined }> {
     const workouts = await this.db.select(readColumns.workout).from(workoutsSchema);
     return {
