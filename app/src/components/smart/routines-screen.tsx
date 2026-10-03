@@ -5,11 +5,7 @@ import SelectPicker from '@/components/presentation/foundation/select-picker';
 import { SurfaceText } from '@/components/presentation/foundation/surface-text';
 import { MIN_TOUCH_TARGET } from '@/components/presentation/foundation/touch-target';
 import { RoutineColorDot } from '@/components/presentation/workout-editor/routine-color-swatches';
-import {
-  daysAgoOf,
-  estimatedMinutesOf,
-  routinesDoneThisRoundOf,
-} from '@/components/presentation/workout-editor/routine-summary';
+import { daysAgoOf, estimatedMinutesOf } from '@/components/presentation/workout-editor/routine-summary';
 import { ProgramListItem, programSummary } from '@/components/smart/program-list-item';
 import { programHref, routineEditorHref } from '@/components/smart/routines-href';
 import { useServices } from '@/components/smart/services-provider';
@@ -160,7 +156,7 @@ export function RoutinesScreen({ focusProgramId }: { focusProgramId?: string }) 
             next={nextSession}
             lastDone={lastDone}
             workoutsDone={routineHistory?.workoutsDone ?? 0}
-            routinesDoneThisRound={routinesDoneThisRoundOf(routineHistory?.namesInOrder ?? [], routineNames)}
+            routinesDoneThisRound={routineHistory?.routinesDoneThisRound ?? 0}
             onStart={() => nextSession && start(nextSession)}
             onAddRoutine={newRoutine}
           />

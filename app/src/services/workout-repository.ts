@@ -21,6 +21,7 @@ import { volumeScaleOf } from '@/store/activity/volume';
 import { PersonalRecord, PreviousBest, PreviousBests } from '@/store/stats/personal-records';
 import { oneRepMaxOf } from '@/store/stats/calculate-stats';
 import { getSessionReferenceTime } from '@/store/stored-sessions';
+import { routinesDoneThisRoundOf } from '@/models/routine-rounds';
 import {
   CardioSetRow,
   WarmupSetRow,
@@ -77,8 +78,8 @@ export interface RoutineHistory {
   /** The last day each routine was done, by name. */
   lastDone: Map<string, LocalDate>;
   workoutsDone: number;
-  /** The routine each workout done was, oldest first. */
-  namesInOrder: string[];
+  /** How many of the routines were done in the current round (`routinesDoneThisRoundOf`). */
+  routinesDoneThisRound: number;
 }
 
 const prSetKinds = (Object.keys(SET_KIND_RULES) as SetKind[]).filter((kind) => SET_KIND_RULES[kind].countsTowardsPrs);
@@ -456,13 +457,13 @@ export class WorkoutRepository {
 
   /**
    * How far the routines named `names` have got: a finished workout counts as one done when it has any set
-   * logged, a warm-up included, and is not freeform. The counts and dates are SQL aggregates; only the
-   * names come back row by row, oldest first by day and then by when they were done, which is what a
-   * program's round is counted from.
+   * logged, a warm-up included, and is not freeform. The counts and dates are SQL aggregates. The round
+   * is walked from the routine name of every done workout, oldest first by day and then by when it was
+   * done: one short column per workout, since where a round ends depends on all of them.
    */
   async routineHistory(names: readonly string[]): Promise<RoutineHistory> {
     if (!names.length) {
-      return { lastDone: new Map(), workoutsDone: 0, namesInOrder: [] };
+      return { lastDone: new Map(), workoutsDone: 0, routinesDoneThisRound: 0 };
     }
     const done = and(
       finished,
@@ -486,7 +487,10 @@ export class WorkoutRepository {
     return {
       lastDone: new Map(perName.map((x) => [x.name, LocalDate.parse(x.lastDone)])),
       workoutsDone: perName.reduce((total, x) => total + x.done, 0),
-      namesInOrder: ordered.map((x) => x.name),
+      routinesDoneThisRound: routinesDoneThisRoundOf(
+        ordered.map((x) => x.name),
+        names,
+      ),
     };
   }
 

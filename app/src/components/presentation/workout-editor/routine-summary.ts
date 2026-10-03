@@ -47,26 +47,6 @@ function secondsOf(exercise: ExerciseBlueprint): number {
   return setCountOf(exercise) * (SECONDS_PER_SET + exercise.restBetweenSets.minRest.seconds());
 }
 
-/**
- * How many of the program's routines were done in the current round, from the routine of each workout done,
- * oldest first (`WorkoutRepository.routineHistory`). A round ends once every routine has been done at least
- * once, in any order, and the next workout starts a new one, so a finished round reads as nothing done yet.
- */
-export function routinesDoneThisRoundOf(namesOldestFirst: readonly string[], routineNames: readonly string[]): number {
-  const names = new Set(routineNames);
-  const thisRound = new Set<string>();
-  for (const name of namesOldestFirst) {
-    if (!names.has(name)) {
-      continue;
-    }
-    thisRound.add(name);
-    if (thisRound.size === names.size) {
-      thisRound.clear();
-    }
-  }
-  return thisRound.size;
-}
-
 /** How long ago `date` was, in the unit a person would say it in. */
 export type DaysAgo =
   | { unit: 'today' }

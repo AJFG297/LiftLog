@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { routinesDoneThisRoundOf } from '@/components/presentation/workout-editor/routine-summary';
+import { routinesDoneThisRoundOf } from '@/models/routine-rounds';
 
 describe('routinesDoneThisRoundOf', () => {
   const program = ['Push', 'Pull', 'Legs', 'Arms'];

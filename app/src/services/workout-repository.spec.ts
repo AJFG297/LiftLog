@@ -408,27 +408,32 @@ describe('WorkoutRepository', () => {
           'Pull 2026-04-02',
           'Push 2026-04-05',
         ]);
-        expect(history.namesInOrder).toEqual(['Push', 'Pull', 'Push', 'Legs']);
+        // Push, Pull, Push, Legs: three of the four done this round (the freeform name never counts).
+        expect(history.routinesDoneThisRound).toBe(3);
       });
 
-      it('orders workouts of one day by when they were done', async () => {
+      it('walks the round in the order the workouts were done, by day and then by time', async () => {
         await repository.putMany([
-          lifted('Evening', april(3), { time: '19:00' }),
-          lifted('Morning', april(3), { time: '08:00' }),
-          lifted('Earlier', april(2), { time: '23:00' }),
+          lifted('A', april(3), { time: '19:00' }),
+          lifted('B', april(3), { time: '08:00' }),
+          lifted('A', april(2), { time: '23:00' }),
         ]);
 
-        expect((await repository.routineHistory(['Evening', 'Morning', 'Earlier'])).namesInOrder).toEqual([
-          'Earlier',
-          'Morning',
-          'Evening',
-        ]);
+        // A, B closes a round, then A starts the next. By day alone, in the order stored, it would read
+        // A, A, B and close the round on B.
+        expect((await repository.routineHistory(['A', 'B'])).routinesDoneThisRound).toBe(1);
+        await repository.put(lifted('B', april(4)));
+        expect((await repository.routineHistory(['A', 'B'])).routinesDoneThisRound).toBe(0);
       });
 
       it('is empty for no routines', async () => {
         await repository.put(lifted('Push', april(1)));
 
-        expect(await repository.routineHistory([])).toEqual({ lastDone: new Map(), workoutsDone: 0, namesInOrder: [] });
+        expect(await repository.routineHistory([])).toEqual({
+          lastDone: new Map(),
+          workoutsDone: 0,
+          routinesDoneThisRound: 0,
+        });
       });
     });
 
