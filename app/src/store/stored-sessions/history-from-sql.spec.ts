@@ -196,6 +196,45 @@ describe('history read from SQL', () => {
     expect((await repository.finishedBetween(march.from, march.to)).map((x) => x.id)).toEqual(['week-2', 'week-1']);
   });
 
+  describe('a past workout open in the editor', () => {
+    const renamed = (name: string) => updateStoredSession({ sessionId: 'week-1', update: (s) => s.withName(name) });
+    const live = () => history()[0]!.with({ id: 'live', date: TODAY });
+
+    it('keeps its edits when the workout in progress is finished meanwhile', async () => {
+      const app = await startApp(history());
+      app.store.dispatch(putStoredSession(live()));
+      app.store.dispatch(setActiveSessionId('live'));
+      await openForEditing(app, 'week-1');
+      app.store.dispatch(renamed('First edit'));
+
+      // Finished from the notification while the editor is still open.
+      app.store.dispatch(sessionFinished('live'));
+      await app.settle();
+      app.store.dispatch(renamed('Second edit'));
+      await app.settle();
+
+      expect(app.getState().storedSessions.sessions['week-1']?.blueprint.name).toBe('Second edit');
+      expect((await app.workoutRepository.get('week-1'))?.blueprint.name).toBe('Second edit');
+      // The finished workout stays open too, for its summary.
+      expect(app.getState().storedSessions.sessions['live']).toBeDefined();
+    });
+
+    it('keeps its edits when a new workout is started meanwhile', async () => {
+      const app = await startApp(history());
+      await openForEditing(app, 'week-1');
+      app.store.dispatch(renamed('First edit'));
+
+      app.store.dispatch(putStoredSession(live()));
+      app.store.dispatch(setActiveSessionId('live'));
+      await app.settle();
+      app.store.dispatch(renamed('Second edit'));
+      await app.settle();
+
+      expect(app.getState().storedSessions.sessions['week-1']?.blueprint.name).toBe('Second edit');
+      expect((await app.workoutRepository.get('week-1'))?.blueprint.name).toBe('Second edit');
+    });
+  });
+
   it('opening a missing workout for editing opens nothing', async () => {
     const app = await startApp(history());
 
