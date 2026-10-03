@@ -72,3 +72,11 @@ export function usePreviousPerformances(): PreviousPerformances {
   }
   return value;
 }
+
+/**
+ * Whether a {@link PreviousPerformancesProvider} is already above: a component that would mount one for
+ * its own session (`SessionComponent`) reuses it, so a screen holding several sessions runs one query.
+ */
+export function useHasPreviousPerformances(): boolean {
+  return useContext(PreviousPerformancesContext) !== undefined;
+}
