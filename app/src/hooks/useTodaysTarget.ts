@@ -28,7 +28,7 @@ export function usePreviousPerformance(
   return (exercise: RecordedWeightedExercise) => {
     const candidates = ofMovement(exercise.movementKey()) as RecordedWeightedExercise[];
     const planned = plannedLineageFor(exercise, session.recordedExercises, routine?.exercises ?? []);
-    return { previous: carriedFrom(exercise, candidates, planned, byLineage), candidates };
+    return { previous: carriedFrom(exercise, planned, byLineage), candidates };
   };
 }
 
