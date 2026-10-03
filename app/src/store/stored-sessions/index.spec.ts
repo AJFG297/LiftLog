@@ -102,7 +102,7 @@ function exerciseDescriptor(overrides: Partial<ExerciseDescriptor> = {}): Exerci
 }
 
 describe('storedSessions reducer', () => {
-  it('putStoredSession stores the session, opens it in the editing slot and moves the carry-over cache', () => {
+  it('putStoredSession stores the session, opens it in the recent slot and moves the carry-over cache', () => {
     const session = createSessionWithCompletionTime(
       LocalDate.of(2026, 4, 10),
       OffsetDateTime.of(2026, 4, 10, 10, 0, 0, 0, ZoneOffset.UTC),
@@ -112,7 +112,8 @@ describe('storedSessions reducer', () => {
     const state = reduce(putStoredSession(session));
 
     expect(state.sessions[session.id]).toBe(session);
-    expect(state.editingSessionId).toBe(session.id);
+    expect(state.recentSessionId).toBe(session.id);
+    expect(state.editingSessionId).toBeUndefined();
     expect(Object.keys(state.latestExercises).length).toBe(1);
   });
 
@@ -167,7 +168,7 @@ describe('storedSessions reducer', () => {
     expect(reduce(setActiveSession(undefined))).toMatchObject({ sessions: {}, activeSessionId: undefined });
   });
 
-  describe('the editing slot', () => {
+  describe('the editing and recent slots', () => {
     const on = (day: number, name = 'Squat') =>
       createSessionWithCompletionTime(
         LocalDate.of(2026, 4, day),
@@ -183,8 +184,8 @@ describe('storedSessions reducer', () => {
       const state = reduce(
         putStoredSession(running),
         setActiveSessionId(running.id),
-        openSession(first),
-        openSession(second),
+        openSession({ session: first, slot: 'editing' }),
+        openSession({ session: second, slot: 'editing' }),
       );
 
       expect(Object.keys(state.sessions).sort()).toEqual([running.id, second.id].sort());
@@ -196,26 +197,59 @@ describe('storedSessions reducer', () => {
       const edited = on(1);
       const fromTables = edited.withUpdatedDate(LocalDate.of(2026, 3, 1));
 
-      const state = reduce(putStoredSession(edited), openSession(fromTables));
+      const state = reduce(putStoredSession(edited), openSession({ session: fromTables, slot: 'editing' }));
 
       expect(state.sessions[edited.id]).toBe(edited);
     });
 
-    it('takes the workout that stops being in progress, so its summary can still read it', () => {
+    it('the recent slot takes the workout that stops being in progress, so its summary can still read it', () => {
       const running = on(10);
 
       const state = reduce(putStoredSession(on(1)), putStoredSession(running), setActiveSessionId(running.id));
       const finished = storedSessionsReducer(state, setActiveSessionId(undefined));
 
       expect(finished.activeSessionId).toBeUndefined();
-      expect(finished.editingSessionId).toBe(running.id);
+      expect(finished.recentSessionId).toBe(running.id);
       expect(finished.sessions).toEqual({ [running.id]: running });
+    });
+
+    it('never closes the editor workout: not by a put, a start or a finish', () => {
+      const past = on(1);
+      const running = on(10);
+      const next = on(11);
+
+      const state = reduce(
+        openSession({ session: past, slot: 'editing' }),
+        putStoredSession(running),
+        setActiveSessionId(running.id),
+        setActiveSessionId(undefined),
+        putStoredSession(next),
+        setActiveSessionId(next.id),
+        putStoredSession(on(2)),
+      );
+
+      expect(state.editingSessionId).toBe(past.id);
+      expect(state.sessions[past.id]).toBe(past);
+      expect(Object.keys(state.sessions)).toHaveLength(3);
+    });
+
+    it('opens a workout for its summary in the recent slot, leaving the editor alone', () => {
+      const past = on(1);
+      const summarised = on(2);
+
+      const state = reduce(
+        openSession({ session: past, slot: 'editing' }),
+        openSession({ session: summarised, slot: 'recent' }),
+      );
+
+      expect(state).toMatchObject({ editingSessionId: past.id, recentSessionId: summarised.id });
+      expect(Object.keys(state.sessions).sort()).toEqual([past.id, summarised.id].sort());
     });
 
     it('is emptied when its workout is deleted', () => {
       const past = on(1);
 
-      const state = reduce(openSession(past), deleteStoredSession(past.id));
+      const state = reduce(openSession({ session: past, slot: 'editing' }), deleteStoredSession(past.id));
 
       expect(state.editingSessionId).toBeUndefined();
       expect(state.sessions).toEqual({});
@@ -266,7 +300,7 @@ describe('storedSessions reducer', () => {
 
     const state = reduce(
       upsertStoredSessions([earlier, latest]),
-      openSession(latest),
+      openSession({ session: latest, slot: 'editing' }),
       updateStoredSession({
         sessionId: latest.id,
         update: (s) => s.with({ recordedExercises: clearedToWarmups.recordedExercises }),
@@ -408,7 +442,7 @@ describe('storedSessions reducer', () => {
 
       const state = reduce(
         upsertStoredSessions([earlier, later]),
-        openSession(later),
+        openSession({ session: later, slot: 'editing' }),
         updateStoredSession({ sessionId: later.id, update: () => squatOn(1, 8).with({ id: later.id }) }),
       );
 
@@ -422,7 +456,7 @@ describe('storedSessions reducer', () => {
 
       const state = reduce(
         upsertStoredSessions([earlier, later]),
-        openSession(later),
+        openSession({ session: later, slot: 'editing' }),
         updateStoredSession({ sessionId: later.id, update: (s) => s.with({ recordedExercises: [] }) }),
       );
 
@@ -436,7 +470,7 @@ describe('storedSessions reducer', () => {
 
       const state = reduce(
         upsertStoredSessions([earlier, today]),
-        openSession(today),
+        openSession({ session: today, slot: 'editing' }),
         updateStoredSession({ sessionId: today.id, update: () => logged }),
       );
 

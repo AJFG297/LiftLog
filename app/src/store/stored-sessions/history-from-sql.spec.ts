@@ -436,6 +436,29 @@ describe('history read from SQL', () => {
       expect(app.getState().storedSessions.latestExerciseWorkoutIds[key]).toBe('a');
     });
 
+    it('agrees with the tables when the tying workout is closed before its write lands', async () => {
+      const app = await startApp([]);
+      const at = OffsetDateTime.of(2026, 4, 1, 1, 0, 0, 0, ZoneOffset.UTC);
+      const squatsAt = (id: string) =>
+        new Session(
+          id,
+          legs,
+          [makeRecordedExercise(squat, [5], new Weight(100, 'kilograms'), () => at)],
+          LocalDate.of(2026, 4, 1),
+          undefined,
+          undefined,
+        );
+      // The second put of b takes the recent slot from a before a's write has landed; the tie a's write
+      // makes is still judged by what it wrote.
+      app.store.dispatch(putStoredSession(squatsAt('b')));
+      app.store.dispatch(putStoredSession(squatsAt('a')));
+      app.store.dispatch(putStoredSession(squatsAt('b')));
+      await app.settle();
+
+      expect(app.getState().storedSessions.sessions['a']).toBeUndefined();
+      expect(app.getState().storedSessions.latestExerciseWorkoutIds[key]).toBe('a');
+    });
+
     interface Write {
       kind: 'put' | 'update' | 'upsert' | 'delete';
       id: string;

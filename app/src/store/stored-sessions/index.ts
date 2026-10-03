@@ -8,14 +8,17 @@ import type { LatestPerformance } from '@/services/workout-repository';
 
 interface StoredSessionState {
   isHydrated: boolean;
-  // The workouts open in memory, by id: the one in progress and the one in the editing slot, no others.
-  // The rest of the history stays in the workout tables until a screen reads it (`WorkoutRepository`).
+  // The workouts open in memory, by id: the one in progress and the two slots below, no others. The rest of
+  // the history stays in the workout tables until a screen reads it (`WorkoutRepository`).
   sessions: Record<string, Session>;
   // The workout in progress, if any.
   activeSessionId: string | undefined;
-  // The other open workout: a past one loaded to be edited (`openSessionForEditing`), the last one put, or
-  // the one just finished, which its summary still shows. Opening another replaces it.
+  // The past workout open in the history editor (`openSessionForEditing`). Only opening another replaces
+  // it, so nothing else that happens meanwhile can close it under the editor.
   editingSessionId: string | undefined;
+  // The workout last put or just finished, which its summary still shows (`openSessionForSummary` after a
+  // restart). The next put or finish replaces it.
+  recentSessionId: string | undefined;
   // The latest performance of each lineage, keyed by `lineageKeys`, which is what carry-over reads. Loaded
   // from the workout tables at startup (`WorkoutRepository.latestPerLineage`), moved forward by the
   // reducers below, and re-read for a lineage a write may have moved back (see `staleLineages`).
@@ -37,6 +40,7 @@ const initialState: StoredSessionState = {
   sessions: {},
   activeSessionId: undefined,
   editingSessionId: undefined,
+  recentSessionId: undefined,
   latestExercises: {},
   latestExerciseWorkoutIds: {},
   builtInExercises: {},
@@ -68,18 +72,19 @@ const storedSessionsSlice = createSlice({
       state.sessions = session ? { [session.id]: session } : {};
       state.activeSessionId = session?.id;
       state.editingSessionId = undefined;
+      state.recentSessionId = undefined;
     },
 
     /**
-     * Opens a workout read from the tables in the editing slot. A copy already open is newer than the tables
-     * can be, so it is kept.
+     * Opens a workout read from the tables in a slot. A copy already open is newer than the tables can be, so
+     * it is kept; the workout in progress takes no slot.
      */
-    openSession(state, action: PayloadAction<Session>) {
-      const session = action.payload;
+    openSession(state, action: PayloadAction<{ session: Session; slot: OpenSlot }>) {
+      const { session, slot } = action.payload;
       if (!state.sessions[session.id]) {
         state.sessions[session.id] = session;
       }
-      openForEditing(state, session.id);
+      openIn(state, slot, session.id);
     },
 
     /** The whole carry-over cache, as read from the workout tables. */
@@ -104,11 +109,17 @@ const storedSessionsSlice = createSlice({
       });
     },
 
-    /** Writes a workout and opens it: in the editing slot, unless it is the workout in progress. */
+    /**
+     * Writes a workout and keeps it open: where it already is, or else in the recent slot. The editor's
+     * workout is never closed by it, nor by starting a workout, which puts it before making it active.
+     */
     putStoredSession(state, action: PayloadAction<Session>) {
+      const isOpen = !!state.sessions[action.payload.id];
       state.sessions[action.payload.id] = action.payload;
       storeSession(state, action.payload);
-      openForEditing(state, action.payload.id);
+      if (!isOpen) {
+        openIn(state, 'recent', action.payload.id);
+      }
     },
 
     /** Applies an edit to one session, addressed by id so it cannot land on the wrong one. */
@@ -126,14 +137,15 @@ const storedSessionsSlice = createSlice({
       storeSession(state, action.payload.update(session));
     },
 
-    /** The workout that stops being in progress moves to the editing slot, where its summary reads it. */
+    /** The workout that stops being in progress moves to the recent slot, where its summary reads it. */
     setActiveSessionId(state, action: PayloadAction<string | undefined>) {
       const previous = state.activeSessionId;
       state.activeSessionId = action.payload;
       if (previous !== undefined && previous !== action.payload && state.sessions[previous]) {
-        state.editingSessionId = previous;
+        openIn(state, 'recent', previous);
+      } else {
+        closeOthers(state);
       }
-      closeOthers(state);
     },
 
     // Cache entries that came from the deleted workout are left for the effect, which re-reads those
@@ -145,6 +157,9 @@ const storedSessionsSlice = createSlice({
       }
       if (state.editingSessionId === action.payload) {
         state.editingSessionId = undefined;
+      }
+      if (state.recentSessionId === action.payload) {
+        state.recentSessionId = undefined;
       }
     },
     updateExercise(state, action: PayloadAction<{ id: string; exercise: ExerciseDescriptor }>) {
@@ -231,18 +246,25 @@ function storeSession(state: WritableDraft<StoredSessionState>, session: Session
   recordLatest(state, session);
 }
 
-/** Puts an open workout in the editing slot, unless it is the one in progress, and closes any other. */
-function openForEditing(state: WritableDraft<StoredSessionState>, sessionId: string) {
+/** Where an open workout other than the one in progress is held: see `editingSessionId`, `recentSessionId`. */
+export type OpenSlot = 'editing' | 'recent';
+
+/** Puts an open workout in `slot`, unless it is the one in progress, and closes what that slot held. */
+function openIn(state: WritableDraft<StoredSessionState>, slot: OpenSlot, sessionId: string) {
   if (sessionId !== state.activeSessionId) {
-    state.editingSessionId = sessionId;
+    if (slot === 'editing') {
+      state.editingSessionId = sessionId;
+    } else {
+      state.recentSessionId = sessionId;
+    }
   }
   closeOthers(state);
 }
 
-/** Drops from memory every workout but the one in progress and the one in the editing slot. */
+/** Drops from memory every workout but the one in progress and the ones in the two slots. */
 function closeOthers(state: WritableDraft<StoredSessionState>) {
   for (const id of Object.keys(state.sessions)) {
-    if (id !== state.activeSessionId && id !== state.editingSessionId) {
+    if (id !== state.activeSessionId && id !== state.editingSessionId && id !== state.recentSessionId) {
       delete state.sessions[id];
     }
   }
@@ -254,8 +276,10 @@ function closeOthers(state: WritableDraft<StoredSessionState>) {
  * unlogged or earlier than what is cached), and those the workout now ties with another workout's entry to
  * the instant, since the tables, not the order of writes, break that tie.
  */
-export function staleLineages(state: StoredSessionState, workoutId: string): ProgressionKey[] {
-  const session = state.sessions[workoutId] as Session | undefined;
+export function staleLineages(state: StoredSessionState, workoutId: string, written?: Session): ProgressionKey[] {
+  // A workout written and then closed (another put took its slot before the write landed) is judged by
+  // what was written.
+  const session = (state.sessions[workoutId] as Session | undefined) ?? written;
   const stale = (Object.keys(state.latestExerciseWorkoutIds) as ProgressionKey[]).filter((key) => {
     if (state.latestExerciseWorkoutIds[key] !== workoutId) {
       return false;
@@ -323,6 +347,9 @@ export const initializeStoredSessionsStateSlice = createAction('initializeStored
 
 /** Loads a workout from the tables into the editing slot, for the screen that edits it. */
 export const openSessionForEditing = createAction<string>('openSessionForEditing');
+
+/** Loads a workout from the tables into the recent slot, for its summary opened by link or after a restart. */
+export const openSessionForSummary = createAction<string>('openSessionForSummary');
 
 export const {
   setIsHydrated,

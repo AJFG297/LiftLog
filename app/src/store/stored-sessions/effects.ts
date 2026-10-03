@@ -5,6 +5,7 @@ import {
   initializeStoredSessionsStateSlice,
   openSession,
   openSessionForEditing,
+  openSessionForSummary,
   putStoredSession,
   restoreExercise,
   selectSession,
@@ -25,6 +26,7 @@ import {
 } from './index';
 import { progressionKeyOf } from '@/models/blueprint-models';
 import { WorkoutRepository } from '@/services/workout-repository';
+import type { Session } from '@/models/session-models';
 import { Dispatch } from '@reduxjs/toolkit';
 import { fetchUpcomingSessions } from '@/store/program';
 import { addUnpublishedSessionId } from '@/store/feed';
@@ -84,13 +86,16 @@ export function applyStoredSessionsEffects(addEffect: AddEffectFn) {
     },
   );
 
-  addEffect(openSessionForEditing, async (action, { getState, dispatch, extra: { workoutRepository } }) => {
+  addEffect([openSessionForEditing, openSessionForSummary], async (action, { getState, dispatch, extra }) => {
+    if (!openSessionForEditing.match(action) && !openSessionForSummary.match(action)) {
+      return;
+    }
     const sessionId = action.payload;
-    const open = selectSession(getState(), sessionId);
+    const slot = openSessionForEditing.match(action) ? 'editing' : 'recent';
     // The read waits for any write before it, so a workout put just before it is opened is read as put.
-    const session = open ?? (await workoutRepository.get(sessionId));
+    const session = selectSession(getState(), sessionId) ?? (await extra.workoutRepository.get(sessionId));
     if (session) {
-      dispatch(openSession(session));
+      dispatch(openSession({ session, slot }));
     }
   });
 
@@ -173,6 +178,10 @@ export function applyStoredSessionsEffects(addEffect: AddEffectFn) {
       // A rest timer or a running cardio timer isn't stored, so an update that changes only those writes
       // nothing. That is most updates while resting.
       if (updateStoredSession.match(action)) {
+        if (__DEV__ && !selectSession(stateBeforeReduce, sessionId)) {
+          // The reducer drops it: a screen must open a past workout (`openSessionForEditing`) to edit it.
+          logger.warn('updateStoredSession for a workout that is not open; nothing was written', { sessionId });
+        }
         const before = selectSession(stateBeforeReduce, sessionId);
         const after = selectSession(stateAfterReduce, sessionId);
         if (before && after && samePersistedContent(before, after)) {
@@ -186,7 +195,7 @@ export function applyStoredSessionsEffects(addEffect: AddEffectFn) {
         return;
       }
       await logger.time('persistStoredSession', () => workoutRepository.put(session));
-      await refreshStaleLineages(sessionId, getState, dispatch, workoutRepository);
+      await refreshStaleLineages(sessionId, getState, dispatch, workoutRepository, session);
     },
   );
 
@@ -290,9 +299,10 @@ async function refreshStaleLineages(
   getState: () => RootState,
   dispatch: Dispatch,
   workoutRepository: WorkoutRepository,
+  written?: Session,
 ) {
   const { storedSessions } = getState();
-  const stale = staleLineages(storedSessions, workoutId);
+  const stale = staleLineages(storedSessions, workoutId, written);
   if (!stale.length) {
     return;
   }
