@@ -321,6 +321,13 @@ describe('WorkoutRepository', () => {
         expect((await repository.latestPlanned())?.id).toBe(planned.id);
       });
 
+      it('sees a write issued before it, awaited or not', async () => {
+        const planned = lifted('Legs', april(1));
+        void repository.put(planned);
+
+        expect((await repository.latestPlanned())?.id).toBe(planned.id);
+      });
+
       it('is undefined with only freeform workouts', async () => {
         await repository.put(lifted(FREEFORM_WORKOUT_NAME, april(8)));
 
