@@ -126,7 +126,7 @@ describe('history aggregates over the 420-session fixture', () => {
   it('stores every session as finished history, and loads none of it into the store', async () => {
     expect(sessions).toHaveLength(420);
     expect(stored).toHaveLength(420);
-    expect(await repository.startedCount()).toBe(417);
+    expect((await repository.startedWorkouts()).count).toBe(417);
     expect((await repository.earliestDate())?.toString()).toBe('2023-07-05');
     expect(state().storedSessions.sessions).toEqual({});
   });

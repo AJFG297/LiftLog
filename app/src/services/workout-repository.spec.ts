@@ -741,17 +741,18 @@ describe('WorkoutRepository', () => {
       });
     });
 
-    it('startedCount counts the finished workouts with a working set logged', async () => {
-      expect(await repository.startedCount()).toBe(0);
+    it('startedWorkouts counts the finished, started workouts and the date of the first', async () => {
+      expect(await repository.startedWorkouts()).toEqual({ count: 0, firstDate: undefined });
 
       await repository.putMany([
-        lifted('A', april(1)),
-        lifted('B', april(2)),
-        lifted('Opened', april(3), { reps: [undefined] }),
+        lifted('Opened', april(1), { reps: [undefined] }),
+        lifted('A', april(2)),
+        lifted('B', april(3)),
       ]);
-      await repository.setActive(lifted('Running', april(4)));
+      await repository.setActive(lifted('Running', april(1)));
 
-      expect(await repository.startedCount()).toBe(2);
+      // Neither the opened-only workout nor the one in progress counts, for the count or the date.
+      expect(await repository.startedWorkouts()).toEqual({ count: 2, firstDate: april(2) });
     });
 
     it('dailyActivity counts and sums the started workouts of each day', async () => {

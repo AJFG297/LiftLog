@@ -16,15 +16,9 @@ export function YouProfile() {
   const formatDate = useFormatDate();
   const showFeed = useAppSelector((x) => x.settings.showFeed);
   const feedName = useAppSelector((x) => x.feed.identity.unwrapOr(undefined)?.name);
-  const profile = useWorkoutQuery(
-    async (repository) => ({
-      workoutCount: await repository.startedCount(),
-      earliest: await repository.earliestDate(),
-    }),
-    [],
-  );
-  const workoutCount = profile?.workoutCount ?? 0;
-  const earliest = profile?.earliest;
+  const profile = useWorkoutQuery((repository) => repository.startedWorkouts(), []);
+  const workoutCount = profile?.count ?? 0;
+  const earliest = profile?.firstDate;
 
   const name = feedName?.trim() || t('you.profile.default_name');
   const since = earliest ? formatDate(earliest, { month: 'long', year: 'numeric' }) : undefined;

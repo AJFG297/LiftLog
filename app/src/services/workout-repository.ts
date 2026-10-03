@@ -503,10 +503,16 @@ export class WorkoutRepository {
     return row?.date ? LocalDate.parse(row.date) : undefined;
   }
 
-  /** How many finished workouts were started (`Session.isStarted`). */
-  async startedCount(): Promise<number> {
-    const [row] = await this.db.select({ count: count() }).from(workoutsSchema).where(and(finished, started));
-    return row?.count ?? 0;
+  /**
+   * The finished workouts that were started (`Session.isStarted`): how many, and the date of the first. Both
+   * describe the same workouts, so "N workouts since" never counts one it dates from or the other way round.
+   */
+  async startedWorkouts(): Promise<{ count: number; firstDate: LocalDate | undefined }> {
+    const [row] = await this.db
+      .select({ count: count(), firstDate: sql<string | null>`min(${workoutsSchema.date})` })
+      .from(workoutsSchema)
+      .where(and(finished, started));
+    return { count: row?.count ?? 0, firstDate: row?.firstDate ? LocalDate.parse(row.firstDate) : undefined };
   }
 
   /** Each day with a started, finished workout, oldest first: how many, and the volume moved. */
