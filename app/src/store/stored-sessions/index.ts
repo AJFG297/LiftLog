@@ -19,6 +19,8 @@ interface StoredSessionState {
   // The workout last put or just finished, which its summary still shows (`openSessionForSummary` after a
   // restart). The next put or finish replaces it.
   recentSessionId: string | undefined;
+  // The last workout a screen asked to open that isn't in the tables, so the screen can say so.
+  notFoundSessionId: string | undefined;
   // The latest performance of each lineage, keyed by `lineageKeys`, which is what carry-over reads. Loaded
   // from the workout tables at startup (`WorkoutRepository.latestPerLineage`), moved forward by the
   // reducers below, and re-read for a lineage a write may have moved back (see `staleLineages`).
@@ -41,6 +43,7 @@ const initialState: StoredSessionState = {
   activeSessionId: undefined,
   editingSessionId: undefined,
   recentSessionId: undefined,
+  notFoundSessionId: undefined,
   latestExercises: {},
   latestExerciseWorkoutIds: {},
   builtInExercises: {},
@@ -85,6 +88,14 @@ const storedSessionsSlice = createSlice({
         state.sessions[session.id] = session;
       }
       openIn(state, slot, session.id);
+      if (state.notFoundSessionId === session.id) {
+        state.notFoundSessionId = undefined;
+      }
+    },
+
+    /** A workout a screen asked to open is not in the tables. */
+    setSessionNotFound(state, action: PayloadAction<string>) {
+      state.notFoundSessionId = action.payload;
     },
 
     /** The whole carry-over cache, as read from the workout tables. */
@@ -355,6 +366,7 @@ export const {
   setIsHydrated,
   setActiveSession,
   openSession,
+  setSessionNotFound,
   setLatestExercises,
   setLatestExercisesFor,
   upsertStoredSessions,

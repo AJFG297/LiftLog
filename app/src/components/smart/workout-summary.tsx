@@ -34,6 +34,7 @@ import { encryptAndShare } from '@/store/feed';
 import { selectActiveProgram, selectRoutineUpdateReceipt, setRoutineUpdateReceipt } from '@/store/program';
 import { SessionRecord } from '@/store/stats/personal-records';
 import {
+  openSessionForSummary,
   selectActiveSessionId,
   selectLatestExercises,
   selectSession,
@@ -112,11 +113,20 @@ export function WorkoutSummary({ sessionId, finished }: WorkoutSummaryProps) {
     return () => subscription.remove();
   });
 
+  // Opened by link or after a restart, its workout isn't in the store: load it by id, and leave only if
+  // there is none.
+  const isOpen = session !== undefined;
+  const notFound = useAppSelector((x) => x.storedSessions.notFoundSessionId === sessionId);
   useEffect(() => {
-    if (!session) {
+    if (!isOpen) {
+      dispatch(openSessionForSummary(sessionId));
+    }
+  }, [dispatch, sessionId, isOpen]);
+  useEffect(() => {
+    if (notFound) {
       goHome(router);
     }
-  }, [session, router]);
+  }, [notFound, router]);
 
   const saveNote = () => {
     if (!session || noteDraft === (session.reflection?.note ?? '')) {

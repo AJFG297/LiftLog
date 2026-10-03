@@ -27,6 +27,7 @@ import {
   updateStoredSession,
   upsertStoredSessions,
   openSessionForEditing,
+  openSessionForSummary,
 } from '@/store/stored-sessions';
 import type { RootState } from '@/store/store';
 import type { UnknownAction } from '@reduxjs/toolkit';
@@ -233,6 +234,28 @@ describe('history read from SQL', () => {
       expect(app.getState().storedSessions.sessions['week-1']?.blueprint.name).toBe('Second edit');
       expect((await app.workoutRepository.get('week-1'))?.blueprint.name).toBe('Second edit');
     });
+  });
+
+  it('a summary opened by link after a restart loads its workout by id, beside the editor', async () => {
+    const app = await startApp(history());
+    await openForEditing(app, 'week-0');
+
+    app.store.dispatch(openSessionForSummary('week-2'));
+    await app.settle();
+
+    expect(app.getState().storedSessions).toMatchObject({ editingSessionId: 'week-0', recentSessionId: 'week-2' });
+    expect(app.getState().storedSessions.sessions['week-2']?.blueprint.name).toBe('Legs');
+  });
+
+  it('a summary or editor opened for a workout that is gone is told so', async () => {
+    const app = await startApp(history());
+
+    app.store.dispatch(openSessionForSummary('deleted-elsewhere'));
+    await app.settle();
+    expect(app.getState().storedSessions.notFoundSessionId).toBe('deleted-elsewhere');
+
+    await openForEditing(app, 'week-1');
+    expect(app.getState().storedSessions.notFoundSessionId).toBe('deleted-elsewhere');
   });
 
   it('opening a missing workout for editing opens nothing', async () => {

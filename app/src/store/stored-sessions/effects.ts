@@ -4,6 +4,7 @@ import {
   deleteStoredSession,
   initializeStoredSessionsStateSlice,
   openSession,
+  setSessionNotFound,
   openSessionForEditing,
   openSessionForSummary,
   putStoredSession,
@@ -94,9 +95,7 @@ export function applyStoredSessionsEffects(addEffect: AddEffectFn) {
     const slot = openSessionForEditing.match(action) ? 'editing' : 'recent';
     // The read waits for any write before it, so a workout put just before it is opened is read as put.
     const session = selectSession(getState(), sessionId) ?? (await extra.workoutRepository.get(sessionId));
-    if (session) {
-      dispatch(openSession({ session, slot }));
-    }
+    dispatch(session ? openSession({ session, slot }) : setSessionNotFound(sessionId));
   });
 
   // Re-resolve the built-in catalog when the language changes (startup load is handled above).
