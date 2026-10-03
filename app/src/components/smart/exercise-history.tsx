@@ -24,16 +24,23 @@ export function ExerciseHistory(props: {
 }) {
   // No session to exclude: this sheet is opened from an exercise, and shows the whole lineage.
   const movement = movementKeyFor(props.exerciseId, props.type);
-  const [limit, setLimit] = useState(PAGE_SIZE);
-  // The pages already shown stay on screen while the next one loads.
-  const exercises =
-    useWorkoutQuery((repository) => repository.previousPerformances([movement], { limit }), [movement, limit], {
-      keepPrevious: true,
-    })?.get(movement) ?? [];
+  // Pages are counted per movement, so another exercise starts again at the first page.
+  const [page, setPage] = useState({ movement, limit: PAGE_SIZE });
+  const limit = page.movement === movement ? page.limit : PAGE_SIZE;
+  // The pages already shown stay on screen while the next one loads, but never under another exercise.
+  const loaded = useWorkoutQuery(
+    async (repository) => ({
+      movement,
+      exercises: (await repository.previousPerformances([movement], { limit })).get(movement) ?? [],
+    }),
+    [movement, limit],
+    { keepPrevious: true },
+  );
+  const exercises = loaded?.movement === movement ? loaded.exercises : [];
   // A full page means there may be more; a short one is the end of the history.
   const loadMore = () => {
     if (exercises.length >= limit) {
-      setLimit(limit + PAGE_SIZE);
+      setPage({ movement, limit: limit + PAGE_SIZE });
     }
   };
   // The exercise's current name, which a rename in the exercise list may have changed.
