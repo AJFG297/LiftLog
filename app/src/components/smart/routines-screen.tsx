@@ -8,9 +8,7 @@ import { RoutineColorDot } from '@/components/presentation/workout-editor/routin
 import {
   daysAgoOf,
   estimatedMinutesOf,
-  lastDoneByRoutineName,
   routinesDoneThisRoundOf,
-  workoutsDoneOf,
 } from '@/components/presentation/workout-editor/routine-summary';
 import { ProgramListItem, programSummary } from '@/components/smart/program-list-item';
 import { programHref, routineEditorHref } from '@/components/smart/routines-href';
@@ -24,7 +22,8 @@ import { Session } from '@/models/session-models';
 import { useAppSelector } from '@/store';
 import { fetchUpcomingSessions, linkPlanExercises, savePlan, selectAllPrograms } from '@/store/program';
 import { setPlansSortOrder } from '@/store/settings';
-import { selectLatestExercises, selectSessions } from '@/store/stored-sessions';
+import { selectLatestExercises } from '@/store/stored-sessions';
+import { useWorkoutQuery } from '@/hooks/useWorkoutQuery';
 import { uuid } from '@/utils/uuid';
 import { LocalDate } from '@js-joda/core';
 import { useTranslate } from '@tolgee/react';
@@ -55,7 +54,6 @@ export function RoutinesScreen({ focusProgramId }: { focusProgramId?: string }) 
   const savedPrograms = useAppSelector((x) => x.program.savedPrograms);
   const sortOrder = useAppSelector((x) => x.settings.plansSortOrder);
   const upcoming = useAppSelector((x) => x.program.upcomingSessions);
-  const sessions = useAppSelector(selectSessions);
   const latestExercises = useAppSelector(selectLatestExercises);
   const { start, confirmationDialog } = useStartWorkoutWithConfirmation();
   const active = savedPrograms[activePlanId];
@@ -68,7 +66,12 @@ export function RoutinesScreen({ focusProgramId }: { focusProgramId?: string }) 
     dispatch(fetchUpcomingSessions());
   }, [active, dispatch]);
 
-  const lastDone = lastDoneByRoutineName(sessions);
+  const routineNames = active ? active.sessions.map((routine) => routine.name) : [];
+  const routineHistory = useWorkoutQuery(
+    (repository) => repository.routineHistory(routineNames),
+    [routineNames.join('\u0000')],
+  );
+  const lastDone = routineHistory?.lastDone ?? new Map<string, LocalDate>();
   const nextSession = upcoming.isSuccess() ? upcoming.data[0] : undefined;
   const bodyweight = nextSession?.bodyweight;
 
@@ -106,7 +109,6 @@ export function RoutinesScreen({ focusProgramId }: { focusProgramId?: string }) 
     router.push(programHref(programId));
   };
 
-  const routineNames = active ? active.sessions.map((routine) => routine.name) : [];
   const others = programs.filter(({ id }) => id !== activePlanId);
   if (sortOrder === 'recent') {
     others.sort((a, b) => b.program.lastEdited.compareTo(a.program.lastEdited));
@@ -157,8 +159,8 @@ export function RoutinesScreen({ focusProgramId }: { focusProgramId?: string }) 
             program={active}
             next={nextSession}
             lastDone={lastDone}
-            workoutsDone={workoutsDoneOf(sessions, routineNames)}
-            routinesDoneThisRound={routinesDoneThisRoundOf(sessions, routineNames)}
+            workoutsDone={routineHistory?.workoutsDone ?? 0}
+            routinesDoneThisRound={routinesDoneThisRoundOf(routineHistory?.namesInOrder ?? [], routineNames)}
             onStart={() => nextSession && start(nextSession)}
             onAddRoutine={newRoutine}
           />

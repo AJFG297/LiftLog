@@ -7,6 +7,8 @@ type TranslateFn = ReturnType<typeof useTranslate>['t'];
 type FormatDate = (date: LocalDate, opts: Intl.DateTimeFormatOptions) => string;
 
 const UP_NEXT_EXERCISES_SHOWN = 2;
+/** How many past runs of a workout its Up next detail looks at (the estimate takes the last few). */
+export const UP_NEXT_PAST_WORKOUTS = 10;
 
 /** "Bench Press, Overhead Press +3 · ~50 min · last done Wednesday", for a plan workout not started yet. */
 export function upNextDetailText(

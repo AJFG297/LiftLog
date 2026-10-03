@@ -355,6 +355,60 @@ describe('WorkoutRepository', () => {
       });
     });
 
+    describe('routineHistory', () => {
+      /** A workout with only a warm-up logged. */
+      function warmedUp(name: string, date: LocalDate): Session {
+        const blueprint = makeWeightedBlueprint({ name: 'Squat', sets: 1 });
+        const recorded = new RecordedWeightedExercise(blueprint, [emptyPotentialSet()], undefined).with({
+          warmupSets: [filledPotentialSet(5, OffsetDateTime.parse(`${date.toString()}T09:00:00Z`))],
+        });
+        return makeSession([blueprint], date).withName(name).withExercise(0, recorded);
+      }
+
+      it('counts the logged workouts of each routine, by name, with the last day each was done', async () => {
+        await repository.putMany([
+          lifted('Push', april(1)),
+          lifted('Pull', april(2)),
+          lifted('Push', april(5)),
+          warmedUp('Legs', april(6)),
+          lifted('Legs', april(7), { reps: [undefined] }),
+          lifted(FREEFORM_WORKOUT_NAME, april(8)),
+          lifted('Arms', april(9)),
+        ]);
+        await repository.setActive(lifted('Pull', april(10)));
+
+        const history = await repository.routineHistory(['Push', 'Pull', 'Legs', FREEFORM_WORKOUT_NAME]);
+
+        expect(history.workoutsDone).toBe(4);
+        expect([...history.lastDone].map(([name, date]) => `${name} ${date.toString()}`).sort()).toEqual([
+          'Legs 2026-04-06',
+          'Pull 2026-04-02',
+          'Push 2026-04-05',
+        ]);
+        expect(history.namesInOrder).toEqual(['Push', 'Pull', 'Push', 'Legs']);
+      });
+
+      it('orders workouts of one day by when they were done', async () => {
+        await repository.putMany([
+          lifted('Evening', april(3), { time: '19:00' }),
+          lifted('Morning', april(3), { time: '08:00' }),
+          lifted('Earlier', april(2), { time: '23:00' }),
+        ]);
+
+        expect((await repository.routineHistory(['Evening', 'Morning', 'Earlier'])).namesInOrder).toEqual([
+          'Earlier',
+          'Morning',
+          'Evening',
+        ]);
+      });
+
+      it('is empty for no routines', async () => {
+        await repository.put(lifted('Push', april(1)));
+
+        expect(await repository.routineHistory([])).toEqual({ lastDone: new Map(), workoutsDone: 0, namesInOrder: [] });
+      });
+    });
+
     describe('inExportOrder', () => {
       async function exported(batchSize: number) {
         const batches: string[][] = [];

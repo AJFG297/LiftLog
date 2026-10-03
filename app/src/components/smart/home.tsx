@@ -7,7 +7,7 @@ import { HistoryRestRow, HistoryWorkoutCard } from '@/components/presentation/ho
 import { HomeHeader } from '@/components/presentation/home/home-header';
 import { UpNextCard } from '@/components/presentation/home/up-next-card';
 import { homeWorkoutHref } from '@/components/smart/home-workout-href';
-import { namesText, upNextDetailText } from '@/components/smart/up-next-text';
+import { namesText, UP_NEXT_PAST_WORKOUTS, upNextDetailText } from '@/components/smart/up-next-text';
 import { WelcomeWizard } from '@/components/smart/welcome-wizard';
 import { WhatsNewBanner } from '@/components/smart/whats-new-banner';
 import { spacing, useAppTheme } from '@/hooks/useAppTheme';
@@ -49,8 +49,6 @@ type TranslateFn = ReturnType<typeof useTranslate>['t'];
 const CARD_EXERCISES_SHOWN = 3;
 /** The 30-day view is the longer of the two ranges, so one query covers both. */
 const HISTORY_RANGE_DAYS: HistoryRange = 30;
-/** How many past runs of the next workout the Up next detail looks at (its estimate takes the last few). */
-const UP_NEXT_PAST_WORKOUTS = 10;
 
 /**
  * The Home tab: what's next, and what was done in the last 7 or 30 days. The workout in progress isn't

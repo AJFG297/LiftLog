@@ -69,6 +69,18 @@ const finished = eq(workoutsSchema.active, false);
  */
 const started = sql`(exists (select 1 from ${weightedSetsSchema} where ${weightedSetsSchema.workoutId} = ${workoutsSchema.id} and ${isNotNull(weightedSetsSchema.reps)}) or exists (select 1 from ${cardioSetsSchema} where ${cardioSetsSchema.workoutId} = ${workoutsSchema.id} and ${isNotNull(cardioSetsSchema.completedAt)}))`;
 
+/** `Session.hasLoggedAnySet`: {@link started}, or a warm-up logged. */
+const loggedAnySet = sql`(${started} or exists (select 1 from ${warmupSetsSchema} where ${warmupSetsSchema.workoutId} = ${workoutsSchema.id} and ${isNotNull(warmupSetsSchema.reps)}))`;
+
+/** The routines of a program as done so far, from {@link WorkoutRepository.routineHistory}. */
+export interface RoutineHistory {
+  /** The last day each routine was done, by name. */
+  lastDone: Map<string, LocalDate>;
+  workoutsDone: number;
+  /** The routine each workout done was, oldest first. */
+  namesInOrder: string[];
+}
+
 const prSetKinds = (Object.keys(SET_KIND_RULES) as SetKind[]).filter((kind) => SET_KIND_RULES[kind].countsTowardsPrs);
 
 /** One record from the running-max query: the set that set it, with what's needed to rebuild its exact 1RM. */
@@ -415,6 +427,42 @@ export class WorkoutRepository {
       bests.set(row.movementKey, best);
     }
     return bests;
+  }
+
+  /**
+   * How far the routines named `names` have got: a finished workout counts as one done when it has any set
+   * logged, a warm-up included, and is not freeform. The counts and dates are SQL aggregates; only the
+   * names come back row by row, oldest first by day and then by when they were done, which is what a
+   * program's round is counted from.
+   */
+  async routineHistory(names: readonly string[]): Promise<RoutineHistory> {
+    if (!names.length) {
+      return { lastDone: new Map(), workoutsDone: 0, namesInOrder: [] };
+    }
+    const done = and(
+      finished,
+      inArray(workoutsSchema.name, [...names]),
+      sql`${workoutsSchema.name} != ${FREEFORM_WORKOUT_NAME}`,
+      loggedAnySet,
+    );
+    const [perName, ordered] = await Promise.all([
+      this.db
+        .select({ name: workoutsSchema.name, lastDone: sql<LocalDateJSON>`max(${workoutsSchema.date})`, done: count() })
+        .from(workoutsSchema)
+        .where(done)
+        .groupBy(workoutsSchema.name),
+      this.db
+        .select({ name: workoutsSchema.name })
+        .from(workoutsSchema)
+        .where(done)
+        // To the second, as the model's activity times compared them.
+        .orderBy(asc(workoutsSchema.date), sql`${workoutsSchema.referenceTimeMs} / 1000`, sql`rowid`),
+    ]);
+    return {
+      lastDone: new Map(perName.map((x) => [x.name, LocalDate.parse(x.lastDone)])),
+      workoutsDone: perName.reduce((total, x) => total + x.done, 0),
+      namesInOrder: ordered.map((x) => x.name),
+    };
   }
 
   /** The date of the earliest finished workout, started or not: where all-time stats begin. */
