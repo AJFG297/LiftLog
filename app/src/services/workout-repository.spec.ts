@@ -335,6 +335,44 @@ describe('WorkoutRepository', () => {
       });
     });
 
+    describe('get', () => {
+      it('reads one workout by id, finished or in progress', async () => {
+        const done = lifted('Done', april(1));
+        const running = lifted('Running', april(2));
+        await repository.putMany([done, lifted('Other', april(3))]);
+        await repository.setActive(running);
+
+        expect((await repository.get(done.id))?.toJSON()).toEqual(done.toJSON());
+        expect((await repository.get(running.id))?.toJSON()).toEqual(running.toJSON());
+        expect(await repository.get('missing')).toBeUndefined();
+      });
+
+      it('sees a write issued before it, awaited or not', async () => {
+        const done = lifted('Done', april(1));
+        void repository.put(done);
+
+        expect((await repository.get(done.id))?.blueprint.name).toBe('Done');
+      });
+    });
+
+    describe('existingIds', () => {
+      it('is the ids asked about that are stored, the workout in progress included', async () => {
+        const done = lifted('Done', april(1)).with({ id: 'done' });
+        await repository.put(done);
+        await repository.setActive(lifted('Running', april(2)).with({ id: 'running' }));
+
+        expect([...(await repository.existingIds(['done', 'running', 'new']))].sort()).toEqual(['done', 'running']);
+        expect(await repository.existingIds([])).toEqual(new Set());
+      });
+
+      it('asks about more ids than fit in one statement', async () => {
+        await repository.put(lifted('Done', april(1)).with({ id: 'id-1500' }));
+        const ids = Array.from({ length: 2000 }, (_, index) => `id-${index}`);
+
+        expect([...(await repository.existingIds(ids))]).toEqual(['id-1500']);
+      });
+    });
+
     describe('latestPerLineage', () => {
       const squat = makeWeightedBlueprint({ name: 'Squat', sets: 1 });
       const key = squat.progressionKey();

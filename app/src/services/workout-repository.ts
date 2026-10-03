@@ -126,9 +126,10 @@ function refKey({ workoutId, position }: ExerciseRef): string {
  */
 export class WorkoutRepository {
   private readonly listeners = new Set<(write: WorkoutWrite) => void>();
-  // Writes and the reads the store builds on ({@link latestPerLineage}, {@link latestPlanned}) run one
-  // after another, in the order they were issued: a read issued after a write must see it, awaited or
-  // not. The device driver queues statements that way itself; the async driver under test does not.
+  // Writes and the reads the store builds on ({@link latestPerLineage}, {@link latestPlanned}, the point
+  // lookups) run one after another, in the order they were issued: a read issued after a write must see
+  // it, awaited or not. The device driver queues statements that way itself; the async driver under test
+  // does not.
   private queue: Promise<unknown> = Promise.resolve();
 
   constructor(private readonly db: ExpoSQLiteDatabase) {}
@@ -151,6 +152,31 @@ export class WorkoutRepository {
       workouts: await this.assemble(workouts, undefined),
       activeWorkoutId: workouts.find((x) => x.active)?.id,
     };
+  }
+
+  /**
+   * One workout by id, finished or in progress, or undefined if there is none. Queued behind the writes
+   * before it, so a workout written just before it is asked for (a finish, then the feed publishing it) is
+   * read as written.
+   */
+  get(workoutId: string): Promise<Session | undefined> {
+    return this.inOrder(async () => {
+      const workouts = await this.db
+        .select(readColumns.workout)
+        .from(workoutsSchema)
+        .where(eq(workoutsSchema.id, workoutId));
+      return (await this.assemble(workouts, [workoutId]))[0];
+    });
+  }
+
+  /** Which of `workoutIds` are stored, finished or in progress. Queued behind the writes before it. */
+  existingIds(workoutIds: readonly string[]): Promise<Set<string>> {
+    return this.inOrder(async () => {
+      const rows = await children([...workoutIds], workoutsSchema.id, (where) =>
+        this.db.select({ id: workoutsSchema.id }).from(workoutsSchema).where(where),
+      );
+      return new Set(rows.map((x) => x.id));
+    });
   }
 
   /** Finished workouts dated from `from` to `to`, both inclusive, latest first by reference time. */
