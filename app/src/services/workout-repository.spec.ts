@@ -10,8 +10,18 @@ import { WorkoutRepository } from '@/services/workout-repository';
 import { SessionGenerator } from '@/models/storage/generators';
 import { CardioExerciseBlueprint } from '@/models/blueprint-models';
 import { RecordedWeightedExercise, Session } from '@/models/session-models';
-import { filledPotentialSet, makeSession, makeWeightedBlueprint } from '@/models/session-models/__test__/helpers';
+import {
+  filledPotentialSet,
+  makeRecordedExercise,
+  makeSession,
+  makeWeightedBlueprint,
+} from '@/models/session-models/__test__/helpers';
 import { workoutsSchema } from '@/db/schema';
+import { Weight } from '@/models/weight';
+import { TemporalComparer } from '@/models/comparers';
+import { getSessionReferenceTime } from '@/store/stored-sessions';
+import { findPersonalRecords } from '@/store/stats/personal-records';
+import { volumeScaleOf } from '@/store/activity/volume';
 
 const logger = { info: vi.fn(), error: vi.fn(), warn: vi.fn(), debug: vi.fn() };
 
@@ -213,5 +223,184 @@ describe('WorkoutRepository', () => {
     expect((await repository.loadAll()).workouts.map((x) => x.id).toSorted()).toEqual(
       sessions.map((x) => x.id).toSorted(),
     );
+  });
+
+  describe('reads', () => {
+    /** A finished workout of one exercise: `reps` logged at `kg`, the last at `time` on `date`. */
+    function lifted(
+      name: string,
+      date: LocalDate,
+      { kg = 100, reps = [5, 5, 5] as (number | undefined)[], exercise = 'Squat', time = '12:00' } = {},
+    ): Session {
+      const blueprint = makeWeightedBlueprint({ name: exercise, sets: reps.length });
+      const last = OffsetDateTime.parse(`${date.toString()}T${time}:00Z`);
+      const recorded = makeRecordedExercise(blueprint, reps, new Weight(kg, 'kilograms'), (index) =>
+        last.minusMinutes((reps.length - 1 - index) * 3),
+      );
+      return makeSession([blueprint], date).withName(name).withExercise(0, recorded);
+    }
+
+    const april = (day: number) => LocalDate.of(2026, 4, day);
+
+    describe('finishedBetween', () => {
+      it('covers both ends of the range, latest first', async () => {
+        const first = lifted('A', april(1));
+        const morning = lifted('B', april(10), { time: '08:00' });
+        const evening = lifted('C', april(10), { time: '19:00' });
+        const last = lifted('D', april(30));
+        await repository.putMany([
+          lifted('Before', LocalDate.of(2026, 3, 31)),
+          first,
+          morning,
+          evening,
+          last,
+          lifted('After', LocalDate.of(2026, 5, 1)),
+        ]);
+
+        const inApril = await repository.finishedBetween(april(1), april(30));
+
+        expect(inApril.map((x) => x.blueprint.name)).toEqual(['D', 'C', 'B', 'A']);
+        expect(inApril.map((x) => x.toJSON())).toEqual([last, evening, morning, first].map((x) => x.toJSON()));
+      });
+
+      it('leaves out the workout in progress', async () => {
+        const done = lifted('Done', april(10));
+        const running = lifted('Running', april(10));
+        await repository.put(done);
+        await repository.setActive(running);
+
+        expect((await repository.finishedBetween(april(10), april(10))).map((x) => x.id)).toEqual([done.id]);
+      });
+    });
+
+    it('latestNamed finds the last few started workouts of that name, latest first', async () => {
+      const sessions = [1, 2, 3, 4].map((day) => lifted('Push', april(day)));
+      const neverStarted = lifted('Push', april(5), { reps: [undefined, undefined] });
+      await repository.putMany([...sessions, lifted('Pull', april(6)), neverStarted]);
+
+      const latest = await repository.latestNamed('Push', 3);
+
+      expect(latest.map((x) => x.date.toString())).toEqual(['2026-04-04', '2026-04-03', '2026-04-02']);
+    });
+
+    describe('earliestDate', () => {
+      it('is the first finished workout, started or not', async () => {
+        await repository.putMany([lifted('A', april(10)), lifted('Empty', april(3), { reps: [undefined] })]);
+        await repository.setActive(lifted('Running', april(1)));
+
+        expect((await repository.earliestDate())?.toString()).toBe('2026-04-03');
+      });
+
+      it('is undefined without any history', async () => {
+        expect(await repository.earliestDate()).toBeUndefined();
+      });
+    });
+
+    it('dailyActivity counts and sums the started workouts of each day', async () => {
+      await repository.putMany([
+        lifted('A', april(10), { kg: 100, reps: [10], time: '08:00' }),
+        lifted('B', april(10), { kg: 50, reps: [10], time: '19:00' }),
+        lifted('C', april(12), { kg: 80, reps: [10] }),
+        lifted('Opened', april(11), { reps: [undefined, undefined] }),
+      ]);
+      await repository.setActive(lifted('Running', april(13), { kg: 60, reps: [10] }));
+
+      expect((await repository.dailyActivity()).map((x) => `${x.date.toString()} ${x.workouts} ${x.volumeKg}`)).toEqual(
+        ['2026-04-10 2 1500', '2026-04-12 1 800'],
+      );
+    });
+
+    it('volumeScale grades against the started workouts, as the calendar always has', async () => {
+      const volumes = [10, 20, 30, 40, 50];
+      await repository.putMany(volumes.map((kg, index) => lifted(`W${index}`, april(index + 1), { kg, reps: [1] })));
+      await repository.put(lifted('Opened', april(20), { reps: [undefined] }));
+
+      expect(await repository.volumeScale()).toEqual(volumeScaleOf(volumes));
+    });
+
+    it('volumeScale is undefined without any started workout', async () => {
+      await repository.put(lifted('Opened', april(20), { reps: [undefined] }));
+
+      expect(await repository.volumeScale()).toBeUndefined();
+    });
+
+    describe('personalRecords', () => {
+      it('is a record only when a movement beats its own earlier best', async () => {
+        const first = lifted('Legs', april(1), { kg: 100, reps: [5] });
+        const better = lifted('Legs', april(8), { kg: 100, reps: [6] });
+        const worse = lifted('Legs', april(15), { kg: 90, reps: [5] });
+        const otherExercise = lifted('Pull', april(22), { kg: 200, reps: [5], exercise: 'Deadlift' });
+        await repository.putMany([first, better, worse, otherExercise]);
+
+        const records = await repository.personalRecords();
+
+        expect([...records.keys()]).toEqual([better.id]);
+        expect(records.get(better.id)).toEqual([{ exerciseName: 'Squat', oneRepMax: new Weight(120, 'kilograms') }]);
+      });
+
+      it('finds the same records as the whole-history walk, for any history', async () => {
+        await fc.assert(
+          fc.asyncProperty(fc.array(SessionGenerator, { maxLength: 12 }), async (sessions) => {
+            const db = await createTestDb();
+            const repository = new WorkoutRepository(db);
+            await repository.putMany(sessions);
+            const oldestFirst = [...sessions].sort(
+              (a, b) =>
+                TemporalComparer(getSessionReferenceTime(a), getSessionReferenceTime(b)) || a.id.localeCompare(b.id),
+            );
+            const describe = (records: Map<string, { exerciseName: string; oneRepMax: Weight }[]>) =>
+              Object.fromEntries(
+                [...records].map(([id, list]) => [
+                  id,
+                  list.map((x) => `${x.exerciseName} ${x.oneRepMax.value.toString()}${x.oneRepMax.unit}`),
+                ]),
+              );
+
+            expect(describe(await repository.personalRecords())).toEqual(describe(findPersonalRecords(oldestFirst)));
+          }),
+          { numRuns: 25 },
+        );
+      });
+    });
+
+    describe('subscribe', () => {
+      it('tells listeners after each kind of write has landed, and what it touched', async () => {
+        const seen: number[] = [];
+        const writes: unknown[] = [];
+        repository.subscribe((write) => {
+          writes.push(write);
+          void repository.loadAll().then(({ workouts }) => seen.push(workouts.length));
+        });
+        const a = lifted('A', april(1));
+        const b = lifted('B', april(2));
+        const c = lifted('C', april(3));
+
+        await repository.put(a);
+        await repository.putMany([b]);
+        await repository.setActive(c);
+        await repository.delete(a.id);
+        await repository.setActive(undefined);
+        await new Promise((resolve) => setTimeout(resolve, 0));
+
+        expect(seen).toEqual([1, 2, 3, 2, 2]);
+        expect(writes).toEqual([
+          { workoutIds: [a.id], activeChanged: false },
+          { workoutIds: [b.id], activeChanged: false },
+          { workoutIds: [c.id], activeChanged: true },
+          { workoutIds: [a.id], activeChanged: false },
+          { workoutIds: [], activeChanged: true },
+        ]);
+      });
+
+      it('stops once unsubscribed', async () => {
+        const listener = vi.fn();
+        const unsubscribe = repository.subscribe(listener);
+        await repository.put(lifted('A', april(1)));
+        unsubscribe();
+        await repository.put(lifted('B', april(2)));
+
+        expect(listener).toHaveBeenCalledTimes(1);
+      });
+    });
   });
 });

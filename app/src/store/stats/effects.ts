@@ -4,8 +4,8 @@ import { fetchOverallStats, setOverallStats } from './index';
 import { AddEffectFn } from '@/store/store';
 import {
   deleteStoredSession,
+  initializeStoredSessionsStateSlice,
   putStoredSession,
-  selectSessionsBy,
   updateStoredSession,
   upsertStoredSessions,
 } from '@/store/stored-sessions';
@@ -16,7 +16,23 @@ import { selectPreferredWeightUnit } from '../settings';
 import { calculateStats } from '@/store/stats/calculate-stats';
 
 export function applyStatsEffects(addEffect: AddEffectFn) {
-  addEffect(fetchOverallStats, async (_, { getState, dispatch }) => {
+  // Stats are read from the workout tables, so they are stale once a write has *committed* - which is after
+  // the action the effect below sees. A fetch between the two would read the old rows and clear the flag,
+  // so the repository marks them stale again after each commit. Writes of the workout in progress are
+  // skipped as below; `setActive` isn't, since finishing is what makes a workout count.
+  let unsubscribe = () => {};
+  addEffect(initializeStoredSessionsStateSlice, (_, { getState, dispatch, extra: { workoutRepository } }) => {
+    unsubscribe();
+    unsubscribe = workoutRepository.subscribe(({ workoutIds, activeChanged }) => {
+      const activeSessionId = getState().storedSessions.activeSessionId;
+      if (!activeChanged && workoutIds.every((id) => id === activeSessionId)) {
+        return;
+      }
+      dispatch(setStatsIsDirty(true));
+    });
+  });
+
+  addEffect(fetchOverallStats, async (_, { getState, dispatch, extra: { workoutRepository } }) => {
     const before = getState();
 
     if (before.stats.overallView.isLoading() || !before.stats.isDirty || !before.storedSessions.isHydrated) {
@@ -32,21 +48,17 @@ export function applyStatsEffects(addEffect: AddEffectFn) {
     try {
       let timeframe = state.stats.overallViewTime;
       if (timeframe === 'all-time') {
-        if (!state.storedSessions.earliestSession) {
+        // From the table, so deleting the first workout moves the start.
+        const earliest = await workoutRepository.earliestDate();
+        if (!earliest) {
           dispatch(setOverallStats(RemoteData.error('No sessions')));
           dispatch(setStatsIsDirty(true));
           return;
         }
-        timeframe = {
-          from: state.storedSessions.earliestSession.date,
-          to: LocalDate.now(),
-        };
+        timeframe = { from: earliest, to: LocalDate.now() };
       }
-      const stats = calculateStats(
-        selectSessionsBy(state, timeframe.from, timeframe.to),
-        selectPreferredWeightUnit(state),
-        timeframe,
-      );
+      const sessions = await workoutRepository.finishedBetween(timeframe.from, timeframe.to);
+      const stats = calculateStats(sessions, selectPreferredWeightUnit(state), timeframe);
       dispatch(setOverallStats(RemoteData.success(stats)));
     } catch (e) {
       dispatch(setOverallStats(RemoteData.error(e)));

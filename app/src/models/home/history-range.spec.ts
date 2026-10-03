@@ -7,8 +7,8 @@ import {
   thirtyDayGridOf,
   workoutFactsOf,
 } from '@/models/home/history-range';
-import { stateWith, workout } from '@/models/home/__test__/home-sessions';
-import { selectActivityMonth, selectOwnSessionsByDate } from '@/store/activity';
+import { ownActivityOf, stateWith, workout } from '@/models/home/__test__/home-sessions';
+import { selectActivityMonth } from '@/store/activity';
 
 const today = LocalDate.of(2025, 4, 10);
 
@@ -20,11 +20,10 @@ const olderLegs = workout('Legs', today.minusDays(20), { kg: 90, minutes: 60 });
 const beforeTheMonth = workout('Push', today.minusDays(35), { kg: 50 });
 const neverStarted = workout('Push', today.minusDays(2), { logged: false });
 
-const state = stateWith([legs, pull, push, olderPull, olderLegs, beforeTheMonth, neverStarted]);
-const byDate = selectOwnSessionsByDate(state);
+const sessions = [legs, pull, push, olderPull, olderLegs, beforeTheMonth, neverStarted];
 
 describe('the last 7 days', () => {
-  const days = historyDaysOf(byDate, today, 7);
+  const days = historyDaysOf(sessions, today, 7);
 
   it('runs from six days ago to today', () => {
     expect(days.map((day) => day.date.toString())).toEqual([
@@ -64,7 +63,7 @@ describe('the last 7 days', () => {
 });
 
 describe('the last 30 days', () => {
-  const days = historyDaysOf(byDate, today, 30);
+  const days = historyDaysOf(sessions, today, 30);
 
   it('adds up everything since 30 days ago and nothing before', () => {
     // 3000 + 2400 + 1800 + 2100 + 2700 kg; 45 + 40 + 50 + 30 + 60 minutes.
@@ -86,13 +85,14 @@ describe('the last 30 days', () => {
     expect(grid[34]?.date.toString()).toBe('2025-04-10');
     // Every column is one weekday, so the last row is the 7-day strip.
     expect(grid.slice(28).map((cell) => cell?.date.toString())).toEqual(
-      historyDaysOf(byDate, today, 7).map((day) => day.date.toString()),
+      historyDaysOf(sessions, today, 7).map((day) => day.date.toString()),
     );
   });
 
   it('marks the same days as the old month calendar, with the same number of workouts on each', () => {
+    const own = ownActivityOf(sessions);
     const calendarCells = [YearMonth.of(2025, 3), YearMonth.of(2025, 4)]
-      .flatMap((yearMonth) => selectActivityMonth(state, { yearMonth, today }).rows)
+      .flatMap((yearMonth) => selectActivityMonth(stateWith(), { own, yearMonth, today }).rows)
       .flatMap((row) => row.cells)
       .filter((cell) => !cell.isOutsideFocus);
     const calendarCount = new Map(calendarCells.map((cell) => [cell.date.toString(), cell.sessionCount]));
@@ -114,7 +114,7 @@ describe('two workouts on one day', () => {
   it('keeps both, latest first', () => {
     const morning = workout('Upper', today, { kg: 50, at: LocalTime.of(7, 0) });
     const evening = workout('Lower', today, { kg: 50, at: LocalTime.of(19, 0) });
-    const days = historyDaysOf(selectOwnSessionsByDate(stateWith([morning, evening])), today, 7);
+    const days = historyDaysOf([morning, evening], today, 7);
 
     expect(days.at(-1)?.sessions.map((session) => session.blueprint.name)).toEqual(['Lower', 'Upper']);
     expect(historySummaryOf(days).workouts).toBe(2);
