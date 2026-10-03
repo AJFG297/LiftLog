@@ -1,0 +1,104 @@
+appId: com.ajfg297.liftlog
+---
+# Seed PPL (made active): Push, Pull, Legs. Push supersets its bench press with a custom exercise,
+# Seed Cable Fly, created from the picker. Then a second, inactive program, Seed Full Body.
+- tapOn: 'Routines'
+- scrollUntilVisible:
+    element:
+      id: 'routines-new-program'
+    direction: DOWN
+- tapOn:
+    id: 'routines-new-program'
+- tapOn:
+    id: 'program-name'
+- eraseText: 30
+- inputText: 'Seed PPL'
+- hideKeyboard
+
+# Push: bench press, the custom fly (created here), military press
+- tapOn:
+    id: 'program-add-routine'
+- tapOn:
+    id: 'routine-name'
+- inputText: 'Push'
+- hideKeyboard
+- tapOn:
+    id: 'routine-start-pick'
+- runFlow:
+    file: pick.yaml
+    env:
+      NAME: 'Barbell Bench Press - Medium Grip'
+- runFlow:
+    file: search.yaml
+    env:
+      NAME: 'Seed Cable Fly'
+- hideKeyboard
+- tapOn:
+    id: 'exercise-picker-create'
+- tapOn:
+    id: 'exercise-create-muscle-chest'
+- tapOn:
+    id: 'exercise-equipment-cable'
+- tapOn:
+    id: 'exercise-create-save'
+- runFlow:
+    file: pick.yaml
+    env:
+      NAME: 'Standing Military Press'
+- hideKeyboard
+- assertVisible: 'Add 3 exercises'
+- tapOn:
+    id: 'exercise-picker-add'
+- runFlow: warmup-first.yaml
+- scrollUntilVisible:
+    element:
+      id: 'routine-exercise-superset'
+    direction: DOWN
+- tapOn:
+    id: 'routine-exercise-superset'
+- tapOn:
+    id: 'routine-save'
+- assertVisible: 'Push'
+
+- runFlow:
+    file: routine-two.yaml
+    env:
+      ROUTINE: 'Pull'
+      FIRST: 'Barbell Deadlift'
+      SECOND: 'Bent Over Barbell Row'
+- runFlow:
+    file: routine-two.yaml
+    env:
+      ROUTINE: 'Legs'
+      FIRST: 'Barbell Squat'
+      SECOND: 'Leg Press'
+
+- scrollUntilVisible:
+    element:
+      id: 'program-use'
+    direction: UP
+- tapOn:
+    id: 'program-use'
+- tapOn: 'SWITCH'
+- back
+
+# A second program that stays inactive
+- scrollUntilVisible:
+    element:
+      id: 'routines-new-program'
+    direction: DOWN
+- tapOn:
+    id: 'routines-new-program'
+- tapOn:
+    id: 'program-name'
+- eraseText: 30
+- inputText: 'Seed Full Body'
+- hideKeyboard
+- runFlow:
+    file: routine-two.yaml
+    env:
+      ROUTINE: 'Full Body'
+      FIRST: 'Barbell Squat'
+      SECOND: 'Pushups'
+- back
+- tapOn: 'Home'

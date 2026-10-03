@@ -1,0 +1,6 @@
+appId: com.ajfg297.liftlog
+---
+# In a live workout: moves to the next exercise's page.
+- tapOn:
+    id: 'up-next'
+    waitToSettleTimeoutMs: 500

@@ -1,0 +1,27 @@
+appId: com.ajfg297.liftlog
+---
+# On a program page: adds routine ROUTINE with exercises FIRST and SECOND (3 x 10 each). FIRST gets a
+# warm-up in front of its three working sets.
+- tapOn:
+    id: 'program-add-routine'
+- tapOn:
+    id: 'routine-name'
+- inputText: ${ROUTINE}
+- hideKeyboard
+- tapOn:
+    id: 'routine-start-pick'
+- runFlow:
+    file: pick.yaml
+    env:
+      NAME: ${FIRST}
+- runFlow:
+    file: pick.yaml
+    env:
+      NAME: ${SECOND}
+- hideKeyboard
+- tapOn:
+    id: 'exercise-picker-add'
+- runFlow: warmup-first.yaml
+- tapOn:
+    id: 'routine-save'
+- assertVisible: ${ROUTINE}
