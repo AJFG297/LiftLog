@@ -331,16 +331,37 @@ describe('history read from SQL', () => {
       expect(latestPerLineage).not.toHaveBeenCalled();
     });
 
-    it('stays equal to the tables after any mix of writes', async () => {
-      const ids = ['a', 'b', 'c', 'd'];
-      const write = fc.record({
-        kind: fc.constantFrom('put', 'update', 'upsert', 'delete'),
-        id: fc.constantFrom(...ids),
-        day: fc.integer({ min: 1, max: 5 }),
-        hour: fc.integer({ min: 0, max: 3 }),
-        name: fc.constantFrom('Squat', 'Bench'),
-        abandoned: fc.boolean(),
-      });
+    it('agrees with the tables when two workouts logged a lineage at the same instant', async () => {
+      const app = await startApp([]);
+      const at = OffsetDateTime.of(2026, 4, 1, 1, 0, 0, 0, ZoneOffset.UTC);
+      const squatsAt = (id: string) =>
+        new Session(
+          id,
+          legs,
+          [makeRecordedExercise(squat, [5], new Weight(100, 'kilograms'), () => at)],
+          LocalDate.of(2026, 4, 1),
+          undefined,
+          undefined,
+        );
+      // Stored b first, then a: the tables break the tie by id, so a is the latest there.
+      app.store.dispatch(putStoredSession(squatsAt('b')));
+      app.store.dispatch(putStoredSession(squatsAt('a')));
+      await app.settle();
+
+      expect((await app.workoutRepository.latestPerLineage())[key]?.workoutId).toBe('a');
+      expect(app.getState().storedSessions.latestExerciseWorkoutIds[key]).toBe('a');
+    });
+
+    interface Write {
+      kind: 'put' | 'update' | 'upsert' | 'delete';
+      id: string;
+      hour: number;
+      name: string;
+      abandoned: boolean;
+    }
+
+    /** Dispatches `writes` back to back, as taps and edits are, and checks the cache against the tables. */
+    async function cacheMatchesTablesAfter(write: fc.Arbitrary<Write>, numRuns: number) {
       const describe = (latest: Record<ProgressionKey, { workoutId: string; exercise: { latestTime?: unknown } }>) =>
         Object.fromEntries(
           Object.entries(latest).map(([lineage, x]) => [
@@ -348,18 +369,17 @@ describe('history read from SQL', () => {
             `${x.workoutId} ${x.exercise.latestTime?.toString()}`,
           ]),
         );
-
       await fc.assert(
-        fc.asyncProperty(fc.array(write, { maxLength: 12 }), async (writes) => {
+        fc.asyncProperty(fc.array(write, { minLength: 2, maxLength: 12 }), async (writes) => {
           const app = await startApp([]);
           const actions = writes.map((w): UnknownAction => {
             const blueprint = makeWeightedBlueprint({ name: w.name, exerciseId: w.name, sets: 1 });
-            const at = OffsetDateTime.of(2026, 4, w.day, w.hour, 0, 0, 0, ZoneOffset.UTC);
+            const at = OffsetDateTime.of(2026, 4, 1, w.hour, 0, 0, 0, ZoneOffset.UTC);
             const built = new Session(
               w.id,
               new SessionBlueprint('Day', [blueprint], ''),
               [makeRecordedExercise(blueprint, [w.abandoned ? undefined : 5], new Weight(100, 'kilograms'), () => at)],
-              LocalDate.of(2026, 4, w.day),
+              LocalDate.of(2026, 4, 1),
               undefined,
               undefined,
             );
@@ -374,7 +394,7 @@ describe('history read from SQL', () => {
                 return deleteStoredSession(w.id);
             }
           });
-          // Dispatched back to back, as taps and edits are, so the refreshes overlap the writes.
+          // Back to back, so the refreshes overlap the writes.
           actions.forEach((action) => app.store.dispatch(action));
           await app.settle();
 
@@ -387,7 +407,35 @@ describe('history read from SQL', () => {
           );
           expect(cached).toEqual(describe(await app.workoutRepository.latestPerLineage()));
         }),
-        { numRuns: 40 },
+        { numRuns },
+      );
+    }
+
+    it('stays equal to the tables after any mix of writes', async () => {
+      await cacheMatchesTablesAfter(
+        fc.record({
+          kind: fc.constantFrom('put', 'update', 'upsert', 'delete'),
+          id: fc.constantFrom('a', 'b', 'c', 'd'),
+          hour: fc.integer({ min: 0, max: 3 }),
+          name: fc.constantFrom('Squat', 'Bench'),
+          abandoned: fc.boolean(),
+        }),
+        40,
+      );
+    });
+
+    it('stays equal to the tables when workouts log a lineage at the same instant', async () => {
+      // Two workouts, one movement, one instant: every logged write ties with the other workout's, and the
+      // tables, not the order of writes, break the tie. No bulk write, which would re-read everything.
+      await cacheMatchesTablesAfter(
+        fc.record({
+          kind: fc.constantFrom('put', 'update', 'delete'),
+          id: fc.constantFrom('a', 'b'),
+          hour: fc.constant(1),
+          name: fc.constant('Squat'),
+          abandoned: fc.boolean(),
+        }),
+        40,
       );
     });
   });
