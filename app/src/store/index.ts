@@ -49,11 +49,11 @@ export function useAppSelectorWithArg<TArg, TRes>(selector: (s: RootState, arg: 
 const notRecomputed = Symbol('notRecomputed');
 
 /**
- * For selectors that are expensive to compute, on screens that stay mounted while offscreen - a tab
- * behind another tab, or a list under a pushed detail screen. While unfocused the selector is not run
- * at all (not merely ignored for rendering), so an edit on the visible screen cannot make an invisible
- * one recompute; the last value it saw is returned until it comes back. It is computed once on mount
- * regardless, so a screen that first renders offscreen still has something to show.
+ * For a selector whose value changes often, on a screen that stays mounted while offscreen - the workout in
+ * progress, which changes on every logged set, in the bar of a tab behind the workout. While unfocused the
+ * selector is not run at all (not merely ignored for rendering), so an edit on the visible screen cannot
+ * make an invisible one recompute; the last value it saw is returned until it comes back. It is computed
+ * once on mount regardless, so a screen that first renders offscreen still has something to show.
  */
 export function useAppSelectorWhenFocused<TRes>(selector: (s: RootState) => TRes): TRes {
   const isFocused = useIsFocused();
@@ -70,13 +70,6 @@ export function useAppSelectorWhenFocused<TRes>(selector: (s: RootState) => TRes
   // While focused, hand back what was just computed rather than the copy the effect will store a
   // render later - otherwise every interaction on the screen would lag a frame behind.
   return currentValue === notRecomputed ? lastFocusedValue : currentValue;
-}
-export function useAppSelectorWhenFocusedWithArg<TArg, TRes>(
-  selector: (s: RootState, arg: TArg) => TRes,
-  arg: TArg,
-): TRes {
-  const memod = useMemo(() => (s: RootState) => selector(s, arg), [selector, arg]);
-  return useAppSelectorWhenFocused(memod);
 }
 
 export const useAppStore = useStore as UseStore<Store<RootState>>;
