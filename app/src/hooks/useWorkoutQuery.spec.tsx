@@ -140,4 +140,19 @@ describe('useWorkoutQuery', () => {
     await waitFor(() => expect(result.current).toEqual(['May']));
     expect(asked).toBe(2);
   });
+
+  it('keeps the last answer under new inputs when asked to, as a list growing a page does', async () => {
+    await repository.putMany([2, 3].map((day) => workout(`Day ${day}`, LocalDate.of(2026, 4, day))));
+    const firstOf = (repo: WorkoutRepository, limit: number) => names(repo).then((all) => all.slice(0, limit));
+    const { result, rerender } = renderHook(
+      ({ limit }) => useWorkoutQuery((repo) => firstOf(repo, limit), [limit], { keepPrevious: true }),
+      { initialProps: { limit: 1 } },
+    );
+    await waitFor(() => expect(result.current).toEqual(['First']));
+
+    rerender({ limit: 2 });
+
+    expect(result.current).toEqual(['First']);
+    await waitFor(() => expect(result.current).toEqual(['First', 'Day 3']));
+  });
 });

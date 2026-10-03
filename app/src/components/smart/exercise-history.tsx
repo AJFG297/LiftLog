@@ -6,7 +6,11 @@ import { useWorkoutQuery } from '@/hooks/useWorkoutQuery';
 import { useAppSelectorWithArg } from '@/store';
 import { selectExerciseById } from '@/store/stored-sessions';
 import { Href } from 'expo-router';
+import { useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+/** Performances read per page; the sheet asks for the next page as it scrolls to the end. */
+const PAGE_SIZE = 20;
 
 /** By id, so the sheet shows the exercise's whole history whatever it was called at the time. */
 export function getExerciseHistoryHref(blueprint: ExerciseBlueprint): Href {
@@ -20,8 +24,18 @@ export function ExerciseHistory(props: {
 }) {
   // No session to exclude: this sheet is opened from an exercise, and shows the whole lineage.
   const movement = movementKeyFor(props.exerciseId, props.type);
+  const [limit, setLimit] = useState(PAGE_SIZE);
+  // The pages already shown stay on screen while the next one loads.
   const exercises =
-    useWorkoutQuery((repository) => repository.previousPerformances([movement]), [movement])?.get(movement) ?? [];
+    useWorkoutQuery((repository) => repository.previousPerformances([movement], { limit }), [movement, limit], {
+      keepPrevious: true,
+    })?.get(movement) ?? [];
+  // A full page means there may be more; a short one is the end of the history.
+  const loadMore = () => {
+    if (exercises.length >= limit) {
+      setLimit(limit + PAGE_SIZE);
+    }
+  };
   // The exercise's current name, which a rename in the exercise list may have changed.
   const title = useAppSelectorWithArg(selectExerciseById, props.exerciseId)?.name ?? props.exerciseName;
 
@@ -37,6 +51,7 @@ export function ExerciseHistory(props: {
       </SurfaceText>
       <ExerciseHistoryList
         exercises={exercises}
+        onEndReached={loadMore}
         contentContainerStyle={{
           paddingHorizontal: spacing.pageHorizontalMargin,
           paddingTop: spacing[2],

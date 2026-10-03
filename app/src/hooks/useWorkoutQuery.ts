@@ -9,6 +9,11 @@ export interface WorkoutQueryOptions {
    * workout in progress out need not run again on every set logged in it.
    */
   ignoreWrite?: (write: WorkoutWrite) => boolean;
+  /**
+   * Keep the last answer on screen while a query for new `deps` is in flight, for inputs that only extend
+   * the answer, like a list loading its next page.
+   */
+  keepPrevious?: boolean;
 }
 
 /**
@@ -27,7 +32,7 @@ export interface WorkoutQueryOptions {
 export function useWorkoutQuery<T>(
   query: (repository: WorkoutRepository) => Promise<T>,
   deps: DependencyList,
-  { ignoreWrite }: WorkoutQueryOptions = {},
+  { ignoreWrite, keepPrevious = false }: WorkoutQueryOptions = {},
 ): T | undefined {
   const { workoutRepository } = useServices();
   const isFocused = useIsFocused();
@@ -59,7 +64,7 @@ export function useWorkoutQuery<T>(
       return;
     }
     lastRun.current = { deps, generation };
-    if (depsChanged) {
+    if (depsChanged && !keepPrevious) {
       setResult(undefined);
     }
     let settled = false;
@@ -84,7 +89,7 @@ export function useWorkoutQuery<T>(
     };
     // `deps` are the caller's; the rest is what the body reads.
     // oxlint-disable-next-line react/exhaustive-deps
-  }, [workoutRepository, isFocused, generation, ...deps]);
+  }, [workoutRepository, isFocused, generation, keepPrevious, ...deps]);
 
   return result?.value;
 }
