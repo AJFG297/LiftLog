@@ -12,19 +12,14 @@ import SessionSummaryTitle from '@/components/presentation/summary/session-summa
 import SplitCardControl from '@/components/presentation/foundation/split-card-control';
 import { StreakCard } from '@/components/presentation/summary/streak-card';
 import { spacing } from '@/hooks/useAppTheme';
+import { useOwnActivity, usePersonalRecords, useStreakStats } from '@/hooks/useOwnActivity';
 import { useScroll } from '@/hooks/useScrollListener';
 import { useToday } from '@/hooks/useToday';
+import { useWorkoutQuery } from '@/hooks/useWorkoutQuery';
 import { Session } from '@/models/session-models';
-import { selectStreakStats } from '@/store/activity';
-import { useAppSelector, useAppSelectorWhenFocused, useAppSelectorWhenFocusedWithArg } from '@/store';
+import { useAppSelector } from '@/store';
 import { addUnpublishedSessionId, encryptAndShare, removeReactionsForEvents } from '@/store/feed';
-import {
-  deleteStoredSession,
-  putStoredSession,
-  selectActiveSession,
-  selectSessionsBy,
-  selectSessionsInMonth,
-} from '@/store/stored-sessions';
+import { deleteStoredSession, putStoredSession, selectActiveSession } from '@/store/stored-sessions';
 import { uuid } from '@/utils/uuid';
 import { LocalDate, YearMonth } from '@js-joda/core';
 import { T, useTranslate } from '@tolgee/react';
@@ -51,15 +46,22 @@ export default function History() {
     x.program.upcomingSessions.map((x) => x.at(0)?.bodyweight).unwrapOr(undefined),
   );
   const [selectedDate, setSelectedDate] = useState<LocalDate>();
-  // These sweep the whole history, and this screen stays mounted under /history/edit - so they must
-  // not recompute while a session is being edited on top of it.
-  const sessionsInMonth = useAppSelectorWhenFocusedWithArg(selectSessionsInMonth, currentYearMonth);
-  const sessionsOnSelectedDate = useAppSelectorWhenFocused((state) =>
-    selectedDate ? selectSessionsBy(state, selectedDate, selectedDate) : undefined,
+  // Queried from the workout tables, and re-queried after a write once this screen is focused again, so
+  // an edit on /history/edit shows here on the way back without costing anything while it happens.
+  const sessionsInMonth = useWorkoutQuery(
+    (repository) => repository.finishedBetween(currentYearMonth.atDay(1), currentYearMonth.atEndOfMonth()),
+    [currentYearMonth.toString()],
   );
-  const visibleSessions = sessionsOnSelectedDate ?? sessionsInMonth;
+  const sessionsOnSelectedDate = useWorkoutQuery(
+    (repository) => (selectedDate ? repository.finishedBetween(selectedDate, selectedDate) : Promise.resolve([])),
+    [selectedDate?.toString()],
+  );
+  // Undefined while the query for what's shown is in flight, so the empty state can't flash first.
+  const visibleSessions = selectedDate ? sessionsOnSelectedDate : sessionsInMonth;
+  const personalRecords = usePersonalRecords();
   const today = useToday();
-  const streakStats = useAppSelectorWhenFocusedWithArg(selectStreakStats, today);
+  const own = useOwnActivity();
+  const streakStats = useStreakStats(own, today);
   const { push } = useRouter();
   const currentWorkoutSession = useAppSelector(selectActiveSession);
   const startWorkoutSession = useStartWorkout();
@@ -117,7 +119,7 @@ export default function History() {
       <LegendList
         testID="history-list"
         maintainVisibleContentPosition={false}
-        data={visibleSessions}
+        data={visibleSessions ?? []}
         keyExtractor={(session) => session.id}
         onScroll={handleScroll}
         contentContainerStyle={{
@@ -129,6 +131,7 @@ export default function History() {
           <View style={{ gap: spacing[4], marginBottom: spacing[4] }}>
             <StreakCard stats={streakStats} />
             <HistoryActivityCalendar
+              own={own}
               currentYearMonth={currentYearMonth}
               selectedDate={selectedDate}
               onMonthChange={(yearMonth) => {
@@ -161,7 +164,7 @@ export default function History() {
                   mainContent={
                     <View style={{ gap: spacing[2] }}>
                       <SessionSummary isFilled showWeight session={session} />
-                      <HistoryPrBadges sessionId={session.id} />
+                      <HistoryPrBadges records={personalRecords.get(session.id)} />
                     </View>
                   }
                 />
@@ -190,7 +193,7 @@ export default function History() {
           </Card>
         )}
         ListEmptyComponent={
-          selectedDate ? (
+          visibleSessions === undefined ? null : selectedDate ? (
             <View style={{ gap: spacing[4], alignItems: 'center' }}>
               <EmptyInfo>
                 <LimitedHtml

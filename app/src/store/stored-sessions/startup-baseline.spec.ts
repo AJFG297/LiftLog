@@ -1,17 +1,18 @@
 import { describe, expect, it, vi } from 'vitest';
 import { drizzle } from 'drizzle-orm/expo-sqlite';
 import { openDatabaseAsync } from 'expo-sqlite';
-import { LocalDate, YearMonth } from '@js-joda/core';
+import { DayOfWeek, LocalDate, YearMonth } from '@js-joda/core';
 import { DatabaseMigrationService } from '@/services/database-migration-service';
 import { WorkoutRepository } from '@/services/workout-repository';
 import { applyStoredSessionsEffects } from '@/store/stored-sessions/effects';
+import { initializeStoredSessionsStateSlice, selectRecentlyCompletedExercises } from '@/store/stored-sessions';
 import {
-  initializeStoredSessionsStateSlice,
-  selectHistoryPersonalRecords,
-  selectRecentlyCompletedExercises,
-  selectSessionsInMonth,
-} from '@/store/stored-sessions';
-import { selectActivityMonth, selectActivityWeek, selectStreakStats } from '@/store/activity';
+  calculateStreak,
+  ownActivityOf,
+  selectActivityMonth,
+  selectActivityWeek,
+  trainingDatesOf,
+} from '@/store/activity';
 import { setIsHydrated as setSettingsIsHydrated } from '@/store/settings';
 import { createEffectStore } from '@/utils/__test__/effect-store';
 import { generateSyntheticHistory } from '@/utils/__test__/synthetic-history';
@@ -23,8 +24,9 @@ import { generateSyntheticHistory } from '@/utils/__test__/synthetic-history';
  *
  * Seeds an in-memory database with a synthetic history, then measures a cold start the way the app does
  * one: run migrations, hydrate stored sessions (read every workout table, rebuild `Session` instances from
- * the rows, derive the caches), then the first pass of the whole-history selectors the home and History
- * screens run on mount. Heap is what a hydrated store retains over an empty one, after a forced GC.
+ * the rows, derive the caches), then the first pass of what the Home and History screens query on mount
+ * (`useOwnActivity`, `usePersonalRecords`, the month list) and the carry-over selectors the workout screen
+ * still reads. Heap is what a hydrated store retains over an empty one, after a forced GC.
  *
  * Numbers come from Node against libsql, not a phone against expo-sqlite, so compare them only with other
  * runs of this script on the same machine.
@@ -60,9 +62,10 @@ async function coldStart(db: Awaited<ReturnType<typeof seedDatabase>>, expectedS
   const started = performance.now();
 
   await new DatabaseMigrationService(db, silentLogger as never, { importOldData: async () => {} }).migrate();
+  const workoutRepository = new WorkoutRepository(db);
   const harness = createEffectStore({
     db,
-    workoutRepository: new WorkoutRepository(db),
+    workoutRepository,
     logger: silentLogger as never,
     keyValueStore: { getItem: () => Promise.resolve(null) } as never,
   });
@@ -73,11 +76,13 @@ async function coldStart(db: Awaited<ReturnType<typeof seedDatabase>>, expectedS
   const hydrated = performance.now();
 
   const state = harness.getState();
-  selectStreakStats(state, TODAY);
-  selectActivityWeek(state, TODAY);
-  selectActivityMonth(state, { yearMonth: YearMonth.from(TODAY), today: TODAY });
-  selectSessionsInMonth(state, YearMonth.from(TODAY));
-  selectHistoryPersonalRecords(state);
+  const own = ownActivityOf(await workoutRepository.dailyActivity(), await workoutRepository.volumeScale());
+  calculateStreak(trainingDatesOf(own), DayOfWeek.MONDAY, TODAY);
+  selectActivityWeek(state, { own, today: TODAY });
+  selectActivityMonth(state, { own, yearMonth: YearMonth.from(TODAY), today: TODAY });
+  const month = YearMonth.from(TODAY);
+  await workoutRepository.finishedBetween(month.atDay(1), month.atEndOfMonth());
+  await workoutRepository.personalRecords();
   // What the workout screen asks for each exercise it shows.
   for (const exercise of Object.values(state.storedSessions.sessions)[0]?.recordedExercises ?? []) {
     selectRecentlyCompletedExercises(state, undefined)(exercise.movementKey());

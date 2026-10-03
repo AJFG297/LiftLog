@@ -8,8 +8,6 @@ import {
   blueprintsForPick,
   customExerciseOf,
   equipmentChoiceOf,
-  musclesForGroup,
-  muscleGroupOf,
   pickerListOf,
   recentExerciseIds,
   sessionWithPickAdded,
@@ -17,8 +15,23 @@ import {
   withPickAppended,
 } from './exercise-picker';
 
-function exercise(name: string, muscles: string[], equipment: string | null = null): ExerciseDescriptor {
-  return { name, muscles, equipment, force: null, level: '', mechanic: null, instructions: '', category: '' };
+function exercise(
+  name: string,
+  primaryMuscles: string[],
+  equipment: string | null = null,
+  secondaryMuscles: string[] = [],
+): ExerciseDescriptor {
+  return {
+    name,
+    primaryMuscles,
+    secondaryMuscles,
+    equipment,
+    force: null,
+    level: '',
+    mechanic: null,
+    instructions: '',
+    category: '',
+  };
 }
 
 const exercises: Record<string, ExerciseDescriptor> = {
@@ -44,19 +57,6 @@ function ids(list: ReturnType<typeof pickerListOf>) {
           : row.id,
   );
 }
-
-describe('muscleGroupOf', () => {
-  it('files an exercise under its first muscle', () => {
-    expect(muscleGroupOf(exercises.bench!)).toBe('chest');
-    expect(muscleGroupOf(exercises.row!)).toBe('back');
-    expect(muscleGroupOf(exercise('Squat', ['Quadriceps']))).toBe('legs');
-  });
-
-  it('files neck and no muscle under no chip', () => {
-    expect(muscleGroupOf(exercises.neck!)).toBeUndefined();
-    expect(muscleGroupOf(exercise('Mystery', []))).toBeUndefined();
-  });
-});
 
 describe('equipmentChoiceOf', () => {
   it('keeps the catalog spelling, counts an E-Z bar as a barbell and anything else as Other', () => {
@@ -185,7 +185,7 @@ describe('toggledPick', () => {
 });
 
 describe('customExerciseOf', () => {
-  it('trims the name and keeps the muscles and equipment', () => {
+  it('trims the name and keeps the muscles, all primary, and the equipment', () => {
     expect(customExerciseOf({ name: '  Zercher Squat ', muscles: ['quadriceps'], equipment: 'barbell' })).toEqual({
       name: 'Zercher Squat',
       category: '',
@@ -194,18 +194,10 @@ describe('customExerciseOf', () => {
       instructions: '',
       level: 'beginner',
       mechanic: null,
-      muscles: ['quadriceps'],
+      primaryMuscles: ['quadriceps'],
+      secondaryMuscles: [],
     });
     expect(customExerciseOf({ name: 'Plank', muscles: [], equipment: undefined }).equipment).toBeNull();
-  });
-});
-
-describe('musclesForGroup', () => {
-  it('starts with the muscle only when the chip has one', () => {
-    expect(musclesForGroup('chest')).toEqual(['chest']);
-    expect(musclesForGroup('core')).toEqual(['abdominals']);
-    expect(musclesForGroup('legs')).toEqual([]);
-    expect(musclesForGroup(undefined)).toEqual([]);
   });
 });
 

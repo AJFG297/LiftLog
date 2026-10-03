@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fuzzyMatchScore } from './exercise-fuzzy-match';
+import { fuzzyMatchScore } from '@/models/exercise-fuzzy-match';
 
 describe('fuzzyMatchScore', () => {
   it('matches subsequences even when the letters are not contiguous', () => {

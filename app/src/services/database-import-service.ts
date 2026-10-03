@@ -10,6 +10,7 @@ import {
 import { importBackends, importBackendsDataMigration } from '@/services/data-migrations/import-backends';
 import { linkExerciseIds, linkExerciseIdsDataMigration } from '@/services/data-migrations/link-exercise-ids';
 import { rekeyProgression, rekeyProgressionDataMigration } from '@/services/data-migrations/rekey-progression';
+import { restoreMuscleRoles, restoreMuscleRolesDataMigration } from '@/services/data-migrations/restore-muscle-roles';
 import {
   seedBackendAssignments,
   seedBackendAssignmentsDataMigration,
@@ -33,6 +34,9 @@ export class DatabaseImportService implements DatabaseImporter {
 
     if (!dataMigrationsRun.includes(dedupeBuiltInExercisesDataMigration)) {
       await dedupeBuiltInExercises(this.db, this.keyValueStore);
+    }
+    if (!dataMigrationsRun.includes(restoreMuscleRolesDataMigration)) {
+      await restoreMuscleRoles(this.db);
     }
     if (!dataMigrationsRun.includes(importBackendsDataMigration)) {
       await importBackends(this.db, this.preferenceService);

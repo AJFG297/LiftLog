@@ -6,10 +6,11 @@ import { WeekActivityStrip } from '@/components/presentation/calendar/week-activ
 import { spacing } from '@/hooks/useAppTheme';
 import { useFormatDate } from '@/hooks/useFormatDate';
 import { useScroll } from '@/hooks/useScrollListener';
+import { useOwnActivity } from '@/hooks/useOwnActivity';
 import { useToday } from '@/hooks/useToday';
 import { FeedUser } from '@/models/feed-models';
 import { useAppSelector, useAppSelectorWithArg } from '@/store';
-import { FollowingActivity, selectFollowingActivity } from '@/store/activity';
+import { FollowingActivity, OwnActivity, selectFollowingActivity } from '@/store/activity';
 import { fetchInboxItems, selectFeedFollowing, unfollowFeedUser } from '@/store/feed';
 import { T, useTranslate } from '@tolgee/react';
 import React, { useState } from 'react';
@@ -27,6 +28,8 @@ export function FeedFollowing() {
   const fetchingFeedItems = useAppSelector((x) => x.feed.isFetching);
   const dispatch = useDispatch();
   const insets = useSafeAreaInsets();
+  // Once for the list: only a self-follow's row reads it, but every row would otherwise query.
+  const own = useOwnActivity();
   return (
     <LegendList
       style={{ flex: 1 }}
@@ -46,7 +49,7 @@ export function FeedFollowing() {
       onScroll={handleScroll}
       data={following}
       keyExtractor={(x) => x.userId}
-      renderItem={({ item }) => <FeedFollowingItem user={item.user} userId={item.userId} />}
+      renderItem={({ item }) => <FeedFollowingItem user={item.user} userId={item.userId} own={own} />}
       ItemSeparatorComponent={() => <View style={{ height: spacing[2] }} />}
       contentContainerStyle={{
         padding: spacing.pageHorizontalMargin,
@@ -56,11 +59,11 @@ export function FeedFollowing() {
   );
 }
 
-function FeedFollowingItem(props: { user: FeedUser; userId: string }) {
+function FeedFollowingItem(props: { user: FeedUser; userId: string; own: OwnActivity }) {
   const dispatch = useDispatch();
   const { t } = useTranslate();
   const today = useToday();
-  const activity = useAppSelectorWithArg(selectFollowingActivity, today).get(props.userId);
+  const activity = useAppSelectorWithArg(selectFollowingActivity, { own: props.own, today }).get(props.userId);
   const [confirmUnfollowVisible, setConfirmUnfollowVisible] = useState(false);
 
   const isAccepted = props.user.type === 'FollowedFeedUser';

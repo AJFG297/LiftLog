@@ -6,7 +6,7 @@ import { rounding, spacing, useAppTheme } from '@/hooks/useAppTheme';
 import { useFormatDate } from '@/hooks/useFormatDate';
 import { useToday } from '@/hooks/useToday';
 import { useAppSelector, useAppSelectorWhenFocusedWithArg } from '@/store';
-import { ActivityCell, selectActivityMonth, selectFollowsOtherUsers } from '@/store/activity';
+import { ActivityCell, OwnActivity, selectActivityMonth, selectFollowsOtherUsers } from '@/store/activity';
 import { LocalDate, Year, YearMonth } from '@js-joda/core';
 import { useTranslate } from '@tolgee/react';
 import { useCallback, useMemo } from 'react';
@@ -14,6 +14,8 @@ import { I18nManager, View } from 'react-native';
 import { Card } from 'react-native-paper';
 
 interface HistoryActivityCalendarProps {
+  /** From `useOwnActivity` on the screen, shared with its streak card. */
+  own: OwnActivity;
   currentYearMonth: YearMonth;
   selectedDate: LocalDate | undefined;
   onMonthChange: (yearMonth: YearMonth) => void;
@@ -21,6 +23,7 @@ interface HistoryActivityCalendarProps {
 }
 
 export function HistoryActivityCalendar({
+  own,
   currentYearMonth,
   selectedDate,
   onMonthChange,
@@ -33,7 +36,7 @@ export function HistoryActivityCalendar({
   const firstDayOfWeek = useAppSelector((x) => x.settings.firstDayOfWeek);
   const followsOthers = useAppSelector(selectFollowsOtherUsers);
 
-  const params = useMemo(() => ({ yearMonth: currentYearMonth, today }), [currentYearMonth, today]);
+  const params = useMemo(() => ({ own, yearMonth: currentYearMonth, today }), [own, currentYearMonth, today]);
   const { rows, crossesFeedHorizon } = useAppSelectorWhenFocusedWithArg(selectActivityMonth, params);
 
   const firstOfMonth = currentYearMonth.atDay(1);

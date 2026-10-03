@@ -41,19 +41,23 @@ export interface WorkoutFacts {
 export const THIRTY_DAY_GRID_CELLS = 35;
 
 /**
- * The `count` days ending on `today`, oldest first. `sessionsByDate` is `selectOwnSessionsByDate`, the
- * same grouping the activity calendar draws, keyed by `LocalDate.toString()`: finished workouts where
- * something counted was logged.
+ * The `count` days ending on `today`, oldest first. `sessions` are the finished workouts of that range
+ * (`WorkoutRepository.finishedBetween`); only those where something was logged count, as on the activity
+ * calendar.
  */
-export function historyDaysOf(
-  sessionsByDate: ReadonlyMap<string, readonly Session[]>,
-  today: LocalDate,
-  count: number,
-): HistoryDay[] {
+export function historyDaysOf(sessions: readonly Session[], today: LocalDate, count: number): HistoryDay[] {
+  const byDate = new Map<string, Session[]>();
+  for (const session of sessions) {
+    if (!session.isStarted) {
+      continue;
+    }
+    const key = session.date.toString();
+    byDate.set(key, [...(byDate.get(key) ?? []), session]);
+  }
   return Array.from({ length: count }, (_, index) => {
     const date = today.minusDays(count - 1 - index);
-    const sessions = [...(sessionsByDate.get(date.toString()) ?? [])].sort(latestFirst);
-    return { date, sessions, isToday: date.isEqual(today) };
+    const daySessions = [...(byDate.get(date.toString()) ?? [])].sort(latestFirst);
+    return { date, sessions: daySessions, isToday: date.isEqual(today) };
   });
 }
 

@@ -26,7 +26,6 @@ import {
   putStoredSession,
   selectExerciseById,
   selectExercises,
-  selectHistoryPersonalRecords,
   selectLatestExercises,
   selectRecentlyCompletedExercises,
   selectSessions,
@@ -118,9 +117,10 @@ async function appWithHistory() {
 }
 
 /** Everything that hangs off an exercise's history, read the way the screens read it. */
-function whatHangsOff(state: RootState, exerciseId: string) {
+async function whatHangsOff(db: ExpoSQLiteDatabase, state: RootState, exerciseId: string) {
   const movementKey = movementKeyFor(exerciseId, WEIGHTED);
-  const sessions = selectSessions(state);
+  const repository = new WorkoutRepository(db);
+  const sessions = await repository.finishedBetween(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 4, 1));
   const stats = calculateStats(sessions, 'kilograms', { from: LocalDate.of(2026, 1, 1), to: LocalDate.of(2026, 4, 1) });
   return {
     history: selectRecentlyCompletedExercises(state, undefined)(movementKey).map((x) => x.latestTime?.toString()),
@@ -128,7 +128,7 @@ function whatHangsOff(state: RootState, exerciseId: string) {
       .filter((x) => x.movementKey === movementKey)
       .map((x) => x.maxLiftedPerSessionStatistics.maxValue.value.toString()),
     // Records are found per movement; each one names the exercise as it was logged that day.
-    records: [...selectHistoryPersonalRecords(state).entries()].map(
+    records: [...(await repository.personalRecords()).entries()].map(
       ([sessionId, records]) => `${sessionId}: ${records.map((x) => x.exerciseName).join(', ')}`,
     ),
   };
@@ -140,7 +140,7 @@ describe('exercise identity through the store', () => {
     ['a copy-on-write edit of a built-in', 'Leg Press', legPress],
   ])('renaming %s keeps history, stats, records and carry-over attached', async (_, exerciseId, blueprint) => {
     const { db, app } = await appWithHistory();
-    const before = whatHangsOff(app.getState(), exerciseId);
+    const before = await whatHangsOff(db, app.getState(), exerciseId);
     expect(before.history).toHaveLength(3);
     expect(before.stats).toHaveLength(1);
     expect(before.records.length).toBeGreaterThan(0);
@@ -150,7 +150,7 @@ describe('exercise identity through the store', () => {
     await app.settle();
 
     expect(selectExerciseById(app.getState(), exerciseId)?.name).toBe('Renamed');
-    expect(whatHangsOff(app.getState(), exerciseId)).toEqual(before);
+    expect(await whatHangsOff(db, app.getState(), exerciseId)).toEqual(before);
 
     // Carry-over: the plan now calls it by its new name and still picks up last week's 105kg.
     const renamedInPlan = blueprint.with({ name: 'Renamed' });
@@ -177,7 +177,7 @@ describe('exercise identity through the store', () => {
       ),
     );
     await app.settle();
-    const after = whatHangsOff(app.getState(), exerciseId);
+    const after = await whatHangsOff(db, app.getState(), exerciseId);
     expect(after.history).toHaveLength(4);
     expect(after.stats).toEqual(['110']);
     expect(after.records.find((x) => x.startsWith('week-3'))).toContain('Renamed');
@@ -185,7 +185,7 @@ describe('exercise identity through the store', () => {
     // And after a restart, from what is on disk.
     const restarted = await startApp(db);
     expect(selectExerciseById(restarted.getState(), exerciseId)?.name).toBe('Renamed');
-    expect(whatHangsOff(restarted.getState(), exerciseId)).toEqual(after);
+    expect(await whatHangsOff(db, restarted.getState(), exerciseId)).toEqual(after);
   });
 
   it('stores the key columns from the exercise id', async () => {
@@ -198,14 +198,14 @@ describe('exercise identity through the store', () => {
   });
 
   it('keeps history whole across a language switch', async () => {
-    const { app } = await appWithHistory();
-    const before = whatHangsOff(app.getState(), 'Leg Press');
+    const { db, app } = await appWithHistory();
+    const before = await whatHangsOff(db, app.getState(), 'Leg Press');
 
     app.store.dispatch(setPreferredLanguage('ru'));
     await app.settle();
 
     expect(selectExercises(app.getState())['Leg Press']?.name).toBe('Жим ногами');
-    expect(whatHangsOff(app.getState(), 'Leg Press')).toEqual(before);
+    expect(await whatHangsOff(db, app.getState(), 'Leg Press')).toEqual(before);
   });
 
   it('links an imported plan to the exercises the user already has, by any name, without duplicates', async () => {
@@ -247,7 +247,7 @@ describe('exercise identity through the store', () => {
   });
 
   it('links a CSV import to existing exercises and makes one stub per unknown name', async () => {
-    const { app } = await appWithHistory();
+    const { db, app } = await appWithHistory();
     const exercisesBefore = Object.keys(selectExercises(app.getState()));
     const sets = [{ reps: 8, weight: 60, unit: 'kilograms' as const }];
     const workouts = sessionsFromNormalized(
@@ -278,7 +278,7 @@ describe('exercise identity through the store', () => {
     expect(Object.keys(selectExercises(app.getState())).toSorted()).toEqual(
       [...exercisesBefore, stubExerciseId('Sissy Squat')].toSorted(),
     );
-    expect(whatHangsOff(app.getState(), USER_EXERCISE).history).toHaveLength(5);
+    expect((await whatHangsOff(db, app.getState(), USER_EXERCISE)).history).toHaveLength(5);
   });
 
   it('keeps a renamed stub descriptor when a CSV repeats its original name', async () => {

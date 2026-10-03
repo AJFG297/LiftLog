@@ -1,5 +1,5 @@
-import { fuzzyMatchScore } from '@/components/presentation/workout-editor/exercise-fuzzy-match';
-import { ExerciseDescriptor } from '@/models/exercise-models';
+import { fuzzyMatchScore } from '@/models/exercise-fuzzy-match';
+import { ExerciseDescriptor, musclesOf } from '@/models/exercise-models';
 import Enumerable from 'linq';
 
 export interface ExerciseFilterResult {
@@ -26,7 +26,7 @@ export function filterExercises(
     .where(
       (x) =>
         (!muscleFilters.length ||
-          x.entry.exercise.muscles.some((exerciseMuscle) => muscleFilters.includes(exerciseMuscle))) &&
+          musclesOf(x.entry.exercise).some((exerciseMuscle) => muscleFilters.includes(exerciseMuscle))) &&
         (!trimmedSearchText || x.score !== null),
     )
     .orderByDescending((x) => x.score ?? 0)
@@ -49,7 +49,8 @@ export function filterExercises(
           instructions: '',
           level: '',
           mechanic: '',
-          muscles: muscleFilters,
+          primaryMuscles: muscleFilters,
+          secondaryMuscles: [],
         }
       : 'NONE';
   return { ids, suggestion };

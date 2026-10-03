@@ -1,5 +1,5 @@
 import { MovementKey } from '@/models/blueprint-models';
-import { Session } from '@/models/session-models';
+import { RecordedWeightedExercise, Session } from '@/models/session-models';
 import { Weight } from '@/models/weight';
 import { calculateOneRepMax } from '@/store/stats/calculate-stats';
 
@@ -8,26 +8,58 @@ export interface PersonalRecord {
   oneRepMax: Weight;
 }
 
-function bestOneRepMax(session: Session): Map<MovementKey, PersonalRecord> {
-  const best = new Map<MovementKey, PersonalRecord>();
+/** A movement's best estimated 1RM in one workout, with the set it came from. */
+interface BestOneRepMax extends PersonalRecord, OneRepMaxSet {}
+
+/** An estimated 1RM and the set it comes from, as lifted. */
+export interface OneRepMaxSet {
+  oneRepMax: Weight;
+  weight: Weight;
+  reps: number;
+}
+
+/**
+ * The set with the best Epley estimate in `exercise`, over the logged sets that count towards records, with
+ * bodyweight folded in. Undefined for a movement that tracks no load, or with no such set logged.
+ */
+export function bestOneRepMaxSet(
+  exercise: RecordedWeightedExercise,
+  bodyweight: Weight | undefined,
+): OneRepMaxSet | undefined {
+  if (!exercise.tracksResistance) {
+    return undefined;
+  }
+  let best: OneRepMaxSet | undefined;
+  for (const potentialSet of exercise.setsCountingTowards('countsTowardsPrs')) {
+    const reps = potentialSet.set?.repsCompleted;
+    if (!reps) {
+      continue;
+    }
+    const oneRepMax = calculateOneRepMax(potentialSet, exercise.effectiveWeight(potentialSet, bodyweight));
+    if (!best || oneRepMax.isGreaterThan(best.oneRepMax)) {
+      best = { oneRepMax, weight: potentialSet.weight, reps };
+    }
+  }
+  return best;
+}
+
+function bestOneRepMax(session: Session): Map<MovementKey, BestOneRepMax> {
+  const best = new Map<MovementKey, BestOneRepMax>();
 
   for (const exercise of session.recordedExercises) {
-    if (exercise.type !== 'RecordedWeightedExercise' || !exercise.isStarted || !exercise.tracksResistance) {
+    if (exercise.type !== 'RecordedWeightedExercise' || !exercise.isStarted) {
+      continue;
+    }
+    const candidate = bestOneRepMaxSet(exercise, session.bodyweight);
+    if (!candidate) {
       continue;
     }
 
     // Same key selectRecentlyCompletedExercises uses; it already guards the cardio/weighted name collision.
     const key = exercise.movementKey();
-
-    for (const potentialSet of exercise.setsCountingTowards('countsTowardsPrs')) {
-      if (!potentialSet.set?.repsCompleted) {
-        continue;
-      }
-      const oneRepMax = calculateOneRepMax(potentialSet, exercise.effectiveWeight(potentialSet, session.bodyweight));
-      const current = best.get(key);
-      if (!current || oneRepMax.isGreaterThan(current.oneRepMax)) {
-        best.set(key, { exerciseName: exercise.blueprint.name, oneRepMax });
-      }
+    const current = best.get(key);
+    if (!current || candidate.oneRepMax.isGreaterThan(current.oneRepMax)) {
+      best.set(key, { exerciseName: exercise.blueprint.name, ...candidate });
     }
   }
 
@@ -51,7 +83,7 @@ export function findPersonalRecords(sessionsOldestFirst: Session[]): Map<string,
       const previous = runningBest.get(key);
 
       if (previous && candidate.oneRepMax.isGreaterThan(previous)) {
-        records.push(candidate);
+        records.push({ exerciseName: candidate.exerciseName, oneRepMax: candidate.oneRepMax });
       }
 
       if (!previous || candidate.oneRepMax.isGreaterThan(previous)) {
@@ -74,52 +106,84 @@ export function findPersonalRecords(sessionsOldestFirst: Session[]): Map<string,
  */
 export type SessionRecord =
   | { kind: 'heaviestWeight'; key: MovementKey; exerciseName: string; weight: Weight; reps: number; previous: Weight }
-  | { kind: 'estimatedOneRepMax'; key: MovementKey; exerciseName: string; oneRepMax: Weight; previous: Weight };
+  | {
+      kind: 'estimatedOneRepMax';
+      key: MovementKey;
+      exerciseName: string;
+      oneRepMax: Weight;
+      /** The set the estimate comes from, as lifted. */
+      weight: Weight;
+      reps: number;
+      previous: Weight;
+    };
 
 /**
- * The records `session` sets against `earlier`, the workouts before it. As in {@link findPersonalRecords},
- * an exercise seen for the first time sets none. Heaviest weight only counts on an exercise loaded with
- * external weight, since a bodyweight movement's load moves with the lifter's bodyweight.
+ * The records `session` sets against `earlier`, the workouts before it (in any order). As in
+ * {@link findPersonalRecords}, an exercise seen for the first time sets none. See {@link RecordLedger} for
+ * the rules; to walk a whole history, keep one ledger rather than calling this per workout.
  */
 export function sessionRecords(session: Session, earlier: readonly Session[]): SessionRecord[] {
-  const previousOneRepMax = new Map<MovementKey, Weight>();
-  const previousHeaviest = new Map<MovementKey, Weight>();
+  const ledger = new RecordLedger();
   for (const past of earlier) {
-    for (const [key, record] of bestOneRepMax(past)) {
-      const best = previousOneRepMax.get(key);
-      if (!best || record.oneRepMax.isGreaterThan(best)) {
-        previousOneRepMax.set(key, record.oneRepMax);
-      }
-    }
-    for (const [key, heaviest] of heaviestSets(past)) {
-      const best = previousHeaviest.get(key);
-      if (!best || heaviest.weight.isGreaterThan(best)) {
-        previousHeaviest.set(key, heaviest.weight);
-      }
-    }
+    ledger.add(past);
   }
+  return ledger.add(session);
+}
 
-  const heaviestToday = heaviestSets(session);
-  const records: SessionRecord[] = [];
-  for (const [key, candidate] of bestOneRepMax(session)) {
-    const heaviest = heaviestToday.get(key);
-    const heaviestBefore = previousHeaviest.get(key);
-    if (heaviest && heaviestBefore && heaviest.weight.isGreaterThan(heaviestBefore)) {
-      records.push({ kind: 'heaviestWeight', key, ...heaviest, previous: heaviestBefore });
-      continue;
+/**
+ * The running bests per movement (best estimated 1RM and heaviest weight), fed one workout at a time.
+ * {@link add} returns the records that workout sets against everything added before it, then folds it in,
+ * so walking a history oldest first yields each workout's records in a single pass.
+ *
+ * The rules: a heavier set than ever is a `heaviestWeight` record; otherwise a better estimated 1RM is an
+ * `estimatedOneRepMax` one, so a movement sets at most one per workout. A movement with no earlier best sets
+ * none. Heaviest weight only counts on an exercise loaded with external weight, since a bodyweight
+ * movement's load moves with the lifter's bodyweight; a movement that tracks no load sets neither.
+ */
+export class RecordLedger {
+  private readonly bestOneRepMax = new Map<MovementKey, Weight>();
+  private readonly heaviest = new Map<MovementKey, Weight>();
+
+  add(session: Session): SessionRecord[] {
+    const oneRepMaxToday = bestOneRepMax(session);
+    const heaviestToday = heaviestSets(session);
+
+    const records: SessionRecord[] = [];
+    for (const [key, candidate] of oneRepMaxToday) {
+      const heaviest = heaviestToday.get(key);
+      const heaviestBefore = this.heaviest.get(key);
+      if (heaviest && heaviestBefore && heaviest.weight.isGreaterThan(heaviestBefore)) {
+        records.push({ kind: 'heaviestWeight', key, ...heaviest, previous: heaviestBefore });
+        continue;
+      }
+      const before = this.bestOneRepMax.get(key);
+      if (before && candidate.oneRepMax.isGreaterThan(before)) {
+        records.push({
+          kind: 'estimatedOneRepMax',
+          key,
+          exerciseName: candidate.exerciseName,
+          oneRepMax: candidate.oneRepMax,
+          weight: candidate.weight,
+          reps: candidate.reps,
+          previous: before,
+        });
+      }
     }
-    const before = previousOneRepMax.get(key);
-    if (before && candidate.oneRepMax.isGreaterThan(before)) {
-      records.push({
-        kind: 'estimatedOneRepMax',
-        key,
-        exerciseName: candidate.exerciseName,
-        oneRepMax: candidate.oneRepMax,
-        previous: before,
-      });
+
+    for (const [key, candidate] of oneRepMaxToday) {
+      const best = this.bestOneRepMax.get(key);
+      if (!best || candidate.oneRepMax.isGreaterThan(best)) {
+        this.bestOneRepMax.set(key, candidate.oneRepMax);
+      }
     }
+    for (const [key, candidate] of heaviestToday) {
+      const best = this.heaviest.get(key);
+      if (!best || candidate.weight.isGreaterThan(best)) {
+        this.heaviest.set(key, candidate.weight);
+      }
+    }
+    return records;
   }
-  return records;
 }
 
 interface HeaviestSet {

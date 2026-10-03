@@ -1,12 +1,11 @@
 import { RecordedExercise, Session } from '@/models/session-models';
 import { lineageKeys, MovementKey, ProgressionKey } from '@/models/blueprint-models';
-import { LocalDate, OffsetDateTime, YearMonth, ZoneId } from '@js-joda/core';
+import { LocalDate, OffsetDateTime, ZoneId } from '@js-joda/core';
 import { createAction, createSelector, createSlice, PayloadAction, WritableDraft } from '@reduxjs/toolkit';
 import { shallowEqual } from 'react-redux';
 import Enumerable from 'linq';
 import { TemporalComparer } from '@/models/comparers';
-import { ExerciseDescriptor } from '@/models/exercise-models';
-import { findPersonalRecords } from '@/store/stats/personal-records';
+import { ExerciseDescriptor, musclesOf } from '@/models/exercise-models';
 
 interface StoredSessionState {
   isHydrated: boolean;
@@ -286,19 +285,6 @@ function updateDerivatives(state: WritableDraft<StoredSessionState>, session: Se
   recordLatest(state.latestExercises as Record<ProgressionKey, RecordedExercise | undefined>, session);
 }
 
-export const selectSessionsBy = createSelector(
-  [
-    storedSessionsSlice.selectors.selectSessions,
-    (_, minDate: LocalDate) => minDate,
-    (_, __, maxDate: LocalDate) => maxDate,
-  ],
-  (sessions, minDate, maxDate) =>
-    Object.values(sessions).filter(
-      (x) =>
-        (x.date.isAfter(minDate) || x.date.isEqual(minDate)) && (x.date.isBefore(maxDate) || x.date.isEqual(maxDate)),
-    ),
-);
-
 export const initializeStoredSessionsStateSlice = createAction('initializeStoredSessionsStateSlice');
 
 export const {
@@ -422,28 +408,9 @@ export const selectSessionsBefore = createSelector(
   },
 );
 
-/**
- * Records per session across the user's whole history. Unlike the feed, which only holds its 90-day retention
- * window, nothing here is truncated, so these are all-time bests.
- */
-export const selectHistoryPersonalRecords = createSelector([selectSessions], (sessions) =>
-  findPersonalRecords(
-    Enumerable.from(sessions)
-      .orderBy((x) => getSessionReferenceTime(x), TemporalComparer)
-      .toArray(),
-  ),
-);
-
-export const selectSessionsInMonth = createSelector([selectSessions, (_, ym: YearMonth) => ym], (sessions, ym) =>
-  Enumerable.from(sessions)
-    .where((x) => x.date.year() === ym.year() && x.date.month().equals(ym.month()))
-    .orderByDescending((x) => getSessionReferenceTime(x), TemporalComparer)
-    .toArray(),
-);
-
 export const selectMuscles = createSelector([selectExercises], (exercises) =>
   Enumerable.from(Object.entries(exercises))
-    .selectMany(([, x]) => x.muscles)
+    .selectMany(([, x]) => musclesOf(x))
     .distinct()
     .orderBy((x) => x)
     .toArray(),

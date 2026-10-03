@@ -12,7 +12,7 @@ the plan import) opens in the Routines tab instead of switching to You:
 | --- | --- | --- |
 | Home | `(session)/` | Home, the workout screen and its sheets, and `history/`: All history (`/history`, the month list that used to be the History tab) and the workout editor (`/history/edit`). |
 | Routines | `routines/` | The Routines screen; `manage-workouts/`, a program's page and the routine editor; `import-plan-info` and `import-plan`, the plan import; and `ai/planner` (see [Routines.md](./Routines.md)). |
-| Progress | `stats/` | The stats screens, relabelled. |
+| Progress | `stats/` | Strength, Training and Body over a chosen range, plus Records and All exercises ([Progress.md](./Progress.md)). |
 | You | `settings/` | A profile card, then the settings, then Feed when `showFeed` is on. |
 
 The feed isn't a tab any more. It lives in `app/src/app/feed/`, on the root stack over the tabs, so
@@ -25,7 +25,7 @@ can't be the focused one (expo-router throws in development and shows the first 
 
 `components/smart/home.tsx`, drawn from `components/presentation/home/`.
 
-- **Header.** Today's date, "Your training", and the streak chip: `selectStreakStats`' completed weeks, plus
+- **Header.** Today's date, "Your training", and the streak chip: `useStreakStats`' completed weeks, plus
   this week once it's met the target, as the old streak card counted it. No streak, no chip.
 - **Up next.** The first of `program.upcomingSessions`: the active plan's next workout as progression built
   it. It says which day of the plan it is, its first two exercises, a time estimate and when it was last
@@ -40,7 +40,7 @@ can't be the focused one (expo-router throws in development and shows the first 
   a legend. Each column of the calendar is one weekday and its last row is the strip, so both views end on
   today, which is ringed with a dashed accent line. A day with a workout is filled in its routine colour.
 - **History.** A card per workout in the range, newest first: date, routine colour, name, a PR badge when
-  it set a personal record (`selectHistoryPersonalRecords`), length, volume, sets and its first three
+  it set a personal record (`usePersonalRecords`), length, volume, sets and its first three
   exercises. The 7-day view adds a thin row for each day without one. A card opens
   `homeWorkoutHref(sessionId)`, the workout editor for now; the workout detail screen (PM-25) swaps in
   there. All history opens `/history`.
@@ -48,11 +48,14 @@ can't be the focused one (expo-router throws in development and shows the first 
 
 ### Where the numbers come from
 
-Nothing new is stored. The ranges read `selectOwnSessionsByDate`, the grouping the old activity calendar
-draws: finished workouts where something counted was logged, keyed by the day they were done. A test
-(`models/home/history-range.spec.ts`) holds the 30-day view to `selectActivityMonth`'s day counts. Volume
-is `sessionVolume`, the calendar's own measure. A workout's length is from its first set to its last, so a
-workout with one logged set has none and is left out of the time and the average.
+Nothing new is stored. The ranges read the last 30 days of finished workouts from the workout tables
+(`useWorkoutQuery` over `WorkoutRepository.finishedBetween`, see [Storage.md](./Storage.md)) and keep the
+ones where something counted was logged, grouped by the day they were done, as the activity calendar does.
+A test (`models/home/history-range.spec.ts`) holds the 30-day view to `selectActivityMonth`'s day counts.
+Volume is `sessionVolume`, the calendar's own measure, which is also what `workout.volume_kg` holds. A
+workout's length is from its first set to its last, so a workout with one logged set has none and is left
+out of the time and the average. The Up next detail reads the last ten runs of that workout
+(`latestNamed`), not the whole history.
 
 The time estimate (`estimatedMinutesOf`) is the median of the last five times the workout was done, which
 already reflects how long this person rests. A workout never done is estimated from its plan: each set at
