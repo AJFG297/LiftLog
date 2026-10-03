@@ -281,16 +281,16 @@ Settled differences from the steps below:
   matched the fixture.
 
 **Steps 4–6 done in PM-14**, with the phase 3 docs. Settled differences from the steps below:
-- Redux holds the workout in progress and one editing slot, not a map of everything: the history editor
-  dispatches `openSessionForEditing(id)`, which reads the workout with `WorkoutRepository.get` into the slot.
-  A put opens what it writes there, and the workout that stops being in progress moves there, where its
-  summary reads it. `setStoredSessions`, `selectSessions`, `earliestSession`, `ProgressRepository` and
+- Redux holds the workout in progress and two slots, not a map of everything: the history editor dispatches
+  `openSessionForEditing(id)`, which reads the workout with `WorkoutRepository.get` into the editing slot,
+  which nothing else closes. A put opens what it writes in the recent slot, and the workout that stops being
+  in progress moves there, where its summary reads it (`openSessionForSummary` after a restart). `setStoredSessions`, `selectSessions`, `earliestSession`, `ProgressRepository` and
   `useAppSelectorWhenFocusedWithArg` are gone; `useAppSelectorWhenFocused` stays for the workout-in-progress
   bar.
 - New reads: `active()`, `get(id)`, `existingIds(ids)`, `inExportOrder(batchSize)`, `routineHistory(names)`
-  and `startedCount()`. The Routines screen's last-done dates and workout count, and the You profile's count
-  and first date, are SQL aggregates. The round count still walks the routine name of each done workout,
-  a one-column read, since where a round ends depends on every workout before it.
+  and `startedWorkouts()`. The Routines screen's last-done dates and workout count, and the You profile's
+  count and first date, are SQL aggregates. The round count still walks the routine name of each done
+  workout, a one-column read, since where a round ends depends on every workout before it.
 - The export reads its order once, then 200 workouts at a time, and joins the serialised batches: byte for
   byte the old file. The order is `reference_time_ms` then the order rows were first stored, as hydration
   read them.

@@ -206,7 +206,8 @@ every screen reads what it shows from these tables when it is shown (see
 one in progress included:
 
 - `active()` - the workout in progress, if any: what startup loads.
-- `get(id)` - one workout by id: the workout detail, the history editor's editing slot, and the feed
+- `get(id)` - one workout by id: the workout detail, the slots below (the history editor, a summary opened
+  by link), and the feed
   publishing a finished workout.
 - `existingIds(ids)` - which of the ids are stored: the CSV import's dedupe, and whether a cheer arriving in
   the inbox is for a workout of yours.
@@ -242,11 +243,13 @@ Every read below covers _finished_ workouts only: the one in progress (`active =
   except on an exact e1RM tie that floats can't tell apart.
 - `routineHistory(names)` - how far a program's routines have got, counting a workout as done when it has
   any set logged (a warm-up included) and isn't freeform: the last day each was done and how many were
-  done, as SQL aggregates, and the routine of each done workout oldest first, which the round count walks.
+  done, as SQL aggregates, and how many routines were done this round (`models/routine-rounds.ts`). The
+  round walks the routine name of every done workout, oldest first: where a round ends depends on all of
+  them (A B A B read from its second workout splits differently), so no bounded tail gives the same answer.
   The Routines screen's active program card and rows.
-- `startedCount()` - how many workouts were started: the You profile.
-- `earliestDate()` - `MIN(date)`: where all-time stats start, so deleting the first workout moves it, and
-  the "since" on the You profile.
+- `startedWorkouts()` - how many workouts were started and the date of the first, over the same workouts:
+  the You profile's "N workouts since".
+- `earliestDate()` - `MIN(date)`: where all-time stats start, so deleting the first workout moves it.
 - `dailyActivity()` - one row per day with a started workout: how many and `SUM(volume_kg)`. The
   calendar's counts and levels, the week strips, the streak and "last workout" all derive from it.
 - `volumeScale()` - the 10th/90th percentile of `volume_kg` over started workouts (`volumeScaleOf`).
@@ -398,16 +401,23 @@ built-in catalog.
 ## Sessions, and the one in progress
 
 The history lives in the workout tables, not in Redux. `storedSessions.sessions` holds the _open_
-workouts only, keyed by id, and never more than two:
+workouts only, keyed by id, and never more than three:
 
 - **The workout in progress**, `activeSessionId`. Startup loads it with `WorkoutRepository.active()`
   (`setActiveSession`); starting a workout puts it and points `activeSessionId` at it.
-- **The editing slot**, `editingSessionId`: one other workout. The history editor (`PastWorkoutEditor`, on
-  `/history/edit` and `/workout-detail/edit`) dispatches `openSessionForEditing(id)` when it mounts, and
-  the effect reads that workout with `get(id)` into the slot (`openSession`), unless it is open already.
-  A put opens the workout it writes there too (the History "add a workout on this day", Undo after a
-  delete), and the workout that stops being in progress moves there, which is where its summary keeps
-  reading it. Opening another workout closes the one in the slot; deleting it empties the slot.
+- **The editing slot**, `editingSessionId`: the past workout open in the history editor
+  (`PastWorkoutEditor`, on `/history/edit` and `/workout-detail/edit`), which dispatches
+  `openSessionForEditing(id)` when it mounts; the effect reads that workout with `get(id)` into the slot
+  (`openSession`), unless it is open already. Only opening another workout for editing, or deleting this
+  one, empties it, so finishing or starting a workout while the editor is open can't close it under the
+  editor.
+- **The recent slot**, `recentSessionId`: the workout last put that wasn't open (a workout being started,
+  the History "add a workout on this day", Undo after a delete) and the workout that stops being in
+  progress, which its summary keeps reading. The next one replaces it. A summary opened by link or after a
+  restart dispatches `openSessionForSummary(id)` to read its workout into this slot.
+
+A workout asked for that isn't in the tables sets `notFoundSessionId`, so the summary can leave rather
+than wait.
 
 Everything else reads the tables when it is shown (see [Workouts](#workouts)): the History list and
 calendar, Home, Stats, Progress, the workout detail, the Routines screen's counts, the You profile, the
@@ -417,7 +427,8 @@ editing different workouts cannot collide. Use `selectSession(state, id)` for an
 `selectActiveSession` for the live one.
 
 - `putStoredSession` / `updateStoredSession` mean "this workout changed" and only write its content. An
-  update to a workout that isn't open does nothing, so a screen opens what it edits first. An update that
+  update to a workout that isn't open does nothing (development builds log a warning), so a screen opens
+  what it edits first. An update that
   changes only what isn't stored (the rest timer, a running cardio timer) writes nothing.
   `upsertStoredSessions` (restore, import) writes without opening anything. `sessionFinished` means "the
   user is done with it" and is what queues the feed publish, exports to the health aggregator and clears

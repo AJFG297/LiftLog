@@ -9,8 +9,9 @@ work to find the docs relevant to your area, and update it whenever you add, rem
   file per key) and user data (SQLite via Drizzle). Both are injected into Redux effects via `extra`.
   Covers which to use, how to add to each, the relational workout tables behind `WorkoutRepository` and
   its reads, how workouts reference exercises by id (the `ExerciseResolver` and the key columns), what
-  startup loads (only the workout in progress and the carry-over cache), the editing slot past workouts
-  are opened into, and the snapshots, startup-reads test and benchmark that guard it.
+  startup loads (only the workout in progress and the carry-over cache), the slots past workouts are
+  opened into (the history editor's, and the recent one a summary reads), and the snapshots,
+  startup-reads test and benchmark that guard it.
 - [Migrations.md](./Migrations.md) - the `createMigrations()` chain in `app/src/models/storage/versions/`
   that brings previously-persisted JSON up to the shape the app expects. Read alongside `Storage.md`.
 - [WorkoutWorker.md](./WorkoutWorker.md) - the platform-specific, message-driven execution environment

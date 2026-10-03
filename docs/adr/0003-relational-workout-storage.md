@@ -35,8 +35,8 @@ PM-14. This records its decisions.
   descriptor. `movement_key` and `progression_key` are built from the id.
 - **D5 - History reads go through a repository, not Redux.** `WorkoutRepository` owns every read and write
   of the tables. Screens read what they show through `useWorkoutQuery`, which re-queries after the
-  repository reports a write. Redux holds only the workout in progress, one editing slot the history
-  editor loads by id, and small caches: the carry-over cache and the stats view. Startup reads the workout
+  repository reports a write. Redux holds only the workout in progress, an editing slot the history
+  editor loads by id, a recent slot for the workout just finished, and small caches: the carry-over cache and the stats view. Startup reads the workout
   in progress and the carry-over cache, nothing else.
 - **D6 - Query columns are computed on write.** `reference_time_ms`, `volume_kg`, `movement_key`,
   `progression_key`, `lineage`, `latest_time_ms`, `completed_at_ms`, `weight_kg` and
