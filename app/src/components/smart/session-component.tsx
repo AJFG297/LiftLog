@@ -15,6 +15,7 @@ import { SurfaceText } from '@/components/presentation/foundation/surface-text';
 import WeightFormat from '../presentation/foundation/weight-format';
 import { formatDuration } from '@/utils/format-date';
 import { useAddExercise } from '@/hooks/useAddExercise';
+import { PreviousPerformancesProvider } from '@/components/smart/previous-performances';
 import { RecordedExerciseView } from '@/components/smart/recorded-exercise-view';
 
 export default function SessionComponent(props: {
@@ -152,13 +153,15 @@ export default function SessionComponent(props: {
   );
 
   return (
-    <FullHeightScrollView floatingChildren={floatingBottomContainer}>
-      {props.header}
-      {notesComponent}
-      {emptyInfo}
-      <ItemList items={session.recordedExercises} renderItem={renderItem} />
-      {bodyweight}
-      {workoutSummary}
-    </FullHeightScrollView>
+    <PreviousPerformancesProvider session={session}>
+      <FullHeightScrollView floatingChildren={floatingBottomContainer}>
+        {props.header}
+        {notesComponent}
+        {emptyInfo}
+        <ItemList items={session.recordedExercises} renderItem={renderItem} />
+        {bodyweight}
+        {workoutSummary}
+      </FullHeightScrollView>
+    </PreviousPerformancesProvider>
   );
 }

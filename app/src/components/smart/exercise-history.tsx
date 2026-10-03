@@ -2,8 +2,9 @@ import { SurfaceText } from '@/components/presentation/foundation/surface-text';
 import { ExerciseHistoryList } from '@/components/presentation/workout/exercise-history-list';
 import { spacing } from '@/hooks/useAppTheme';
 import { ExerciseBlueprint, ExerciseId, movementKeyFor } from '@/models/blueprint-models';
+import { useWorkoutQuery } from '@/hooks/useWorkoutQuery';
 import { useAppSelectorWithArg } from '@/store';
-import { selectExerciseById, selectRecentlyCompletedExercises } from '@/store/stored-sessions';
+import { selectExerciseById } from '@/store/stored-sessions';
 import { Href } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -18,10 +19,9 @@ export function ExerciseHistory(props: {
   exerciseName: string;
 }) {
   // No session to exclude: this sheet is opened from an exercise, and shows the whole lineage.
-  const exercises = useAppSelectorWithArg(
-    selectRecentlyCompletedExercises,
-    undefined,
-  )(movementKeyFor(props.exerciseId, props.type));
+  const movement = movementKeyFor(props.exerciseId, props.type);
+  const exercises =
+    useWorkoutQuery((repository) => repository.previousPerformances([movement]), [movement])?.get(movement) ?? [];
   // The exercise's current name, which a rename in the exercise list may have changed.
   const title = useAppSelectorWithArg(selectExerciseById, props.exerciseId)?.name ?? props.exerciseName;
 

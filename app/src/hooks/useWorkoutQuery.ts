@@ -1,7 +1,15 @@
 import { useServices } from '@/components/smart/services-provider';
-import { WorkoutRepository } from '@/services/workout-repository';
+import { WorkoutRepository, WorkoutWrite } from '@/services/workout-repository';
 import { useIsFocused } from 'expo-router';
 import { DependencyList, useEffect, useRef, useState } from 'react';
+
+export interface WorkoutQueryOptions {
+  /**
+   * Writes that can't change the answer, which the query then doesn't re-run for: a query that leaves the
+   * workout in progress out need not run again on every set logged in it.
+   */
+  ignoreWrite?: (write: WorkoutWrite) => boolean;
+}
 
 /**
  * Reads from the workout tables and keeps the result current: `query` runs on mount, again whenever `deps`
@@ -19,6 +27,7 @@ import { DependencyList, useEffect, useRef, useState } from 'react';
 export function useWorkoutQuery<T>(
   query: (repository: WorkoutRepository) => Promise<T>,
   deps: DependencyList,
+  { ignoreWrite }: WorkoutQueryOptions = {},
 ): T | undefined {
   const { workoutRepository } = useServices();
   const isFocused = useIsFocused();
@@ -28,10 +37,16 @@ export function useWorkoutQuery<T>(
   const lastRun = useRef<{ deps: DependencyList; generation: number } | undefined>(undefined);
   const latestQuery = useRef(query);
   latestQuery.current = query;
+  const latestIgnoreWrite = useRef(ignoreWrite);
+  latestIgnoreWrite.current = ignoreWrite;
 
   // Subscribed before the first query runs (effects run in order), so a write can't slip between them.
   useEffect(() => {
-    return workoutRepository.subscribe(() => setGeneration((n) => n + 1));
+    return workoutRepository.subscribe((write) => {
+      if (!latestIgnoreWrite.current?.(write)) {
+        setGeneration((n) => n + 1);
+      }
+    });
   }, [workoutRepository]);
 
   useEffect(() => {

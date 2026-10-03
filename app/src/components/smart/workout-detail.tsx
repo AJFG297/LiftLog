@@ -11,6 +11,7 @@ import { formatExerciseSummary } from '@/components/presentation/summary/format-
 import { spacing, useAppTheme } from '@/hooks/useAppTheme';
 import { useFormatDate } from '@/hooks/useFormatDate';
 import { useStartWorkoutWithConfirmation } from '@/hooks/useStartWorkoutWithConfirmation';
+import { useWorkoutComparison } from '@/hooks/useWorkoutComparison';
 import { MovementKey } from '@/models/blueprint-models';
 import { SharedSession } from '@/models/feed-models';
 import { RecordedWeightedExercise } from '@/models/session-models';
@@ -40,15 +41,7 @@ import {
   removeSessionFromProgram,
   selectActiveProgram,
 } from '@/store/program';
-import { sessionRecords } from '@/store/stats/personal-records';
-import {
-  deleteStoredSession,
-  putStoredSession,
-  selectPreviousComparableSession,
-  selectSession,
-  selectSessionsBefore,
-  sessionFinished,
-} from '@/store/stored-sessions';
+import { deleteStoredSession, putStoredSession, selectSession, sessionFinished } from '@/store/stored-sessions';
 import { formatTimeRange } from '@/utils/format-time-range';
 import { localeFormatBigNumber } from '@/utils/locale-bignumber';
 import { uuid } from '@/utils/uuid';
@@ -75,11 +68,9 @@ export function WorkoutDetail({ sessionId }: { sessionId: string }) {
   const locale = useAppSelector((x) => x.settings.preferredLanguage);
   const showFeed = useAppSelector((x) => x.settings.showFeed);
   const unit: WeightUnit = useAppSelector((x) => x.settings.useImperialUnits) ? 'pounds' : 'kilograms';
-  // Edit workout opens on top of this screen, and the records sweep the whole history, so an edit there must
-  // not recompute them here.
+  // Edit workout opens on top of this screen; the comparison is re-read once it comes back into focus.
   const session = useAppSelectorWhenFocusedWithArg(selectSession, sessionId);
-  const previous = useAppSelectorWhenFocusedWithArg(selectPreviousComparableSession, session);
-  const earlier = useAppSelectorWhenFocusedWithArg(selectSessionsBefore, session);
+  const comparison = useWorkoutComparison(session);
   const program = useAppSelector(selectActiveProgram);
   const programId = useAppSelector((x) => x.program.activePlanId);
   const receivedReactions = useAppSelector(selectReceivedReactionsByEvent);
@@ -100,10 +91,10 @@ export function WorkoutDetail({ sessionId }: { sessionId: string }) {
     );
   }
 
-  const records = sessionRecords(session, earlier);
+  const records = comparison?.records ?? [];
   const rowsByExercise = sessionSetRows(session, records);
   const changes = new Map<MovementKey, BestSetChange>(
-    bestSetComparisons(session, previous).map((comparison) => [comparison.key, comparison.change]),
+    bestSetComparisons(session, comparison?.previous).map((x) => [x.key, x.change]),
   );
 
   const doAgain = () => start(repeatSession(session, LocalDate.now(), uuid()));

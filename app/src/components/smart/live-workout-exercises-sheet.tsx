@@ -7,6 +7,7 @@ import { formatWeightText } from '@/components/presentation/foundation/weight-fo
 import { ExerciseOverviewRow, SupersetGroupHeader } from '@/components/presentation/live-workout/exercise-overview-row';
 import { ReorderableItem, ReorderableList } from '@/components/presentation/live-workout/reorderable-list';
 import { targetLabel } from '@/components/presentation/live-workout/target-text';
+import { PreviousPerformancesProvider } from '@/components/smart/previous-performances';
 import { getSessionExerciseEditorHref } from '@/components/smart/session-exercise-editor';
 import { useAddExercise } from '@/hooks/useAddExercise';
 import { spacing, useAppTheme } from '@/hooks/useAppTheme';
@@ -49,7 +50,11 @@ export function LiveWorkoutExercisesSheet() {
     }
   }, [hasSession, back]);
 
-  return session ? <SheetContent session={session} /> : null;
+  return session ? (
+    <PreviousPerformancesProvider session={session}>
+      <SheetContent session={session} />
+    </PreviousPerformancesProvider>
+  ) : null;
 }
 
 function SheetContent({ session }: { session: Session }) {

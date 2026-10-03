@@ -1,5 +1,6 @@
 import ConfirmationDialog from '@/components/presentation/foundation/confirmation-dialog';
 import { LiveWorkout } from '@/components/smart/live-workout';
+import { PreviousPerformancesProvider } from '@/components/smart/previous-performances';
 import { useAppSelector } from '@/store';
 import { useDispatch } from 'react-redux';
 import { selectActiveSession, updateStoredSession } from '@/store/stored-sessions';
@@ -47,11 +48,13 @@ export default function Index() {
   return (
     <>
       {keepAwake && <KeepAwake />}
-      <LiveWorkout
-        session={session}
-        updateSession={(update) => dispatch(updateStoredSession({ sessionId: session.id, update }))}
-        onFinish={() => save()}
-      />
+      <PreviousPerformancesProvider session={session}>
+        <LiveWorkout
+          session={session}
+          updateSession={(update) => dispatch(updateStoredSession({ sessionId: session.id, update }))}
+          onFinish={() => save()}
+        />
+      </PreviousPerformancesProvider>
       <ConfirmationDialog
         okText={t('generic.finish.button')}
         onOk={() => save(true)}

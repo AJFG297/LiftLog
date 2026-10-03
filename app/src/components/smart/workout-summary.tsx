@@ -13,6 +13,7 @@ import { SHEET_OVER_SUMMARY_HREF, useUndoRoutineUpdate } from '@/components/smar
 import { useFinishWorkout } from '@/hooks/useFinishWorkout';
 import { useFormatDate } from '@/hooks/useFormatDate';
 import { useOnDismiss } from '@/hooks/useOnDismiss';
+import { useWorkoutComparison } from '@/hooks/useWorkoutComparison';
 import { fontFamily, numberStyle, spacing, useAppTheme } from '@/hooks/useAppTheme';
 import { formatRepsTarget } from '@/models/blueprint-models';
 import { SharedSession } from '@/models/feed-models';
@@ -31,13 +32,11 @@ import {
 import { useAppSelector, useAppSelectorWithArg } from '@/store';
 import { encryptAndShare } from '@/store/feed';
 import { selectActiveProgram, selectRoutineUpdateReceipt, setRoutineUpdateReceipt } from '@/store/program';
-import { SessionRecord, sessionRecords } from '@/store/stats/personal-records';
+import { SessionRecord } from '@/store/stats/personal-records';
 import {
   selectActiveSessionId,
   selectLatestExercises,
-  selectPreviousComparableSession,
   selectSession,
-  selectSessionsBefore,
   updateStoredSession,
 } from '@/store/stored-sessions';
 import { localeFormatBigNumber } from '@/utils/locale-bignumber';
@@ -76,8 +75,7 @@ export function WorkoutSummary({ sessionId, finished }: WorkoutSummaryProps) {
   const { sessionService } = useServices();
   const session = useAppSelectorWithArg(selectSession, sessionId);
   const activeSessionId = useAppSelector(selectActiveSessionId);
-  const previous = useAppSelectorWithArg(selectPreviousComparableSession, session);
-  const earlier = useAppSelectorWithArg(selectSessionsBefore, session);
+  const comparison = useWorkoutComparison(session);
   const program = useAppSelector(selectActiveProgram);
   const latestExercises = useAppSelector(selectLatestExercises);
   const unit: WeightUnit = useAppSelector((x) => x.settings.useImperialUnits) ? 'pounds' : 'kilograms';
@@ -164,7 +162,9 @@ export function WorkoutSummary({ sessionId, finished }: WorkoutSummaryProps) {
     .filter(Boolean)
     .join(' · ');
 
-  const records = sessionRecords(session, earlier);
+  const previous = comparison?.previous;
+  const usual = comparison?.usual ?? [];
+  const records = comparison?.records ?? [];
   const comparisons = bestSetComparisons(session, previous);
   const targets =
     finished && routine
@@ -236,7 +236,7 @@ export function WorkoutSummary({ sessionId, finished }: WorkoutSummaryProps) {
         </SurfaceText>
       </View>
 
-      <StatCards session={session} earlier={earlier} previous={previous} records={records} unit={unit} t={t} />
+      <StatCards session={session} usual={usual} previous={previous} records={records} unit={unit} t={t} />
 
       {records.length ? (
         <Card style={{ gap: spacing[3] }}>
@@ -333,21 +333,22 @@ function SectionTitle({ children }: { children: string }) {
 
 function StatCards({
   session,
-  earlier,
+  usual,
   previous,
   records,
   unit,
   t,
 }: {
   session: Session;
-  earlier: readonly Session[];
+  /** The earlier workouts of the routine that make up its usual length. */
+  usual: readonly Session[];
   previous: Session | undefined;
   records: SessionRecord[];
   unit: WeightUnit;
   t: UseTranslateResult['t'];
 }) {
   const minutes = minutesOf(session);
-  const duration = durationVsUsual(session, earlier);
+  const duration = durationVsUsual(session, usual);
   const volume = volumeVsLast(session, previous);
   const sets = setCounts(session);
   const name = session.blueprint.name;
