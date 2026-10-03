@@ -320,30 +320,35 @@ export class WorkoutRepository {
     if (progressionKeys?.length === 0) {
       return {};
     }
+    const others = excludeWorkoutId === undefined ? sql`` : sql`and e.workout_id != ${excludeWorkoutId}`;
+    // Every lineage stored, or those of `progressionKeys`. Unfiltered, as at startup, it skips from one
+    // lineage to the next through the `lineage` index rather than reading every exercise ever logged.
+    const lineages = progressionKeys
+      ? sql`select distinct e.lineage from ${workoutExercisesSchema} e where e.progression_key in ${progressionKeys}`
+      : sql`select lineage from walk where lineage is not null`;
     const refs = await Promise.resolve(
       this.db.all<ExerciseRef & { lineage: ProgressionKey }>(sql`
-        with placed as (
-          -- A repeat of a key within one workout is its own lineage, numbered by position over every
-          -- exercise of the workout, logged or not, as lineageKeys numbers them; the case below builds
-          -- the same string as lineageKey() in blueprint-models.
-          select e.workout_id, e.position, e.progression_key, e.latest_time_ms,
-            row_number() over (partition by e.workout_id, e.progression_key order by e.position) as repeat
-          from ${workoutExercisesSchema} e
-          ${progressionKeys ? sql`where e.progression_key in ${progressionKeys}` : sql``}
+        with recursive walk(lineage) as (
+          select min(lineage) from ${workoutExercisesSchema}
+          union all
+          select (select min(e.lineage) from ${workoutExercisesSchema} e where e.lineage > walk.lineage)
+          from walk where walk.lineage is not null
         ),
-        lineages as (
-          select p.workout_id, p.position, p.latest_time_ms, w.reference_time_ms,
-            case when p.repeat = 1 then p.progression_key else p.progression_key || '#' || p.repeat end as lineage
-          from placed p
-          join ${workoutsSchema} w on w.id = p.workout_id
-          where p.latest_time_ms is not null
-          ${excludeWorkoutId === undefined ? sql`` : sql`and w.id != ${excludeWorkoutId}`}
+        latest as (
+          -- The index ends each lineage with its latest time, so this is a seek per lineage.
+          select l.lineage, (
+            select max(e.latest_time_ms) from ${workoutExercisesSchema} e where e.lineage = l.lineage ${others}
+          ) as latest_time_ms
+          from (${lineages}) l
         ),
         ranked as (
-          select *, row_number() over (
-            partition by lineage order by latest_time_ms desc, reference_time_ms desc, workout_id, position
+          select e.workout_id, e.position, e.lineage, row_number() over (
+            partition by e.lineage order by w.reference_time_ms desc, w.id, e.position
           ) as rank
-          from lineages
+          from latest l
+          join ${workoutExercisesSchema} e on e.lineage = l.lineage and e.latest_time_ms = l.latest_time_ms
+          join ${workoutsSchema} w on w.id = e.workout_id
+          where 1 = 1 ${others}
         )
         select workout_id as "workoutId", position, lineage from ranked where rank = 1
       `),

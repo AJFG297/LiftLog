@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { Client, InStatement } from '@libsql/client';
+import type { Client, InArgs, InStatement } from '@libsql/client';
 import { drizzle } from 'drizzle-orm/expo-sqlite';
 import { openDatabaseAsync } from 'expo-sqlite';
 import { LocalDate } from '@js-joda/core';
@@ -23,7 +23,27 @@ const silentLogger = {
 
 interface Statement {
   sql: string;
+  args: InArgs | undefined;
   rows: number;
+  /** What SQLite does to answer it, from `EXPLAIN QUERY PLAN`: `SCAN` reads a whole table or index. */
+  plan: string[];
+}
+
+/** The workout tables, whose size is the history's. */
+const HISTORY_TABLES = ['workout', 'workout_exercise', 'weighted_set', 'warmup_set', 'cardio_set'];
+
+/** The names a statement reads the workout tables by, aliases included, as its query plan names them. */
+function historyTableNames(sql: string): Set<string> {
+  const names = new Set<string>();
+  const tables = HISTORY_TABLES.join('|');
+  for (const match of sql.matchAll(new RegExp(`(?:from|join)\\s+"?(${tables})\\b"?(?:\\s+(?:as\\s+)?(\\w+))?`, 'gi'))) {
+    names.add(match[1]!);
+    const alias = match[2];
+    if (alias && !/^(where|on|join|left|inner|order|group|limit|union)$/i.test(alias)) {
+      names.add(alias);
+    }
+  }
+  return names;
 }
 
 /**
@@ -43,7 +63,10 @@ async function hydrate(count: number) {
   const execute = client.execute.bind(client);
   client.execute = (async (statement: InStatement) => {
     const result = await execute(statement);
-    statements.push({ sql: typeof statement === 'string' ? statement : statement.sql, rows: result.rows.length });
+    const sql = typeof statement === 'string' ? statement : statement.sql;
+    const args = typeof statement === 'string' ? undefined : statement.args;
+    const plan = await execute({ sql: `explain query plan ${sql}`, args });
+    statements.push({ sql, args, rows: result.rows.length, plan: plan.rows.map((row) => row['detail'] as string) });
     return result;
   }) as Client['execute'];
   const wholeHistory = vi.spyOn(workoutRepository, 'loadAll');
@@ -87,5 +110,11 @@ describe('startup reads of the history', () => {
     // about 70,000 rows; startup reads well under a thousand of them, as it does for 300.
     expect(rowsRead(large.statements)).toBeLessThan(1000);
     expect(rowsRead(large.statements)).toBeLessThan(rowsRead(small.statements) * 1.5);
+    // Nor does SQLite walk the history to find them: every read of a workout table seeks an index.
+    const scans = large.statements.flatMap((x) => {
+      const names = historyTableNames(x.sql);
+      return x.plan.filter((step) => names.has(/^SCAN (\S+)/.exec(step)?.[1] ?? ''));
+    });
+    expect(scans).toEqual([]);
   });
 });

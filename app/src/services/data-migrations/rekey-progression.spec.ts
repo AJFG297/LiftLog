@@ -53,6 +53,32 @@ describe('rekeyProgression', () => {
     expect((await db.select().from(dataMigrationsSchema)).map((x) => x.id)).toContain(rekeyProgressionDataMigration);
   });
 
+  it('numbers the lineages again where two old keys became one', async () => {
+    const db = drizzle(await openDatabaseAsync(':memory:'));
+    await new DatabaseMigrationService(db, { info: vi.fn() } as never, { importOldData: async () => {} }).migrate();
+    const squat = (sets: number) =>
+      makeWeightedBlueprint({ name: 'Squat', exerciseId: 'Squat', sets, repsConfig: { type: 'fixed', reps: 5 } });
+    await new WorkoutRepository(db).putMany([makeSession([squat(3), squat(5)])]);
+    // Stored as two lineages, each the first of its old key.
+    for (const [position, progressionKey] of [
+      'Squat_WeightedExerciseBlueprint_3_5',
+      'Squat_WeightedExerciseBlueprint_5_5',
+    ].entries()) {
+      await db
+        .update(workoutExercisesSchema)
+        .set({ progressionKey, lineage: progressionKey })
+        .where(eq(workoutExercisesSchema.position, position));
+    }
+
+    await rekeyProgression(db);
+
+    const rows = await db.select().from(workoutExercisesSchema);
+    expect(rows.map((row) => row.lineage)).toEqual([
+      'Squat_WeightedExerciseBlueprint',
+      'Squat_WeightedExerciseBlueprint#2',
+    ]);
+  });
+
   it('changes nothing the second time', async () => {
     const db = await dbWithOldKeys();
     await rekeyProgression(db);

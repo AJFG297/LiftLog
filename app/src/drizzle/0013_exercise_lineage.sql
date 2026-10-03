@@ -1,0 +1,3 @@
+ALTER TABLE `workout_exercise` ADD `lineage` text DEFAULT '' NOT NULL;--> statement-breakpoint
+CREATE INDEX `workout_exercise_lineage` ON `workout_exercise` (`lineage`,`latest_time_ms`);--> statement-breakpoint
+UPDATE `workout_exercise` SET `lineage` = `numbered`.`lineage` FROM (SELECT `workout_id`, `position`, CASE WHEN row_number() OVER (PARTITION BY `workout_id`, `progression_key` ORDER BY `position`) = 1 THEN `progression_key` ELSE `progression_key` || '#' || row_number() OVER (PARTITION BY `workout_id`, `progression_key` ORDER BY `position`) END AS `lineage` FROM `workout_exercise`) AS `numbered` WHERE `numbered`.`workout_id` = `workout_exercise`.`workout_id` AND `numbered`.`position` = `workout_exercise`.`position`;

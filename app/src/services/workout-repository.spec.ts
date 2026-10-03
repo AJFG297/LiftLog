@@ -8,7 +8,14 @@ import { sql } from 'drizzle-orm';
 import { DatabaseMigrationService } from '@/services/database-migration-service';
 import { WorkoutRepository } from '@/services/workout-repository';
 import { SessionGenerator } from '@/models/storage/generators';
-import { CardioExerciseBlueprint, movementKeyFor, SessionBlueprint, stubExerciseId } from '@/models/blueprint-models';
+import {
+  CardioExerciseBlueprint,
+  lineageKeys,
+  movementKeyFor,
+  progressionKeyOf,
+  SessionBlueprint,
+  stubExerciseId,
+} from '@/models/blueprint-models';
 
 import { FREEFORM_WORKOUT_NAME, RecordedExercise, RecordedWeightedExercise, Session } from '@/models/session-models';
 import {
@@ -562,6 +569,81 @@ describe('WorkoutRepository', () => {
         const latestPerLineage = await repository.latestPerLineage();
 
         expect(latestPerLineage[key]?.workoutId).toBe(logged.id);
+      });
+
+      it('breaks a tie of the same instant by the workout that went on later, then by id', async () => {
+        const bench = makeWeightedBlueprint({ name: 'Bench', sets: 1 });
+        const at = (hour: number) => OffsetDateTime.of(2026, 4, 1, hour, 0, 0, 0, ZoneOffset.UTC);
+        const squatsAtNine = (id: string, benchHour?: number) =>
+          new Session(
+            id,
+            new SessionBlueprint('Legs', [squat, bench], ''),
+            [
+              makeRecordedExercise(squat, [5], new Weight(100, 'kilograms'), () => at(9)),
+              makeRecordedExercise(bench, [benchHour === undefined ? undefined : 5], new Weight(60, 'kilograms'), () =>
+                at(benchHour ?? 9),
+              ),
+            ],
+            april(1),
+            undefined,
+            undefined,
+          );
+        await repository.putMany([squatsAtNine('a'), squatsAtNine('c', 11), squatsAtNine('b', 11)]);
+
+        expect((await repository.latestPerLineage())[key]?.workoutId).toBe('b');
+      });
+
+      it('agrees with a walk over every workout, for any history', async () => {
+        /** Each lineage's latest place: by its time, then the workout's reference time, then workout id. */
+        function walked(sessions: Session[], excludeWorkoutId?: string) {
+          const best = new Map<string, { at: number; reference: number; session: Session; position: number }>();
+          for (const session of sessions.filter((x) => x.id !== excludeWorkoutId)) {
+            const reference = getSessionReferenceTime(session).toInstant().toEpochMilli();
+            lineageKeys(session.recordedExercises).forEach((lineage, position) => {
+              const at = session.recordedExercises[position]!.latestTime?.toInstant().toEpochMilli();
+              const current = best.get(lineage);
+              const later =
+                !current ||
+                (at ?? -Infinity) > current.at ||
+                (at === current.at &&
+                  (reference > current.reference ||
+                    (reference === current.reference && session.id < current.session.id)));
+              if (at !== undefined && later) {
+                best.set(lineage, { at, reference, session, position });
+              }
+            });
+          }
+          return Object.fromEntries(
+            [...best].map(([lineage, x]) => [
+              lineage,
+              [x.session.id, x.session.recordedExercises[x.position]!.toJSON()],
+            ]),
+          );
+        }
+        const read = async (options?: Parameters<WorkoutRepository['latestPerLineage']>[0]) =>
+          Object.fromEntries(
+            Object.entries(await repository.latestPerLineage(options)).map(([lineage, x]) => [
+              lineage,
+              [x.workoutId, x.exercise.toJSON()],
+            ]),
+          );
+
+        await fc.assert(
+          fc.asyncProperty(fc.array(SessionGenerator, { minLength: 1, maxLength: 8 }), async (generated) => {
+            const sessions = generated.map((session, index) => session.with({ id: `w${index}` }));
+            repository = new WorkoutRepository(await createTestDb());
+            await repository.putMany(sessions);
+
+            expect(await read()).toEqual(walked(sessions));
+            expect(await read({ excludeWorkoutId: 'w0' })).toEqual(walked(sessions, 'w0'));
+            const keys = [...new Set(sessions[0]!.recordedExercises.map((x) => x.progressionKey()))];
+            const ofKeys = Object.fromEntries(
+              Object.entries(walked(sessions)).filter(([lineage]) => keys.includes(progressionKeyOf(lineage as never))),
+            );
+            expect(await read({ progressionKeys: keys })).toEqual(ofKeys);
+          }),
+          { numRuns: 30 },
+        );
       });
     });
 

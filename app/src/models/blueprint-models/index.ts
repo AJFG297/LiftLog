@@ -1314,8 +1314,8 @@ export function lineageKeys(exercises: readonly { progressionKey(): ProgressionK
 
 /**
  * The lineage key of the `repeat`-th place of `key` in one list: the key itself for the first, `<key>#n`
- * after. {@link progressionKeyOf} is the inverse; `WorkoutRepository.latestPerLineage` builds the same
- * string in SQL.
+ * after. {@link progressionKeyOf} is the inverse. Stored on every exercise row as `workout_exercise.lineage`,
+ * which migration 0013 and the rekey data migration build the same way in SQL.
  */
 export function lineageKey(key: ProgressionKey, repeat: number): ProgressionKey {
   return repeat === 1 ? key : (`${key}#${repeat}` as ProgressionKey);

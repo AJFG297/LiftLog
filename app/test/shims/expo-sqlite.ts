@@ -41,9 +41,10 @@ export const backupDatabaseAsync: typeof expoBackupDatabaseAsync = async (opts) 
   );
   const tables = tablesResult.rows.map((r) => r[0] as string);
 
-  // Collect all DDL (tables, indexes, triggers, views) in creation order
+  // Collect all DDL (tables, indexes, triggers, views): tables first, as an index added by a later migration
+  // can sit on a page freed below its table's.
   const schemaResult = await src.execute(
-    `SELECT sql FROM sqlite_master WHERE sql IS NOT NULL AND name NOT LIKE 'sqlite_%' ORDER BY rootpage`,
+    `SELECT sql FROM sqlite_master WHERE sql IS NOT NULL AND name NOT LIKE 'sqlite_%' ORDER BY type != 'table', rootpage`,
   );
 
   // Tables are copied alphabetically, so a child can land before its parent; check foreign keys at commit,
