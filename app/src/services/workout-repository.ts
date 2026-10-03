@@ -169,6 +169,30 @@ export class WorkoutRepository {
     });
   }
 
+  /**
+   * Every workout, the one in progress included, latest first by reference time, `batchSize` at a time:
+   * the plaintext export, which never holds the whole history at once. Workouts of the same time keep the
+   * order they were first stored in, as hydration read them. The order is read once up front, so a write
+   * during the export can't move a workout between batches; one deleted meanwhile is left out.
+   */
+  async *inExportOrder(batchSize: number): AsyncGenerator<Session[]> {
+    const ordered = await this.db
+      .select({ id: workoutsSchema.id })
+      .from(workoutsSchema)
+      .orderBy(desc(workoutsSchema.referenceTimeMs), sql`rowid`);
+    for (const ids of chunkedValues(
+      ordered.map((x) => x.id),
+      batchSize,
+    )) {
+      const workouts = await children(ids, workoutsSchema.id, (where) =>
+        this.db.select(readColumns.workout).from(workoutsSchema).where(where),
+      );
+      const byId = new Map(workouts.map((x) => [x.id, x]));
+      const inOrder = ids.flatMap((id) => byId.get(id) ?? []);
+      yield await this.assemble(inOrder, ids);
+    }
+  }
+
   /** Which of `workoutIds` are stored, finished or in progress. Queued behind the writes before it. */
   existingIds(workoutIds: readonly string[]): Promise<Set<string>> {
     return this.inOrder(async () => {

@@ -355,6 +355,53 @@ describe('WorkoutRepository', () => {
       });
     });
 
+    describe('inExportOrder', () => {
+      async function exported(batchSize: number) {
+        const batches: string[][] = [];
+        for await (const batch of repository.inExportOrder(batchSize)) {
+          batches.push(batch.map((x) => x.blueprint.name));
+        }
+        return batches;
+      }
+
+      it('is every workout, the one in progress included, latest first, in batches', async () => {
+        await repository.putMany([
+          lifted('A', april(1)),
+          lifted('C', april(10), { time: '19:00' }),
+          lifted('B', april(10), { time: '08:00' }),
+          lifted('E', april(30)),
+        ]);
+        await repository.setActive(lifted('Running', april(20)));
+
+        expect(await exported(2)).toEqual([['E', 'Running'], ['C', 'B'], ['A']]);
+        expect(await exported(100)).toEqual([['E', 'Running', 'C', 'B', 'A']]);
+      });
+
+      it('keeps the order workouts were first stored in when their times tie', async () => {
+        await repository.putMany(['First', 'Second', 'Third'].map((name) => lifted(name, april(1))));
+        // A rewrite keeps the row where it was.
+        await repository.put(lifted('First', april(1)).with({ id: (await repository.latestNamed('First', 1))[0]!.id }));
+
+        expect(await exported(1)).toEqual([['First'], ['Second'], ['Third']]);
+      });
+
+      it('rebuilds each workout as stored', async () => {
+        const session = lifted('A', april(1));
+        await repository.put(session);
+
+        const read: Session[] = [];
+        for await (const batch of repository.inExportOrder(10)) {
+          read.push(...batch);
+        }
+
+        expect(read.map((x) => x.toJSON())).toEqual([session.toJSON()]);
+      });
+
+      it('yields nothing without any workout', async () => {
+        expect(await exported(10)).toEqual([]);
+      });
+    });
+
     describe('existingIds', () => {
       it('is the ids asked about that are stored, the workout in progress included', async () => {
         const done = lifted('Done', april(1)).with({ id: 'done' });

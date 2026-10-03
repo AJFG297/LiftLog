@@ -27,7 +27,6 @@ import { applyStoredSessionsEffects } from '@/store/stored-sessions/effects';
 import { DatabaseMigrationService } from '@/services/database-migration-service';
 import { WorkoutRepository } from '@/services/workout-repository';
 import { createEffectStore } from '@/utils/__test__/effect-store';
-import { ProgressRepository } from '@/services/progress-repository';
 import { Session } from '@/models/session-models';
 import { describeExercise, describeSession, loadHistoryFixture, normalize } from '@/utils/__test__/history-fixture';
 
@@ -279,8 +278,11 @@ describe('history aggregates over the 420-session fixture', () => {
     };
   }
 
-  it('ordered sessions for plaintext export', () => {
-    const ordered = new ProgressRepository(state).getOrderedSessions().select(describeSession).toArray();
+  it('ordered sessions for plaintext export', async () => {
+    const ordered: string[] = [];
+    for await (const batch of repository.inExportOrder(200)) {
+      ordered.push(...batch.map(describeSession));
+    }
     expect(ordered).toHaveLength(420);
     expect(ordered).toMatchSnapshot();
   });
