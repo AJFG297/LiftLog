@@ -126,9 +126,9 @@ function refKey({ workoutId, position }: ExerciseRef): string {
  */
 export class WorkoutRepository {
   private readonly listeners = new Set<(write: WorkoutWrite) => void>();
-  // Writes and the carry-over read ({@link latestPerLineage}) run one after another, in the order they
-  // were issued: the effect that re-reads a lineage after a write must see every write issued before it.
-  // The device driver queues statements that way itself; the async driver under test does not.
+  // Writes and the reads the store builds on ({@link latestPerLineage}, {@link latestPlanned}) run one
+  // after another, in the order they were issued: a read issued after a write must see it, awaited or
+  // not. The device driver queues statements that way itself; the async driver under test does not.
   private queue: Promise<unknown> = Promise.resolve();
 
   constructor(private readonly db: ExpoSQLiteDatabase) {}
@@ -195,20 +195,25 @@ export class WorkoutRepository {
     );
   }
 
-  /** The most recent finished workout that was not freeform: where the plan is up to. */
-  async latestPlanned(): Promise<Session | undefined> {
-    const workouts = await this.db
-      .select(readColumns.workout)
-      .from(workoutsSchema)
-      .where(and(finished, sql`${workoutsSchema.name} != ${FREEFORM_WORKOUT_NAME}`))
-      .orderBy(desc(workoutsSchema.referenceTimeMs), asc(workoutsSchema.id))
-      .limit(1);
-    return (
-      await this.assemble(
-        workouts,
-        workouts.map((x) => x.id),
-      )
-    )[0];
+  /**
+   * The most recent finished workout that was not freeform: where the plan is up to. Queued behind the
+   * writes before it, as finishing a workout asks for the next one as soon as it has dispatched the write.
+   */
+  latestPlanned(): Promise<Session | undefined> {
+    return this.inOrder(async () => {
+      const workouts = await this.db
+        .select(readColumns.workout)
+        .from(workoutsSchema)
+        .where(and(finished, sql`${workoutsSchema.name} != ${FREEFORM_WORKOUT_NAME}`))
+        .orderBy(desc(workoutsSchema.referenceTimeMs), asc(workoutsSchema.id))
+        .limit(1);
+      return (
+        await this.assemble(
+          workouts,
+          workouts.map((x) => x.id),
+        )
+      )[0];
+    });
   }
 
   /**
