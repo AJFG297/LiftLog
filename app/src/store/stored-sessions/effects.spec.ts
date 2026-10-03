@@ -12,8 +12,8 @@ import {
   putStoredSession,
   sessionFinished,
   setActiveSessionId,
+  setActiveSession,
   setExercises,
-  setStoredSessions,
   upsertExercises,
   upsertStoredSessions,
   updateStoredSession,
@@ -403,16 +403,18 @@ describe('stored-sessions effects', () => {
 
       await testBed.dispatchHandled(initializeStoredSessionsStateSlice());
 
-      expect(Object.keys(testBed.getDispatchedAction(setStoredSessions).payload)).toEqual([session.id]);
-      expect(testBed.getDispatchedAction(setActiveSessionId).payload).toBe(session.id);
+      expect(testBed.getDispatchedAction(setActiveSession).payload?.toJSON()).toEqual(session.toJSON());
+      // Read back as it is, so nothing is written to the table on the way in.
+      testBed.expectNotDispatched(setActiveSessionId);
     });
 
-    it('does not claim an active session when none was in progress', async () => {
+    it('loads no workout when none was in progress', async () => {
       await new WorkoutRepository(db).put(Session.freeformSession(LocalDate.of(2026, 4, 10), undefined));
       const testBed = bed({});
 
       await testBed.dispatchHandled(initializeStoredSessionsStateSlice());
 
+      expect(testBed.getDispatchedAction(setActiveSession).payload).toBeUndefined();
       testBed.expectNotDispatched(setActiveSessionId);
     });
   });

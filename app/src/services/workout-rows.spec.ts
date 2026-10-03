@@ -5,6 +5,7 @@ import { SessionGenerator } from '@/models/storage/generators';
 import { RecordedWeightedExercise, Session } from '@/models/session-models';
 import { RestTimer } from '@/models/session-models/rest-timer';
 import { Weight } from '@/models/weight';
+import { lineageKeys } from '@/models/blueprint-models';
 import {
   emptyPotentialSet,
   filledPotentialSet,
@@ -101,6 +102,7 @@ describe('workout rows', () => {
       fc.assert(
         fc.property(SessionGenerator, (session) => {
           const rows = toWorkoutRows(session);
+          const lineages = lineageKeys(session.recordedExercises);
 
           expect(rows.workout.referenceTimeMs).toBe(getSessionReferenceTime(session).toInstant().toEpochMilli());
           expect(rows.workout.volumeKg).toBe(sessionVolume(session));
@@ -108,6 +110,7 @@ describe('workout rows', () => {
             expect(rows.exercises[index]).toMatchObject({
               movementKey: exercise.movementKey(),
               progressionKey: exercise.progressionKey(),
+              lineage: lineages[index],
               latestTimeMs: exercise.latestTime?.toInstant().toEpochMilli() ?? null,
             });
           });

@@ -1,6 +1,6 @@
 # Plan: relational storage and stable exercise identity
 
-Status: **in progress**. Phase 0 (PM-9) and phase 1 (PM-10, PM-11) are done: workouts live in relational tables and blueprints carry stable exercise IDs. Phase 2, reading history from SQL, is under way: the History tab, calendar, feed strips and Stats read from SQL (PM-13), and so do the workout screen, the summary, the workout detail and carry-over (PM-12); the rest, and the full hydration itself, remain (PM-14).
+Status: **done** (PM-9 to PM-14). Workouts live in relational tables, blueprints carry stable exercise IDs, every screen reads history from SQL, and startup loads only the workout in progress and the carry-over cache. The decisions are recorded in [ADR-0003](../adr/0003-relational-workout-storage.md); [Storage.md](../Storage.md) describes the result. What's left is listed under the phase 3 follow-ups.
 
 This plan rests on two assumptions:
 
@@ -280,6 +280,30 @@ Settled differences from the steps below:
 - No snapshot changed: the tie-breaks for equal times (`reference_time_ms desc`, then id and position)
   matched the fixture.
 
+**Steps 4–6 done in PM-14**, with the phase 3 docs. Settled differences from the steps below:
+- Redux holds the workout in progress and two slots, not a map of everything: the history editor dispatches
+  `openSessionForEditing(id)`, which reads the workout with `WorkoutRepository.get` into the editing slot,
+  which nothing else closes. A put opens what it writes in the recent slot, and the workout that stops being
+  in progress moves there, where its summary reads it (`openSessionForSummary` after a restart). `setStoredSessions`, `selectSessions`, `earliestSession`, `ProgressRepository` and
+  `useAppSelectorWhenFocusedWithArg` are gone; `useAppSelectorWhenFocused` stays for the workout-in-progress
+  bar.
+- New reads: `active()`, `get(id)`, `existingIds(ids)`, `inExportOrder(batchSize)`, `routineHistory(names)`
+  and `startedWorkouts()`. The Routines screen's last-done dates and workout count, and the You profile's
+  count and first date, are SQL aggregates. The round count still walks the routine name of each done
+  workout, a one-column read, since where a round ends depends on every workout before it.
+- The export reads its order once, then 200 workouts at a time, and joins the serialised batches: byte for
+  byte the old file. The order is `reference_time_ms` then the order rows were first stored, as hydration
+  read them.
+- The workout detail and the feed's publishing read by id; a cheer is accepted when `existingIds` finds its
+  workout. The exercise history sheet loads 20 performances at a time (`useWorkoutQuery`'s `keepPrevious`).
+- Making startup flat needed one schema change: `latestPerLineage` numbered every exercise ever logged
+  with a window function, so it grew with the history. `workout_exercise.lineage` (migration 0013, filled
+  for stored rows, and renumbered by the rekey data migration) with an index on `(lineage, latest_time_ms)`
+  lets it step from lineage to lineage and seek each one's latest. Hydration went from about 860 ms to 9 ms
+  over 5,000 workouts under Node, and is the same at 500; retained heap from 88 MB to 0.6 MB.
+- The Progress tab and all-time Stats still rebuild every workout in their range while shown; that, and
+  pushing their aggregates into SQL, is a follow-up, not startup.
+
 1. **Hot path:**
    - Build `latestExercises` at startup from "latest `workout_exercise` per `progression_key`", including
      the active session, and update it incrementally on write.
@@ -317,8 +341,11 @@ Settled differences from the steps below:
   - the protobuf backup restore path
 
   Keep the payload migration chains: the blueprint JSON column and feed items still use them.
-- **Docs.** Update `docs/Storage.md` and `docs/Migrations.md`, and add an ADR covering D1-D4.
+- **Docs.** Update `docs/Storage.md` and `docs/Migrations.md`, and add an ADR covering D1-D4. Done in
+  PM-14: [ADR-0003](../adr/0003-relational-workout-storage.md) covers D1-D7.
 - **Follow-ups:**
+  - Per-movement aggregates in SQL for all-time Stats and the Progress tab, which still rebuild every
+    workout in their range while shown.
   - Exercise merge UI and the normalizer fix.
   - Rename detection in `blueprint-diff`.
   - Showing descriptor muscles and instructions during a workout.

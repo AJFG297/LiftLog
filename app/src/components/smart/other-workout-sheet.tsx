@@ -1,7 +1,7 @@
 import { ListRow } from '@/components/presentation/foundation/list-row';
 import { MsIconSrc } from '@/components/presentation/foundation/ms-icon-source';
 import { SheetHeader } from '@/components/presentation/foundation/sheet-header';
-import { upNextDetailText } from '@/components/smart/up-next-text';
+import { UP_NEXT_PAST_WORKOUTS, upNextDetailText } from '@/components/smart/up-next-text';
 import { spacing, useAppTheme } from '@/hooks/useAppTheme';
 import { useFormatDate } from '@/hooks/useFormatDate';
 import { useStartWorkoutWithConfirmation } from '@/hooks/useStartWorkoutWithConfirmation';
@@ -9,7 +9,7 @@ import { useToday } from '@/hooks/useToday';
 import { routineColorOf } from '@/models/home/routine-colors';
 import { useAppSelector } from '@/store';
 import { selectActiveProgram } from '@/store/program';
-import { selectSessions } from '@/store/stored-sessions';
+import { listDep, useWorkoutQuery } from '@/hooks/useWorkoutQuery';
 import { useTranslate } from '@tolgee/react';
 import { useNavigation, useRouter } from 'expo-router';
 import { useGoToRoutines } from '@/hooks/useGoToRoutines';
@@ -31,11 +31,20 @@ export function OtherWorkoutSheet() {
   const formatDate = useFormatDate();
   const today = useToday();
   const plan = useAppSelector(selectActiveProgram);
-  const sessions = useAppSelector(selectSessions);
   // The first is Home's Up next card; this sheet is for the rest.
   const others = useAppSelector((x) => x.program.upcomingSessions)
     .map((x) => x.slice(1))
     .unwrapOr([]);
+  const names = [...new Set(others.map((x) => x.blueprint.name))];
+  const pastRuns = useWorkoutQuery(
+    async (repository) =>
+      new Map(
+        await Promise.all(
+          names.map(async (name) => [name, await repository.latestNamed(name, UP_NEXT_PAST_WORKOUTS)] as const),
+        ),
+      ),
+    [listDep(names)],
+  );
   const { start, confirmationDialog } = useStartWorkoutWithConfirmation({ onStarted: () => back() });
   const planWorkoutNames = plan?.sessions.map((x) => x.name) ?? [];
 
@@ -51,7 +60,7 @@ export function OtherWorkoutSheet() {
             key={session.id}
             testID={`other-workout-${index}`}
             title={session.blueprint.name}
-            subtitle={upNextDetailText(t, session, sessions, today, formatDate)}
+            subtitle={upNextDetailText(t, session, pastRuns?.get(session.blueprint.name) ?? [], today, formatDate)}
             accessibilityLabel={t('home.up_next.start.button', { name: session.blueprint.name })}
             leading={
               <View

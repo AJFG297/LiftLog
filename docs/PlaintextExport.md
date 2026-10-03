@@ -33,3 +33,8 @@ planned reps. Warm-ups never have an RPE. The column is last, after `RPE`, so to
 position keep working. In the JSON export every set carries the same value as `kind`; warm-ups are in each
 weighted exercise's `warmupSets`, apart from the other sets in `potentialSets`, and each planned set in the
 exercise's `blueprint.plannedSets` has a `kind` too.
+
+Workouts come latest first, the one in progress included. The export reads them from the workout tables
+200 at a time (`WorkoutRepository.inExportOrder`) and writes each batch as it arrives, so it never holds the
+whole history in memory; the file is the same whatever the batch size
+(`store/settings/export-plaintext-effects.spec.ts`).

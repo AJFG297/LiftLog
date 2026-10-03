@@ -21,6 +21,7 @@ import { volumeScaleOf } from '@/store/activity/volume';
 import { PersonalRecord, PreviousBest, PreviousBests } from '@/store/stats/personal-records';
 import { oneRepMaxOf } from '@/store/stats/calculate-stats';
 import { getSessionReferenceTime } from '@/store/stored-sessions';
+import { routinesDoneThisRoundOf } from '@/models/routine-rounds';
 import {
   CardioSetRow,
   WarmupSetRow,
@@ -68,6 +69,18 @@ const finished = eq(workoutsSchema.active, false);
  * table, so they don't count, as in the model.
  */
 const started = sql`(exists (select 1 from ${weightedSetsSchema} where ${weightedSetsSchema.workoutId} = ${workoutsSchema.id} and ${isNotNull(weightedSetsSchema.reps)}) or exists (select 1 from ${cardioSetsSchema} where ${cardioSetsSchema.workoutId} = ${workoutsSchema.id} and ${isNotNull(cardioSetsSchema.completedAt)}))`;
+
+/** `Session.hasLoggedAnySet`: {@link started}, or a warm-up logged. */
+const loggedAnySet = sql`(${started} or exists (select 1 from ${warmupSetsSchema} where ${warmupSetsSchema.workoutId} = ${workoutsSchema.id} and ${isNotNull(warmupSetsSchema.reps)}))`;
+
+/** The routines of a program as done so far, from {@link WorkoutRepository.routineHistory}. */
+export interface RoutineHistory {
+  /** The last day each routine was done, by name. */
+  lastDone: Map<string, LocalDate>;
+  workoutsDone: number;
+  /** How many of the routines were done in the current round (`routinesDoneThisRoundOf`). */
+  routinesDoneThisRound: number;
+}
 
 const prSetKinds = (Object.keys(SET_KIND_RULES) as SetKind[]).filter((kind) => SET_KIND_RULES[kind].countsTowardsPrs);
 
@@ -121,14 +134,17 @@ function refKey({ workoutId, position }: ExerciseRef): string {
  * The `active` flag has a single writer, {@link setActive}. Content writes never change it: a new row
  * starts inactive, and an existing one keeps its flag.
  *
- * Reads other than {@link loadAll} cover finished history only, and leave the workout in progress out.
+ * Reads cover finished history only, and leave the workout in progress out, unless they say otherwise:
+ * {@link active}, {@link get}, {@link existingIds}, {@link inExportOrder}, {@link latestPerLineage} and
+ * {@link loadAll} include it.
  * {@link subscribe} tells screens when any write has landed, so what they show can be re-queried.
  */
 export class WorkoutRepository {
   private readonly listeners = new Set<(write: WorkoutWrite) => void>();
-  // Writes and the reads the store builds on ({@link latestPerLineage}, {@link latestPlanned}) run one
-  // after another, in the order they were issued: a read issued after a write must see it, awaited or
-  // not. The device driver queues statements that way itself; the async driver under test does not.
+  // Writes and the reads the store builds on ({@link latestPerLineage}, {@link latestPlanned}, the point
+  // lookups) run one after another, in the order they were issued: a read issued after a write must see
+  // it, awaited or not. The device driver queues statements that way itself; the async driver under test
+  // does not.
   private queue: Promise<unknown> = Promise.resolve();
 
   constructor(private readonly db: ExpoSQLiteDatabase) {}
@@ -144,13 +160,80 @@ export class WorkoutRepository {
     };
   }
 
-  /** Every stored workout, and which one (if any) is in progress. */
+  /** The workout in progress, if there is one: all that startup loads of the history. */
+  async active(): Promise<Session | undefined> {
+    const workouts = await this.db
+      .select(readColumns.workout)
+      .from(workoutsSchema)
+      .where(eq(workoutsSchema.active, true));
+    return (
+      await this.assemble(
+        workouts,
+        workouts.map((x) => x.id),
+      )
+    )[0];
+  }
+
+  /**
+   * Every stored workout, and which one (if any) is in progress. For the jobs that must touch every
+   * workout once - a data migration rewriting them all, reading a backup file to restore it - and never
+   * for what a screen shows.
+   */
   async loadAll(): Promise<{ workouts: Session[]; activeWorkoutId: string | undefined }> {
     const workouts = await this.db.select(readColumns.workout).from(workoutsSchema);
     return {
       workouts: await this.assemble(workouts, undefined),
       activeWorkoutId: workouts.find((x) => x.active)?.id,
     };
+  }
+
+  /**
+   * One workout by id, finished or in progress, or undefined if there is none. Queued behind the writes
+   * before it, so a workout written just before it is asked for (a finish, then the feed publishing it) is
+   * read as written.
+   */
+  get(workoutId: string): Promise<Session | undefined> {
+    return this.inOrder(async () => {
+      const workouts = await this.db
+        .select(readColumns.workout)
+        .from(workoutsSchema)
+        .where(eq(workoutsSchema.id, workoutId));
+      return (await this.assemble(workouts, [workoutId]))[0];
+    });
+  }
+
+  /**
+   * Every workout, the one in progress included, latest first by reference time, `batchSize` at a time:
+   * the plaintext export, which never holds the whole history at once. Workouts of the same time keep the
+   * order they were first stored in, as hydration read them. The order is read once up front, so a write
+   * during the export can't move a workout between batches; one deleted meanwhile is left out.
+   */
+  async *inExportOrder(batchSize: number): AsyncGenerator<Session[]> {
+    const ordered = await this.db
+      .select({ id: workoutsSchema.id })
+      .from(workoutsSchema)
+      .orderBy(desc(workoutsSchema.referenceTimeMs), sql`rowid`);
+    for (const ids of chunkedValues(
+      ordered.map((x) => x.id),
+      batchSize,
+    )) {
+      const workouts = await children(ids, workoutsSchema.id, (where) =>
+        this.db.select(readColumns.workout).from(workoutsSchema).where(where),
+      );
+      const byId = new Map(workouts.map((x) => [x.id, x]));
+      const inOrder = ids.flatMap((id) => byId.get(id) ?? []);
+      yield await this.assemble(inOrder, ids);
+    }
+  }
+
+  /** Which of `workoutIds` are stored, finished or in progress. Queued behind the writes before it. */
+  existingIds(workoutIds: readonly string[]): Promise<Set<string>> {
+    return this.inOrder(async () => {
+      const rows = await children([...workoutIds], workoutsSchema.id, (where) =>
+        this.db.select({ id: workoutsSchema.id }).from(workoutsSchema).where(where),
+      );
+      return new Set(rows.map((x) => x.id));
+    });
   }
 
   /** Finished workouts dated from `from` to `to`, both inclusive, latest first by reference time. */
@@ -238,30 +321,35 @@ export class WorkoutRepository {
     if (progressionKeys?.length === 0) {
       return {};
     }
+    const excludeClause = excludeWorkoutId === undefined ? sql`` : sql`and e.workout_id != ${excludeWorkoutId}`;
+    // Every lineage stored, or those of `progressionKeys`. Unfiltered, as at startup, it skips from one
+    // lineage to the next through the `lineage` index rather than reading every exercise ever logged.
+    const lineages = progressionKeys
+      ? sql`select distinct e.lineage from ${workoutExercisesSchema} e where e.progression_key in ${progressionKeys}`
+      : sql`select lineage from walk where lineage is not null`;
     const refs = await Promise.resolve(
       this.db.all<ExerciseRef & { lineage: ProgressionKey }>(sql`
-        with placed as (
-          -- A repeat of a key within one workout is its own lineage, numbered by position over every
-          -- exercise of the workout, logged or not, as lineageKeys numbers them; the case below builds
-          -- the same string as lineageKey() in blueprint-models.
-          select e.workout_id, e.position, e.progression_key, e.latest_time_ms,
-            row_number() over (partition by e.workout_id, e.progression_key order by e.position) as repeat
-          from ${workoutExercisesSchema} e
-          ${progressionKeys ? sql`where e.progression_key in ${progressionKeys}` : sql``}
+        with recursive walk(lineage) as (
+          select min(lineage) from ${workoutExercisesSchema}
+          union all
+          select (select min(e.lineage) from ${workoutExercisesSchema} e where e.lineage > walk.lineage)
+          from walk where walk.lineage is not null
         ),
-        lineages as (
-          select p.workout_id, p.position, p.latest_time_ms, w.reference_time_ms,
-            case when p.repeat = 1 then p.progression_key else p.progression_key || '#' || p.repeat end as lineage
-          from placed p
-          join ${workoutsSchema} w on w.id = p.workout_id
-          where p.latest_time_ms is not null
-          ${excludeWorkoutId === undefined ? sql`` : sql`and w.id != ${excludeWorkoutId}`}
+        latest as (
+          -- The index ends each lineage with its latest time, so this is a seek per lineage.
+          select l.lineage, (
+            select max(e.latest_time_ms) from ${workoutExercisesSchema} e where e.lineage = l.lineage ${excludeClause}
+          ) as latest_time_ms
+          from (${lineages}) l
         ),
         ranked as (
-          select *, row_number() over (
-            partition by lineage order by latest_time_ms desc, reference_time_ms desc, workout_id, position
+          select e.workout_id, e.position, e.lineage, row_number() over (
+            partition by e.lineage order by w.reference_time_ms desc, w.id, e.position
           ) as rank
-          from lineages
+          from latest l
+          join ${workoutExercisesSchema} e on e.lineage = l.lineage and e.latest_time_ms = l.latest_time_ms
+          join ${workoutsSchema} w on w.id = e.workout_id
+          where 1 = 1 ${excludeClause}
         )
         select workout_id as "workoutId", position, lineage from ranked where rank = 1
       `),
@@ -367,6 +455,45 @@ export class WorkoutRepository {
     return bests;
   }
 
+  /**
+   * How far the routines named `names` have got: a finished workout counts as one done when it has any set
+   * logged, a warm-up included, and is not freeform. The counts and dates are SQL aggregates. The round
+   * is walked from the routine name of every done workout, oldest first by day and then by when it was
+   * done: one short column per workout, since where a round ends depends on all of them.
+   */
+  async routineHistory(names: readonly string[]): Promise<RoutineHistory> {
+    if (!names.length) {
+      return { lastDone: new Map(), workoutsDone: 0, routinesDoneThisRound: 0 };
+    }
+    const done = and(
+      finished,
+      inArray(workoutsSchema.name, [...names]),
+      sql`${workoutsSchema.name} != ${FREEFORM_WORKOUT_NAME}`,
+      loggedAnySet,
+    );
+    const [perName, ordered] = await Promise.all([
+      this.db
+        .select({ name: workoutsSchema.name, lastDone: sql<LocalDateJSON>`max(${workoutsSchema.date})`, done: count() })
+        .from(workoutsSchema)
+        .where(done)
+        .groupBy(workoutsSchema.name),
+      this.db
+        .select({ name: workoutsSchema.name })
+        .from(workoutsSchema)
+        .where(done)
+        // To the second, as the model's activity times compared them.
+        .orderBy(asc(workoutsSchema.date), sql`${workoutsSchema.referenceTimeMs} / 1000`, sql`rowid`),
+    ]);
+    return {
+      lastDone: new Map(perName.map((x) => [x.name, LocalDate.parse(x.lastDone)])),
+      workoutsDone: perName.reduce((total, x) => total + x.done, 0),
+      routinesDoneThisRound: routinesDoneThisRoundOf(
+        ordered.map((x) => x.name),
+        names,
+      ),
+    };
+  }
+
   /** The date of the earliest finished workout, started or not: where all-time stats begin. */
   async earliestDate(): Promise<LocalDate | undefined> {
     const [row] = await this.db
@@ -374,6 +501,18 @@ export class WorkoutRepository {
       .from(workoutsSchema)
       .where(finished);
     return row?.date ? LocalDate.parse(row.date) : undefined;
+  }
+
+  /**
+   * The finished workouts that were started (`Session.isStarted`): how many, and the date of the first. Both
+   * describe the same workouts, so "N workouts since" never counts one it dates from or the other way round.
+   */
+  async startedWorkouts(): Promise<{ count: number; firstDate: LocalDate | undefined }> {
+    const [row] = await this.db
+      .select({ count: count(), firstDate: sql<string | null>`min(${workoutsSchema.date})` })
+      .from(workoutsSchema)
+      .where(and(finished, started));
+    return { count: row?.count ?? 0, firstDate: row?.firstDate ? LocalDate.parse(row.firstDate) : undefined };
   }
 
   /** Each day with a started, finished workout, oldest first: how many, and the volume moved. */

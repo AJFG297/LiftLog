@@ -5,6 +5,7 @@ import {
   workoutExercisesSchema,
   workoutsSchema,
 } from '@/db/schema';
+import { lineageKeys } from '@/models/blueprint-models';
 import { RecordedCardioExercise, RecordedWeightedExercise, Session } from '@/models/session-models';
 import { isSessionFeel, reflectionsEqual } from '@/models/session-models/reflection';
 import {
@@ -43,7 +44,7 @@ export interface WorkoutRows {
  */
 export const readColumns = {
   workout: omitColumns(workoutsSchema, ['referenceTimeMs', 'volumeKg']),
-  exercise: omitColumns(workoutExercisesSchema, ['kind', 'movementKey', 'progressionKey', 'latestTimeMs']),
+  exercise: omitColumns(workoutExercisesSchema, ['kind', 'movementKey', 'progressionKey', 'lineage', 'latestTimeMs']),
   weightedSet: omitColumns(weightedSetsSchema, ['weightKg', 'effectiveWeightKg', 'completedAtMs']),
   warmupSet: getTableColumns(warmupSetsSchema),
   cardioSet: omitColumns(cardioSetsSchema, ['completedAtMs']),
@@ -52,7 +53,7 @@ export const readColumns = {
 /** What {@link fromWorkoutRows} needs: {@link WorkoutRows} without the query columns. */
 export interface StoredWorkoutRows {
   workout: Omit<WorkoutRow, 'referenceTimeMs' | 'volumeKg'>;
-  exercises: Omit<WorkoutExerciseRow, 'kind' | 'movementKey' | 'progressionKey' | 'latestTimeMs'>[];
+  exercises: Omit<WorkoutExerciseRow, 'kind' | 'movementKey' | 'progressionKey' | 'lineage' | 'latestTimeMs'>[];
   weightedSets: Omit<WeightedSetRow, 'weightKg' | 'effectiveWeightKg' | 'completedAtMs'>[];
   warmupSets: WarmupSetRow[];
   cardioSets: Omit<CardioSetRow, 'completedAtMs'>[];
@@ -76,6 +77,7 @@ export function toWorkoutRows(session: Session): WorkoutRows {
   const weightedSets: WeightedSetRow[] = [];
   const warmupSets: WarmupSetRow[] = [];
   const cardioSets: CardioSetRow[] = [];
+  const lineages = lineageKeys(session.recordedExercises);
 
   session.recordedExercises.forEach((exercise, exercisePosition) => {
     const exerciseJson = json.recordedExercises[exercisePosition]!;
@@ -85,6 +87,7 @@ export function toWorkoutRows(session: Session): WorkoutRows {
       kind: exerciseJson.type === 'RecordedWeightedExercise' ? 'weighted' : 'cardio',
       movementKey: exercise.movementKey(),
       progressionKey: exercise.progressionKey(),
+      lineage: lineages[exercisePosition]!,
       latestTimeMs: epochMs(exercise.latestTime),
       notes: exerciseJson.notes ?? null,
       blueprint: exerciseJson.blueprint,

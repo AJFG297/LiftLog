@@ -26,6 +26,8 @@ import {
   setActiveSessionId,
   updateStoredSession,
   upsertStoredSessions,
+  openSessionForEditing,
+  openSessionForSummary,
 } from '@/store/stored-sessions';
 import type { RootState } from '@/store/store';
 import type { UnknownAction } from '@reduxjs/toolkit';
@@ -90,6 +92,12 @@ async function startApp(sessions: Session[]) {
 
 const march = { from: LocalDate.of(2026, 3, 1), to: LocalDate.of(2026, 3, 31) };
 
+/** Opens a past workout for editing, as the history editor does when it mounts. */
+async function openForEditing(app: Awaited<ReturnType<typeof startApp>>, sessionId: string) {
+  app.store.dispatch(openSessionForEditing(sessionId));
+  await app.settle();
+}
+
 describe('history read from SQL', () => {
   beforeEach(() => {
     // Only the clock: `fetchOverallStats` waits on a real timer.
@@ -113,6 +121,7 @@ describe('history read from SQL', () => {
     expect([...(await repository.personalRecords()).keys()]).toEqual(['week-1', 'week-2']);
 
     // The middle week gets a heavier top set: 120 kg for 10, the best of the three by a distance.
+    await openForEditing(app, 'week-1');
     app.store.dispatch(
       updateStoredSession({
         sessionId: 'week-1',
@@ -161,6 +170,102 @@ describe('history read from SQL', () => {
     );
   });
 
+  it('startup loads none of the history; the editor loads one past workout by id, saves and deletes it', async () => {
+    const app = await startApp(history());
+    const { workoutRepository: repository } = app;
+    expect(app.getState().storedSessions.sessions).toEqual({});
+
+    await openForEditing(app, 'week-1');
+    expect(Object.keys(app.getState().storedSessions.sessions)).toEqual(['week-1']);
+    expect(app.getState().storedSessions.editingSessionId).toBe('week-1');
+
+    app.store.dispatch(
+      updateStoredSession({ sessionId: 'week-1', update: (s) => s.withUpdatedDate(LocalDate.of(2026, 3, 10)) }),
+    );
+    app.store.dispatch(sessionFinished('week-1'));
+    await app.settle();
+    expect((await repository.get('week-1'))?.date.toString()).toBe('2026-03-10');
+
+    // Opening another past workout closes this one: only one is held in memory at a time.
+    await openForEditing(app, 'week-0');
+    expect(Object.keys(app.getState().storedSessions.sessions)).toEqual(['week-0']);
+
+    app.store.dispatch(deleteStoredSession('week-0'));
+    await app.settle();
+    expect(await repository.get('week-0')).toBeUndefined();
+    expect(app.getState().storedSessions).toMatchObject({ sessions: {}, editingSessionId: undefined });
+    expect((await repository.finishedBetween(march.from, march.to)).map((x) => x.id)).toEqual(['week-2', 'week-1']);
+  });
+
+  describe('a past workout open in the editor', () => {
+    const renamed = (name: string) => updateStoredSession({ sessionId: 'week-1', update: (s) => s.withName(name) });
+    const live = () => history()[0]!.with({ id: 'live', date: TODAY });
+
+    it('keeps its edits when the workout in progress is finished meanwhile', async () => {
+      const app = await startApp(history());
+      app.store.dispatch(putStoredSession(live()));
+      app.store.dispatch(setActiveSessionId('live'));
+      await openForEditing(app, 'week-1');
+      app.store.dispatch(renamed('First edit'));
+
+      // Finished from the notification while the editor is still open.
+      app.store.dispatch(sessionFinished('live'));
+      await app.settle();
+      app.store.dispatch(renamed('Second edit'));
+      await app.settle();
+
+      expect(app.getState().storedSessions.sessions['week-1']?.blueprint.name).toBe('Second edit');
+      expect((await app.workoutRepository.get('week-1'))?.blueprint.name).toBe('Second edit');
+      // The finished workout stays open too, for its summary.
+      expect(app.getState().storedSessions.sessions['live']).toBeDefined();
+    });
+
+    it('keeps its edits when a new workout is started meanwhile', async () => {
+      const app = await startApp(history());
+      await openForEditing(app, 'week-1');
+      app.store.dispatch(renamed('First edit'));
+
+      app.store.dispatch(putStoredSession(live()));
+      app.store.dispatch(setActiveSessionId('live'));
+      await app.settle();
+      app.store.dispatch(renamed('Second edit'));
+      await app.settle();
+
+      expect(app.getState().storedSessions.sessions['week-1']?.blueprint.name).toBe('Second edit');
+      expect((await app.workoutRepository.get('week-1'))?.blueprint.name).toBe('Second edit');
+    });
+  });
+
+  it('a summary opened by link after a restart loads its workout by id, beside the editor', async () => {
+    const app = await startApp(history());
+    await openForEditing(app, 'week-0');
+
+    app.store.dispatch(openSessionForSummary('week-2'));
+    await app.settle();
+
+    expect(app.getState().storedSessions).toMatchObject({ editingSessionId: 'week-0', recentSessionId: 'week-2' });
+    expect(app.getState().storedSessions.sessions['week-2']?.blueprint.name).toBe('Legs');
+  });
+
+  it('a summary or editor opened for a workout that is gone is told so', async () => {
+    const app = await startApp(history());
+
+    app.store.dispatch(openSessionForSummary('deleted-elsewhere'));
+    await app.settle();
+    expect(app.getState().storedSessions.notFoundSessionId).toBe('deleted-elsewhere');
+
+    await openForEditing(app, 'week-1');
+    expect(app.getState().storedSessions.notFoundSessionId).toBe('deleted-elsewhere');
+  });
+
+  it('opening a missing workout for editing opens nothing', async () => {
+    const app = await startApp(history());
+
+    await openForEditing(app, 'deleted-elsewhere');
+
+    expect(app.getState().storedSessions).toMatchObject({ sessions: {}, editingSessionId: undefined });
+  });
+
   it('deleting the earliest workout moves the all-time stats start', async () => {
     const app = await startApp(history());
     const { workoutRepository: repository } = app;
@@ -190,6 +295,7 @@ describe('history read from SQL', () => {
     const heaviest = () => app.getState().stats.overallView.unwrapOr(undefined)?.heaviestLift?.weight;
     expect(heaviest()).toEqual(new Weight(105, 'kilograms'));
 
+    await openForEditing(app, 'week-1');
     // The persist effect's write waits on the test, as a big import or a slow device would make it.
     let commit = () => {};
     const putMany = repository.putMany.bind(repository);
@@ -266,6 +372,7 @@ describe('history read from SQL', () => {
       expect(nextSquatKg(app)).toEqual([107.5, 107.5, 107.5]);
 
       // Week 2's sets are cleared: week 1 (102.5 kg) is the latest Squat again.
+      await openForEditing(app, 'week-2');
       app.store.dispatch(
         updateStoredSession({
           sessionId: 'week-2',
@@ -349,6 +456,29 @@ describe('history read from SQL', () => {
       await app.settle();
 
       expect((await app.workoutRepository.latestPerLineage())[key]?.workoutId).toBe('a');
+      expect(app.getState().storedSessions.latestExerciseWorkoutIds[key]).toBe('a');
+    });
+
+    it('agrees with the tables when the tying workout is closed before its write lands', async () => {
+      const app = await startApp([]);
+      const at = OffsetDateTime.of(2026, 4, 1, 1, 0, 0, 0, ZoneOffset.UTC);
+      const squatsAt = (id: string) =>
+        new Session(
+          id,
+          legs,
+          [makeRecordedExercise(squat, [5], new Weight(100, 'kilograms'), () => at)],
+          LocalDate.of(2026, 4, 1),
+          undefined,
+          undefined,
+        );
+      // The second put of b takes the recent slot from a before a's write has landed; the tie a's write
+      // makes is still judged by what it wrote.
+      app.store.dispatch(putStoredSession(squatsAt('b')));
+      app.store.dispatch(putStoredSession(squatsAt('a')));
+      app.store.dispatch(putStoredSession(squatsAt('b')));
+      await app.settle();
+
+      expect(app.getState().storedSessions.sessions['a']).toBeUndefined();
       expect(app.getState().storedSessions.latestExerciseWorkoutIds[key]).toBe('a');
     });
 

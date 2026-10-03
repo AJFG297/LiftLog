@@ -4,7 +4,6 @@ import {
   SessionBlueprint,
   WeightedExerciseBlueprint,
 } from '@/models/blueprint-models';
-import { Session } from '@/models/session-models';
 import { ChronoUnit, LocalDate } from '@js-joda/core';
 
 /** A rough time for one set, rest aside, in seconds. */
@@ -46,60 +45,6 @@ function secondsOf(exercise: ExerciseBlueprint): number {
     );
   }
   return setCountOf(exercise) * (SECONDS_PER_SET + exercise.restBetweenSets.minRest.seconds());
-}
-
-/**
- * The last day each routine was done, by routine name, which is how a workout knows its routine. A workout
- * that was opened but never logged a set doesn't count, and nor does a freeform one.
- */
-export function lastDoneByRoutineName(sessions: readonly Session[]): Map<string, LocalDate> {
-  const lastDone = new Map<string, LocalDate>();
-  for (const session of sessions) {
-    if (session.isFreeform || !session.hasLoggedAnySet) {
-      continue;
-    }
-    const name = session.blueprint.name;
-    const known = lastDone.get(name);
-    if (!known || session.date.isAfter(known)) {
-      lastDone.set(name, session.date);
-    }
-  }
-  return lastDone;
-}
-
-/**
- * How many workouts of `routineNames` were done, counted the way {@link lastDoneByRoutineName} counts them:
- * by name, with at least one set logged, and never a freeform one.
- */
-export function workoutsDoneOf(sessions: readonly Session[], routineNames: readonly string[]): number {
-  const names = new Set(routineNames);
-  return sessions.filter(
-    (session) => !session.isFreeform && session.hasLoggedAnySet && names.has(session.blueprint.name),
-  ).length;
-}
-
-/**
- * How many of the program's routines were done in the current round. A round ends once every routine has
- * been done at least once, in any order, and the next workout starts a new one, so a finished round reads
- * as nothing done yet. Workouts count the way {@link workoutsDoneOf} counts them.
- */
-export function routinesDoneThisRoundOf(sessions: readonly Session[], routineNames: readonly string[]): number {
-  const names = new Set(routineNames);
-  const done = sessions
-    .filter((session) => !session.isFreeform && session.hasLoggedAnySet && names.has(session.blueprint.name))
-    .sort((a, b) => a.date.compareTo(b.date) || activityEpochOf(a) - activityEpochOf(b));
-  const thisRound = new Set<string>();
-  for (const session of done) {
-    thisRound.add(session.blueprint.name);
-    if (thisRound.size === names.size) {
-      thisRound.clear();
-    }
-  }
-  return thisRound.size;
-}
-
-function activityEpochOf(session: Session): number {
-  return session.lastExercise?.lastActivityTime?.toEpochSecond() ?? 0;
 }
 
 /** How long ago `date` was, in the unit a person would say it in. */

@@ -18,16 +18,15 @@ import { createEffectStore } from '@/utils/__test__/effect-store';
 import { generateSyntheticHistory } from '@/utils/__test__/synthetic-history';
 
 /**
- * Startup baseline for the storage rewrite (PM-9; compared against in PM-14). Not part of the normal suite:
+ * Startup baseline for the storage rewrite (PM-9; re-run in PM-14). Not part of the normal suite:
  *
  *   npm run bench:startup
  *
  * Seeds an in-memory database with a synthetic history, then measures a cold start the way the app does
- * one: run migrations, hydrate stored sessions (read every workout table, rebuild `Session` instances from
- * the rows, and load the carry-over cache with its own query), then the first pass of what the Home and
- * History screens query on mount (`useOwnActivity`, `usePersonalRecords`, the month list) and what the
- * workout screen asks for its exercises. Heap is what a hydrated store retains over an empty one, after a
- * forced GC.
+ * one: run migrations, hydrate stored sessions (the workout in progress, if any, and the carry-over cache,
+ * each by its own query), then the first pass of what the Home and History screens query on mount
+ * (`useOwnActivity`, `usePersonalRecords`, the month list) and what the workout screen asks for its
+ * exercises. Heap is what a hydrated store retains over an empty one, after a forced GC.
  *
  * Numbers come from Node against libsql, not a phone against expo-sqlite, so compare them only with other
  * runs of this script on the same machine.
@@ -55,11 +54,13 @@ async function seedDatabase(count: number) {
   const expoDb = await openDatabaseAsync(':memory:');
   const db = drizzle(expoDb);
   await new DatabaseMigrationService(db, silentLogger as never, { importOldData: async () => {} }).migrate();
-  await new WorkoutRepository(db).putMany(generateSyntheticHistory({ count, end: TODAY }));
-  return db;
+  const history = generateSyntheticHistory({ count, end: TODAY });
+  await new WorkoutRepository(db).putMany(history);
+  // The workout the workout screen is measured on: the first stored, as PM-9's run took the first hydrated.
+  return { db, first: history[0] };
 }
 
-async function coldStart(db: Awaited<ReturnType<typeof seedDatabase>>, expectedSessions: number) {
+async function coldStart({ db, first }: Awaited<ReturnType<typeof seedDatabase>>) {
   const started = performance.now();
 
   await new DatabaseMigrationService(db, silentLogger as never, { importOldData: async () => {} }).migrate();
@@ -85,7 +86,6 @@ async function coldStart(db: Awaited<ReturnType<typeof seedDatabase>>, expectedS
   await workoutRepository.finishedBetween(month.atDay(1), month.atEndOfMonth());
   await workoutRepository.personalRecords();
   // What the workout screen asks for the exercises it shows (`PreviousPerformancesProvider`).
-  const first = Object.values(state.storedSessions.sessions)[0];
   if (first) {
     await workoutRepository.previousPerformances(
       first.recordedExercises.map((x) => x.movementKey()),
@@ -100,7 +100,8 @@ async function coldStart(db: Awaited<ReturnType<typeof seedDatabase>>, expectedS
 
   expect(silentLogger.error).not.toHaveBeenCalled();
   expect(state.storedSessions.isHydrated).toBe(true);
-  expect(Object.keys(state.storedSessions.sessions)).toHaveLength(expectedSessions);
+  // The synthetic history has no workout in progress, so the store holds none of it.
+  expect(state.storedSessions.sessions).toEqual({});
   return {
     migrateAndHydrateMs: hydrated - started,
     firstAggregatesMs: interactive - hydrated,
@@ -113,22 +114,22 @@ const median = (values: number[]) => [...values].sort((a, b) => a - b)[Math.floo
 
 describe.skipIf(!process.env.LIFTLOG_BENCH)('startup baseline', () => {
   it(`cold start with ${SESSION_COUNT} sessions`, { timeout: 600_000 }, async () => {
-    const db = await seedDatabase(SESSION_COUNT);
-    const emptyDb = await seedDatabase(0);
+    const seeded = await seedDatabase(SESSION_COUNT);
+    const empty = await seedDatabase(0);
 
     // Heap first, while nothing has held a history yet. An empty start loads the modules and the exercise
     // catalog, so the difference is what the history itself costs. It is measured once: module-level
     // selectors memoize their last input, so a later run's baseline would still hold an earlier history.
-    await coldStart(emptyDb, 0);
+    await coldStart(empty);
     const heapBefore = heapUsedMb();
-    const first = await coldStart(db, SESSION_COUNT);
+    const first = await coldStart(seeded);
     const retainedHeapMb = heapUsedMb() - heapBefore;
     expect(first.store.getState().storedSessions.isHydrated).toBe(true);
 
     // The first start above doubles as JIT warm-up, so none of these include it.
     const runs = [];
     for (let i = 0; i < RUNS; i++) {
-      const { store: _, ...timings } = await coldStart(db, SESSION_COUNT);
+      const { store: _, ...timings } = await coldStart(seeded);
       runs.push(timings);
     }
 

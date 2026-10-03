@@ -20,6 +20,7 @@ import { match, P } from 'ts-pattern';
 export function ExerciseHistoryList(props: {
   exercises: RecordedExercise[];
   contentContainerStyle?: StyleProp<ViewStyle>;
+  onEndReached?: () => void;
 }) {
   return (
     <LegendList
@@ -27,6 +28,7 @@ export function ExerciseHistoryList(props: {
       data={props.exercises}
       keyExtractor={(exercise, index) => exercise.latestTime?.toString() ?? index.toString()}
       contentContainerStyle={props.contentContainerStyle}
+      onEndReached={props.onEndReached}
       renderItem={({ item }) => <ExerciseHistoryEntry exercise={item} />}
       ItemSeparatorComponent={() => <Divider style={{ marginVertical: spacing[4] }} />}
       ListEmptyComponent={

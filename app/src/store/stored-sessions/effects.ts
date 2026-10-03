@@ -3,10 +3,15 @@ import {
   deleteExercise,
   deleteStoredSession,
   initializeStoredSessionsStateSlice,
+  openSession,
+  setSessionNotFound,
+  openSessionForEditing,
+  openSessionForSummary,
   putStoredSession,
   restoreExercise,
   selectSession,
   sessionFinished,
+  setActiveSession,
   setActiveSessionId,
   setBuiltInExercises,
   setExercises,
@@ -14,7 +19,6 @@ import {
   setIsHydrated,
   setLatestExercises,
   setLatestExercisesFor,
-  setStoredSessions,
   staleLineages,
   updateExercise,
   updateStoredSession,
@@ -23,6 +27,7 @@ import {
 } from './index';
 import { progressionKeyOf } from '@/models/blueprint-models';
 import { WorkoutRepository } from '@/services/workout-repository';
+import type { Session } from '@/models/session-models';
 import { Dispatch } from '@reduxjs/toolkit';
 import { fetchUpcomingSessions } from '@/store/program';
 import { addUnpublishedSessionId } from '@/store/feed';
@@ -52,19 +57,12 @@ export function applyStoredSessionsEffects(addEffect: AddEffectFn) {
       if (!getState().settings.isHydrated) {
         throw new Error('Settings must be hydrated before stored sessions');
       }
+      // All startup reads of the history: the workout in progress and the carry-over cache. Neither grows
+      // with the number of workouts; every screen reads the rest from the tables when it is shown.
       await logger.time('initializeStoredSessions', async () => {
-        // The carry-over cache comes from its own query, so it no longer depends on the whole history
-        // being in memory; `loadAll` goes with the full hydration (PM-14).
-        const [{ workouts, activeWorkoutId }, latest] = await Promise.all([
-          workoutRepository.loadAll(),
-          workoutRepository.latestPerLineage(),
-        ]);
-        dispatch(setStoredSessions(Object.fromEntries(workouts.map((x) => [x.id, x]))));
+        const [active, latest] = await Promise.all([workoutRepository.active(), workoutRepository.latestPerLineage()]);
+        dispatch(setActiveSession(active));
         dispatch(setLatestExercises(latest));
-        // Only when there is one: dispatching `undefined` would clear every flag in the table.
-        if (activeWorkoutId) {
-          dispatch(setActiveSessionId(activeWorkoutId));
-        }
       });
 
       const savedExercises = (await db.select().from(exercisesSchema)).reduce(
@@ -88,6 +86,17 @@ export function applyStoredSessionsEffects(addEffect: AddEffectFn) {
       dispatch(fetchUpcomingSessions());
     },
   );
+
+  addEffect([openSessionForEditing, openSessionForSummary], async (action, { getState, dispatch, extra }) => {
+    if (!openSessionForEditing.match(action) && !openSessionForSummary.match(action)) {
+      return;
+    }
+    const sessionId = action.payload;
+    const slot = openSessionForEditing.match(action) ? 'editing' : 'recent';
+    // The read waits for any write before it, so a workout put just before it is opened is read as put.
+    const session = selectSession(getState(), sessionId) ?? (await extra.workoutRepository.get(sessionId));
+    dispatch(session ? openSession({ session, slot }) : setSessionNotFound(sessionId));
+  });
 
   // Re-resolve the built-in catalog when the language changes (startup load is handled above).
   addEffect(setPreferredLanguage, async (action, { getState, dispatch }) => {
@@ -168,6 +177,10 @@ export function applyStoredSessionsEffects(addEffect: AddEffectFn) {
       // A rest timer or a running cardio timer isn't stored, so an update that changes only those writes
       // nothing. That is most updates while resting.
       if (updateStoredSession.match(action)) {
+        if (__DEV__ && !selectSession(stateBeforeReduce, sessionId)) {
+          // The reducer drops it: a screen must open a past workout (`openSessionForEditing`) to edit it.
+          logger.warn('updateStoredSession for a workout that is not open; nothing was written', { sessionId });
+        }
         const before = selectSession(stateBeforeReduce, sessionId);
         const after = selectSession(stateAfterReduce, sessionId);
         if (before && after && samePersistedContent(before, after)) {
@@ -181,7 +194,7 @@ export function applyStoredSessionsEffects(addEffect: AddEffectFn) {
         return;
       }
       await logger.time('persistStoredSession', () => workoutRepository.put(session));
-      await refreshStaleLineages(sessionId, getState, dispatch, workoutRepository);
+      await refreshStaleLineages(sessionId, getState, dispatch, workoutRepository, session);
     },
   );
 
@@ -285,9 +298,10 @@ async function refreshStaleLineages(
   getState: () => RootState,
   dispatch: Dispatch,
   workoutRepository: WorkoutRepository,
+  written?: Session,
 ) {
   const { storedSessions } = getState();
-  const stale = staleLineages(storedSessions, workoutId);
+  const stale = staleLineages(storedSessions, workoutId, written);
   if (!stale.length) {
     return;
   }

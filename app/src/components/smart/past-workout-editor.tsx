@@ -2,7 +2,7 @@ import SessionComponent from '@/components/smart/session-component';
 import SessionMoreMenuComponent from '@/components/smart/session-more-menu-component';
 import { spacing } from '@/hooks/useAppTheme';
 import { useAppSelector, useAppSelectorWithArg } from '@/store';
-import { selectSession, sessionFinished, updateStoredSession } from '@/store/stored-sessions';
+import { openSessionForEditing, selectSession, sessionFinished, updateStoredSession } from '@/store/stored-sessions';
 import { useFinishWorkout } from '@/hooks/useFinishWorkout';
 import { LocalDate } from '@js-joda/core';
 import { useRouter, Stack } from 'expo-router';
@@ -12,7 +12,7 @@ import { useDispatch } from 'react-redux';
 import { useOnDismiss } from '@/hooks/useOnDismiss';
 import { useStartWorkoutWithConfirmation } from '@/hooks/useStartWorkoutWithConfirmation';
 import { useTranslate } from '@tolgee/react';
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 
 /**
  * Editing a finished workout: its sets, its date, and resuming it as the workout in progress. `close` leaves the
@@ -21,6 +21,10 @@ import { useRef } from 'react';
  */
 export function PastWorkoutEditor({ sessionId, close }: { sessionId: string; close: () => void }) {
   const dispatch = useDispatch();
+  // Loaded by id into the editing slot; edits are written back through the repository like any other.
+  useEffect(() => {
+    dispatch(openSessionForEditing(sessionId));
+  }, [dispatch, sessionId]);
   const session = useAppSelectorWithArg(selectSession, sessionId);
   const { push } = useRouter();
   const finishWorkout = useFinishWorkout(sessionId);
@@ -50,7 +54,7 @@ export function PastWorkoutEditor({ sessionId, close }: { sessionId: string; clo
   const showBodyweight = useAppSelector((x) => x.settings.showBodyweight);
   const { t } = useTranslate();
 
-  // The row is gone if it was deleted from under this screen.
+  // Not loaded yet, or the row is gone because it was deleted from under this screen.
   if (!session) {
     return null;
   }

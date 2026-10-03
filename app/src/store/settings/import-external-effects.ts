@@ -7,7 +7,10 @@ import { getExternalImporter } from '@/services/csv-import';
 export function addImportExternalEffects(addEffect: AddEffectFn) {
   addEffect(
     importFromExternal,
-    async ({ payload: { format } }, { dispatch, getState, extra: { filePickerService, tolgee, logger } }) => {
+    async (
+      { payload: { format } },
+      { dispatch, getState, extra: { filePickerService, tolgee, logger, workoutRepository } },
+    ) => {
       const file = await filePickerService.pickFile();
       if (!file) {
         return;
@@ -20,8 +23,8 @@ export function addImportExternalEffects(addEffect: AddEffectFn) {
 
         // Grouping-key session ids: skip any workout already present so re-importing
         // the same day (FitNotes) or date+Workout slot (StrongLifts) is a no-op.
-        const existingSessions = getState().storedSessions.sessions;
-        const newWorkouts = backupData.workouts.filter((w) => !existingSessions[w.id]);
+        const existing = await workoutRepository.existingIds(backupData.workouts.map((w) => w.id));
+        const newWorkouts = backupData.workouts.filter((w) => !existing.has(w.id));
         if (newWorkouts.length === 0) {
           dispatch(
             showSnackbar({

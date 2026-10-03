@@ -13,9 +13,13 @@ import {
 } from '@/models/session-models/__test__/helpers';
 import { RecordedCardioExercise } from '@/models/session-models/recorded-cardio-exercise';
 import { exportPlainText } from '@/store/settings';
-import Enumerable from 'linq';
+import { drizzle } from 'drizzle-orm/expo-sqlite';
+import { openDatabaseAsync } from 'expo-sqlite';
+import { DatabaseMigrationService } from '@/services/database-migration-service';
+import { WorkoutRepository } from '@/services/workout-repository';
+import { generateSyntheticHistory } from '@/utils/__test__/synthetic-history';
 import { createAddEffectTestBed } from '@/utils/__test__/add-effect-testbed';
-import { addExportPlaintextEffects } from '@/store/settings/export-plaintext-effects';
+import { addExportPlaintextEffects, exportToCsv, exportToJson } from '@/store/settings/export-plaintext-effects';
 import { FileExportService } from '@/services/file-export-service';
 import { fromJsonBytes } from '@/services/encryption-service';
 import { RecordedWeightedExerciseJSON, SessionJSON } from '@/models/storage/versions/latest';
@@ -69,10 +73,15 @@ function makeSession(exercises: RecordedWeightedExercise[] | ReturnType<typeof m
   );
 }
 
-function makeProgressRepository(sessions: Session[]) {
-  return {
-    getOrderedSessions: vi.fn(() => Enumerable.from(sessions)),
-  };
+/** The workouts in the tables the export reads, written in the order given. */
+async function makeWorkoutRepository(sessions: Session[]) {
+  const db = drizzle(await openDatabaseAsync(':memory:'));
+  await new DatabaseMigrationService(db, { info: vi.fn(), error: vi.fn(), warn: vi.fn(), debug: vi.fn() } as never, {
+    importOldData: async () => {},
+  }).migrate();
+  const repository = new WorkoutRepository(db);
+  await repository.putMany(sessions);
+  return repository;
 }
 
 function makeFileExportService(): MockedObject<FileExportService> {
@@ -88,7 +97,7 @@ describe('export-plaintext-effects', () => {
       const fileExportService = makeFileExportService();
       const testBed = createAddEffectTestBed({
         services: {
-          progressRepository: makeProgressRepository([makeSession([makeWeightedExercise()])]),
+          workoutRepository: await makeWorkoutRepository([makeSession([makeWeightedExercise()])]),
           fileExportService,
         },
       });
@@ -114,7 +123,7 @@ describe('export-plaintext-effects', () => {
       ]).with({ id: '124' });
       const testBed = createAddEffectTestBed({
         services: {
-          progressRepository: makeProgressRepository([session]),
+          workoutRepository: await makeWorkoutRepository([session]),
           fileExportService,
         },
       });
@@ -135,7 +144,7 @@ describe('export-plaintext-effects', () => {
       const session = makeSession([makeWeightedExercise('Deadlift', 1, 180, 5)]);
       const testBed = createAddEffectTestBed({
         services: {
-          progressRepository: makeProgressRepository([session]),
+          workoutRepository: await makeWorkoutRepository([session]),
           fileExportService,
         },
       });
@@ -156,7 +165,7 @@ describe('export-plaintext-effects', () => {
       const session = makeSession([makeCardioExercise('Treadmill')]);
       const testBed = createAddEffectTestBed({
         services: {
-          progressRepository: makeProgressRepository([session]),
+          workoutRepository: await makeWorkoutRepository([session]),
           fileExportService,
         },
       });
@@ -186,7 +195,7 @@ describe('export-plaintext-effects', () => {
       const session = makeSession([exercise]);
       const testBed = createAddEffectTestBed({
         services: {
-          progressRepository: makeProgressRepository([session]),
+          workoutRepository: await makeWorkoutRepository([session]),
           fileExportService,
         },
       });
@@ -211,7 +220,7 @@ describe('export-plaintext-effects', () => {
       );
       const testBed = createAddEffectTestBed({
         services: {
-          progressRepository: makeProgressRepository([makeSession([exercise])]),
+          workoutRepository: await makeWorkoutRepository([makeSession([exercise])]),
           fileExportService,
         },
       });
@@ -237,7 +246,7 @@ describe('export-plaintext-effects', () => {
       );
       const testBed = createAddEffectTestBed({
         services: {
-          progressRepository: makeProgressRepository([makeSession([exercise])]),
+          workoutRepository: await makeWorkoutRepository([makeSession([exercise])]),
           fileExportService,
         },
       });
@@ -263,7 +272,7 @@ describe('export-plaintext-effects', () => {
       });
       const testBed = createAddEffectTestBed({
         services: {
-          progressRepository: makeProgressRepository([makeSession([exercise])]),
+          workoutRepository: await makeWorkoutRepository([makeSession([exercise])]),
           fileExportService,
         },
       });
@@ -292,7 +301,7 @@ describe('export-plaintext-effects', () => {
       const typed = kinds.reduce((ex, kind, index) => ex.withSet(index, (s) => s.with({ kind })), exercise);
       const testBed = createAddEffectTestBed({
         services: {
-          progressRepository: makeProgressRepository([makeSession([typed])]),
+          workoutRepository: await makeWorkoutRepository([makeSession([typed])]),
           fileExportService,
         },
       });
@@ -317,7 +326,7 @@ describe('export-plaintext-effects', () => {
       ];
       const testBed = createAddEffectTestBed({
         services: {
-          progressRepository: makeProgressRepository(sessions),
+          workoutRepository: await makeWorkoutRepository(sessions),
           fileExportService,
         },
       });
@@ -349,7 +358,7 @@ describe('export-plaintext-effects', () => {
       );
       const testBed = createAddEffectTestBed({
         services: {
-          progressRepository: makeProgressRepository([makeSession([exercise])]),
+          workoutRepository: await makeWorkoutRepository([makeSession([exercise])]),
           fileExportService,
         },
       });
@@ -369,7 +378,7 @@ describe('export-plaintext-effects', () => {
       const exercise = withLoggedWarmups(makeWeightedExercise('Bench Press', 1, 100, 10), [{ reps: 5, weightKg: 50 }]);
       const testBed = createAddEffectTestBed({
         services: {
-          progressRepository: makeProgressRepository([makeSession([exercise])]),
+          workoutRepository: await makeWorkoutRepository([makeSession([exercise])]),
           fileExportService,
         },
       });
@@ -390,7 +399,7 @@ describe('export-plaintext-effects', () => {
       const fileExportService = makeFileExportService();
       const testBed = createAddEffectTestBed({
         services: {
-          progressRepository: makeProgressRepository([makeSession([makeWeightedExercise()])]),
+          workoutRepository: await makeWorkoutRepository([makeSession([makeWeightedExercise()])]),
           fileExportService,
         },
       });
@@ -408,7 +417,7 @@ describe('export-plaintext-effects', () => {
       const fileExportService = makeFileExportService();
       const testBed = createAddEffectTestBed({
         services: {
-          progressRepository: makeProgressRepository([makeSession([makeWeightedExercise()])]),
+          workoutRepository: await makeWorkoutRepository([makeSession([makeWeightedExercise()])]),
           fileExportService,
         },
       });
@@ -430,7 +439,7 @@ describe('export-plaintext-effects', () => {
       ];
       const testBed = createAddEffectTestBed({
         services: {
-          progressRepository: makeProgressRepository(sessions),
+          workoutRepository: await makeWorkoutRepository(sessions),
           fileExportService,
         },
       });
@@ -448,7 +457,7 @@ describe('export-plaintext-effects', () => {
       const fileExportService = makeFileExportService();
       const testBed = createAddEffectTestBed({
         services: {
-          progressRepository: makeProgressRepository([makeSession([makeWeightedExercise()])]),
+          workoutRepository: await makeWorkoutRepository([makeSession([makeWeightedExercise()])]),
           fileExportService,
         },
       });
@@ -466,7 +475,7 @@ describe('export-plaintext-effects', () => {
       const session = makeSession([makeWeightedExercise('Deadlift', 2, 180, 5)]);
       const testBed = createAddEffectTestBed({
         services: {
-          progressRepository: makeProgressRepository([session]),
+          workoutRepository: await makeWorkoutRepository([session]),
           fileExportService,
         },
       });
@@ -488,7 +497,7 @@ describe('export-plaintext-effects', () => {
       const fileExportService = makeFileExportService();
       const testBed = createAddEffectTestBed({
         services: {
-          progressRepository: makeProgressRepository([makeSession([makeWeightedExercise()])]),
+          workoutRepository: await makeWorkoutRepository([makeSession([makeWeightedExercise()])]),
           fileExportService,
         },
       });
@@ -503,7 +512,7 @@ describe('export-plaintext-effects', () => {
       const fileExportService = makeFileExportService();
       const testBed = createAddEffectTestBed({
         services: {
-          progressRepository: makeProgressRepository([]),
+          workoutRepository: await makeWorkoutRepository([]),
           fileExportService,
         },
       });
@@ -511,6 +520,53 @@ describe('export-plaintext-effects', () => {
 
       await expect(testBed.dispatchHandled(exportPlainText({ format: 'CSV' }))).resolves.not.toThrow();
       await expect(testBed.dispatchHandled(exportPlainText({ format: 'JSON' }))).resolves.not.toThrow();
+      const written = fileExportService.exportBytes.mock.calls.map(([, bytes]) => new TextDecoder().decode(bytes));
+      expect(written).toEqual(['', '[]']);
+    });
+
+    it('writes the same bytes however the workouts are batched', async () => {
+      // Cardio-only workouts give no CSV rows, so some batches add nothing to the CSV.
+      const history = generateSyntheticHistory({ count: 60, end: LocalDate.of(2026, 6, 1) });
+      async function* batchesOf(size: number) {
+        for (let i = 0; i < history.length; i += size) {
+          yield history.slice(i, i + size);
+        }
+      }
+      async function* oneEach() {
+        for (const session of history) {
+          yield [session];
+        }
+      }
+
+      const csv = new TextDecoder().decode(await exportToCsv(batchesOf(history.length)));
+      const json = new TextDecoder().decode(await exportToJson(batchesOf(history.length)));
+
+      expect(csv.split('\r\n')[0]).toBe(
+        'SessionId,Timestamp,Exercise,Weight,WeightUnit,Reps,TargetReps,Notes,RPE,SetType',
+      );
+      expect(fromJsonBytes<SessionJSON[]>(new TextEncoder().encode(json))).toHaveLength(60);
+      for (const batches of [batchesOf(7), batchesOf(1), oneEach()]) {
+        expect(new TextDecoder().decode(await exportToCsv(batches))).toBe(csv);
+      }
+      expect(new TextDecoder().decode(await exportToJson(batchesOf(7)))).toBe(json);
+    });
+
+    it('exports every stored workout, latest first, 200 at a time', async () => {
+      const history = generateSyntheticHistory({ count: 450, end: LocalDate.of(2026, 6, 1) });
+      const workoutRepository = await makeWorkoutRepository(history);
+      const read = vi.spyOn(workoutRepository, 'inExportOrder');
+      const fileExportService = makeFileExportService();
+      const testBed = createAddEffectTestBed({ services: { workoutRepository, fileExportService } });
+      addExportPlaintextEffects(testBed.addEffect);
+
+      await testBed.dispatchHandled(exportPlainText({ format: 'JSON' }));
+
+      expect(read.mock.calls).toEqual([[200]]);
+      const [, bytes] = fileExportService.exportBytes.mock.calls[0]!;
+      const exported = fromJsonBytes<SessionJSON[]>(bytes);
+      expect(exported).toHaveLength(450);
+      expect(exported[0]!.id).toBe(history.at(-1)!.id);
+      expect(exported.at(-1)!.id).toBe(history[0]!.id);
     });
   });
 });

@@ -3,7 +3,6 @@ import { LocalDate, OffsetDateTime, ZoneOffset } from '@js-joda/core';
 import { v4 as uuid } from 'uuid';
 import {
   selectSession,
-  selectSessions,
   selectMuscles,
   staleLineages,
   selectExerciseById,
@@ -14,7 +13,8 @@ import {
   updateStoredSession,
   setActiveSessionId,
   upsertStoredSessions,
-  setStoredSessions,
+  setActiveSession,
+  openSession,
   deleteStoredSession,
   setLatestExercisesFor,
   updateExercise,
@@ -102,7 +102,7 @@ function exerciseDescriptor(overrides: Partial<ExerciseDescriptor> = {}): Exerci
 }
 
 describe('storedSessions reducer', () => {
-  it('putStoredSession stores the session and tracks derived values', () => {
+  it('putStoredSession stores the session, opens it in the recent slot and moves the carry-over cache', () => {
     const session = createSessionWithCompletionTime(
       LocalDate.of(2026, 4, 10),
       OffsetDateTime.of(2026, 4, 10, 10, 0, 0, 0, ZoneOffset.UTC),
@@ -112,11 +112,12 @@ describe('storedSessions reducer', () => {
     const state = reduce(putStoredSession(session));
 
     expect(state.sessions[session.id]).toBe(session);
-    expect(state.earliestSession).toBe(session);
+    expect(state.recentSessionId).toBe(session.id);
+    expect(state.editingSessionId).toBeUndefined();
     expect(Object.keys(state.latestExercises).length).toBe(1);
   });
 
-  it('upsertStoredSessions adds many and tracks the earliest session', () => {
+  it('upsertStoredSessions moves the carry-over cache but holds none of the workouts in memory', () => {
     const early = createSessionWithCompletionTime(
       LocalDate.of(2026, 1, 1),
       OffsetDateTime.of(2026, 1, 1, 10, 0, 0, 0, ZoneOffset.UTC),
@@ -130,27 +131,129 @@ describe('storedSessions reducer', () => {
 
     const state = reduce(upsertStoredSessions([late, early]));
 
-    expect(Object.keys(state.sessions)).toHaveLength(2);
-    expect(state.earliestSession).toBe(early);
+    expect(state.sessions).toEqual({});
+    expect(Object.keys(state.latestExercises)).toHaveLength(2);
   });
 
-  it('setStoredSessions replaces sessions and clears the carry-over cache, which startup loads from the tables', () => {
-    const first = createSessionWithCompletionTime(
+  it('upsertStoredSessions updates a workout that is open', () => {
+    const open = createSessionWithCompletionTime(
+      LocalDate.of(2026, 4, 1),
+      OffsetDateTime.of(2026, 4, 1, 10, 0, 0, 0, ZoneOffset.UTC),
+      'A',
+    );
+    const restored = open.withUpdatedDate(LocalDate.of(2026, 4, 2));
+
+    const state = reduce(putStoredSession(open), upsertStoredSessions([restored]));
+
+    expect(state.sessions).toEqual({ [open.id]: restored });
+  });
+
+  it('setActiveSession opens only the workout in progress, as startup reads it', () => {
+    const stale = createSessionWithCompletionTime(
       LocalDate.of(2026, 4, 10),
       OffsetDateTime.of(2026, 4, 10, 10, 0, 0, 0, ZoneOffset.UTC),
       'Squat',
     );
-    const replacement = createSessionWithCompletionTime(
+    const active = createSessionWithCompletionTime(
       LocalDate.of(2026, 4, 11),
       OffsetDateTime.of(2026, 4, 11, 10, 0, 0, 0, ZoneOffset.UTC),
       'Bench',
     );
 
-    const state = reduce(putStoredSession(first), setStoredSessions({ [replacement.id]: replacement }));
+    const state = reduce(putStoredSession(stale), setActiveSession(active));
 
-    expect(state.sessions[first.id]).toBeUndefined();
-    expect(state.sessions[replacement.id]).toBe(replacement);
-    expect(state.latestExercises).toEqual({});
+    expect(state.sessions).toEqual({ [active.id]: active });
+    expect(state.activeSessionId).toBe(active.id);
+    expect(state.editingSessionId).toBeUndefined();
+    expect(reduce(setActiveSession(undefined))).toMatchObject({ sessions: {}, activeSessionId: undefined });
+  });
+
+  describe('the editing and recent slots', () => {
+    const on = (day: number, name = 'Squat') =>
+      createSessionWithCompletionTime(
+        LocalDate.of(2026, 4, day),
+        OffsetDateTime.of(2026, 4, day, 10, 0, 0, 0, ZoneOffset.UTC),
+        name,
+      );
+
+    it('holds one past workout beside the one in progress: opening another closes it', () => {
+      const running = on(10);
+      const first = on(1);
+      const second = on(2);
+
+      const state = reduce(
+        putStoredSession(running),
+        setActiveSessionId(running.id),
+        openSession({ session: first, slot: 'editing' }),
+        openSession({ session: second, slot: 'editing' }),
+      );
+
+      expect(Object.keys(state.sessions).sort()).toEqual([running.id, second.id].sort());
+      expect(state.editingSessionId).toBe(second.id);
+      expect(state.activeSessionId).toBe(running.id);
+    });
+
+    it('keeps a copy already open, which is newer than the tables', () => {
+      const edited = on(1);
+      const fromTables = edited.withUpdatedDate(LocalDate.of(2026, 3, 1));
+
+      const state = reduce(putStoredSession(edited), openSession({ session: fromTables, slot: 'editing' }));
+
+      expect(state.sessions[edited.id]).toBe(edited);
+    });
+
+    it('the recent slot takes the workout that stops being in progress, so its summary can still read it', () => {
+      const running = on(10);
+
+      const state = reduce(putStoredSession(on(1)), putStoredSession(running), setActiveSessionId(running.id));
+      const finished = storedSessionsReducer(state, setActiveSessionId(undefined));
+
+      expect(finished.activeSessionId).toBeUndefined();
+      expect(finished.recentSessionId).toBe(running.id);
+      expect(finished.sessions).toEqual({ [running.id]: running });
+    });
+
+    it('never closes the editor workout: not by a put, a start or a finish', () => {
+      const past = on(1);
+      const running = on(10);
+      const next = on(11);
+
+      const state = reduce(
+        openSession({ session: past, slot: 'editing' }),
+        putStoredSession(running),
+        setActiveSessionId(running.id),
+        setActiveSessionId(undefined),
+        putStoredSession(next),
+        setActiveSessionId(next.id),
+        putStoredSession(on(2)),
+      );
+
+      expect(state.editingSessionId).toBe(past.id);
+      expect(state.sessions[past.id]).toBe(past);
+      expect(Object.keys(state.sessions)).toHaveLength(3);
+    });
+
+    it('opens a workout for its summary in the recent slot, leaving the editor alone', () => {
+      const past = on(1);
+      const summarised = on(2);
+
+      const state = reduce(
+        openSession({ session: past, slot: 'editing' }),
+        openSession({ session: summarised, slot: 'recent' }),
+      );
+
+      expect(state).toMatchObject({ editingSessionId: past.id, recentSessionId: summarised.id });
+      expect(Object.keys(state.sessions).sort()).toEqual([past.id, summarised.id].sort());
+    });
+
+    it('is emptied when its workout is deleted', () => {
+      const past = on(1);
+
+      const state = reduce(openSession({ session: past, slot: 'editing' }), deleteStoredSession(past.id));
+
+      expect(state.editingSessionId).toBeUndefined();
+      expect(state.sessions).toEqual({});
+    });
   });
 
   it('a completed exercise supersedes an earlier abandoned one with the same blueprint', () => {
@@ -197,6 +300,7 @@ describe('storedSessions reducer', () => {
 
     const state = reduce(
       upsertStoredSessions([earlier, latest]),
+      openSession({ session: latest, slot: 'editing' }),
       updateStoredSession({
         sessionId: latest.id,
         update: (s) => s.with({ recordedExercises: clearedToWarmups.recordedExercises }),
@@ -263,6 +367,7 @@ describe('storedSessions reducer', () => {
 
     const state = reduce(
       putStoredSession(target),
+      setActiveSessionId(target.id),
       putStoredSession(bystander),
       updateStoredSession({ sessionId: target.id, update: (s) => s.withUpdatedDate(LocalDate.of(2026, 5, 1)) }),
     );
@@ -330,44 +435,6 @@ describe('storedSessions reducer', () => {
     const latestSquat = (state: ReturnType<typeof reduce>) =>
       Object.values(state.latestExercises).filter(Boolean) as RecordedWeightedExercise[];
 
-    it('deleting the earliest session moves the earliest to the next one', () => {
-      const first = squatOn(1);
-      const second = squatOn(5);
-
-      const state = reduce(upsertStoredSessions([first, second]), deleteStoredSession(first.id));
-
-      expect(state.earliestSession).toBe(second);
-    });
-
-    it('deleting the only session clears the earliest', () => {
-      const only = squatOn(1);
-
-      const state = reduce(putStoredSession(only), deleteStoredSession(only.id));
-
-      expect(state.earliestSession).toBeUndefined();
-    });
-
-    it('replacing every session resets the earliest', () => {
-      const old = squatOn(1);
-      const replacement = squatOn(5);
-
-      const state = reduce(putStoredSession(old), setStoredSessions({ [replacement.id]: replacement }));
-
-      expect(state.earliestSession).toBe(replacement);
-    });
-
-    it('moving the earliest session later hands the earliest to the session now first', () => {
-      const first = squatOn(1);
-      const second = squatOn(5);
-
-      const state = reduce(
-        upsertStoredSessions([first, second]),
-        updateStoredSession({ sessionId: first.id, update: (s) => s.withUpdatedDate(LocalDate.of(2026, 4, 9)) }),
-      );
-
-      expect(state.earliestSession).toBe(second);
-    });
-
     it('an edit that moves the latest set earlier flags the lineage stale', () => {
       const earlier = squatOn(1);
       const later = squatOn(5);
@@ -375,6 +442,7 @@ describe('storedSessions reducer', () => {
 
       const state = reduce(
         upsertStoredSessions([earlier, later]),
+        openSession({ session: later, slot: 'editing' }),
         updateStoredSession({ sessionId: later.id, update: () => squatOn(1, 8).with({ id: later.id }) }),
       );
 
@@ -388,6 +456,7 @@ describe('storedSessions reducer', () => {
 
       const state = reduce(
         upsertStoredSessions([earlier, later]),
+        openSession({ session: later, slot: 'editing' }),
         updateStoredSession({ sessionId: later.id, update: (s) => s.with({ recordedExercises: [] }) }),
       );
 
@@ -401,6 +470,7 @@ describe('storedSessions reducer', () => {
 
       const state = reduce(
         upsertStoredSessions([earlier, today]),
+        openSession({ session: today, slot: 'editing' }),
         updateStoredSession({ sessionId: today.id, update: () => logged }),
       );
 
@@ -519,28 +589,12 @@ describe('storedSessions selectors', () => {
   const squat = (date: LocalDate, time: OffsetDateTime, name = 'Squat') =>
     createSessionWithCompletionTime(date, time, name);
 
-  it('selectSessions and selectSession read the session map', () => {
+  it('selectSession reads an open workout by id', () => {
     const session = squat(LocalDate.of(2026, 4, 10), OffsetDateTime.of(2026, 4, 10, 10, 0, 0, 0, ZoneOffset.UTC));
     const state = { storedSessions: reduce(putStoredSession(session)) };
 
-    expect(selectSessions(state)).toHaveLength(1);
     expect(selectSession(state, session.id)).toBe(session);
-  });
-
-  it('selectSessions keeps its reference while only the workout in progress changes', () => {
-    const done = squat(LocalDate.of(2026, 4, 1), OffsetDateTime.of(2026, 4, 1, 10, 0, 0, 0, ZoneOffset.UTC));
-    const inProgress = squat(LocalDate.of(2026, 4, 8), OffsetDateTime.of(2026, 4, 8, 10, 0, 0, 0, ZoneOffset.UTC));
-    const before = reduce(upsertStoredSessions([done, inProgress]), setActiveSessionId(inProgress.id));
-
-    const edited = storedSessionsReducer(
-      before,
-      updateStoredSession({ sessionId: inProgress.id, update: (s) => s.withUpdatedDate(LocalDate.of(2026, 4, 9)) }),
-    );
-
-    // Everything expensive - streak, personal records, volume - memoizes off this array, and the
-    // History tab is mounted behind the workout screen. A new reference here re-runs all of it per tap.
-    expect(edited.sessions).not.toBe(before.sessions);
-    expect(selectSessions({ storedSessions: edited })).toBe(selectSessions({ storedSessions: before }));
+    expect(selectSession(state, 'not-open')).toBeUndefined();
   });
 
   it('selectMuscles returns sorted distinct muscles and selectExerciseById reads one', () => {

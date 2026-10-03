@@ -25,7 +25,8 @@ import {
   sessionSetRows,
   uniqueRoutineName,
 } from '@/models/workout-detail';
-import { useAppSelector, useAppSelectorWhenFocusedWithArg } from '@/store';
+import { useAppSelector } from '@/store';
+import { useWorkoutQuery } from '@/hooks/useWorkoutQuery';
 import {
   addUnpublishedSessionId,
   encryptAndShare,
@@ -41,7 +42,7 @@ import {
   removeSessionFromProgram,
   selectActiveProgram,
 } from '@/store/program';
-import { deleteStoredSession, putStoredSession, selectSession, sessionFinished } from '@/store/stored-sessions';
+import { deleteStoredSession, putStoredSession, sessionFinished } from '@/store/stored-sessions';
 import { formatTimeRange } from '@/utils/format-time-range';
 import { localeFormatBigNumber } from '@/utils/locale-bignumber';
 import { uuid } from '@/utils/uuid';
@@ -68,8 +69,10 @@ export function WorkoutDetail({ sessionId }: { sessionId: string }) {
   const locale = useAppSelector((x) => x.settings.preferredLanguage);
   const showFeed = useAppSelector((x) => x.settings.showFeed);
   const unit: WeightUnit = useAppSelector((x) => x.settings.useImperialUnits) ? 'pounds' : 'kilograms';
-  // Edit workout opens on top of this screen; the comparison is re-read once it comes back into focus.
-  const session = useAppSelectorWhenFocusedWithArg(selectSession, sessionId);
+  // Edit workout opens on top of this screen; the workout and its comparison are re-read once it comes back
+  // into focus. Wrapped, so `undefined` is "loading" and `{ session: undefined }` is "deleted".
+  const loaded = useWorkoutQuery(async (repository) => ({ session: await repository.get(sessionId) }), [sessionId]);
+  const session = loaded?.session;
   const comparison = useWorkoutComparison(session);
   const program = useAppSelector(selectActiveProgram);
   const programId = useAppSelector((x) => x.program.activePlanId);
@@ -82,7 +85,7 @@ export function WorkoutDetail({ sessionId }: { sessionId: string }) {
     return (
       <View style={{ flex: 1, backgroundColor: tokens.bg, justifyContent: 'center', padding: spacing[6] }}>
         {/* Deleting here pops the screen as the session goes, so the message would only flash on the way out. */}
-        {deleting ? null : (
+        {deleting || !loaded ? null : (
           <SurfaceText font="text-base" style={{ color: tokens.muted, textAlign: 'center' }}>
             {t('workout_detail.missing.body')}
           </SurfaceText>

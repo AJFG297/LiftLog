@@ -10,18 +10,8 @@ import {
   withRoutineSetRemoved,
   withRoutineSetReps,
 } from '@/components/presentation/workout-editor/routine-sets';
-import {
-  daysAgoOf,
-  estimatedMinutesOf,
-  lastDoneByRoutineName,
-  totalSetsOf,
-} from '@/components/presentation/workout-editor/routine-summary';
-import {
-  makeCardioBlueprint,
-  makeSession,
-  makeWeightedBlueprint,
-  tick,
-} from '@/models/session-models/__test__/helpers';
+import { daysAgoOf, estimatedMinutesOf, totalSetsOf } from '@/components/presentation/workout-editor/routine-summary';
+import { makeCardioBlueprint, makeWeightedBlueprint } from '@/models/session-models/__test__/helpers';
 
 const bench = () =>
   makeWeightedBlueprint({
@@ -134,17 +124,6 @@ describe('routine summary', () => {
 
   it('guesses 10 minutes for a distance set', () => {
     expect(estimatedMinutesOf(new SessionBlueprint('Row', [makeCardioBlueprint(1)], ''))).toBe(10);
-  });
-
-  it('finds the last day each routine was done, skipping workouts with nothing logged', () => {
-    const logged = makeSession([makeWeightedBlueprint()], LocalDate.of(2025, 4, 5)).withCycledExerciseReps(
-      0,
-      0,
-      tick(),
-    );
-    const later = makeSession([makeWeightedBlueprint()], LocalDate.of(2025, 4, 9));
-    const lastDone = lastDoneByRoutineName([logged, later]);
-    expect(lastDone.get('Test')?.toString()).toBe('2025-04-05');
   });
 
   it('says how long ago in days, then weeks, then gives up', () => {

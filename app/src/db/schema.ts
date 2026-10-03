@@ -84,6 +84,9 @@ export const workoutExercisesSchema = sqliteTable(
     kind: text().$type<'weighted' | 'cardio'>().notNull(),
     movementKey: text('movement_key').notNull(),
     progressionKey: text('progression_key').notNull(),
+    // `lineageKeys`: the progression key, numbered `#n` for a repeat of it within the workout. The carry-over
+    // cache is the latest of each, which the index below finds without walking the history.
+    lineage: text().notNull().default(''),
     latestTimeMs: integer('latest_time_ms'),
     notes: text(),
     // Migrated on read by `sessionBlueprintMigrations`, at the workout's `blueprint_version`.
@@ -93,6 +96,7 @@ export const workoutExercisesSchema = sqliteTable(
     primaryKey({ columns: [table.workoutId, table.position] }),
     index('workout_exercise_movement').on(table.movementKey, table.latestTimeMs),
     index('workout_exercise_progression').on(table.progressionKey, table.latestTimeMs),
+    index('workout_exercise_lineage').on(table.lineage, table.latestTimeMs),
   ],
 );
 

@@ -177,7 +177,8 @@ A workout is stored across five tables (`db/schema.ts`), not as one payload:
   (`services/data-migrations/link-exercise-ids.ts`), which also rewrote every row's key columns.
 - **Query columns** are computed on write, for SQL to order and aggregate. They are never read back:
   - `workout`: `reference_time_ms` (`getSessionReferenceTime`) and `volume_kg` (`sessionVolume`)
-  - `workout_exercise`: `movement_key`, `progression_key` and `latest_time_ms`
+  - `workout_exercise`: `movement_key`, `progression_key`, `lineage` (`lineageKeys`: the progression key,
+    numbered `#n` for a repeat within the workout) and `latest_time_ms`
   - sets: `completed_at_ms`, `weight_kg` and `effective_weight_kg` (bodyweight folded in)
 
   Times are epoch milliseconds, so rows order correctly across offsets. `reference_time_ms` for a workout
@@ -198,11 +199,28 @@ on the cascades.
 - `setActive` is the only writer of `active`. It clears the flag, then writes the given workout's content
   with the flag set.
 - `delete` removes a workout and its rows.
-- `loadAll` reads everything back for hydration.
 
-The history screens read from the same tables instead of the whole history in Redux (phase 2 of the
-[relational storage plan](./plans/relational-storage.md)). Every read below covers _finished_ workouts
-only: the one in progress (`active = 1`) is left out, as `selectSessions` leaves it out.
+The store never holds the history: startup reads the workout in progress and the carry-over cache, and
+every screen reads what it shows from these tables when it is shown (see
+[Sessions, and the one in progress](#sessions-and-the-one-in-progress)). These reads take any workout, the
+one in progress included:
+
+- `active()` - the workout in progress, if any: what startup loads.
+- `get(id)` - one workout by id: the workout detail, the slots below (the history editor, a summary opened
+  by link), and the feed
+  publishing a finished workout.
+- `existingIds(ids)` - which of the ids are stored: the CSV import's dedupe, and whether a cheer arriving in
+  the inbox is for a workout of yours.
+- `inExportOrder(batchSize)` - every workout, latest first by `reference_time_ms` (ties in the order they
+  were first stored), `batchSize` at a time: the plaintext export, which serialises batch by batch.
+- `latestPerLineage({ progressionKeys?, excludeWorkoutId? })` - the latest performance of every lineage:
+  the carry-over cache below. With `excludeWorkoutId` it is what that workout's exercises carried on from
+  (Today's target). Unfiltered, it walks the `lineage` index from one lineage to the next and seeks each
+  one's latest time, so it reads no whole table: startup's cost doesn't grow with the history.
+- `loadAll()` - every workout, for the jobs that must touch each one once (a data migration, reading a
+  backup to restore it). Never for a screen.
+
+Every read below covers _finished_ workouts only: the one in progress (`active = 1`) is left out.
 
 - `finishedBetween(from, to)` - the workouts dated in the range, inclusive, latest first by
   `reference_time_ms`. The History month list, a selected day, Home's 7/30-day ranges and the Stats date
@@ -217,20 +235,20 @@ only: the one in progress (`active = 1`) is left out, as `selectSessions` leaves
 - `previousPerformances(movements, { excludeWorkoutId?, limit? })` - each movement's earlier performances,
   newest first: exercises with a working set logged, in finished workouts other than the one being viewed.
   "Last time" on the workout screen, the past-workout editor and a shared workout (through
-  `PreviousPerformancesProvider`, limit 10), and the exercise history sheet (no limit).
+  `PreviousPerformancesProvider`, limit 10), and the exercise history sheet, 20 at a time: it asks for 20
+  more each time it scrolls to the end of a full page.
 - `bestsBefore(session)` - for each of the workout's movements, the best estimated 1RM and the heaviest
   set over the finished workouts before it, as `RecordLedger` holds them; `sessionRecords(session, bests)`
   then names the records the workout set. Sets are scored as in `personalRecords()`, so the two agree
   except on an exact e1RM tie that floats can't tell apart.
-- `latestPerLineage({ progressionKeys?, excludeWorkoutId? })` - the latest performance of every lineage
-  (see `lineageKeys`: a repeat of an exercise within one workout is numbered by position in SQL too),
-  over _every_ workout, the one in progress included: the carry-over cache below. With `excludeWorkoutId`
-  it is what that workout's exercises carried on from (Today's target).
-
-Writes, `latestPerLineage` and `latestPlanned` run in the order they were issued, on one queue inside the
-repository, so the reads the store builds on see every write before them: the read that corrects the
-carry-over cache after a write, and the plan position that finishing a workout asks for as soon as it has
-dispatched the write.
+- `routineHistory(names)` - how far a program's routines have got, counting a workout as done when it has
+  any set logged (a warm-up included) and isn't freeform: the last day each was done and how many were
+  done, as SQL aggregates, and how many routines were done this round (`models/routine-rounds.ts`). The
+  round walks the routine name of every done workout, oldest first: where a round ends depends on all of
+  them (A B A B read from its second workout splits differently), so no bounded tail gives the same answer.
+  The Routines screen's active program card and rows.
+- `startedWorkouts()` - how many workouts were started and the date of the first, over the same workouts:
+  the You profile's "N workouts since".
 - `earliestDate()` - `MIN(date)`: where all-time stats start, so deleting the first workout moves it.
 - `dailyActivity()` - one row per day with a started workout: how many and `SUM(volume_kg)`. The
   calendar's counts and levels, the week strips, the streak and "last workout" all derive from it.
@@ -247,6 +265,11 @@ dispatched the write.
 A workout is "started" in SQL when it has a `weighted_set` with `reps` or a `cardio_set` with
 `completed_at`, which is `Session.isStarted`; warm-ups are in their own table, so they don't count, as in
 the model.
+
+Writes, `latestPerLineage`, `latestPlanned`, `get` and `existingIds` run in the order they were issued, on
+one queue inside the repository, so these reads see every write before them: the read that corrects the
+carry-over cache after a write, the plan position that finishing a workout asks for as soon as it has
+dispatched the write, and the editor or the feed reading a workout just written.
 
 `subscribe(listener)` is the one write notification: every `put`, `putMany`, `delete` and `setActive`
 calls the listeners after its transaction has committed, so a listener that re-queries sees the rows. It
@@ -268,10 +291,15 @@ It runs the query on mount and whenever its deps change (returning `undefined` m
 state can't flash under a new month), and runs it again after any write the repository reports, keeping
 the old value on screen until the new one arrives. While the screen is not focused, writes are only
 counted: it re-queries once on return, and not at all if nothing was written. That is what lets Home and
-History sit under the workout screen while sets are logged, as `useAppSelectorWhenFocused` did for the
-selectors it replaces. Deps are compared like `useEffect`'s, so pass primitives, not js-joda values. An
-`ignoreWrite` option names the writes that can't change the answer, so a query that leaves the workout in
-progress out doesn't re-run on every set logged in it.
+History sit under the workout screen while sets are logged. Deps are compared like `useEffect`'s, so pass
+primitives, not js-joda values. An `ignoreWrite` option names the writes that can't change the answer, so
+a query that leaves the workout in progress out doesn't re-run on every set logged in it. `keepPrevious`
+keeps the old answer on screen while a query for new deps runs, for deps that only extend it, like the
+exercise history sheet's page count.
+
+A screen that needs a "loading" apart from "not found" wraps the answer: the workout detail queries
+`{ session: await repository.get(id) }`, so `undefined` is loading and `{ session: undefined }` is a
+workout deleted from under it.
 
 On top of it, `hooks/useOwnActivity.ts` has `useOwnActivity()` (`dailyActivity` + `volumeScale` as an
 `OwnActivity`, which the calendar, week-strip and following-row selectors in `store/activity` take as a
@@ -294,9 +322,10 @@ Stats are the exception that still caches in Redux: `fetchOverallStats` reads `e
 and `subscribe` marks it stale again after the commit (`stats/effects.ts`): a fetch that runs between the
 action and the commit (a big import, an edit while Stats is mounted) would otherwise read the old rows
 and clear the flag. Both skip writes that touch only the workout in progress; `setActive` is never skipped,
-since finishing is what makes a workout count. All-time stats rebuild every `Session` in the range (about 0.8 s under Node for 5,000
-workouts), which hydration used to pay once; pushing the per-movement aggregates into SQL is the
-follow-up that removes it.
+since finishing is what makes a workout count. All-time stats rebuild every `Session` in the range (about
+0.8 s under Node for 5,000 workouts), which hydration used to pay once, and the Progress tab
+(`useProgressHistory`, see [Progress.md](./Progress.md)) does the same while it is shown; pushing the
+per-movement aggregates into SQL is the follow-up that removes both.
 
 Workout ids are kept end to end. They are the Health Connect / HealthKit record ids and the key the CSV
 import dedupes on.
@@ -322,18 +351,24 @@ The workout storage is pinned by:
   that workout's rows, in one transaction; and the `active` flag rules.
 - `drizzle/migrations.spec.ts`: the journal, `migrations.js` and the migrations folder agree. Vitest's
   migrator reads the folder, so without this a migration missing from `migrations.js` would pass every
-  test and never run on a device.
+  test and never run on a device. `drizzle/exercise-lineage.spec.ts` holds migration 0013's backfill of
+  `lineage` to `lineageKeys`.
 - `store/settings/import-backup-effects.spec.ts`: restores `utils/__test__/backup.liftlogbackup.sqlite.gz`,
   a backup made by this app's own export, round-trips export then restore, and rejects a pre-relational
   backup.
 
 The reads are pinned by `services/workout-repository.spec.ts` too: each query against hand-built
-workouts, and `personalRecords()` against `findPersonalRecords` over any generated history (fast-check).
-`hooks/useWorkoutQuery.spec.tsx` covers the refresh and focus rules, and
-`store/stored-sessions/history-from-sql.spec.ts` drives the store through an edit and a delete of a past
-workout and reads the month list, calendar, records and stats back from the tables; its carry-over cases
-start the next workout through `SessionService` after each, and a property check dispatches random writes
-back to back and compares the cache with `latestPerLineage()` once they settle.
+workouts, and `personalRecords()` against `findPersonalRecords` and `latestPerLineage()` against a walk over
+every workout, over any generated history (fast-check). `hooks/useWorkoutQuery.spec.tsx` covers the
+refresh and focus rules, and `store/stored-sessions/history-from-sql.spec.ts` drives the store as the
+history editor does - open a past workout by id, edit it, delete it - and reads the month list, calendar,
+records and stats back from the tables; its carry-over cases start the next workout through
+`SessionService` after each, and a property check dispatches random writes back to back and compares the
+cache with `latestPerLineage()` once they settle.
+
+`store/stored-sessions/startup-reads.spec.ts` holds startup to the active workout and the carry-over
+cache: over 300 and 3,000 workouts it records every statement the startup effect issues, and expects the
+same statements, under a thousand rows read, and no query plan that scans a workout table.
 
 History-derived behaviour is pinned by snapshots:
 
@@ -341,12 +376,13 @@ History-derived behaviour is pinned by snapshots:
   progression key, "last time", previous comparable session, month and range lists, streak, activity
   calendar, personal records, stats, export order) over a 420-session fixture
   (`utils/__test__/history-420.sessions.json.gz`), written through `WorkoutRepository.putMany` and
-  hydrated by the real startup effect. Every case but the export order is fed by the repository's queries
-  (the carry-over cache by the startup effect, which loads it from one). A change to that snapshot is a
-  change in what users see, so it has to be deliberate and called out in the PR.
-- `store/stored-sessions/startup-baseline.spec.ts` measures cold start (migrate, hydrate, first
-  aggregates) and retained heap over a synthetic history (`utils/__test__/synthetic-history.ts`,
-  5,000 sessions by default). It is skipped in the normal suite; run `npm run bench:startup` from `app/`
+  started by the real startup effect. Every case is fed by the repository's queries (the carry-over cache
+  by the startup effect, which loads it from one; the export order by `inExportOrder`). A change to that
+  snapshot is a change in what users see, so it has to be deliberate and called out in the PR.
+- `store/stored-sessions/startup-baseline.spec.ts` measures cold start (migrate, hydrate the workout in
+  progress and the carry-over cache, first aggregates) and retained heap over a synthetic history
+  (`utils/__test__/synthetic-history.ts`, 5,000 sessions by default). PM-14 took it from about 1,040 ms
+  and 88 MB retained to about 170 ms and 0.6 MB, with hydration about 9 ms at 500 workouts and at 5,000. It is skipped in the normal suite; run `npm run bench:startup` from `app/`
   (`LIFTLOG_BENCH_SESSIONS` / `LIFTLOG_BENCH_RUNS` override the size and repeat count). The numbers are
   only comparable with other runs on the same machine.
 
@@ -358,40 +394,51 @@ and anything that needs to survive versioned shape changes.
 
 Startup order is `initializeSettingsStateSlice` → (once settings are hydrated)
 `initializeStoredSessionsStateSlice`. Preferences are therefore available to DB hydration, but not the
-other way round; `stored-sessions/effects.ts` asserts this explicitly.
+other way round; `stored-sessions/effects.ts` asserts this explicitly. That hydration reads two things of
+the history, `active()` and `latestPerLineage()`; the rest of startup is the exercise list and the
+built-in catalog.
 
 ## Sessions, and the one in progress
 
-`storedSessions.sessions` holds every session the user owns - their history _and_ the workout in
-progress - keyed by id, with `activeSessionId` pointing at the live one. Screens address a session by
-id (`updateStoredSession({ sessionId, update })`, mirroring `updateProgram`), so two screens editing
-different sessions cannot collide.
+The history lives in the workout tables, not in Redux. `storedSessions.sessions` holds the _open_
+workouts only, keyed by id, and never more than three:
 
-Two things follow from that, and both matter when you touch this slice:
+- **The workout in progress**, `activeSessionId`. Startup loads it with `WorkoutRepository.active()`
+  (`setActiveSession`); starting a workout puts it and points `activeSessionId` at it.
+- **The editing slot**, `editingSessionId`: the past workout open in the history editor
+  (`PastWorkoutEditor`, on `/history/edit` and `/workout-detail/edit`), which dispatches
+  `openSessionForEditing(id)` when it mounts; the effect reads that workout with `get(id)` into the slot
+  (`openSession`), unless it is open already. Only opening another workout for editing, or deleting this
+  one, empties it, so finishing or starting a workout while the editor is open can't close it under the
+  editor.
+- **The recent slot**, `recentSessionId`: the workout last put that wasn't open (a workout being started,
+  the History "add a workout on this day", Undo after a delete) and the workout that stops being in
+  progress, which its summary keeps reading. The next one replaces it. A summary opened by link or after a
+  restart dispatches `openSessionForSummary(id)` to read its workout into this slot.
 
-- **Editing a session must not re-run every aggregate.** Nothing on the workout path reads the whole
-  history any more: "last time", Today's target, the comparison and the records come from the tables
-  (see [Workouts](#workouts)), and the carry-over cache is kept per lineage. What is left on
-  `selectSessions` (the Routines tab's last-done and round counts, the You profile, export, the CSV import
-  dedupe) goes in PM-14. Until then it returns only _finished_ sessions and memoizes with
-  `resultEqualityCheck: shallowEqual`, so the workout in progress cannot move it: the map changes identity
-  on every recorded set, and handing back the previous array is what stops everything downstream from
-  recomputing.
+A workout asked for that isn't in the tables sets `notFoundSessionId`, so the summary can leave rather
+than wait.
 
-  Use `selectSession(state, id)` to look up a session by id, active or not, and `selectActiveSession`
-  for the live workout.
+Everything else reads the tables when it is shown (see [Workouts](#workouts)): the History list and
+calendar, Home, Stats, Progress, the workout detail, the Routines screen's counts, the You profile, the
+exercise history sheet, the export, the CSV import's dedupe and the feed. Screens address an open
+workout by id (`updateStoredSession({ sessionId, update })`, mirroring `updateProgram`), so two screens
+editing different workouts cannot collide. Use `selectSession(state, id)` for an open workout by id and
+`selectActiveSession` for the live one.
 
+- `putStoredSession` / `updateStoredSession` mean "this workout changed" and only write its content. An
+  update to a workout that isn't open does nothing (development builds log a warning), so a screen opens
+  what it edits first. An update that
+  changes only what isn't stored (the rest timer, a running cardio timer) writes nothing.
+  `upsertStoredSessions` (restore, import) writes without opening anything. `sessionFinished` means "the
+  user is done with it" and is what queues the feed publish, exports to the health aggregator and clears
+  the active pointer. Keep completion work on the latter, or it fires once per set. Stats are the
+  exception that listens to both: any write to a _finished_ workout (edit, import, delete) marks them
+  dirty, while sets recorded in the workout in progress don't, and `sessionFinished` covers that workout
+  once it ends.
 - `useAppSelectorWhenFocused` (`store/index.ts`) does not run its selector at all while the screen is
-  offscreen - it is the tool for an expensive selector on a screen that stays mounted underneath
-  another. It returns the last value it saw until focus comes back. `useWorkoutQuery` applies the same
-  rule to repository reads.
-- `putStoredSession` / `updateStoredSession` mean "this session changed" and only write its content. An
-  update that changes only what isn't stored (the rest timer, a running cardio timer) writes nothing.
-  `sessionFinished` means "the user is done with it" and is what queues the feed publish, exports to the
-  health aggregator and clears the active pointer. Keep completion work on the latter, or it fires once
-  per set. Stats are the exception that listens to both: any write to a _finished_ session (edit,
-  import, delete) marks them dirty, while sets recorded in the workout in progress don't, and
-  `sessionFinished` covers that workout once it ends.
+  offscreen. The workout-in-progress bar uses it, so the tabs under the workout don't re-render on every
+  set; `useWorkoutQuery` applies the same rule to repository reads.
 - **The carry-over cache** (`latestExercises`, the latest performance per lineage, which
   `SessionService` and the routine editor read) is loaded at startup by one query, `latestPerLineage()`,
   and kept current in two steps. The reducer moves it forward synchronously: a set logged in the workout
@@ -401,10 +448,10 @@ Two things follow from that, and both matter when you touch this slice:
   in place, and after the write has landed the effect re-reads just those lineages
   (`staleLineages` + `refreshStaleLineages` in `stored-sessions/effects.ts`) and re-fetches the upcoming
   workouts. A lineage two workouts logged at the same instant is re-read too, so the tables' tie-break
-  (then by reference time, workout id and position) decides rather than the order the writes came in. `latestExerciseWorkoutIds` records which workout each entry came from, which is how a write
-  knows what it can have changed. A restore or import re-reads the whole cache. `earliestSession` is still
-  derived from the hydrated sessions (its one reader, the You profile, moves in PM-14); stats ask the
-  table (`earliestDate()`).
+  (then by reference time, workout id and position) decides rather than the order the writes came in.
+  `latestExerciseWorkoutIds` records which workout each entry came from, which is how a write knows what
+  it can have changed. A put or an update is always to an open workout, so `staleLineages` reads its new
+  content from the store; a deleted one has none. A restore or import re-reads the whole cache.
 
 The `active` column has a single writer, `WorkoutRepository.setActive` (called by the `setActiveSessionId`
 effect), with a unique partial index (`single_active_workout`) enforcing at most one - the same shape the

@@ -8,7 +8,14 @@ import { sql } from 'drizzle-orm';
 import { DatabaseMigrationService } from '@/services/database-migration-service';
 import { WorkoutRepository } from '@/services/workout-repository';
 import { SessionGenerator } from '@/models/storage/generators';
-import { CardioExerciseBlueprint, movementKeyFor, SessionBlueprint, stubExerciseId } from '@/models/blueprint-models';
+import {
+  CardioExerciseBlueprint,
+  lineageKeys,
+  movementKeyFor,
+  progressionKeyOf,
+  SessionBlueprint,
+  stubExerciseId,
+} from '@/models/blueprint-models';
 
 import { FREEFORM_WORKOUT_NAME, RecordedExercise, RecordedWeightedExercise, Session } from '@/models/session-models';
 import {
@@ -335,6 +342,166 @@ describe('WorkoutRepository', () => {
       });
     });
 
+    describe('active', () => {
+      it('is the workout in progress, read whole', async () => {
+        const running = lifted('Running', april(2));
+        await repository.putMany([lifted('Done', april(1)), lifted('Other', april(3))]);
+        await repository.setActive(running);
+
+        expect((await repository.active())?.toJSON()).toEqual(running.toJSON());
+      });
+
+      it('is undefined with no workout in progress', async () => {
+        await repository.put(lifted('Done', april(1)));
+
+        expect(await repository.active()).toBeUndefined();
+      });
+    });
+
+    describe('get', () => {
+      it('reads one workout by id, finished or in progress', async () => {
+        const done = lifted('Done', april(1));
+        const running = lifted('Running', april(2));
+        await repository.putMany([done, lifted('Other', april(3))]);
+        await repository.setActive(running);
+
+        expect((await repository.get(done.id))?.toJSON()).toEqual(done.toJSON());
+        expect((await repository.get(running.id))?.toJSON()).toEqual(running.toJSON());
+        expect(await repository.get('missing')).toBeUndefined();
+      });
+
+      it('sees a write issued before it, awaited or not', async () => {
+        const done = lifted('Done', april(1));
+        void repository.put(done);
+
+        expect((await repository.get(done.id))?.blueprint.name).toBe('Done');
+      });
+    });
+
+    describe('routineHistory', () => {
+      /** A workout with only a warm-up logged. */
+      function warmedUp(name: string, date: LocalDate): Session {
+        const blueprint = makeWeightedBlueprint({ name: 'Squat', sets: 1 });
+        const recorded = new RecordedWeightedExercise(blueprint, [emptyPotentialSet()], undefined).with({
+          warmupSets: [filledPotentialSet(5, OffsetDateTime.parse(`${date.toString()}T09:00:00Z`))],
+        });
+        return makeSession([blueprint], date).withName(name).withExercise(0, recorded);
+      }
+
+      it('counts the logged workouts of each routine, by name, with the last day each was done', async () => {
+        await repository.putMany([
+          lifted('Push', april(1)),
+          lifted('Pull', april(2)),
+          lifted('Push', april(5)),
+          warmedUp('Legs', april(6)),
+          lifted('Legs', april(7), { reps: [undefined] }),
+          lifted(FREEFORM_WORKOUT_NAME, april(8)),
+          lifted('Arms', april(9)),
+        ]);
+        await repository.setActive(lifted('Pull', april(10)));
+
+        const history = await repository.routineHistory(['Push', 'Pull', 'Legs', FREEFORM_WORKOUT_NAME]);
+
+        expect(history.workoutsDone).toBe(4);
+        expect([...history.lastDone].map(([name, date]) => `${name} ${date.toString()}`).sort()).toEqual([
+          'Legs 2026-04-06',
+          'Pull 2026-04-02',
+          'Push 2026-04-05',
+        ]);
+        // Push, Pull, Push, Legs: three of the four done this round (the freeform name never counts).
+        expect(history.routinesDoneThisRound).toBe(3);
+      });
+
+      it('walks the round in the order the workouts were done, by day and then by time', async () => {
+        await repository.putMany([
+          lifted('A', april(3), { time: '19:00' }),
+          lifted('B', april(3), { time: '08:00' }),
+          lifted('A', april(2), { time: '23:00' }),
+        ]);
+
+        // A, B closes a round, then A starts the next. By day alone, in the order stored, it would read
+        // A, A, B and close the round on B.
+        expect((await repository.routineHistory(['A', 'B'])).routinesDoneThisRound).toBe(1);
+        await repository.put(lifted('B', april(4)));
+        expect((await repository.routineHistory(['A', 'B'])).routinesDoneThisRound).toBe(0);
+      });
+
+      it('is empty for no routines', async () => {
+        await repository.put(lifted('Push', april(1)));
+
+        expect(await repository.routineHistory([])).toEqual({
+          lastDone: new Map(),
+          workoutsDone: 0,
+          routinesDoneThisRound: 0,
+        });
+      });
+    });
+
+    describe('inExportOrder', () => {
+      async function exported(batchSize: number) {
+        const batches: string[][] = [];
+        for await (const batch of repository.inExportOrder(batchSize)) {
+          batches.push(batch.map((x) => x.blueprint.name));
+        }
+        return batches;
+      }
+
+      it('is every workout, the one in progress included, latest first, in batches', async () => {
+        await repository.putMany([
+          lifted('A', april(1)),
+          lifted('C', april(10), { time: '19:00' }),
+          lifted('B', april(10), { time: '08:00' }),
+          lifted('E', april(30)),
+        ]);
+        await repository.setActive(lifted('Running', april(20)));
+
+        expect(await exported(2)).toEqual([['E', 'Running'], ['C', 'B'], ['A']]);
+        expect(await exported(100)).toEqual([['E', 'Running', 'C', 'B', 'A']]);
+      });
+
+      it('keeps the order workouts were first stored in when their times tie', async () => {
+        await repository.putMany(['First', 'Second', 'Third'].map((name) => lifted(name, april(1))));
+        // A rewrite keeps the row where it was.
+        await repository.put(lifted('First', april(1)).with({ id: (await repository.latestNamed('First', 1))[0]!.id }));
+
+        expect(await exported(1)).toEqual([['First'], ['Second'], ['Third']]);
+      });
+
+      it('rebuilds each workout as stored', async () => {
+        const session = lifted('A', april(1));
+        await repository.put(session);
+
+        const read: Session[] = [];
+        for await (const batch of repository.inExportOrder(10)) {
+          read.push(...batch);
+        }
+
+        expect(read.map((x) => x.toJSON())).toEqual([session.toJSON()]);
+      });
+
+      it('yields nothing without any workout', async () => {
+        expect(await exported(10)).toEqual([]);
+      });
+    });
+
+    describe('existingIds', () => {
+      it('is the ids asked about that are stored, the workout in progress included', async () => {
+        const done = lifted('Done', april(1)).with({ id: 'done' });
+        await repository.put(done);
+        await repository.setActive(lifted('Running', april(2)).with({ id: 'running' }));
+
+        expect([...(await repository.existingIds(['done', 'running', 'new']))].sort()).toEqual(['done', 'running']);
+        expect(await repository.existingIds([])).toEqual(new Set());
+      });
+
+      it('asks about more ids than fit in one statement', async () => {
+        await repository.put(lifted('Done', april(1)).with({ id: 'id-1500' }));
+        const ids = Array.from({ length: 2000 }, (_, index) => `id-${index}`);
+
+        expect([...(await repository.existingIds(ids))]).toEqual(['id-1500']);
+      });
+    });
+
     describe('latestPerLineage', () => {
       const squat = makeWeightedBlueprint({ name: 'Squat', sets: 1 });
       const key = squat.progressionKey();
@@ -407,6 +574,81 @@ describe('WorkoutRepository', () => {
         const latestPerLineage = await repository.latestPerLineage();
 
         expect(latestPerLineage[key]?.workoutId).toBe(logged.id);
+      });
+
+      it('breaks a tie of the same instant by the workout that went on later, then by id', async () => {
+        const bench = makeWeightedBlueprint({ name: 'Bench', sets: 1 });
+        const at = (hour: number) => OffsetDateTime.of(2026, 4, 1, hour, 0, 0, 0, ZoneOffset.UTC);
+        const squatsAtNine = (id: string, benchHour?: number) =>
+          new Session(
+            id,
+            new SessionBlueprint('Legs', [squat, bench], ''),
+            [
+              makeRecordedExercise(squat, [5], new Weight(100, 'kilograms'), () => at(9)),
+              makeRecordedExercise(bench, [benchHour === undefined ? undefined : 5], new Weight(60, 'kilograms'), () =>
+                at(benchHour ?? 9),
+              ),
+            ],
+            april(1),
+            undefined,
+            undefined,
+          );
+        await repository.putMany([squatsAtNine('a'), squatsAtNine('c', 11), squatsAtNine('b', 11)]);
+
+        expect((await repository.latestPerLineage())[key]?.workoutId).toBe('b');
+      });
+
+      it('agrees with a walk over every workout, for any history', async () => {
+        /** Each lineage's latest place: by its time, then the workout's reference time, then workout id. */
+        function walked(sessions: Session[], excludeWorkoutId?: string) {
+          const best = new Map<string, { at: number; reference: number; session: Session; position: number }>();
+          for (const session of sessions.filter((x) => x.id !== excludeWorkoutId)) {
+            const reference = getSessionReferenceTime(session).toInstant().toEpochMilli();
+            lineageKeys(session.recordedExercises).forEach((lineage, position) => {
+              const at = session.recordedExercises[position]!.latestTime?.toInstant().toEpochMilli();
+              const current = best.get(lineage);
+              const later =
+                !current ||
+                (at ?? -Infinity) > current.at ||
+                (at === current.at &&
+                  (reference > current.reference ||
+                    (reference === current.reference && session.id < current.session.id)));
+              if (at !== undefined && later) {
+                best.set(lineage, { at, reference, session, position });
+              }
+            });
+          }
+          return Object.fromEntries(
+            [...best].map(([lineage, x]) => [
+              lineage,
+              [x.session.id, x.session.recordedExercises[x.position]!.toJSON()],
+            ]),
+          );
+        }
+        const read = async (options?: Parameters<WorkoutRepository['latestPerLineage']>[0]) =>
+          Object.fromEntries(
+            Object.entries(await repository.latestPerLineage(options)).map(([lineage, x]) => [
+              lineage,
+              [x.workoutId, x.exercise.toJSON()],
+            ]),
+          );
+
+        await fc.assert(
+          fc.asyncProperty(fc.array(SessionGenerator, { minLength: 1, maxLength: 8 }), async (generated) => {
+            const sessions = generated.map((session, index) => session.with({ id: `w${index}` }));
+            repository = new WorkoutRepository(await createTestDb());
+            await repository.putMany(sessions);
+
+            expect(await read()).toEqual(walked(sessions));
+            expect(await read({ excludeWorkoutId: 'w0' })).toEqual(walked(sessions, 'w0'));
+            const keys = [...new Set(sessions[0]!.recordedExercises.map((x) => x.progressionKey()))];
+            const ofKeys = Object.fromEntries(
+              Object.entries(walked(sessions)).filter(([lineage]) => keys.includes(progressionKeyOf(lineage as never))),
+            );
+            expect(await read({ progressionKeys: keys })).toEqual(ofKeys);
+          }),
+          { numRuns: 30 },
+        );
       });
     });
 
@@ -497,6 +739,20 @@ describe('WorkoutRepository', () => {
       it('is undefined without any history', async () => {
         expect(await repository.earliestDate()).toBeUndefined();
       });
+    });
+
+    it('startedWorkouts counts the finished, started workouts and the date of the first', async () => {
+      expect(await repository.startedWorkouts()).toEqual({ count: 0, firstDate: undefined });
+
+      await repository.putMany([
+        lifted('Opened', april(1), { reps: [undefined] }),
+        lifted('A', april(2)),
+        lifted('B', april(3)),
+      ]);
+      await repository.setActive(lifted('Running', april(1)));
+
+      // Neither the opened-only workout nor the one in progress counts, for the count or the date.
+      expect(await repository.startedWorkouts()).toEqual({ count: 2, firstDate: april(2) });
     });
 
     it('dailyActivity counts and sums the started workouts of each day', async () => {
