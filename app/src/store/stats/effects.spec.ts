@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { combineReducers } from '@reduxjs/toolkit';
 import { LocalDate } from '@js-joda/core';
 import { applyStatsEffects } from '@/store/stats/effects';
@@ -15,6 +15,11 @@ import {
 } from '@/store/stored-sessions';
 import { createAddEffectTestBed } from '@/utils/__test__/add-effect-testbed';
 import { EmptySession, Session } from '@/models/session-models';
+import { drizzle } from 'drizzle-orm/expo-sqlite';
+import { openDatabaseAsync } from 'expo-sqlite';
+import { DatabaseMigrationService } from '@/services/database-migration-service';
+import { WorkoutRepository } from '@/services/workout-repository';
+import type { Services } from '@/services';
 
 const reducer = combineReducers({
   settings: settingsReducer,
@@ -22,8 +27,8 @@ const reducer = combineReducers({
   storedSessions: storedSessionsReducer,
 });
 
-function setup(stored: Session[], activeSessionId?: string) {
-  const testBed = createAddEffectTestBed({ reducer });
+function setup(stored: Session[], activeSessionId?: string, services?: Partial<Services>) {
+  const testBed = createAddEffectTestBed({ reducer, services });
   applyStatsEffects(testBed.addEffect);
   testBed.dispatch(upsertStoredSessions(stored));
   if (activeSessionId) {
@@ -81,7 +86,12 @@ describe('stats staleness', () => {
   });
 
   it('an edit while stats are being calculated leaves them stale for the next fetch', async () => {
-    const testBed = setup([finished]);
+    const db = drizzle(await openDatabaseAsync(':memory:'));
+    const logger = { info: vi.fn(), warn: vi.fn(), debug: vi.fn(), error: vi.fn() };
+    await new DatabaseMigrationService(db, logger as never, { importOldData: async () => {} }).migrate();
+    const workoutRepository = new WorkoutRepository(db);
+    await workoutRepository.put(finished);
+    const testBed = setup([finished], undefined, { workoutRepository });
     testBed.dispatch(setIsHydrated(true));
     testBed.setState({ stats: { ...testBed.getState().stats, isDirty: true } });
 

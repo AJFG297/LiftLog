@@ -27,7 +27,7 @@ import ExerciseFilterer from '@/components/presentation/workout-editor/exercise-
 import { ExerciseEquipmentChips } from '@/components/presentation/workout-editor/exercise-create-form';
 import { customExerciseOf, EQUIPMENT_CHOICES } from '@/components/presentation/workout-editor/exercise-picker';
 import { LegendList } from '@legendapp/list';
-import { ExerciseDescriptor } from '@/models/exercise-models';
+import { ExerciseDescriptor, musclesOf, withMuscles } from '@/models/exercise-models';
 import { exerciseMetaLabel, translateExerciseMeta } from '@/utils/exercise-meta';
 import { HeaderHeightContext } from 'expo-router/react-navigation';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -84,7 +84,11 @@ function ExerciseListItem({
         title={exercise.name || t('exercise.name.untitled')}
         // Important to have a space to ensure they are all the same size
         // Otherwise delete button can show through when there is no desc
-        description={exercise.muscles.map((m) => translateExerciseMeta(t, 'muscle', m)).join(', ') || ' '}
+        description={
+          musclesOf(exercise)
+            .map((m) => translateExerciseMeta(t, 'muscle', m))
+            .join(', ') || ' '
+        }
         descriptionNumberOfLines={1}
         expanded={listExpanded}
         onPress={() => {
@@ -258,7 +262,10 @@ function ExerciseEditSheet({ exercise, exerciseId }: { exercise: ExerciseDescrip
         multiline
         testID="exercise-instructions-input"
       />
-      <ExerciseMuscleSelector muscles={exercise.muscles} onChange={(muscles) => update({ muscles })} />
+      <ExerciseMuscleSelector
+        muscles={musclesOf(exercise)}
+        onChange={(muscles) => update(withMuscles(exercise, muscles))}
+      />
       <ExerciseEquipmentChips
         label={t('exercise_picker.equipment.label')}
         noneLabel={t('exercise_picker.create.equipment.none')}

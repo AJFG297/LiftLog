@@ -3,6 +3,7 @@ import { DEFAULT_BAR_WEIGHT, DEFAULT_PLATES } from '@/models/plates';
 import type { PerUnit } from '@/models/weight';
 import { RemoteData } from '@/models/remote';
 import { DayOfWeek, Instant } from '@js-joda/core';
+import type { ProgressTab } from '@/store/stats/progress-tab';
 import { ActionCreatorWithPreparedPayload, createAction, UnknownAction } from '@reduxjs/toolkit';
 import {
   boolCodec,
@@ -16,6 +17,7 @@ import {
   perUnitCodec,
   PlansSortOrder,
   plansSortOrderCodec,
+  progressTabCodec,
   stringCodec,
   ThemeMode,
   themeModeCodec,
@@ -80,6 +82,8 @@ export const preferenceRegistry = {
   colorSchemeSeed: pref<ColorSchemeSeed>({ default: 'default', codec: colorSchemeSeedCodec }),
   themeMode: pref<ThemeMode>({ default: 'system', codec: themeModeCodec }),
   plansSortOrder: pref<PlansSortOrder>({ default: 'name', codec: plansSortOrderCodec }),
+  // The Progress tab reopens on the section last used.
+  progressTab: pref<ProgressTab>({ default: 'strength', codec: progressTabCodec }),
   firstDayOfWeek: pref<DayOfWeek>({ default: DayOfWeek.SUNDAY, codec: dayOfWeekCodec }),
   barWeight: pref<PerUnit<number>>({ default: DEFAULT_BAR_WEIGHT, codec: perUnitCodec(isBarWeight) }),
   availablePlates: pref<PerUnit<number[]>>({ default: DEFAULT_PLATES, codec: perUnitCodec(isPlateList) }),

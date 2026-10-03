@@ -6,20 +6,14 @@ import {
   customExerciseOf,
   EQUIPMENT_CHOICES,
   type EquipmentChoice,
-  MUSCLE_GROUPS,
-  type MuscleGroup,
-  musclesForGroup,
   pickerListOf,
   type PickerRow,
   type PickerSection,
   recentExerciseIds,
   toggledPick,
 } from '@/components/presentation/workout-editor/exercise-picker';
-import {
-  type ChipOption,
-  ExercisePickerChipRow,
-  ExercisePickerSearchField,
-} from '@/components/presentation/workout-editor/exercise-picker-filters';
+import { type ChipOption, ChipRow } from '@/components/presentation/foundation/chip-row';
+import { SearchField } from '@/components/presentation/foundation/search-field';
 import {
   ExercisePickerCreateRow,
   ExercisePickerNoMatch,
@@ -28,12 +22,13 @@ import {
 } from '@/components/presentation/workout-editor/exercise-picker-row';
 import { searchSeedFor } from '@/components/presentation/workout-editor/filter-exercises';
 import { spacing, useAppTheme } from '@/hooks/useAppTheme';
+import { MUSCLE_GROUPS, type MuscleGroup, musclesForGroup } from '@/models/muscle-groups';
 import type { ExercisePickerMode } from '@/hooks/useExerciseSearch';
 import { ExerciseDescriptor } from '@/models/exercise-models';
 import { useAppSelector } from '@/store';
 import { PickedExercise, setExerciseSearchResult } from '@/store/app';
 import { selectExercises, selectLatestExercises, selectMuscles, updateExercise } from '@/store/stored-sessions';
-import { exerciseMetaLabel } from '@/utils/exercise-meta';
+import { exerciseMetaLabel, muscleGroupLabel } from '@/utils/exercise-meta';
 import { uuid } from '@/utils/uuid';
 import { LegendList } from '@legendapp/list';
 import { useTranslate } from '@tolgee/react';
@@ -141,7 +136,7 @@ export function ExerciseSearch({ requestId, mode, exerciseName, context }: Exerc
 
   const metaOf = (id: string, exercise: ExerciseDescriptor) =>
     [
-      exercise.muscles[0] ? exerciseMetaLabel(t, 'muscle', exercise.muscles[0]) : undefined,
+      exercise.primaryMuscles[0] ? exerciseMetaLabel(t, 'muscle', exercise.primaryMuscles[0]) : undefined,
       exercise.equipment ? exerciseMetaLabel(t, 'equipment', exercise.equipment) : undefined,
       alreadyIn.has(id)
         ? context?.name
@@ -263,7 +258,8 @@ export function ExerciseSearch({ requestId, mode, exerciseName, context }: Exerc
         {header}
         {creating ? null : (
           <>
-            <ExercisePickerSearchField
+            <SearchField
+              testID="exercise-search"
               value={query}
               onChange={setQuery}
               placeholder={t('exercise_picker.search.placeholder', { count: Object.keys(exercises).length })}
@@ -271,14 +267,14 @@ export function ExerciseSearch({ requestId, mode, exerciseName, context }: Exerc
               clearLabel={t('exercise_picker.search.clear.button')}
             />
             <View>
-              <ExercisePickerChipRow
+              <ChipRow
                 testID="exercise-picker-muscle"
                 accessibilityLabel={t('exercise_picker.muscle.label')}
                 options={muscleOptions}
                 selected={muscle}
                 onSelect={setMuscle}
               />
-              <ExercisePickerChipRow
+              <ChipRow
                 testID="exercise-picker-equipment"
                 accessibilityLabel={t('exercise_picker.equipment.label')}
                 options={[{ value: undefined, label: t('exercise_picker.equipment.any') }, ...equipmentOptions]}
@@ -458,22 +454,5 @@ function sectionLabel(t: TranslateFn, section: PickerSection): string {
       return t('exercise_picker.section.matches');
     default:
       return muscleGroupLabel(t, section);
-  }
-}
-
-function muscleGroupLabel(t: TranslateFn, group: MuscleGroup): string {
-  switch (group) {
-    case 'chest':
-      return t('exercise_picker.muscle.chest');
-    case 'back':
-      return t('exercise_picker.muscle.back');
-    case 'shoulders':
-      return t('exercise_picker.muscle.shoulders');
-    case 'arms':
-      return t('exercise_picker.muscle.arms');
-    case 'legs':
-      return t('exercise_picker.muscle.legs');
-    case 'core':
-      return t('exercise_picker.muscle.core');
   }
 }

@@ -170,6 +170,24 @@ describe('PreferenceService - themeMode', () => {
   });
 });
 
+// ─── progressTab ──────────────────────────────────────────────────────────────
+
+describe('PreferenceService - progressTab', () => {
+  it("defaults to 'strength' when unset or unrecognised", async () => {
+    expect(await makeService().service.getPreference('progressTab')).toBe('strength');
+    expect(await makeService({ progressTab: 'records' }).service.getPreference('progressTab')).toBe('strength');
+  });
+
+  it('reads and writes each tab verbatim', async () => {
+    for (const tab of ['strength', 'training', 'body'] as const) {
+      expect(await makeService({ progressTab: tab }).service.getPreference('progressTab')).toBe(tab);
+      const { service, store } = makeService();
+      await service.setPreference('progressTab', tab);
+      expect(store.setItem).toHaveBeenCalledWith('progressTab', tab);
+    }
+  });
+});
+
 // ─── firstDayOfWeek ───────────────────────────────────────────────────────────
 
 describe('PreferenceService - firstDayOfWeek', () => {

@@ -2,7 +2,10 @@
 
 The screen for choosing exercises (PM-32, step 13 of the [redesign plan](./plans/redesign.md)). It is one
 route, `app/exercise-search.tsx`, drawn by `components/smart/exercise-search.tsx` (`ExerciseSearch`), with
-its pure logic in `components/presentation/workout-editor/exercise-picker.ts`.
+its pure logic in `components/presentation/workout-editor/exercise-picker.ts`. The parts All exercises
+shares live outside the picker: the fuzzy match (`models/exercise-fuzzy-match.ts`), the muscle groups
+(`models/muscle-groups.ts`: `MUSCLE_GROUPS`, `muscleGroupOf`, `musclesForGroup`), and the search field and
+chip row (`foundation/search-field.tsx`, `foundation/chip-row.tsx`).
 
 It is a `presentation: 'modal'` route rather than a form sheet (the one exception to D7): a page sheet on
 iOS and a full-screen page on Android. It hides the native header and draws Cancel / title / New itself.
@@ -45,15 +48,15 @@ The routine or workout's name and exercise ids travel as route params, so a row 
 
 - With no search: **Recent**, then every other exercise by name. Recent is the five exercises logged most
   recently, newest first (`recentExerciseIds`, from `storedSessions.latestExercises`).
-- With a search: the fuzzy matches (`exercise-fuzzy-match.ts`), best first, and Recent has no section of
+- With a search: the fuzzy matches (`models/exercise-fuzzy-match.ts`), best first, and Recent has no section of
   its own. If no exercise in the whole catalog is named exactly what was typed, a **Create "X"** row ends
   the list. If one is but the chips hide it, the row offers to clear the chips instead, so a filter never
   leads to a duplicate. If nothing the chips allow matches, the screen says so and offers Create "X", or
   Clear filters when the chips hide a match.
 - A new search or chip remounts the list, so it starts at the top.
-- **Muscle chips** (All, Chest, Back, Shoulders, Arms, Legs, Core) group the catalog's muscles. An exercise
-  files under its first muscle, which the catalog lists first among the primary ones. Filtering on any muscle
-  would put every press and row under Arms, through their secondary muscles. Neck is under All only.
+- **Muscle chips** (All, Chest, Back, Shoulders, Arms, Legs, Core) group the catalog's muscles (`muscleGroupOf`), labelled by `muscleGroupLabel`, which All exercises' chips share. An exercise
+  files under its first primary muscle (`ExerciseDescriptor.primaryMuscles`). Filing by any muscle would put
+  every press and row under Arms, through their secondary muscles. Neck is under All only.
 - **Equipment chips** use the catalog's own words, labelled from the same `exercise.equipment.*` keys as
   each row's meta, so a chip and its rows read alike ("Bodyweight" for `body only`). An E-Z bar counts as a
   barbell, and anything outside the list (foam roll, medicine ball, none) as Other.
@@ -61,7 +64,7 @@ The routine or workout's name and exercise ids travel as route params, so a row 
 ## New exercises
 
 **New**, or Create "X", opens a form in the picker with the name (prefilled with the search), the muscles
-(the first one tapped is the main one) and the equipment. The muscle and equipment chips that were on start
+(all primary; the first one tapped is the main one) and the equipment. The muscle and equipment chips that were on start
 it off when they name one. Create saves it as a custom exercise and picks it: added to the selection, or,
 when swapping, picked straight away.
 

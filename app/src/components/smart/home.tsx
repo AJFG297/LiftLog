@@ -12,9 +12,11 @@ import { WelcomeWizard } from '@/components/smart/welcome-wizard';
 import { WhatsNewBanner } from '@/components/smart/whats-new-banner';
 import { spacing, useAppTheme } from '@/hooks/useAppTheme';
 import { useFormatDate } from '@/hooks/useFormatDate';
+import { useOwnActivity, usePersonalRecords, useStreakStats } from '@/hooks/useOwnActivity';
 import { usePreferredWeightSuffix } from '@/hooks/usePreferredWeightUnit';
 import { useStartWorkoutWithConfirmation } from '@/hooks/useStartWorkoutWithConfirmation';
 import { useToday } from '@/hooks/useToday';
+import { useWorkoutQuery } from '@/hooks/useWorkoutQuery';
 import {
   HistoryDay,
   HistoryRange,
@@ -28,12 +30,11 @@ import { routineColorOf } from '@/models/home/routine-colors';
 import { ProgramBlueprint } from '@/models/blueprint-models';
 import { Session } from '@/models/session-models';
 import { Weight } from '@/models/weight';
-import { useAppSelector, useAppSelectorWhenFocused, useAppSelectorWhenFocusedWithArg } from '@/store';
-import { selectOwnSessionsByDate, selectStreakStats } from '@/store/activity';
+import { useAppSelector } from '@/store';
 import { publishUnpublishedSessions } from '@/store/feed';
 import { fetchUpcomingSessions, selectActiveProgram } from '@/store/program';
 import { executeRemoteBackup } from '@/store/settings';
-import { selectActiveSessionId, selectHistoryPersonalRecords, selectSessions } from '@/store/stored-sessions';
+import { selectActiveSessionId } from '@/store/stored-sessions';
 import { LocalDate } from '@js-joda/core';
 import { useTranslate } from '@tolgee/react';
 import { useFocusEffect, useRouter } from 'expo-router';
@@ -46,6 +47,10 @@ import { useDispatch } from 'react-redux';
 type TranslateFn = ReturnType<typeof useTranslate>['t'];
 
 const CARD_EXERCISES_SHOWN = 3;
+/** The 30-day view is the longer of the two ranges, so one query covers both. */
+const HISTORY_RANGE_DAYS: HistoryRange = 30;
+/** How many past runs of the next workout the Up next detail looks at (its estimate takes the last few). */
+const UP_NEXT_PAST_WORKOUTS = 10;
 
 /**
  * The Home tab: what's next, and what was done in the last 7 or 30 days. The workout in progress isn't
@@ -66,15 +71,28 @@ export function Home() {
   const [range, setRange] = useState<HistoryRange>(7);
   const { start, confirmationDialog } = useStartWorkoutWithConfirmation();
 
-  // Home stays mounted under the workout screen, so it must not recompute these on every logged set.
   const hasWorkoutInProgress = useAppSelector((x) => selectActiveSessionId(x) !== undefined);
-  const sessionsByDate = useAppSelectorWhenFocused(selectOwnSessionsByDate);
-  const sessions = useAppSelectorWhenFocused(selectSessions);
-  const personalRecords = useAppSelectorWhenFocused(selectHistoryPersonalRecords);
-  const streakStats = useAppSelectorWhenFocusedWithArg(selectStreakStats, today);
+  // Queried from the workout tables; Home stays mounted under the workout screen, and these only
+  // re-query once it is focused again.
+  const recentSessions = useWorkoutQuery(
+    (repository) => repository.finishedBetween(today.minusDays(HISTORY_RANGE_DAYS - 1), today),
+    [today.toString()],
+  );
+  const personalRecords = usePersonalRecords();
+  const own = useOwnActivity();
+  const streakStats = useStreakStats(own, today);
   const upcoming = useAppSelector((x) => x.program.upcomingSessions);
   // Undefined while the plans load, or once the active plan has been deleted.
   const plan: ProgramBlueprint | undefined = useAppSelector(selectActiveProgram);
+  const nextSession = upcoming.map((x) => x.at(0)).unwrapOr(undefined);
+  const nextSessionName = nextSession?.blueprint.name;
+  const pastRunsOfNext = useWorkoutQuery(
+    (repository) =>
+      nextSessionName === undefined
+        ? Promise.resolve([])
+        : repository.latestNamed(nextSessionName, UP_NEXT_PAST_WORKOUTS),
+    [nextSessionName],
+  );
 
   useFocusEffect(() => {
     dispatch(fetchUpcomingSessions());
@@ -84,12 +102,11 @@ export function Home() {
 
   const planWorkoutNames = plan?.sessions.map((x) => x.name) ?? [];
   const colorOf = (session: Session) => routineColorOf(session.blueprint.name, planWorkoutNames);
-  const nextSession = upcoming.map((x) => x.at(0)).unwrapOr(undefined);
   // Other offers the plan's other workouts when it has any; the Routines tab can't start one yet (PM-26).
   const otherPlanWorkouts = upcoming.map((x) => x.length > 1).unwrapOr(false);
   const bodyweight = nextSession?.bodyweight;
 
-  const days = historyDaysOf(sessionsByDate, today, range);
+  const days = historyDaysOf(recentSessions ?? [], today, range);
   const summary = historySummaryOf(days);
   const entries = historyEntriesOf(days, range);
 
@@ -180,7 +197,7 @@ export function Home() {
           <UpNextCard
             eyebrow={upNextEyebrow(t, plan, nextSession)}
             name={nextSession.blueprint.name}
-            detail={upNextDetailText(t, nextSession, sessions, today, formatDate)}
+            detail={upNextDetailText(t, nextSession, pastRunsOfNext ?? [], today, formatDate)}
             color={colorOf(nextSession)}
             startLabel={t('home.up_next.start.button', { name: nextSession.blueprint.name })}
             otherLabel={t('home.up_next.other.button')}

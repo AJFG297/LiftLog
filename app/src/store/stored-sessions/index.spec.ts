@@ -1,10 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import fc from 'fast-check';
-import { Duration, LocalDate, OffsetDateTime, ZoneOffset, YearMonth } from '@js-joda/core';
+import { Duration, LocalDate, OffsetDateTime, ZoneOffset } from '@js-joda/core';
 import { v4 as uuid } from 'uuid';
 import {
-  selectSessionsInMonth,
-  selectSessionsBy,
   selectSession,
   selectSessions,
   selectPreviousComparableSession,
@@ -92,35 +90,6 @@ function createWarmupsOnlySession(sessionDate: LocalDate, warmupTime: OffsetDate
   });
 }
 
-describe('stored sessions sorting', () => {
-  it('sorts sessions in a month by the actual completion time, not only the date', () => {
-    const sameDay = LocalDate.of(2026, 4, 10);
-    const earlier = createSessionWithCompletionTime(
-      sameDay,
-      OffsetDateTime.of(2026, 4, 10, 8, 30, 0, 0, ZoneOffset.UTC),
-      'Morning',
-    );
-    const later = createSessionWithCompletionTime(
-      sameDay,
-      OffsetDateTime.of(2026, 4, 10, 18, 15, 0, 0, ZoneOffset.UTC),
-      'Evening',
-    );
-
-    const state = {
-      storedSessions: {
-        sessions: {
-          [earlier.id]: earlier,
-          [later.id]: later,
-        },
-      },
-    };
-
-    const ordered = selectSessionsInMonth(state, YearMonth.of(2026, 4));
-
-    expect(ordered.map((session) => session.blueprint.name)).toEqual(['Evening', 'Morning']);
-  });
-});
-
 // ─── Reducer ──────────────────────────────────────────────────────────────────
 
 function reduce(...actions: UnknownAction[]) {
@@ -138,7 +107,8 @@ function exerciseDescriptor(overrides: Partial<ExerciseDescriptor> = {}): Exerci
     level: 'beginner',
     mechanic: null,
     equipment: null,
-    muscles: ['quads'],
+    primaryMuscles: ['quads'],
+    secondaryMuscles: [],
     instructions: '',
     category: 'strength',
     ...overrides,
@@ -518,8 +488,8 @@ describe('storedSessions reducer', () => {
   });
 
   it('manages saved exercises', () => {
-    const squat = exerciseDescriptor({ name: 'Squat', muscles: ['quads'] });
-    const bench = exerciseDescriptor({ name: 'Bench', muscles: ['chest'] });
+    const squat = exerciseDescriptor({ name: 'Squat', primaryMuscles: ['quads'] });
+    const bench = exerciseDescriptor({ name: 'Bench', primaryMuscles: ['chest'] });
 
     let state = reduce(updateExercise({ id: '1', exercise: squat }), updateExercise({ id: '2', exercise: bench }));
     expect(state.savedExercises['1']).toBe(squat);
@@ -594,20 +564,6 @@ describe('storedSessions selectors', () => {
 
     expect(selectSessions(state)).toHaveLength(1);
     expect(selectSession(state, session.id)).toBe(session);
-  });
-
-  it('selectSessionsBy filters to an inclusive date range', () => {
-    const inRange = squat(LocalDate.of(2026, 4, 10), OffsetDateTime.of(2026, 4, 10, 10, 0, 0, 0, ZoneOffset.UTC), 'In');
-    const tooEarly = squat(
-      LocalDate.of(2026, 1, 1),
-      OffsetDateTime.of(2026, 1, 1, 10, 0, 0, 0, ZoneOffset.UTC),
-      'Early',
-    );
-    const state = { storedSessions: reduce(upsertStoredSessions([inRange, tooEarly])) };
-
-    const result = selectSessionsBy(state, LocalDate.of(2026, 4, 1), LocalDate.of(2026, 4, 30));
-
-    expect(result.map((s) => s.blueprint.name)).toEqual(['In']);
   });
 
   it('selectPreviousComparableSession finds the prior session of the same name', () => {
@@ -751,13 +707,16 @@ describe('storedSessions selectors', () => {
   it('selectMuscles returns sorted distinct muscles and selectExerciseById reads one', () => {
     const state = {
       storedSessions: reduce(
-        updateExercise({ id: '1', exercise: exerciseDescriptor({ muscles: ['quads', 'glutes'] }) }),
-        updateExercise({ id: '2', exercise: exerciseDescriptor({ muscles: ['glutes', 'chest'] }) }),
+        updateExercise({
+          id: '1',
+          exercise: exerciseDescriptor({ primaryMuscles: ['quads'], secondaryMuscles: ['glutes'] }),
+        }),
+        updateExercise({ id: '2', exercise: exerciseDescriptor({ primaryMuscles: ['glutes', 'chest'] }) }),
       ),
     };
 
     expect(selectMuscles(state)).toEqual(['chest', 'glutes', 'quads']);
-    expect(selectExerciseById(state, '1')!.muscles).toEqual(['quads', 'glutes']);
+    expect(selectExerciseById(state, '1')!.secondaryMuscles).toEqual(['glutes']);
   });
 });
 

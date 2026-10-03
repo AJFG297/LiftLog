@@ -1,41 +1,9 @@
-import { fuzzyMatchScore } from '@/components/presentation/workout-editor/exercise-fuzzy-match';
+import { fuzzyMatchScore } from '@/models/exercise-fuzzy-match';
 import { ExerciseBlueprint, Rest, WeightedExerciseBlueprint } from '@/models/blueprint-models';
 import { ExerciseDescriptor } from '@/models/exercise-models';
+import { MuscleGroup, muscleGroupOf } from '@/models/muscle-groups';
 import { RecordedWeightedExercise, Session } from '@/models/session-models';
 import type { OffsetDateTime } from '@js-joda/core';
-
-/** The muscle chips, in the order they're shown after All. */
-export const MUSCLE_GROUPS = ['chest', 'back', 'shoulders', 'arms', 'legs', 'core'] as const;
-export type MuscleGroup = (typeof MUSCLE_GROUPS)[number];
-
-// Keyed by the catalog's muscle vocabulary. Neck belongs to no chip, so it only shows under All.
-const MUSCLE_GROUP_OF: Record<string, MuscleGroup> = {
-  chest: 'chest',
-  lats: 'back',
-  'middle back': 'back',
-  'lower back': 'back',
-  traps: 'back',
-  shoulders: 'shoulders',
-  biceps: 'arms',
-  triceps: 'arms',
-  forearms: 'arms',
-  quadriceps: 'legs',
-  hamstrings: 'legs',
-  glutes: 'legs',
-  calves: 'legs',
-  adductors: 'legs',
-  abductors: 'legs',
-  abdominals: 'core',
-};
-
-/**
- * The chip an exercise files under, from its first muscle. The catalog lists primary muscles first, and
- * filtering on any muscle would put every press and row under Arms through their secondary muscles.
- */
-export function muscleGroupOf(exercise: ExerciseDescriptor): MuscleGroup | undefined {
-  const first = exercise.muscles[0]?.trim().toLowerCase();
-  return first === undefined ? undefined : MUSCLE_GROUP_OF[first];
-}
 
 /**
  * The equipment chips, as the catalog spells them. They're also what a custom exercise can store, so the
@@ -197,16 +165,9 @@ export function customExerciseOf(input: {
     instructions: '',
     level: 'beginner',
     mechanic: null,
-    muscles: input.muscles,
+    primaryMuscles: input.muscles,
+    secondaryMuscles: [],
   };
-}
-
-/** The muscle a new exercise starts with when the Create was reached through a one-muscle chip. */
-export function musclesForGroup(group: MuscleGroup | undefined): string[] {
-  const muscles = Object.entries(MUSCLE_GROUP_OF)
-    .filter(([, of]) => of === group)
-    .map(([muscle]) => muscle);
-  return muscles.length === 1 ? muscles : [];
 }
 
 /** An exercise picked from the list, as the blueprint links it. */

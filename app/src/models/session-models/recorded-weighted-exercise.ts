@@ -3,6 +3,7 @@ import {
   PlannedWarmupSet,
   ProgressionKey,
   RepsTarget,
+  Resistance,
   Rest,
   WeightedExerciseBlueprint,
   roundWarmupWeight,
@@ -43,6 +44,19 @@ export interface SetPosition {
 
 /** A logged slot and where it sits. */
 export type LoggedSlot = SetPosition & { slot: PotentialSet };
+
+/**
+ * The load actually moved for a set: the stored weight for a plain exercise, the bodyweight plus the stored
+ * (added/assisted) weight for a bodyweight exercise, and nothing for a movement that tracks no load. When
+ * the bodyweight is unknown its contribution is treated as zero. Also what SQL's `effective_weight_kg`
+ * holds, so a query can rebuild the exact value from a set's stored columns.
+ */
+export function effectiveLoad(resistance: Resistance, weight: Weight, bodyweight: Weight | undefined): Weight {
+  if (resistance === 'none') {
+    return Weight.NIL;
+  }
+  return resistance === 'bodyweight' ? (bodyweight ?? Weight.NIL).plus(weight) : weight;
+}
 
 export class RecordedWeightedExercise {
   readonly type = 'RecordedWeightedExercise';
@@ -334,10 +348,7 @@ export class RecordedWeightedExercise {
    * session bodyweight is unknown the bodyweight contribution is treated as zero.
    */
   effectiveWeight(set: PotentialSet, bodyweight: Weight | undefined): Weight {
-    if (!this.tracksResistance) {
-      return Weight.NIL;
-    }
-    return this.blueprint.resistance === 'bodyweight' ? (bodyweight ?? Weight.NIL).plus(set.weight) : set.weight;
+    return effectiveLoad(this.blueprint.resistance, set.weight, bodyweight);
   }
 
   get maxWeight(): Weight {

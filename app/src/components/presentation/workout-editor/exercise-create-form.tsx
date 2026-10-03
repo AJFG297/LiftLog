@@ -2,7 +2,7 @@ import { Card } from '@/components/presentation/foundation/card';
 import { Chip } from '@/components/presentation/foundation/chip';
 import { SurfaceText } from '@/components/presentation/foundation/surface-text';
 import { MIN_TOUCH_TARGET } from '@/components/presentation/foundation/touch-target';
-import type { ChipOption } from '@/components/presentation/workout-editor/exercise-picker-filters';
+import type { ChipOption } from '@/components/presentation/foundation/chip-row';
 import { fontFamily, spacing, useAppTheme } from '@/hooks/useAppTheme';
 import { TextInput, View } from 'react-native';
 
