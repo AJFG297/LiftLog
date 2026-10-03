@@ -321,7 +321,7 @@ export class WorkoutRepository {
     if (progressionKeys?.length === 0) {
       return {};
     }
-    const others = excludeWorkoutId === undefined ? sql`` : sql`and e.workout_id != ${excludeWorkoutId}`;
+    const excludeClause = excludeWorkoutId === undefined ? sql`` : sql`and e.workout_id != ${excludeWorkoutId}`;
     // Every lineage stored, or those of `progressionKeys`. Unfiltered, as at startup, it skips from one
     // lineage to the next through the `lineage` index rather than reading every exercise ever logged.
     const lineages = progressionKeys
@@ -338,7 +338,7 @@ export class WorkoutRepository {
         latest as (
           -- The index ends each lineage with its latest time, so this is a seek per lineage.
           select l.lineage, (
-            select max(e.latest_time_ms) from ${workoutExercisesSchema} e where e.lineage = l.lineage ${others}
+            select max(e.latest_time_ms) from ${workoutExercisesSchema} e where e.lineage = l.lineage ${excludeClause}
           ) as latest_time_ms
           from (${lineages}) l
         ),
@@ -349,7 +349,7 @@ export class WorkoutRepository {
           from latest l
           join ${workoutExercisesSchema} e on e.lineage = l.lineage and e.latest_time_ms = l.latest_time_ms
           join ${workoutsSchema} w on w.id = e.workout_id
-          where 1 = 1 ${others}
+          where 1 = 1 ${excludeClause}
         )
         select workout_id as "workoutId", position, lineage from ranked where rank = 1
       `),

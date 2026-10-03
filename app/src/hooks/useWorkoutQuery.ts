@@ -94,6 +94,14 @@ export function useWorkoutQuery<T>(
   return result?.value;
 }
 
+/**
+ * One dep for a list of strings, so a query re-runs when the list's contents change rather than its identity.
+ * The separator can't occur in a name.
+ */
+export function listDep(values: readonly string[]): string {
+  return values.join('\u0000');
+}
+
 function sameDeps(a: DependencyList, b: DependencyList): boolean {
   return a.length === b.length && a.every((value, index) => Object.is(value, b[index]));
 }

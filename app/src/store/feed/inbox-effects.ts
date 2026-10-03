@@ -24,9 +24,9 @@ import { match } from 'ts-pattern';
  * compromising the server. The signature proves *who* wrote a message, never that they were entitled to. So a
  * cheer is only accepted if it comes from a current follower and targets a workout you actually own.
  *
- * The emoji allowlist and the count bound are enforced earlier, in `Reaction.fromJSON`.
+ * The emoji allowlist and the count bound are enforced earlier, in `Reaction.fromJSON`. `ownWorkoutIds` is
+ * which of the cheered workouts are this user's own, read from the workout tables.
  */
-/** `ownWorkoutIds`: which of the workouts the messages cheer are this user's own. */
 function acceptableReactions(
   messages: ReactionInboxMessage[],
   ownWorkoutIds: ReadonlySet<string>,

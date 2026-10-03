@@ -19,7 +19,7 @@ import { useAppSelector } from '@/store';
 import { fetchUpcomingSessions, linkPlanExercises, savePlan, selectAllPrograms } from '@/store/program';
 import { setPlansSortOrder } from '@/store/settings';
 import { selectLatestExercises } from '@/store/stored-sessions';
-import { useWorkoutQuery } from '@/hooks/useWorkoutQuery';
+import { listDep, useWorkoutQuery } from '@/hooks/useWorkoutQuery';
 import { uuid } from '@/utils/uuid';
 import { LocalDate } from '@js-joda/core';
 import { useTranslate } from '@tolgee/react';
@@ -65,7 +65,7 @@ export function RoutinesScreen({ focusProgramId }: { focusProgramId?: string }) 
   const routineNames = active ? active.sessions.map((routine) => routine.name) : [];
   const routineHistory = useWorkoutQuery(
     (repository) => repository.routineHistory(routineNames),
-    [routineNames.join('\u0000')],
+    [listDep(routineNames)],
   );
   const lastDone = routineHistory?.lastDone ?? new Map<string, LocalDate>();
   const nextSession = upcoming.isSuccess() ? upcoming.data[0] : undefined;

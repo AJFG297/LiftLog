@@ -9,7 +9,7 @@ import { useToday } from '@/hooks/useToday';
 import { routineColorOf } from '@/models/home/routine-colors';
 import { useAppSelector } from '@/store';
 import { selectActiveProgram } from '@/store/program';
-import { useWorkoutQuery } from '@/hooks/useWorkoutQuery';
+import { listDep, useWorkoutQuery } from '@/hooks/useWorkoutQuery';
 import { useTranslate } from '@tolgee/react';
 import { useNavigation, useRouter } from 'expo-router';
 import { useGoToRoutines } from '@/hooks/useGoToRoutines';
@@ -43,7 +43,7 @@ export function OtherWorkoutSheet() {
           names.map(async (name) => [name, await repository.latestNamed(name, UP_NEXT_PAST_WORKOUTS)] as const),
         ),
       ),
-    [names.join('\u0000')],
+    [listDep(names)],
   );
   const { start, confirmationDialog } = useStartWorkoutWithConfirmation({ onStarted: () => back() });
   const planWorkoutNames = plan?.sessions.map((x) => x.name) ?? [];

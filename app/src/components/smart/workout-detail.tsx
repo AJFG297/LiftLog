@@ -69,8 +69,8 @@ export function WorkoutDetail({ sessionId }: { sessionId: string }) {
   const locale = useAppSelector((x) => x.settings.preferredLanguage);
   const showFeed = useAppSelector((x) => x.settings.showFeed);
   const unit: WeightUnit = useAppSelector((x) => x.settings.useImperialUnits) ? 'pounds' : 'kilograms';
-  // Read by id from the workout tables. Edit workout opens on top of this screen; the workout and its
-  // comparison are re-read once it comes back into focus.
+  // Edit workout opens on top of this screen; the workout and its comparison are re-read once it comes back
+  // into focus. Wrapped, so `undefined` is "loading" and `{ session: undefined }` is "deleted".
   const loaded = useWorkoutQuery(async (repository) => ({ session: await repository.get(sessionId) }), [sessionId]);
   const session = loaded?.session;
   const comparison = useWorkoutComparison(session);
