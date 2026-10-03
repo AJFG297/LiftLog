@@ -163,7 +163,7 @@ function WeeklyStat({
           weight="600"
           style={{ fontSize: 13, lineHeight: 18, color: toneColor(moved.tone) }}
         >
-          {moved.text ?? t('progress.tab.same.label')}
+          {moved.text ?? t('progress.same.label')}
         </SurfaceText>
       ) : null}
     </View>

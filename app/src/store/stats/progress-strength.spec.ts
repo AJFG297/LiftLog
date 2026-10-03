@@ -136,58 +136,52 @@ describe('recentRecords', () => {
   it('lists the 3 latest records, latest first, with what each beat', () => {
     expect(recentRecords(history, 'kilograms')).toEqual([
       {
-        key: bench.key,
+        key: `w-22|${bench.key}`,
         exerciseId: stubExerciseId('Bench'),
         workoutId: 'w-22',
         date: day(9, 22),
-        name: 'Bench',
+        exerciseName: 'Bench',
         kind: 'heaviestWeight',
-        value: 85,
-        weight: 85,
+        value: kg(85),
         reps: 5,
-        previous: 82.5,
-        gain: 2.5,
+        previous: kg(82.5),
+        gain: kg(2.5),
       },
       {
-        key: bench.key,
+        key: `w-15|${bench.key}`,
         exerciseId: stubExerciseId('Bench'),
         workoutId: 'w-15',
         date: day(9, 15),
-        name: 'Bench',
+        exerciseName: 'Bench',
         kind: 'estimatedOneRepMax',
         // 97.3 against 95.1, each to the nearest half.
-        value: 97.5,
-        weight: 80,
-        reps: 7,
-        previous: 95,
-        gain: 2.5,
+        value: kg(97.5),
+        estimatedFrom: { weight: kg(80), reps: 7 },
+        previous: kg(95),
+        gain: kg(2.5),
       },
       {
-        key: bench.key,
+        key: `w-8|${bench.key}`,
         exerciseId: stubExerciseId('Bench'),
         workoutId: 'w-8',
         date: day(9, 8),
-        name: 'Bench',
+        exerciseName: 'Bench',
         kind: 'heaviestWeight',
-        value: 82.5,
-        weight: 82.5,
+        value: kg(82.5),
         reps: 5,
-        previous: 80,
-        gain: 2.5,
+        previous: kg(80),
+        gain: kg(2.5),
       },
     ]);
   });
 
   it('converts a weight lifted in kilograms to the nearest half pound, and gains as shown', () => {
     const converted = historyOf({ exercises: [bench], records: [record(1, kg(62.5), kg(60))] });
+    const [row] = recentRecords(converted, 'pounds');
 
     // 62.5 kg is 137.79 lbs and 60 kg is 132.28 lbs.
-    expect(recentRecords(converted, 'pounds')[0]).toMatchObject({
-      value: 138,
-      weight: 138,
-      previous: 132.5,
-      gain: 5.5,
-    });
+    expect([row?.value, row?.previous, row?.gain].map((weight) => weight?.value.toNumber())).toEqual([138, 132.5, 5.5]);
+    expect(row?.value.unit).toBe('pounds');
   });
 
   it('is empty before any record', () => {

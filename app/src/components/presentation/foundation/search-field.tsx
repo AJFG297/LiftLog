@@ -1,10 +1,11 @@
-import { Chip } from '@/components/presentation/foundation/chip';
 import { MsIconSrc } from '@/components/presentation/foundation/ms-icon-source';
 import { MIN_TOUCH_TARGET } from '@/components/presentation/foundation/touch-target';
 import { fontFamily, spacing, useAppTheme } from '@/hooks/useAppTheme';
-import { Pressable, ScrollView, TextInput, View } from 'react-native';
+import { Pressable, TextInput, View } from 'react-native';
 
-interface ExercisePickerSearchFieldProps {
+interface SearchFieldProps {
+  /** The input is `${testID}-input` and its clear button `${testID}-clear`. */
+  testID: string;
   value: string;
   onChange: (value: string) => void;
   placeholder: string;
@@ -12,14 +13,15 @@ interface ExercisePickerSearchFieldProps {
   clearLabel: string;
 }
 
-/** The picker's search field, with a clear button once something is typed. */
-export function ExercisePickerSearchField({
+/** A search field on a list: a search icon, the input, and a clear button once something is typed. */
+export function SearchField({
+  testID,
   value,
   onChange,
   placeholder,
   accessibilityLabel,
   clearLabel,
-}: ExercisePickerSearchFieldProps) {
+}: SearchFieldProps) {
   const { tokens } = useAppTheme();
   return (
     <View
@@ -37,7 +39,7 @@ export function ExercisePickerSearchField({
     >
       <MsIconSrc name="search" size={18} color={tokens.muted} />
       <TextInput
-        testID="exercise-search-input"
+        testID={`${testID}-input`}
         value={value}
         onChangeText={onChange}
         placeholder={placeholder}
@@ -58,7 +60,7 @@ export function ExercisePickerSearchField({
       />
       {value ? (
         <Pressable
-          testID="exercise-search-clear"
+          testID={`${testID}-clear`}
           onPress={() => onChange('')}
           accessibilityRole="button"
           accessibilityLabel={clearLabel}
@@ -81,54 +83,5 @@ export function ExercisePickerSearchField({
         <View style={{ width: spacing[3] }} />
       )}
     </View>
-  );
-}
-
-export interface ChipOption<T> {
-  value: T;
-  label: string;
-}
-
-interface ExercisePickerChipRowProps<T> {
-  options: ChipOption<T>[];
-  selected: T;
-  onSelect: (value: T) => void;
-  /** Read out before the row, e.g. "Muscle". */
-  accessibilityLabel: string;
-  testID?: string;
-}
-
-/**
- * One row of filter chips that scrolls sideways past the screen's edge. Exactly one is on; the first option
- * is the "All" that turns the filter off.
- */
-export function ExercisePickerChipRow<T extends string | undefined>({
-  options,
-  selected,
-  onSelect,
-  accessibilityLabel,
-  testID,
-}: ExercisePickerChipRowProps<T>) {
-  return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      keyboardShouldPersistTaps="handled"
-      accessibilityRole="radiogroup"
-      accessibilityLabel={accessibilityLabel}
-      style={{ marginHorizontal: -spacing.pageHorizontalMargin }}
-      // Chips carry a 4pt touch inset of their own, so the row's padding is that much less than the page's.
-      contentContainerStyle={{ paddingHorizontal: spacing.pageHorizontalMargin - spacing[1] }}
-    >
-      {options.map((option) => (
-        <Chip
-          key={option.value ?? 'all'}
-          testID={testID ? `${testID}-${option.value ?? 'all'}` : undefined}
-          label={option.label}
-          selected={option.value === selected}
-          onPress={() => onSelect(option.value)}
-        />
-      ))}
-    </ScrollView>
   );
 }

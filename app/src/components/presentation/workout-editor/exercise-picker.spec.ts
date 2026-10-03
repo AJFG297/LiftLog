@@ -8,8 +8,6 @@ import {
   blueprintsForPick,
   customExerciseOf,
   equipmentChoiceOf,
-  musclesForGroup,
-  muscleGroupOf,
   pickerListOf,
   recentExerciseIds,
   sessionWithPickAdded,
@@ -59,24 +57,6 @@ function ids(list: ReturnType<typeof pickerListOf>) {
           : row.id,
   );
 }
-
-describe('muscleGroupOf', () => {
-  it('files an exercise under its first muscle', () => {
-    expect(muscleGroupOf(exercises.bench!)).toBe('chest');
-    expect(muscleGroupOf(exercises.row!)).toBe('back');
-    expect(muscleGroupOf(exercise('Squat', ['Quadriceps']))).toBe('legs');
-  });
-
-  it('files an exercise by its primary muscles only', () => {
-    expect(muscleGroupOf(exercise('Close-Grip Bench Press', ['triceps'], 'barbell', ['chest']))).toBe('arms');
-    expect(muscleGroupOf(exercise('Helper only', [], null, ['chest']))).toBeUndefined();
-  });
-
-  it('files neck and no muscle under no chip', () => {
-    expect(muscleGroupOf(exercises.neck!)).toBeUndefined();
-    expect(muscleGroupOf(exercise('Mystery', []))).toBeUndefined();
-  });
-});
 
 describe('equipmentChoiceOf', () => {
   it('keeps the catalog spelling, counts an E-Z bar as a barbell and anything else as Other', () => {
@@ -218,15 +198,6 @@ describe('customExerciseOf', () => {
       secondaryMuscles: [],
     });
     expect(customExerciseOf({ name: 'Plank', muscles: [], equipment: undefined }).equipment).toBeNull();
-  });
-});
-
-describe('musclesForGroup', () => {
-  it('starts with the muscle only when the chip has one', () => {
-    expect(musclesForGroup('chest')).toEqual(['chest']);
-    expect(musclesForGroup('core')).toEqual(['abdominals']);
-    expect(musclesForGroup('legs')).toEqual([]);
-    expect(musclesForGroup(undefined)).toEqual([]);
   });
 });
 

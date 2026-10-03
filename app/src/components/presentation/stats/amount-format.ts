@@ -3,7 +3,7 @@ import { ChangeTone, toneOf } from '@/store/stats/progress-amounts';
 import { localeFormatBigNumber } from '@/utils/locale-bignumber';
 
 /** A number already rounded for showing, as it is: "80", "82.5", "102.25". */
-export function amountText(value: number): string {
+export function amountText(value: number | BigNumber): string {
   return localeFormatBigNumber(new BigNumber(value));
 }
 
@@ -31,7 +31,7 @@ export function signedAmount(value: number, decimals: number, { fixed = false } 
 }
 
 /** A change already rounded for showing, with its sign: the difference of two amounts as shown. */
-export function signedText(value: number): SignedText {
+export function signedText(value: number | BigNumber): SignedText {
   return signed(new BigNumber(value), amountText);
 }
 

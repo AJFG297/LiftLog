@@ -1,4 +1,4 @@
-import { fuzzyMatchScore } from '@/components/presentation/workout-editor/exercise-fuzzy-match';
+import { fuzzyMatchScore } from '@/models/exercise-fuzzy-match';
 import { ExerciseDescriptor, musclesOf } from '@/models/exercise-models';
 import Enumerable from 'linq';
 

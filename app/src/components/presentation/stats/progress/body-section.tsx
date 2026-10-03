@@ -63,7 +63,7 @@ export function BodySection({ view, from, to, unit, overRange }: BodySectionProp
               {change.text ? (
                 <AmountText amount={change.text} unit={unit} style={changeStyle} />
               ) : (
-                <SurfaceText style={changeStyle}>{t('progress.tab.same.label')}</SurfaceText>
+                <SurfaceText style={changeStyle}>{t('progress.same.label')}</SurfaceText>
               )}
               <SurfaceText font="text-xs" style={{ color: tokens.muted }}>
                 {overRange}

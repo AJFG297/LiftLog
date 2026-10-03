@@ -82,8 +82,10 @@ the `progressTab` preference, so the screen reopens on the one last used.
 The screen calls `useProgressHistory()` once. Every number comes from pure functions in `store/stats/`, one
 file per part, and the components in `components/presentation/stats/progress/` only format and draw them. What
 the Records and All exercises lists share with the tab sits one folder up, in `components/presentation/stats/`:
-`list-parts.tsx` (`ListCard`, `useRowDivider`, `useToneColor`, `ListEmptyLine`), `amount-format.ts` (`amountText`,
-`signedText`, `signedAmount`) and `amount-text.tsx` (`AmountText`).
+`list-parts.tsx` (`ListCard`, `useRowDivider`, `useToneColor`, `ListEmptyLine`, and the list pages' `ListPageTitle`
+and `ListEmptyState`), `amount-format.ts` (`amountText`, `signedText`, `signedAmount`) and `amount-text.tsx`
+(`AmountText`). A change's direction is one `ChangeTone` (`gain`, `fall`, `none`, from `toneOf` in
+`progress-amounts.ts`) on every screen.
 
 | File | Gives |
 | --- | --- |
@@ -102,8 +104,8 @@ reads the same on Strength and on Records:
 - A weight that was on the bar (`'load'`) shows as lifted, to at most two places, in the unit it was lifted in.
   Converted to the other unit, it shows to the nearest half too: 62.5 kg reads "138 lbs", not "137.79".
 - A gain or a change is always the difference of the two values as shown (`shownChange`), so a row adds up as
-  it reads. When the two would show alike although they differ, a real but tiny gain, both show to a tenth
-  instead and the gain reads "+0.1" rather than "+0".
+  it reads. When the two would show alike although they differ, a real but tiny gain, both show a place finer,
+  to a tenth and then a hundredth, and the gain reads "+0.1" or "+0.03" rather than "+0".
 
 The view models hand the components amounts already rounded; the components only format them
 (`amountText`, `signedText`).
@@ -125,8 +127,9 @@ hold no history.
 - **Lifts**: the 4 movements done in the most workouts in the range (ties to the one done last, then by
   name), each with its latest estimated 1RM (best reps for a movement that tracks no load), the change over
   the range from `progressSince` as shown, the session count and a `Sparkline` of the range. There is no pinning yet.
-- **Recent records**: the last 3 of `history.records`, whatever the range, with the gain over what each beat.
-  A heaviest record shows its set; an estimated-1RM one shows the set the estimate comes from.
+- **Recent records**: the newest 3 records, whatever the range: the first three rows of the Records list, built
+  by the same `recordListRowOf`, with the gain over what each beat. A heaviest record shows its set; an
+  estimated-1RM one shows the set the estimate comes from.
 - Lift and record rows open the expanded exercise view over all time (`useOpenExerciseStats`), since it
   otherwise covers only its own period and an older lift would open on "no data". All exercises and See all
   open `/stats/exercises` and `/stats/records`.
@@ -165,4 +168,67 @@ muscle says the same rather than that there are no sets.
 
 ## Records and All exercises
 
+Both are pushed from the Progress tab (`stats/records`, `stats/exercises`) and draw their own title under the
+native header's back button (`ListPageTitle`). Each calls `useProgressHistory()` once and hands it to a pure
+function that returns what the screen draws; a row opens the exercise's stats over all time
+(`useOpenExerciseStats`). They share the tab's list pieces (`list-parts.tsx`, `amount-format.ts`, `AmountText`)
+and its rounding (`progress-amounts.ts`), so a value reads the same on every screen.
 
+### Records
+
+`recordsListOf(history, today, filter, unit)` (`store/stats/records-list.ts`) reads `history.records`, so the
+list follows the [record ledger](#the-record-ledger)'s rules: at most one record per exercise per workout, and
+none the first time an exercise is done.
+
+- **Filter**: `RecordFilter` is `'all'` or a record kind (`heaviestWeight`, `estimatedOneRepMax`), shown as All ·
+  Heaviest · Est. 1RM. The control is hidden while there are no records at all.
+- **Count**: "12 records since July" counts what the filter lets through, since the month the history starts
+  (`firstDate`, the first started workout, so a planned workout where nothing was logged doesn't count), with
+  the year once that month is in an earlier year.
+- **Months**: an ordered list of `{ month: YearMonth, showYear, rows }`, newest first. Within a month the newest
+  workout comes first, and a workout's records keep exercise order (`newestWorkoutFirst`).
+- **A row** (`RecordListRow`, from `recordListRowOf`): a union on `kind`. A heaviest record carries its `reps`,
+  an estimate the set it comes from (`estimatedFrom`). It shows the date, the exercise (under the name it was
+  last logged with), the kind and value ("Heaviest · 130 kg × 3", "Est. 1RM · 104.5 kg"), what it beat ("was
+  127.5 kg", after the set for an estimate: "82.5 kg × 8 · was 102 kg") and the gain. Weights are in the user's
+  unit, so a record lifted in pounds against a best in kilograms reads in one unit, and are rounded as
+  [How amounts read](#how-amounts-read) says.
+- **Empty**: "No records yet" with no records, or a line for the chosen kind pointing back to All
+  (`ListEmptyState`).
+
+Strength's recent records are the list's first three rows, from the same `recordListRowOf`, and both screens
+draw them with one `RecordRow` (`components/presentation/stats/record-row.tsx`): so the same record reads the
+same value and gain on both. On Strength the row `shows` the set after the kind and has no third line. Its gain
+badge ("+2.5 kg") is set in bold Geist Mono, unit included, as the board draws it: the one exception to keeping
+units in Geist ([Theming.md](./Theming.md#type)).
+
+### All exercises
+
+`exercisesListOf(history, catalog, today, filters, unit)` (`store/stats/exercises-list.ts`) lists every
+movement in `history.exercises`: only what the user has logged.
+
+- **Order**: most recently done first; exercises last done on the same day keep the order they were first
+  done in.
+- **Search**: the exercise picker's `fuzzyMatchScore` (`models/exercise-fuzzy-match.ts`) on the name, best
+  match first as in the picker, then the most recently done. The field is foundation's `SearchField`.
+- **Muscle chips**: All · Chest · Back · Legs · Shoulders · Arms, and Core only when something logged files
+  under it, in foundation's `ChipRow` and labelled as the picker's chips are (`muscleGroupLabel` in
+  `utils/exercise-meta.ts`). An exercise's chip is `muscleGroupOf` (`models/muscle-groups.ts`) its catalog
+  descriptor (`selectExercises()[exerciseId]`), the picker's rule: its first muscle. One missing from the
+  catalog shows under All only.
+- **Count**: "12 exercises, most recent first" ("best match first" during a search) and "Change over 12 weeks"
+  head the list. They stay when a search or chip matches nothing, and only go with nothing logged at all.
+- **A row** (`ExerciseListRow`, drawn by `ExerciseRow`): the name, when it was last done (today, yesterday, a
+  weekday within the week, else a date) and the session count over the whole history; a `Sparkline` of the
+  last 12 weeks (`TREND_WEEKS`, which the heading and the spoken change interpolate) with no end dot; the
+  latest estimated 1RM, or best reps for a movement that tracks no load; and the change over the 12 weeks from
+  `progressSince`, through `shownChange`, so it is the difference of the values as shown. Its `tone` (a
+  `ChangeTone`) sets the colours: a gain is `positive` with an `accentInk` line, a fall `warmInk` for both, no
+  change (or nothing to compare) muted with a `faint` line. Fewer than two sessions in the window shows a
+  dash. A "same" change is a word, so it stays in Geist while the numbers beside it are Geist Mono.
+- **Empty**: no match for the search, nothing under the chip, or nothing logged yet.
+
+`ExerciseRow` and Strength's lift rows show the same things but stay two components: the board draws the lift
+rows larger (an 18pt value, a 64 × 28 sparkline in `accentInk` with an end dot, a chevron) and the exercise rows
+smaller, with the sparkline coloured by the change. They share `AmountText`, `signedText`, `useToneColor` and
+`useRowDivider`.
