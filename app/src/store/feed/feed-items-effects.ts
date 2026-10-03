@@ -24,7 +24,6 @@ import { Session } from '@/models/session-models';
 import { GetUserResponse, UserEventResponse } from '@/models/feed-api-models';
 import { EncryptionService, fromJsonBytes, toJsonBytes } from '@/services/encryption-service';
 import { FeedApiService } from '@/services/feed-api';
-import { selectSession } from '@/store/stored-sessions';
 import { ProgramBlueprint } from '@/models/blueprint-models';
 import { feedUnpublishedSessionsSchema } from '@/db/schema';
 import { AnyVersionProgramBlueprintJSON, AnyVersionUserEventJSON } from '@/models/storage/versions/any';
@@ -185,7 +184,7 @@ export function addFeedItemEffects(addEffect: AddEffectFn) {
 
   addEffect(
     publishUnpublishedSessions,
-    async (_, { dispatch, getState, extra: { db, feedApiService, encryptionService } }) => {
+    async (_, { dispatch, getState, extra: { db, feedApiService, encryptionService, workoutRepository } }) => {
       const state = getState();
       const identityRemote = state.feed.identity;
 
@@ -201,7 +200,8 @@ export function addFeedItemEffects(addEffect: AddEffectFn) {
       const unpublishedSessionIds = await db.select().from(feedUnpublishedSessionsSchema);
 
       for (const { sessionId } of unpublishedSessionIds) {
-        const session = selectSession(getState(), sessionId);
+        // Read as stored: the queue holds finished workouts, and the read waits for any write before it.
+        const session = await workoutRepository.get(sessionId);
 
         let result;
         if (session) {

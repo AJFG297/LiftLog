@@ -3,8 +3,13 @@ import { combineReducers } from '@reduxjs/toolkit';
 import { Instant, LocalDate } from '@js-joda/core';
 import { addFeedItemEffects, publishSessionAsync } from '@/store/feed/feed-items-effects';
 import { createAddEffectTestBed } from '@/utils/__test__/add-effect-testbed';
-import feedReducer, { fetchFeedItems } from '@/store/feed';
-import { storedSessionsReducer } from '@/store/stored-sessions';
+import feedReducer, { fetchFeedItems, publishUnpublishedSessions, removeUnpublishedSessionId } from '@/store/feed';
+import { drizzle } from 'drizzle-orm/expo-sqlite';
+import { openDatabaseAsync } from 'expo-sqlite';
+import { DatabaseMigrationService } from '@/services/database-migration-service';
+import { WorkoutRepository } from '@/services/workout-repository';
+import { feedUnpublishedSessionsSchema } from '@/db/schema';
+import { RemoteData } from '@/models/remote';
 import { FeedIdentity, FEED_EVENT_RETENTION_SECONDS, FollowedFeedUser, SessionUserEvent } from '@/models/feed-models';
 import { Session } from '@/models/session-models';
 import { SessionBlueprint } from '@/models/blueprint-models';
@@ -184,7 +189,7 @@ function ingestionTestBed(events: { eventId: string; version: number }[]) {
       feed: { followedUsers: { [FOLLOWED_ID]: followedUser() } },
     } as never,
     services: services as never,
-    reducer: combineReducers({ feed: feedReducer, storedSessions: storedSessionsReducer }),
+    reducer: combineReducers({ feed: feedReducer }),
   });
 
   addFeedItemEffects(testBed.addEffect);
@@ -223,5 +228,47 @@ describe('fetchFeedItems ingestion', () => {
     await testBed.dispatchHandled(fetchFeedItems({ fromUserAction: false }));
 
     expect(ingestedEventIds(testBed).sort()).toEqual(['good-1', 'good-2']);
+  });
+});
+
+describe('publishUnpublishedSessions', () => {
+  it('publishes a queued workout read from the tables, and unpublishes one that is gone', async () => {
+    const db = drizzle(await openDatabaseAsync(':memory:'));
+    await new DatabaseMigrationService(db, { info: vi.fn(), error: vi.fn(), warn: vi.fn(), debug: vi.fn() } as never, {
+      importOldData: async () => {},
+    }).migrate();
+    const workoutRepository = new WorkoutRepository(db);
+    await workoutRepository.put(sessionWithBodyweight(undefined));
+    await db.insert(feedUnpublishedSessionsSchema).values([{ sessionId: 'session-1' }, { sessionId: 'deleted' }]);
+
+    const published: { type: string; eventId: string; session?: SessionJSON }[] = [];
+    const services = {
+      db,
+      workoutRepository,
+      encryptionService: {
+        signRsa256PssAndEncryptAesCbcAsync: vi.fn((payloadBytes: Uint8Array) => {
+          published.push(JSON.parse(new TextDecoder().decode(payloadBytes)) as (typeof published)[number]);
+          return Promise.resolve({ encryptedPayload: new Uint8Array(), iv: { value: new Uint8Array() } });
+        }),
+      },
+      feedApiService: { putUserEventAsync: vi.fn().mockResolvedValue(ApiResult.success()) },
+    };
+    const testBed = createAddEffectTestBed({
+      initialState: { feed: { identity: RemoteData.success(identityWith(false)) } } as never,
+      services: services as never,
+      reducer: combineReducers({ feed: feedReducer }),
+    });
+    addFeedItemEffects(testBed.addEffect);
+
+    await testBed.dispatchHandled(publishUnpublishedSessions());
+
+    expect(published.map((x) => [x.type, x.eventId, x.session?.blueprint.name])).toEqual([
+      ['SessionUserEvent', 'session-1', 'Push'],
+      ['RemovedSessionUserEvent', 'deleted', undefined],
+    ]);
+    expect(testBed.dispatchedActions.filter((x) => removeUnpublishedSessionId.match(x)).map((x) => x.payload)).toEqual([
+      'session-1',
+      'deleted',
+    ]);
   });
 });
