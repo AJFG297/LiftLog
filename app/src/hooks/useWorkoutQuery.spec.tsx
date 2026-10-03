@@ -106,6 +106,22 @@ describe('useWorkoutQuery', () => {
     expect(asked).toBe(1);
   });
 
+  it('leaves a write alone when told it cannot change the answer', async () => {
+    const ignored = workout('Ignored', LocalDate.of(2026, 4, 11));
+    const { result } = renderHook(() =>
+      useWorkoutQuery(names, [], { ignoreWrite: (write) => write.workoutIds.every((id) => id === ignored.id) }),
+    );
+    await waitFor(() => expect(result.current).toEqual(['First']));
+
+    await act(() => repository.put(ignored));
+    await act(() => Promise.resolve());
+    expect(asked).toBe(1);
+
+    await act(() => repository.put(workout('Counted', LocalDate.of(2026, 4, 12))));
+    await waitFor(() => expect(result.current).toEqual(['Counted', 'Ignored', 'First']));
+    expect(asked).toBe(2);
+  });
+
   it('starts over when its inputs change, so a stale answer is never shown under new inputs', async () => {
     await repository.put(workout('May', LocalDate.of(2026, 5, 3)));
     const inMonth = async (repo: WorkoutRepository, month: number) => {

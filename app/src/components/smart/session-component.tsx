@@ -15,6 +15,7 @@ import { SurfaceText } from '@/components/presentation/foundation/surface-text';
 import WeightFormat from '../presentation/foundation/weight-format';
 import { formatDuration } from '@/utils/format-date';
 import { useAddExercise } from '@/hooks/useAddExercise';
+import { PreviousPerformancesProvider, useHasPreviousPerformances } from '@/components/smart/previous-performances';
 import { RecordedExerciseView } from '@/components/smart/recorded-exercise-view';
 
 export default function SessionComponent(props: {
@@ -33,6 +34,7 @@ export default function SessionComponent(props: {
   const isReadonly = !props.updateSession;
   const editableSessionId = isReadonly ? undefined : session.id;
   const addExercise = useAddExercise(editableSessionId);
+  const hasPreviousPerformances = useHasPreviousPerformances();
   const updateSession = (reducer: (session: Session) => Session) => props.updateSession?.(reducer);
 
   const notesComponent = session.blueprint.notes ? (
@@ -151,7 +153,7 @@ export default function SessionComponent(props: {
     </Card>
   );
 
-  return (
+  const content = (
     <FullHeightScrollView floatingChildren={floatingBottomContainer}>
       {props.header}
       {notesComponent}
@@ -160,5 +162,11 @@ export default function SessionComponent(props: {
       {bodyweight}
       {workoutSummary}
     </FullHeightScrollView>
+  );
+  // "Last time" for the exercises: loaded here for a screen of one session, or once above for several.
+  return hasPreviousPerformances ? (
+    content
+  ) : (
+    <PreviousPerformancesProvider session={session}>{content}</PreviousPerformancesProvider>
   );
 }

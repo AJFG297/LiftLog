@@ -1,4 +1,11 @@
-import { ExerciseBlueprint, latestInLineage, lineageKeys, ProgressionKey, RepsTarget } from '@/models/blueprint-models';
+import {
+  ExerciseBlueprint,
+  latestInLineage,
+  lineageKeys,
+  ProgressionKey,
+  progressionKeyOf,
+  RepsTarget,
+} from '@/models/blueprint-models';
 import type { RecordedExercise } from '@/models/session-models/recorded-exercise';
 import { RecordedWeightedExercise } from '@/models/session-models/recorded-weighted-exercise';
 import { setLabels } from '@/models/session-models/set-kind';
@@ -36,17 +43,30 @@ export interface TodaysTarget {
  * The performance `exercise` carried on from: the latest of the lineage its routine gives it, `planned`
  * (see {@link plannedLineageFor}), in `previousByLineage`, because that is what the session was built from.
  * An exercise swapped during the workout has a key of its own, and the lineage it came from must not be
- * lost with it. Without a routine exercise to go by, the exercise's own key decides among `candidates`
- * (newest first).
+ * lost with it. Without a routine exercise to go by, the latest performance of the exercise's own key, in
+ * whichever place it was done, decides; `previousByLineage` holds every lineage of that key, so a capped
+ * list of the movement's recent performances is never what this depends on.
  */
 export function carriedFrom(
   exercise: RecordedWeightedExercise,
-  candidates: readonly RecordedWeightedExercise[],
   planned: ProgressionKey | undefined,
   previousByLineage: Readonly<Record<ProgressionKey, RecordedExercise | undefined>>,
 ): RecordedWeightedExercise | undefined {
   const fromPlan = planned === undefined ? undefined : latestInLineage(previousByLineage, planned);
-  return fromPlan instanceof RecordedWeightedExercise ? fromPlan : exercise.previousPerformanceIn(candidates);
+  if (fromPlan instanceof RecordedWeightedExercise) {
+    return fromPlan;
+  }
+  const key = exercise.progressionKey();
+  let latest: RecordedWeightedExercise | undefined;
+  for (const [lineage, performance] of Object.entries(previousByLineage) as [ProgressionKey, RecordedExercise][]) {
+    if (progressionKeyOf(lineage) !== key || !(performance instanceof RecordedWeightedExercise)) {
+      continue;
+    }
+    if (!latest?.latestTime || (performance.latestTime && latest.latestTime.isBefore(performance.latestTime))) {
+      latest = performance;
+    }
+  }
+  return latest;
 }
 
 /**

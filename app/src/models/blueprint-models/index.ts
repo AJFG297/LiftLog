@@ -1308,8 +1308,22 @@ export function lineageKeys(exercises: readonly { progressionKey(): ProgressionK
     const key = exercise.progressionKey();
     const repeat = (seen.get(key) ?? 0) + 1;
     seen.set(key, repeat);
-    return repeat === 1 ? key : (`${key}#${repeat}` as ProgressionKey);
+    return lineageKey(key, repeat);
   });
+}
+
+/**
+ * The lineage key of the `repeat`-th place of `key` in one list: the key itself for the first, `<key>#n`
+ * after. {@link progressionKeyOf} is the inverse; `WorkoutRepository.latestPerLineage` builds the same
+ * string in SQL.
+ */
+export function lineageKey(key: ProgressionKey, repeat: number): ProgressionKey {
+  return repeat === 1 ? key : (`${key}#${repeat}` as ProgressionKey);
+}
+
+/** The progression key a lineage key (see {@link lineageKey}) is a place of. */
+export function progressionKeyOf(lineage: ProgressionKey): ProgressionKey {
+  return lineage.replace(/#\d+$/, '') as ProgressionKey;
 }
 
 /**
@@ -1320,7 +1334,7 @@ export function latestInLineage<T>(
   latest: Readonly<Record<ProgressionKey, T | undefined>>,
   lineage: ProgressionKey,
 ): T | undefined {
-  return latest[lineage] ?? latest[lineage.replace(/#\d+$/, '') as ProgressionKey];
+  return latest[lineage] ?? latest[progressionKeyOf(lineage)];
 }
 
 /**

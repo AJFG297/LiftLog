@@ -16,15 +16,18 @@ import {
   RecordedWeightedExercise,
   Session,
 } from '@/models/session-models';
-import { ProgressRepository } from '@/services/progress-repository';
+import type { WorkoutRepository } from '@/services/workout-repository';
 import type { RootState } from '@/store';
 import { selectActiveSession } from '@/store/stored-sessions';
 import { uuid } from '@/utils/uuid';
 import { LocalDate } from '@js-joda/core';
 
+/** What {@link SessionService} reads of the workout tables: where the plan is up to. */
+export type PlanPositionSource = Pick<WorkoutRepository, 'latestPlanned'>;
+
 export class SessionService {
   constructor(
-    private progressRepository: ProgressRepository,
+    private workoutRepository: PlanPositionSource,
     private getState: () => RootState,
   ) {}
 
@@ -41,8 +44,7 @@ export class SessionService {
     }
     await yieldToEventLoop();
 
-    let latestSession =
-      currentSession ?? this.progressRepository.getOrderedSessions().firstOrDefault((x) => !x.isFreeform);
+    let latestSession = currentSession ?? (await this.workoutRepository.latestPlanned());
 
     await yieldToEventLoop();
     // Track the plan position by index so progression walks the plan in order.

@@ -1,7 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import Enumerable from 'linq';
-import { SessionService } from '@/services/session-service';
-import { ProgressRepository } from '@/services/progress-repository';
+import { PlanPositionSource, SessionService } from '@/services/session-service';
 import {
   PlannedWarmupSet,
   ProgressionRule,
@@ -32,11 +30,12 @@ function makeState(overrides?: { workoutSession?: Session; orderedSessions?: Ses
   } as unknown as RootState;
 }
 
+/** `orderedSessions` latest first, as `WorkoutRepository.latestPlanned` reads them. */
 function makeService(state: RootState, orderedSessions: Session[] = []) {
-  const progressRepository = {
-    getOrderedSessions: () => Enumerable.from(orderedSessions),
-  } as unknown as ProgressRepository;
-  return new SessionService(progressRepository, () => state);
+  const workoutRepository: PlanPositionSource = {
+    latestPlanned: () => Promise.resolve(orderedSessions.find((x) => !x.isFreeform)),
+  };
+  return new SessionService(workoutRepository, () => state);
 }
 
 async function collect(iter: AsyncIterableIterator<Session>, count: number): Promise<Session[]> {

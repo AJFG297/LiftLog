@@ -8,8 +8,8 @@ import {
   RestTimer,
   Session,
 } from '@/models/session-models';
-import { useAppSelector, useAppSelectorWithArg } from '@/store';
-import { selectRecentlyCompletedExercises } from '@/store/stored-sessions';
+import { usePreviousPerformances } from '@/components/smart/previous-performances';
+import { useAppSelector } from '@/store';
 import { Updater } from '@/utils/types';
 import { LocalTime, OffsetDateTime, ZoneId } from '@js-joda/core';
 import { useRouter } from 'expo-router';
@@ -48,12 +48,15 @@ interface RecordedExerciseViewProps {
   variant?: 'list' | 'focus';
 }
 
-/** One exercise's sets, weighted or cardio: the logging UI every session screen shares. */
+/**
+ * One exercise's sets, weighted or cardio: the logging UI every session screen shares. Needs a
+ * `PreviousPerformancesProvider` for the session above it, for "last time".
+ */
 export function RecordedExerciseView(props: RecordedExerciseViewProps) {
   const { session, exerciseIndex, isActiveWorkout } = props;
   const { push } = useRouter();
   const logRpe = useAppSelector((x) => x.settings.logRpe);
-  const recentlyCompletedExercises = useAppSelectorWithArg(selectRecentlyCompletedExercises, session.id);
+  const { ofMovement: recentlyCompletedExercises } = usePreviousPerformances();
   const isReadonly = !props.updateSession;
   const updateSession = (reducer: (session: Session) => Session) => props.updateSession?.(reducer);
   const onEditExercise = isReadonly ? undefined : () => push(getSessionExerciseEditorHref(session.id, exerciseIndex));

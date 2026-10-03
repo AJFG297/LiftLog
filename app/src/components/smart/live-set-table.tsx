@@ -48,9 +48,9 @@ export function LiveSetTable(props: LiveSetTableProps) {
   const { resistance } = exercise.blueprint;
   const unit = weightUnitOf(exercise, preferredUnit);
   const perDumbbell = equipmentClassOf(catalog[exercise.blueprint.exerciseId]?.equipment ?? null) === 'dumbbell';
-  const performances = previousPerformance(exercise);
+  const performances = previousPerformance?.(exercise);
   // A changed set scheme carries nothing on, but last time's numbers are still worth seeing.
-  const previous = performances.previous ?? performances.candidates[0];
+  const previous = performances?.previous ?? performances?.candidates[0];
   const next = props.toStartNext ? exercise.currentSet : undefined;
   const editing = entry.editing?.exerciseIndex === exerciseIndex ? entry.editing : undefined;
   const bodyweightLabel = t('exercise.short_bodyweight.label');
@@ -143,7 +143,7 @@ export function LiveSetTable(props: LiveSetTableProps) {
         onAddSet={() => entry.addSet(exerciseIndex)}
         editingRowRef={props.editingRowRef}
       />
-      <ExerciseNotesDisplay exercise={exercise} previousExercise={performances.candidates[0]} />
+      <ExerciseNotesDisplay exercise={exercise} previousExercise={performances?.candidates[0]} />
     </View>
   );
 }

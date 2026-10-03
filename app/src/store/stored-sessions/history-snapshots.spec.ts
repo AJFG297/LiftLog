@@ -7,8 +7,6 @@ import type { RootState } from '@/store/store';
 import {
   getSessionReferenceTime,
   selectLatestExercises,
-  selectPreviousComparableSession,
-  selectRecentlyCompletedExercises,
   selectSessions,
   initializeStoredSessionsStateSlice,
 } from '@/store/stored-sessions';
@@ -36,8 +34,8 @@ import { describeExercise, describeSession, loadHistoryFixture, normalize } from
 /**
  * Characterization snapshots of every history aggregate over the 420-session fixture. They pin what the
  * app computed from the whole history in Redux, so the storage rewrite (docs/plans/relational-storage.md)
- * can prove it computes the same thing: the History, calendar, streak, records and stats cases are now fed
- * by `WorkoutRepository`'s queries, the carry-over cases still by the selectors. Any snapshot change must
+ * can prove it computes the same thing: every case but the export order is now fed by `WorkoutRepository`'s
+ * queries (the carry-over cache by the startup effect, which loads it from one). Any snapshot change must
  * be deliberate and listed in the PR that makes it.
  *
  * Selectors that read "today" take it as an argument; the rest of the clock dependence is the system zone,
@@ -144,7 +142,7 @@ describe('history aggregates over the 420-session fixture', () => {
     expect(labelled).toMatchSnapshot();
   });
 
-  it('recently completed exercises per movement', () => {
+  it('recently completed exercises per movement', async () => {
     // From the stored sessions, whose exercises startup linked; the fixture's own are still unlinked.
     const movementKeys = Enumerable.from(selectSessions(state()))
       .selectMany((x) => x.recordedExercises)
@@ -152,37 +150,40 @@ describe('history aggregates over the 420-session fixture', () => {
       .distinct()
       .orderBy((x) => x)
       .toArray();
-    const lookup = selectRecentlyCompletedExercises(state(), undefined);
+    const lookup = await repository.previousPerformances(movementKeys);
     expect(
-      byLabel(movementKeys.map((key) => [labelMovement(key), key, lookup(key).map(describeExercise)])),
+      byLabel(movementKeys.map((key) => [labelMovement(key), key, (lookup.get(key) ?? []).map(describeExercise)])),
     ).toMatchSnapshot();
   });
 
-  it('recently completed exercises leave out the session being viewed', () => {
+  it('recently completed exercises leave out the session being viewed', async () => {
     const newest = Enumerable.from(selectSessions(state()))
       .orderByDescending((x) => getSessionReferenceTime(x).toEpochSecond())
       .first();
-    const lookup = selectRecentlyCompletedExercises(state(), newest.id);
+    const lookup = await repository.previousPerformances(
+      newest.recordedExercises.map((x) => x.movementKey()),
+      { excludeWorkoutId: newest.id, limit: 3 },
+    );
     expect(
       byLabel(
         newest.recordedExercises.map((exercise) => [
           labelMovement(exercise.movementKey()),
           exercise.movementKey(),
-          lookup(exercise.movementKey()).slice(0, 3).map(describeExercise),
+          (lookup.get(exercise.movementKey()) ?? []).map(describeExercise),
         ]),
       ),
     ).toMatchSnapshot();
   });
 
-  it('previous comparable session for every session', () => {
-    const previous = Object.fromEntries(
-      [...sessions]
-        .sort((a, b) => a.id.localeCompare(b.id))
-        .map((session) => {
-          const match = selectPreviousComparableSession(state(), session);
-          return [describeSession(session), match ? describeSession(match) : null];
-        }),
-    );
+  it('previous comparable session for every session', async () => {
+    const previous: Record<string, string | null> = {};
+    for (const session of [...sessions].sort((a, b) => a.id.localeCompare(b.id))) {
+      const [match] = await repository.latestNamed(session.blueprint.name, 1, {
+        before: session,
+        includeUnstarted: true,
+      });
+      previous[describeSession(session)] = match ? describeSession(match) : null;
+    }
     expect(previous).toMatchSnapshot();
   });
 

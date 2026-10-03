@@ -29,6 +29,9 @@ import { restWindowOf } from '@/models/session-models/rest';
 import { normalizedReflection, reflectionsEqual, SessionReflection } from '@/models/session-models/reflection';
 import { IndexOutOfBoundsError } from '@/utils/index-out-of-bounds';
 
+/** The name a workout started without a routine gets; what makes {@link Session.isFreeform} true. */
+export const FREEFORM_WORKOUT_NAME = 'Freeform Workout';
+
 export class Session {
   constructor(
     readonly id: string,
@@ -363,7 +366,7 @@ export class Session {
       id: uuid(),
       date: date,
       bodyweight,
-      blueprint: EmptySession.blueprint.with({ name: 'Freeform Workout' }),
+      blueprint: EmptySession.blueprint.with({ name: FREEFORM_WORKOUT_NAME }),
     });
   }
 
@@ -552,7 +555,7 @@ export class Session {
   }
 
   get isFreeform(): boolean {
-    return this.blueprint.name === 'Freeform Workout';
+    return this.blueprint.name === FREEFORM_WORKOUT_NAME;
   }
 }
 
