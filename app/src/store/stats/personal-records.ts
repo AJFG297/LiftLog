@@ -55,7 +55,8 @@ function bestOneRepMax(session: Session): Map<MovementKey, BestOneRepMax> {
       continue;
     }
 
-    // Same key selectRecentlyCompletedExercises uses; it already guards the cardio/weighted name collision.
+    // Same key `WorkoutRepository.previousPerformances` groups by; it already guards the cardio/weighted
+    // name collision.
     const key = exercise.movementKey();
     const current = best.get(key);
     if (!current || candidate.oneRepMax.isGreaterThan(current.oneRepMax)) {

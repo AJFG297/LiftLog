@@ -237,7 +237,8 @@ export class WorkoutRepository {
       this.db.all<ExerciseRef & { lineage: ProgressionKey }>(sql`
         with placed as (
           -- A repeat of a key within one workout is its own lineage, numbered by position over every
-          -- exercise of the workout, logged or not, as lineageKeys numbers them.
+          -- exercise of the workout, logged or not, as lineageKeys numbers them; the case below builds
+          -- the same string as lineageKey() in blueprint-models.
           select e.workout_id, e.position, e.progression_key, e.latest_time_ms,
             row_number() over (partition by e.workout_id, e.progression_key order by e.position) as repeat
           from ${workoutExercisesSchema} e

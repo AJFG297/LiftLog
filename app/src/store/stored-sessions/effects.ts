@@ -21,7 +21,7 @@ import {
   upsertExercises,
   upsertStoredSessions,
 } from './index';
-import { ProgressionKey } from '@/models/blueprint-models';
+import { progressionKeyOf } from '@/models/blueprint-models';
 import { WorkoutRepository } from '@/services/workout-repository';
 import { Dispatch } from '@reduxjs/toolkit';
 import { fetchUpcomingSessions } from '@/store/program';
@@ -301,9 +301,4 @@ async function refreshStaleLineages(
     dispatch(setLatestExercisesFor({ keys, latest }));
     dispatch(fetchUpcomingSessions());
   }
-}
-
-/** The progression key a lineage key is a repeat of (`<key>#2`), or itself. */
-function progressionKeyOf(lineage: ProgressionKey): ProgressionKey {
-  return lineage.replace(/#\d+$/, '') as ProgressionKey;
 }
