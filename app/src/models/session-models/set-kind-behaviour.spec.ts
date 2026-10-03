@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import Enumerable from 'linq';
 import { LocalDate, OffsetDateTime } from '@js-joda/core';
 import BigNumber from 'bignumber.js';
 import { ProgressionRule, SessionBlueprint } from '@/models/blueprint-models';
@@ -8,7 +7,6 @@ import type { SetKind, WorkingListKind } from '@/models/session-models/set-kind'
 import { makeSession, makeWeightedBlueprint } from '@/models/session-models/__test__/helpers';
 import { Weight } from '@/models/weight';
 import { SessionService } from '@/services/session-service';
-import { ProgressRepository } from '@/services/progress-repository';
 import { sessionVolume } from '@/store/activity/volume';
 import { findPersonalRecords } from '@/store/stats/personal-records';
 import type { RootState } from '@/store';
@@ -92,8 +90,7 @@ describe('what each set kind counts towards', () => {
 describe('the next session', () => {
   function service() {
     const state = { settings: { useImperialUnits: false }, storedSessions: { sessions: {} } } as unknown as RootState;
-    const progress = { getOrderedSessions: () => Enumerable.from([]) } as unknown as ProgressRepository;
-    return new SessionService(progress, () => state);
+    return new SessionService({ latestPlanned: () => Promise.resolve(undefined) }, () => state);
   }
 
   function nextAfter(last: RecordedWeightedExercise) {

@@ -5,7 +5,7 @@ import { DayOfWeek, LocalDate, YearMonth } from '@js-joda/core';
 import { DatabaseMigrationService } from '@/services/database-migration-service';
 import { WorkoutRepository } from '@/services/workout-repository';
 import { applyStoredSessionsEffects } from '@/store/stored-sessions/effects';
-import { initializeStoredSessionsStateSlice, selectRecentlyCompletedExercises } from '@/store/stored-sessions';
+import { initializeStoredSessionsStateSlice } from '@/store/stored-sessions';
 import {
   calculateStreak,
   ownActivityOf,
@@ -24,9 +24,10 @@ import { generateSyntheticHistory } from '@/utils/__test__/synthetic-history';
  *
  * Seeds an in-memory database with a synthetic history, then measures a cold start the way the app does
  * one: run migrations, hydrate stored sessions (read every workout table, rebuild `Session` instances from
- * the rows, derive the caches), then the first pass of what the Home and History screens query on mount
- * (`useOwnActivity`, `usePersonalRecords`, the month list) and the carry-over selectors the workout screen
- * still reads. Heap is what a hydrated store retains over an empty one, after a forced GC.
+ * the rows, and load the carry-over cache with its own query), then the first pass of what the Home and
+ * History screens query on mount (`useOwnActivity`, `usePersonalRecords`, the month list) and what the
+ * workout screen asks for its exercises. Heap is what a hydrated store retains over an empty one, after a
+ * forced GC.
  *
  * Numbers come from Node against libsql, not a phone against expo-sqlite, so compare them only with other
  * runs of this script on the same machine.
@@ -83,9 +84,17 @@ async function coldStart(db: Awaited<ReturnType<typeof seedDatabase>>, expectedS
   const month = YearMonth.from(TODAY);
   await workoutRepository.finishedBetween(month.atDay(1), month.atEndOfMonth());
   await workoutRepository.personalRecords();
-  // What the workout screen asks for each exercise it shows.
-  for (const exercise of Object.values(state.storedSessions.sessions)[0]?.recordedExercises ?? []) {
-    selectRecentlyCompletedExercises(state, undefined)(exercise.movementKey());
+  // What the workout screen asks for the exercises it shows (`PreviousPerformancesProvider`).
+  const first = Object.values(state.storedSessions.sessions)[0];
+  if (first) {
+    await workoutRepository.previousPerformances(
+      first.recordedExercises.map((x) => x.movementKey()),
+      { excludeWorkoutId: first.id, limit: 10 },
+    );
+    await workoutRepository.latestPerLineage({
+      progressionKeys: first.recordedExercises.map((x) => x.progressionKey()),
+      excludeWorkoutId: first.id,
+    });
   }
   const interactive = performance.now();
 

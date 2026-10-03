@@ -33,7 +33,8 @@ export function createServices(store: Store<RootState>, db: ExpoSQLiteDatabase, 
   const logger = new Logger();
   const keyValueStore = new KeyValueStore();
   const progressRepository = new ProgressRepository(store.getState);
-  const sessionService = new SessionService(progressRepository, store.getState);
+  const workoutRepository = new WorkoutRepository(db);
+  const sessionService = new SessionService(workoutRepository, store.getState);
   const notificationService = new NotificationService(store.getState, store.dispatch);
   const encryptionService = new EncryptionService();
   const feedApiService = new FeedApiService(store.getState);
@@ -48,7 +49,6 @@ export function createServices(store: Store<RootState>, db: ExpoSQLiteDatabase, 
   const tolgee = getTolgee(preferenceService);
   const workoutWorkerService = new WorkoutWorker(store.dispatch, store.getState, tolgee, offerPlanUpdateInForeground);
   const healthExportService: HES = new HealthExportService();
-  const workoutRepository = new WorkoutRepository(db);
   const databaseMigrationService = new DatabaseMigrationService(
     db,
     logger,

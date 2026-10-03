@@ -1,4 +1,4 @@
-import { AddEffectFn } from '@/store/store';
+import { AddEffectFn, RootState } from '@/store/store';
 import {
   deleteExercise,
   deleteStoredSession,
@@ -12,12 +12,18 @@ import {
   setExercises,
   setHiddenBuiltInIds,
   setIsHydrated,
+  setLatestExercises,
+  setLatestExercisesFor,
   setStoredSessions,
+  staleLineages,
   updateExercise,
   updateStoredSession,
   upsertExercises,
   upsertStoredSessions,
 } from './index';
+import { ProgressionKey } from '@/models/blueprint-models';
+import { WorkoutRepository } from '@/services/workout-repository';
+import { Dispatch } from '@reduxjs/toolkit';
 import { fetchUpcomingSessions } from '@/store/program';
 import { addUnpublishedSessionId } from '@/store/feed';
 import { setStatsIsDirty } from '@/store/stats';
@@ -47,8 +53,14 @@ export function applyStoredSessionsEffects(addEffect: AddEffectFn) {
         throw new Error('Settings must be hydrated before stored sessions');
       }
       await logger.time('initializeStoredSessions', async () => {
-        const { workouts, activeWorkoutId } = await workoutRepository.loadAll();
+        // The carry-over cache comes from its own query, so it no longer depends on the whole history
+        // being in memory; `loadAll` goes with the full hydration (PM-14).
+        const [{ workouts, activeWorkoutId }, latest] = await Promise.all([
+          workoutRepository.loadAll(),
+          workoutRepository.latestPerLineage(),
+        ]);
         dispatch(setStoredSessions(Object.fromEntries(workouts.map((x) => [x.id, x]))));
+        dispatch(setLatestExercises(latest));
         // Only when there is one: dispatching `undefined` would clear every flag in the table.
         if (activeWorkoutId) {
           dispatch(setActiveSessionId(activeWorkoutId));
@@ -122,8 +134,9 @@ export function applyStoredSessionsEffects(addEffect: AddEffectFn) {
     }
   });
 
-  addEffect(deleteStoredSession, async (action, { extra: { logger, workoutRepository } }) => {
+  addEffect(deleteStoredSession, async (action, { getState, dispatch, extra: { logger, workoutRepository } }) => {
     await logger.time('deleteStoredSession', () => workoutRepository.delete(action.payload));
+    await refreshStaleLineages(action.payload, getState, dispatch, workoutRepository);
   });
   addEffect(deleteStoredSession, async (action, { stateAfterReduce, extra: { healthExportService, logger } }) => {
     const workoutId = action.payload;
@@ -140,7 +153,10 @@ export function applyStoredSessionsEffects(addEffect: AddEffectFn) {
   // Content only. The `active` flag has a single writer below, so a recorded set never touches it.
   addEffect(
     [putStoredSession, updateStoredSession],
-    async (action, { getState, stateBeforeReduce, stateAfterReduce, extra: { logger, workoutRepository } }) => {
+    async (
+      action,
+      { getState, dispatch, stateBeforeReduce, stateAfterReduce, extra: { logger, workoutRepository } },
+    ) => {
       const sessionId = putStoredSession.match(action)
         ? action.payload.id
         : updateStoredSession.match(action)
@@ -165,6 +181,7 @@ export function applyStoredSessionsEffects(addEffect: AddEffectFn) {
         return;
       }
       await logger.time('persistStoredSession', () => workoutRepository.put(session));
+      await refreshStaleLineages(sessionId, getState, dispatch, workoutRepository);
     },
   );
 
@@ -175,10 +192,15 @@ export function applyStoredSessionsEffects(addEffect: AddEffectFn) {
     });
   });
 
-  addEffect(upsertStoredSessions, async (action, { cancelActiveListeners, extra: { logger, workoutRepository } }) => {
-    cancelActiveListeners();
-    await logger.time('upsertStoredSessions', () => workoutRepository.putMany(action.payload));
-  });
+  addEffect(
+    upsertStoredSessions,
+    async (action, { cancelActiveListeners, dispatch, extra: { logger, workoutRepository } }) => {
+      cancelActiveListeners();
+      await logger.time('upsertStoredSessions', () => workoutRepository.putMany(action.payload));
+      // A restore or import can move any lineage back; cheaper to re-read them all than to work out which.
+      dispatch(setLatestExercises(await workoutRepository.latestPerLineage()));
+    },
+  );
 
   addEffect(deleteExercise, async (action, { stateAfterReduce, extra: { db, keyValueStore } }) => {
     if (stateAfterReduce.storedSessions.builtInExercises[action.payload]) {
@@ -246,4 +268,42 @@ export function applyStoredSessionsEffects(addEffect: AddEffectFn) {
       ...(rows.length ? [tx.insert(exercisesSchema).values(rows)] : []),
     ]);
   });
+}
+
+/**
+ * Re-reads from the tables the lineages whose cached latest came from `workoutId` and may have moved back
+ * (see `staleLineages`), once that workout's write has landed. The reducer has already moved every
+ * lineage it could forward, so this only runs for the rare edit or delete of a latest performance; logging
+ * a set reads nothing.
+ *
+ * The repository runs its writes and this read in the order they were issued, so the read sees every write
+ * before it and a later write's own refresh follows this one. A lineage the reducer has moved on meanwhile
+ * belongs to that later write and is left to its refresh.
+ */
+async function refreshStaleLineages(
+  workoutId: string,
+  getState: () => RootState,
+  dispatch: Dispatch,
+  workoutRepository: WorkoutRepository,
+) {
+  const { storedSessions } = getState();
+  const stale = staleLineages(storedSessions, workoutId);
+  if (!stale.length) {
+    return;
+  }
+  const snapshot = storedSessions.latestExercises;
+  const latest = await workoutRepository.latestPerLineage({
+    progressionKeys: [...new Set(stale.map(progressionKeyOf))],
+  });
+  const { latestExercises } = getState().storedSessions;
+  const keys = stale.filter((key) => latestExercises[key] === snapshot[key]);
+  if (keys.length) {
+    dispatch(setLatestExercisesFor({ keys, latest }));
+    dispatch(fetchUpcomingSessions());
+  }
+}
+
+/** The progression key a lineage key is a repeat of (`<key>#2`), or itself. */
+function progressionKeyOf(lineage: ProgressionKey): ProgressionKey {
+  return lineage.replace(/#\d+$/, '') as ProgressionKey;
 }

@@ -1,15 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import fc from 'fast-check';
-import { Duration, LocalDate, OffsetDateTime, ZoneOffset } from '@js-joda/core';
+import { LocalDate, OffsetDateTime, ZoneOffset } from '@js-joda/core';
 import { v4 as uuid } from 'uuid';
 import {
   selectSession,
   selectSessions,
-  selectPreviousComparableSession,
-  selectSessionsBefore,
-  selectRecentlyCompletedExercises,
-  selectPreviousLineages,
   selectMuscles,
+  staleLineages,
   selectExerciseById,
   selectExercises,
   getSessionReferenceTime,
@@ -20,6 +16,7 @@ import {
   upsertStoredSessions,
   setStoredSessions,
   deleteStoredSession,
+  setLatestExercisesFor,
   updateExercise,
   upsertExercises,
   deleteExercise,
@@ -28,19 +25,8 @@ import {
   setBuiltInExercises,
   setHiddenBuiltInIds,
 } from '@/store/stored-sessions';
-import {
-  CardioExerciseBlueprint,
-  CardioExerciseSetBlueprint,
-  movementKeyFor,
-  SessionBlueprint,
-  WeightedExerciseBlueprint,
-} from '@/models/blueprint-models';
-import {
-  RecordedCardioExercise,
-  RecordedCardioExerciseSet,
-  RecordedWeightedExercise,
-  Session,
-} from '@/models/session-models';
+import { SessionBlueprint, WeightedExerciseBlueprint } from '@/models/blueprint-models';
+import { RecordedWeightedExercise, Session } from '@/models/session-models';
 import { Weight } from '@/models/weight';
 import { ExerciseDescriptor } from '@/models/exercise-models';
 import { UnknownAction } from '@reduxjs/toolkit';
@@ -148,7 +134,7 @@ describe('storedSessions reducer', () => {
     expect(state.earliestSession).toBe(early);
   });
 
-  it('setStoredSessions replaces sessions and rebuilds latestExercises', () => {
+  it('setStoredSessions replaces sessions and clears the carry-over cache, which startup loads from the tables', () => {
     const first = createSessionWithCompletionTime(
       LocalDate.of(2026, 4, 10),
       OffsetDateTime.of(2026, 4, 10, 10, 0, 0, 0, ZoneOffset.UTC),
@@ -164,6 +150,7 @@ describe('storedSessions reducer', () => {
 
     expect(state.sessions[first.id]).toBeUndefined();
     expect(state.sessions[replacement.id]).toBe(replacement);
+    expect(state.latestExercises).toEqual({});
   });
 
   it('a completed exercise supersedes an earlier abandoned one with the same blueprint', () => {
@@ -200,18 +187,9 @@ describe('storedSessions reducer', () => {
     expect(latest).toBe(completed.recordedExercises[0]);
   });
 
-  it('nor when latestExercises is recomputed after a delete', () => {
-    const at = (day: number) => OffsetDateTime.of(2026, 4, day, 10, 0, 0, 0, ZoneOffset.UTC);
-    const oldest = createSessionWithCompletionTime(LocalDate.of(2026, 3, 27), at(1).minusDays(5), 'Squat');
-    const completed = createSessionWithCompletionTime(LocalDate.of(2026, 4, 3), at(3), 'Squat');
-    const warmupsOnly = createWarmupsOnlySession(LocalDate.of(2026, 4, 10), at(10), 'Squat');
-
-    const state = reduce(upsertStoredSessions([oldest, completed, warmupsOnly]), deleteStoredSession(oldest.id));
-
-    expect(Object.values(state.latestExercises)[0]).toBe(completed.recordedExercises[0]);
-  });
-
-  it('nor when the carried-over exercise is edited down to only its warm-ups', () => {
+  // The reducer can't know who is latest now without the whole history, so it leaves the entry and the
+  // effect re-reads the lineage from the tables (`staleLineages`, pinned in history-from-sql.spec.ts).
+  it('nor when the carried-over exercise is edited down to only its warm-ups: the lineage is flagged stale', () => {
     const at = (day: number) => OffsetDateTime.of(2026, 4, day, 10, 0, 0, 0, ZoneOffset.UTC);
     const earlier = createSessionWithCompletionTime(LocalDate.of(2026, 4, 3), at(3), 'Squat');
     const latest = createSessionWithCompletionTime(LocalDate.of(2026, 4, 10), at(10), 'Squat');
@@ -225,7 +203,8 @@ describe('storedSessions reducer', () => {
       }),
     );
 
-    expect(Object.values(state.latestExercises)[0]).toBe(earlier.recordedExercises[0]);
+    expect(staleLineages(state, latest.id)).toEqual([latest.recordedExercises[0]!.progressionKey()]);
+    expect(staleLineages(state, earlier.id)).toEqual([]);
   });
 
   describe('an exercise planned twice in one session', () => {
@@ -260,14 +239,13 @@ describe('storedSessions reducer', () => {
       expect(state.latestExercises[`${key}#2` as typeof key]).toBe(session.recordedExercises[1]);
     });
 
-    it('falls back to the earlier session for each place once the latest is deleted', () => {
+    it('flags both places stale once the latest is deleted', () => {
       const earlier = twice(3, 100, 60);
       const later = twice(10, 105, 62.5);
 
       const state = reduce(upsertStoredSessions([earlier, later]), deleteStoredSession(later.id));
 
-      expect(state.latestExercises[key]).toBe(earlier.recordedExercises[0]);
-      expect(state.latestExercises[`${key}#2` as typeof key]).toBe(earlier.recordedExercises[1]);
+      expect(staleLineages(state, later.id)).toEqual([key, `${key}#2`]);
     });
   });
 
@@ -324,17 +302,25 @@ describe('storedSessions reducer', () => {
     expect(state.activeSessionId).toBeUndefined();
   });
 
-  it('deleteStoredSession removes the session and recalculates latest exercises', () => {
+  it('deleteStoredSession removes the session and leaves its carry-over entries for the effect to re-read', () => {
     const session = createSessionWithCompletionTime(
       LocalDate.of(2026, 4, 10),
       OffsetDateTime.of(2026, 4, 10, 10, 0, 0, 0, ZoneOffset.UTC),
       'Squat',
     );
+    const key = session.recordedExercises[0]!.progressionKey();
 
     const state = reduce(putStoredSession(session), deleteStoredSession(session.id));
 
     expect(state.sessions[session.id]).toBeUndefined();
-    expect(Object.values(state.latestExercises).filter(Boolean)).toHaveLength(0);
+    expect(staleLineages(state, session.id)).toEqual([key]);
+    expect(
+      reduce(
+        putStoredSession(session),
+        deleteStoredSession(session.id),
+        setLatestExercisesFor({ keys: [key], latest: {} }),
+      ).latestExercises,
+    ).toEqual({});
   });
 
   describe('derived caches after edits and deletes', () => {
@@ -382,42 +368,33 @@ describe('storedSessions reducer', () => {
       expect(state.earliestSession).toBe(second);
     });
 
-    it('an edit that moves the latest set earlier falls back to the session that is now latest', () => {
+    it('an edit that moves the latest set earlier flags the lineage stale', () => {
       const earlier = squatOn(1);
       const later = squatOn(5);
+      const key = later.recordedExercises[0]!.progressionKey();
 
       const state = reduce(
         upsertStoredSessions([earlier, later]),
         updateStoredSession({ sessionId: later.id, update: () => squatOn(1, 8).with({ id: later.id }) }),
       );
 
-      expect(latestSquat(state)).toEqual([earlier.recordedExercises[0]]);
+      expect(staleLineages(state, later.id)).toEqual([key]);
     });
 
-    it('removing an exercise from the session that held its latest falls back to the previous one', () => {
+    it('removing an exercise from the session that held its latest flags the lineage stale', () => {
       const earlier = squatOn(1);
       const later = squatOn(5);
+      const key = later.recordedExercises[0]!.progressionKey();
 
       const state = reduce(
         upsertStoredSessions([earlier, later]),
         updateStoredSession({ sessionId: later.id, update: (s) => s.with({ recordedExercises: [] }) }),
       );
 
-      expect(latestSquat(state)).toEqual([earlier.recordedExercises[0]]);
+      expect(staleLineages(state, later.id)).toEqual([key]);
     });
 
-    it('removing the last occurrence of an exercise drops its key', () => {
-      const only = squatOn(1);
-
-      const state = reduce(
-        putStoredSession(only),
-        updateStoredSession({ sessionId: only.id, update: (s) => s.with({ recordedExercises: [] }) }),
-      );
-
-      expect(latestSquat(state)).toEqual([]);
-    });
-
-    it('logging a later set keeps the edited exercise as the latest', () => {
+    it('logging a later set keeps the edited exercise as the latest, with nothing to re-read', () => {
       const earlier = squatOn(1);
       const today = squatOn(5);
       const logged = squatOn(5, 11).with({ id: today.id });
@@ -428,62 +405,46 @@ describe('storedSessions reducer', () => {
       );
 
       expect(latestSquat(state)).toEqual([logged.recordedExercises[0]]);
+      expect(staleLineages(state, today.id)).toEqual([]);
     });
 
-    it('stay equal to a rebuild from scratch after any mix of writes', () => {
-      const ids = ['a', 'b', 'c', 'd'];
-      const write = fc.record({
-        kind: fc.constantFrom('put', 'update', 'upsert', 'delete'),
-        id: fc.constantFrom(...ids),
-        day: fc.integer({ min: 1, max: 5 }),
-        hour: fc.integer({ min: 0, max: 3 }),
-        name: fc.constantFrom('Squat', 'Bench'),
-        abandoned: fc.boolean(),
+    it('an edit at the same time swaps the cached exercise for the edited one', () => {
+      const today = squatOn(5);
+      const heavier = today.with({
+        recordedExercises: [
+          (today.recordedExercises[0] as RecordedWeightedExercise).with({
+            potentialSets: [filledPotentialSet(5, at(5), new Weight(110, 'kilograms'))],
+          }),
+        ],
       });
-      const summarize = (state: ReturnType<typeof reduce>) => ({
-        earliest: state.earliestSession?.date.toString(),
-        latest: Object.fromEntries(
-          Object.entries(state.latestExercises).map(([key, exercise]) => [key, exercise?.latestTime?.toString()]),
-        ),
-      });
-
-      fc.assert(
-        fc.property(fc.array(write, { maxLength: 20 }), (writes) => {
-          const actions = writes.map((w): UnknownAction => {
-            const date = LocalDate.of(2026, 4, w.day);
-            const built = (
-              w.abandoned
-                ? createAbandonedSession(date, w.name)
-                : createSessionWithCompletionTime(date, at(w.day, w.hour), w.name)
-            ).with({ id: w.id });
-            switch (w.kind) {
-              case 'put':
-                return putStoredSession(built);
-              case 'update':
-                return updateStoredSession({ sessionId: w.id, update: () => built });
-              case 'upsert':
-                return upsertStoredSessions([built]);
-              default:
-                return deleteStoredSession(w.id);
-            }
-          });
-          const incremental = reduce(...actions);
-          const rebuilt = reduce(setStoredSessions({ ...incremental.sessions }));
-          expect(summarize(incremental)).toEqual(summarize(rebuilt));
-        }),
-      );
-    });
-
-    it('re-importing a session with an earlier latest set falls back as an edit would', () => {
-      const earlier = squatOn(1);
-      const later = squatOn(5);
 
       const state = reduce(
-        upsertStoredSessions([earlier, later]),
-        upsertStoredSessions([squatOn(1, 8).with({ id: later.id })]),
+        putStoredSession(today),
+        updateStoredSession({ sessionId: today.id, update: () => heavier }),
       );
 
-      expect(latestSquat(state)).toEqual([earlier.recordedExercises[0]]);
+      expect(latestSquat(state)).toEqual([heavier.recordedExercises[0]]);
+      expect(staleLineages(state, today.id)).toEqual([]);
+    });
+
+    it('setLatestExercisesFor replaces only the keys it is given', () => {
+      const squat = squatOn(1);
+      const bench = createSessionWithCompletionTime(LocalDate.of(2026, 4, 2), at(2), 'Bench');
+      const squatKey = squat.recordedExercises[0]!.progressionKey();
+      const benchKey = bench.recordedExercises[0]!.progressionKey();
+      const replacement = squatOn(3);
+
+      const state = reduce(
+        upsertStoredSessions([squat, bench]),
+        setLatestExercisesFor({
+          keys: [squatKey],
+          latest: { [squatKey]: { workoutId: replacement.id, exercise: replacement.recordedExercises[0]! } },
+        }),
+      );
+
+      expect(state.latestExercises[squatKey]).toBe(replacement.recordedExercises[0]);
+      expect(state.latestExercises[benchKey]).toBe(bench.recordedExercises[0]);
+      expect(staleLineages(state, replacement.id)).toEqual([squatKey]);
     });
   });
 
@@ -566,91 +527,6 @@ describe('storedSessions selectors', () => {
     expect(selectSession(state, session.id)).toBe(session);
   });
 
-  it('selectPreviousComparableSession finds the prior session of the same name', () => {
-    const older = squat(LocalDate.of(2026, 4, 1), OffsetDateTime.of(2026, 4, 1, 10, 0, 0, 0, ZoneOffset.UTC));
-    const newer = squat(LocalDate.of(2026, 4, 8), OffsetDateTime.of(2026, 4, 8, 10, 0, 0, 0, ZoneOffset.UTC));
-    const state = { storedSessions: reduce(upsertStoredSessions([older, newer])) };
-
-    expect(selectPreviousComparableSession(state, newer)).toBe(older);
-    expect(selectPreviousComparableSession(state, undefined)).toBeUndefined();
-  });
-
-  it('selectSessionsBefore returns only the sessions before the given one', () => {
-    const older = squat(LocalDate.of(2026, 4, 1), OffsetDateTime.of(2026, 4, 1, 10, 0, 0, 0, ZoneOffset.UTC));
-    const middle = squat(LocalDate.of(2026, 4, 8), OffsetDateTime.of(2026, 4, 8, 10, 0, 0, 0, ZoneOffset.UTC));
-    const newer = squat(LocalDate.of(2026, 4, 15), OffsetDateTime.of(2026, 4, 15, 10, 0, 0, 0, ZoneOffset.UTC));
-    const state = { storedSessions: reduce(upsertStoredSessions([older, middle, newer])) };
-
-    expect(selectSessionsBefore(state, middle)).toEqual([older]);
-    expect(selectSessionsBefore(state, undefined)).toEqual([]);
-  });
-
-  it('selectPreviousLineages holds the latest of each lineage from the other sessions', () => {
-    const earlier = squat(LocalDate.of(2026, 4, 1), OffsetDateTime.of(2026, 4, 1, 10, 0, 0, 0, ZoneOffset.UTC));
-    const later = squat(LocalDate.of(2026, 4, 8), OffsetDateTime.of(2026, 4, 8, 10, 0, 0, 0, ZoneOffset.UTC));
-    const state = { storedSessions: reduce(upsertStoredSessions([earlier, later])) };
-    const key = earlier.recordedExercises[0]!.progressionKey();
-
-    expect(selectPreviousLineages(state, undefined)[key]).toBe(later.recordedExercises[0]);
-    expect(selectPreviousLineages(state, later.id)[key]).toBe(earlier.recordedExercises[0]);
-  });
-
-  it('selectRecentlyCompletedExercises returns recorded exercises for a blueprint', () => {
-    const session = squat(LocalDate.of(2026, 4, 10), OffsetDateTime.of(2026, 4, 10, 10, 0, 0, 0, ZoneOffset.UTC));
-    const state = { storedSessions: reduce(putStoredSession(session)) };
-
-    const lookup = selectRecentlyCompletedExercises(state, undefined);
-    const blueprint = session.recordedExercises[0]!.blueprint as WeightedExerciseBlueprint;
-
-    expect(lookup(blueprint.movementKey())).toHaveLength(1);
-  });
-
-  it('selectRecentlyCompletedExercises skips an exercise with only warm-ups logged', () => {
-    const completed = squat(LocalDate.of(2026, 4, 1), OffsetDateTime.of(2026, 4, 1, 10, 0, 0, 0, ZoneOffset.UTC));
-    const warmupsOnly = createWarmupsOnlySession(
-      LocalDate.of(2026, 4, 8),
-      OffsetDateTime.of(2026, 4, 8, 10, 0, 0, 0, ZoneOffset.UTC),
-      'Squat',
-    );
-    const state = { storedSessions: reduce(upsertStoredSessions([completed, warmupsOnly])) };
-    const blueprint = completed.recordedExercises[0]!.blueprint as WeightedExerciseBlueprint;
-
-    const previous = selectRecentlyCompletedExercises(state, undefined)(blueprint.movementKey());
-
-    expect(previous).toEqual([completed.recordedExercises[0]]);
-  });
-
-  it('selectRecentlyCompletedExercises omits the workout in progress, which is not its own previous', () => {
-    const done = squat(LocalDate.of(2026, 4, 1), OffsetDateTime.of(2026, 4, 1, 10, 0, 0, 0, ZoneOffset.UTC));
-    const inProgress = squat(LocalDate.of(2026, 4, 8), OffsetDateTime.of(2026, 4, 8, 10, 0, 0, 0, ZoneOffset.UTC));
-    const state = {
-      storedSessions: reduce(upsertStoredSessions([done, inProgress]), setActiveSessionId(inProgress.id)),
-    };
-    const blueprint = done.recordedExercises[0]!.blueprint as WeightedExerciseBlueprint;
-
-    const previous = selectRecentlyCompletedExercises(state, undefined)(blueprint.movementKey());
-
-    expect(previous).toHaveLength(1);
-    expect(previous[0]).toBe(done.recordedExercises[0]);
-  });
-
-  it('selectRecentlyCompletedExercises omits the session it was asked about, so editing history is cheap', () => {
-    const done = squat(LocalDate.of(2026, 4, 1), OffsetDateTime.of(2026, 4, 1, 10, 0, 0, 0, ZoneOffset.UTC));
-    const beingEdited = squat(LocalDate.of(2026, 4, 8), OffsetDateTime.of(2026, 4, 8, 10, 0, 0, 0, ZoneOffset.UTC));
-    const before = reduce(upsertStoredSessions([done, beingEdited]));
-    const blueprint = done.recordedExercises[0]!.blueprint as WeightedExerciseBlueprint;
-
-    const previous = selectRecentlyCompletedExercises({ storedSessions: before }, beingEdited.id);
-    expect(previous(blueprint.movementKey())).toEqual([done.recordedExercises[0]]);
-
-    // The groupBy over all history must not re-run when the session under edit changes.
-    const edited = storedSessionsReducer(
-      before,
-      updateStoredSession({ sessionId: beingEdited.id, update: (s) => s.withUpdatedDate(LocalDate.of(2026, 4, 9)) }),
-    );
-    expect(selectRecentlyCompletedExercises({ storedSessions: edited }, beingEdited.id)).toBe(previous);
-  });
-
   it('selectSessions keeps its reference while only the workout in progress changes', () => {
     const done = squat(LocalDate.of(2026, 4, 1), OffsetDateTime.of(2026, 4, 1, 10, 0, 0, 0, ZoneOffset.UTC));
     const inProgress = squat(LocalDate.of(2026, 4, 8), OffsetDateTime.of(2026, 4, 8, 10, 0, 0, 0, ZoneOffset.UTC));
@@ -665,43 +541,6 @@ describe('storedSessions selectors', () => {
     // History tab is mounted behind the workout screen. A new reference here re-runs all of it per tap.
     expect(edited.sessions).not.toBe(before.sessions);
     expect(selectSessions({ storedSessions: edited })).toBe(selectSessions({ storedSessions: before }));
-  });
-
-  it('selectRecentlyCompletedExercises excludes same-named exercises of a different type', () => {
-    const cardioBlueprint = new CardioExerciseBlueprint('New Exercise', [CardioExerciseSetBlueprint.empty()], '', '');
-    const cardioExercise = new RecordedCardioExercise(
-      cardioBlueprint,
-      [
-        RecordedCardioExerciseSet.empty(cardioBlueprint.sets[0]!).with({
-          completionDateTime: OffsetDateTime.of(2026, 4, 10, 10, 0, 0, 0, ZoneOffset.UTC),
-          duration: Duration.ofSeconds(45),
-        }),
-      ],
-      undefined,
-    );
-    const session = new Session(
-      uuid(),
-      new SessionBlueprint('Freeform Workout', [cardioBlueprint], ''),
-      [cardioExercise],
-      LocalDate.of(2026, 4, 10),
-      undefined,
-      undefined,
-    );
-    const state = { storedSessions: reduce(putStoredSession(session)) };
-
-    const lookup = selectRecentlyCompletedExercises(state, undefined);
-    const weightedBlueprint = makeWeightedBlueprint({
-      name: 'New Exercise',
-      repsConfig: { type: 'fixed', reps: 10 },
-      progression: [],
-    });
-
-    expect(lookup(weightedBlueprint.movementKey())).toEqual([]);
-    expect(lookup(cardioBlueprint.movementKey())).toEqual([cardioExercise]);
-
-    // The sheet route only carries an id and a type, so the same lookup has to work without a blueprint.
-    expect(lookup(movementKeyFor(cardioBlueprint.exerciseId, 'CardioExerciseBlueprint'))).toEqual([cardioExercise]);
-    expect(lookup(movementKeyFor(cardioBlueprint.exerciseId, 'WeightedExerciseBlueprint'))).toEqual([]);
   });
 
   it('selectMuscles returns sorted distinct muscles and selectExerciseById reads one', () => {

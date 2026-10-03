@@ -1,13 +1,19 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import fc from 'fast-check';
 import { drizzle } from 'drizzle-orm/expo-sqlite';
 import { openDatabaseAsync } from 'expo-sqlite';
 import { LocalDate, OffsetDateTime, ZoneOffset } from '@js-joda/core';
 import { DatabaseMigrationService } from '@/services/database-migration-service';
+import { SessionService } from '@/services/session-service';
 import { WorkoutRepository } from '@/services/workout-repository';
-import { SessionBlueprint } from '@/models/blueprint-models';
+import { ProgressionKey, SessionBlueprint } from '@/models/blueprint-models';
 import { RecordedWeightedExercise, Session } from '@/models/session-models';
 import { Weight } from '@/models/weight';
-import { makeRecordedExercise, makeWeightedBlueprint } from '@/models/session-models/__test__/helpers';
+import {
+  emptyPotentialSet,
+  makeRecordedExercise,
+  makeWeightedBlueprint,
+} from '@/models/session-models/__test__/helpers';
 import { createEffectStore } from '@/utils/__test__/effect-store';
 import { applyStoredSessionsEffects } from '@/store/stored-sessions/effects';
 import { applyStatsEffects } from '@/store/stats/effects';
@@ -15,10 +21,14 @@ import {
   deleteStoredSession,
   initializeStoredSessionsStateSlice,
   putStoredSession,
+  selectLatestExercises,
   sessionFinished,
   setActiveSessionId,
   updateStoredSession,
+  upsertStoredSessions,
 } from '@/store/stored-sessions';
+import type { RootState } from '@/store/store';
+import type { UnknownAction } from '@reduxjs/toolkit';
 import { fetchOverallStats, setOverallViewTime } from '@/store/stats';
 import { oneRepMaxOf } from '@/store/stats/calculate-stats';
 import { setIsHydrated as setSettingsIsHydrated } from '@/store/settings';
@@ -218,6 +228,168 @@ describe('history read from SQL', () => {
     app.store.dispatch(fetchOverallStats());
     await app.settle();
     expect(heaviest()).toEqual(new Weight(120, 'kilograms'));
+  });
+
+  describe('carry-over', () => {
+    const legs = new SessionBlueprint('Legs', [squat], '');
+    const push = new SessionBlueprint('Push', [makeWeightedBlueprint({ name: 'Bench', exerciseId: 'Bench' })], '');
+    const key = squat.progressionKey();
+    /** The weight the next Legs opens on: the best set last time plus the 2.5 kg rule. */
+    const nextSquatKg = (app: Awaited<ReturnType<typeof startApp>>) => {
+      const service = new SessionService(app.workoutRepository, app.getState);
+      const next = service.hydrateSessionFromBlueprint(legs, selectLatestExercises(app.getState()));
+      return (next.recordedExercises[0] as RecordedWeightedExercise).potentialSets.map((x) =>
+        x.weight.value.toNumber(),
+      );
+    };
+
+    it('starting a workout from a program applies carry-over and progression from the tables', async () => {
+      const app = await startApp(history());
+      // Loaded at startup by one query, not derived from the hydrated sessions.
+      expect(selectLatestExercises(app.getState())[key]?.latestTime?.toString()).toBe('2026-03-16T10:02:02Z');
+
+      const service = new SessionService(app.workoutRepository, app.getState);
+      const upcoming: Session[] = [];
+      for await (const session of service.getUpcomingSessions([legs, push], selectLatestExercises(app.getState()))) {
+        upcoming.push(session);
+        if (upcoming.length === 2) break;
+      }
+
+      // The last planned workout was Legs, so Push is next; Legs then carries 105 kg forward.
+      expect(upcoming.map((x) => x.blueprint.name)).toEqual(['Push', 'Legs']);
+      const squats = upcoming[1]!.recordedExercises[0] as RecordedWeightedExercise;
+      expect(squats.potentialSets.map((x) => x.weight.value.toNumber())).toEqual([107.5, 107.5, 107.5]);
+    });
+
+    it('editing the latest past workout down moves carry-over back for the next one, without a restart', async () => {
+      const app = await startApp(history());
+      expect(nextSquatKg(app)).toEqual([107.5, 107.5, 107.5]);
+
+      // Week 2's sets are cleared: week 1 (102.5 kg) is the latest Squat again.
+      app.store.dispatch(
+        updateStoredSession({
+          sessionId: 'week-2',
+          update: (session) =>
+            session.withExercise(
+              0,
+              (session.recordedExercises[0] as RecordedWeightedExercise).with({
+                potentialSets: [emptyPotentialSet(105), emptyPotentialSet(105), emptyPotentialSet(105)],
+              }),
+            ),
+        }),
+      );
+      await app.settle();
+
+      const latest = selectLatestExercises(app.getState())[key];
+      expect(latest?.latestTime?.toString()).toBe('2026-03-09T10:01:02Z');
+      expect(app.getState().storedSessions.latestExerciseWorkoutIds[key]).toBe('week-1');
+      expect(nextSquatKg(app)).toEqual([105, 105, 105]);
+    });
+
+    it('deleting the latest past workout moves carry-over back for the next one, without a restart', async () => {
+      const app = await startApp(history());
+
+      app.store.dispatch(deleteStoredSession('week-2'));
+      await app.settle();
+
+      expect(app.getState().storedSessions.latestExerciseWorkoutIds[key]).toBe('week-1');
+      expect(nextSquatKg(app)).toEqual([105, 105, 105]);
+
+      app.store.dispatch(deleteStoredSession('week-1'));
+      app.store.dispatch(deleteStoredSession('week-0'));
+      await app.settle();
+
+      expect(selectLatestExercises(app.getState())).toEqual({});
+      expect(nextSquatKg(app)).toEqual([0, 0, 0]);
+    });
+
+    it('logging a set in the workout in progress moves carry-over forward without reading the tables', async () => {
+      const app = await startApp(history());
+      const live = new Session(
+        'live',
+        legs,
+        [RecordedWeightedExercise.empty(squat, 'kilograms')],
+        TODAY,
+        undefined,
+        undefined,
+      );
+      const latestPerLineage = vi.spyOn(app.workoutRepository, 'latestPerLineage');
+      app.store.dispatch(putStoredSession(live));
+      app.store.dispatch(setActiveSessionId(live.id));
+      await app.settle();
+
+      expect(app.getState().storedSessions.latestExerciseWorkoutIds[key]).toBe('week-2');
+      app.store.dispatch(
+        updateStoredSession({
+          sessionId: live.id,
+          update: (s) => s.withCycledExerciseReps(0, 0, OffsetDateTime.of(2026, 6, 3, 10, 0, 0, 0, ZoneOffset.UTC)),
+        }),
+      );
+      await app.settle();
+
+      expect(app.getState().storedSessions.latestExerciseWorkoutIds[key]).toBe('live');
+      expect(latestPerLineage).not.toHaveBeenCalled();
+    });
+
+    it('stays equal to the tables after any mix of writes', async () => {
+      const ids = ['a', 'b', 'c', 'd'];
+      const write = fc.record({
+        kind: fc.constantFrom('put', 'update', 'upsert', 'delete'),
+        id: fc.constantFrom(...ids),
+        day: fc.integer({ min: 1, max: 5 }),
+        hour: fc.integer({ min: 0, max: 3 }),
+        name: fc.constantFrom('Squat', 'Bench'),
+        abandoned: fc.boolean(),
+      });
+      const describe = (latest: Record<ProgressionKey, { workoutId: string; exercise: { latestTime?: unknown } }>) =>
+        Object.fromEntries(
+          Object.entries(latest).map(([lineage, x]) => [
+            lineage,
+            `${x.workoutId} ${x.exercise.latestTime?.toString()}`,
+          ]),
+        );
+
+      await fc.assert(
+        fc.asyncProperty(fc.array(write, { maxLength: 12 }), async (writes) => {
+          const app = await startApp([]);
+          const actions = writes.map((w): UnknownAction => {
+            const blueprint = makeWeightedBlueprint({ name: w.name, exerciseId: w.name, sets: 1 });
+            const at = OffsetDateTime.of(2026, 4, w.day, w.hour, 0, 0, 0, ZoneOffset.UTC);
+            const built = new Session(
+              w.id,
+              new SessionBlueprint('Day', [blueprint], ''),
+              [makeRecordedExercise(blueprint, [w.abandoned ? undefined : 5], new Weight(100, 'kilograms'), () => at)],
+              LocalDate.of(2026, 4, w.day),
+              undefined,
+              undefined,
+            );
+            switch (w.kind) {
+              case 'put':
+                return putStoredSession(built);
+              case 'update':
+                return updateStoredSession({ sessionId: w.id, update: () => built });
+              case 'upsert':
+                return upsertStoredSessions([built]);
+              default:
+                return deleteStoredSession(w.id);
+            }
+          });
+          // Dispatched back to back, as taps and edits are, so the refreshes overlap the writes.
+          actions.forEach((action) => app.store.dispatch(action));
+          await app.settle();
+
+          const state: RootState = app.getState();
+          const cached = Object.fromEntries(
+            Object.entries(selectLatestExercises(state)).map(([lineage, exercise]) => [
+              lineage,
+              `${state.storedSessions.latestExerciseWorkoutIds[lineage as ProgressionKey]} ${exercise?.latestTime?.toString()}`,
+            ]),
+          );
+          expect(cached).toEqual(describe(await app.workoutRepository.latestPerLineage()));
+        }),
+        { numRuns: 40 },
+      );
+    });
   });
 
   it('a set logged in the workout in progress leaves the stats alone, finishing it does not', async () => {
