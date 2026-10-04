@@ -37,6 +37,13 @@ import { addImportBackupEffects } from '@/store/settings/import-backup-effects';
 import { calculateStats } from '@/store/stats/calculate-stats';
 import { sessionsFromNormalized } from '@/services/csv-import/csv-to-sessions';
 import type { RootState } from '@/store';
+import { aiPlanFromJSON } from '@/models/ai-models';
+import { parseProgramBlueprintFile, serializeProgramBlueprint } from '@/models/plan-file';
+import { SharedProgramBlueprint } from '@/models/feed-models';
+import { ApiResult } from '@/services/api-error';
+import { toJsonBytes } from '@/services/encryption-service';
+import { fetchSharedItem } from '@/store/feed';
+import { addSharedItemEffects } from '@/store/feed/shared-item-effects';
 
 vi.stubEnv('TZ', 'UTC');
 
@@ -85,7 +92,7 @@ async function storedWorkouts(db: ExpoSQLiteDatabase): Promise<Session[]> {
   return (await new WorkoutRepository(db).loadAll()).workouts;
 }
 
-async function startApp(db: ExpoSQLiteDatabase) {
+async function startApp(db: ExpoSQLiteDatabase, extra: Record<string, unknown> = {}) {
   const workoutRepository = new WorkoutRepository(db);
   let getState: () => RootState = () => {
     throw new Error('not started');
@@ -98,11 +105,13 @@ async function startApp(db: ExpoSQLiteDatabase) {
     logger: logger as never,
     tolgee: { t: (s: string) => s } as never,
     keyValueStore: { getItem: () => Promise.resolve(null), setItem: () => Promise.resolve() } as never,
+    ...extra,
   });
   getState = harness.getState;
   applyStoredSessionsEffects(harness.addEffect);
   applyProgramEffects(harness.addEffect);
   addImportBackupEffects(harness.addEffect);
+  addSharedItemEffects(harness.addEffect);
   harness.store.dispatch(setSettingsIsHydrated(true));
   harness.store.dispatch(initializeStoredSessionsStateSlice());
   await harness.settle();
@@ -283,6 +292,79 @@ describe('exercise identity through the store', () => {
       [...exercisesBefore, stubExerciseId('Sissy Squat')].toSorted(),
     );
     expect((await whatHangsOff(db, USER_EXERCISE)).history).toHaveLength(5);
+  });
+
+  it('links a new "Lunges" from a plan file, an AI plan, a CSV and a shared item to the existing "Lunge"', async () => {
+    const db = await migratedDb();
+    await db
+      .insert(exercisesSchema)
+      .values({ id: 'user-lunge', payload: toExerciseDescriptorJSON(stubDescriptor('Lunge')) });
+    const lunges = () =>
+      new ProgramBlueprint(
+        'Legs',
+        [new SessionBlueprint('Day', [WeightedExerciseBlueprint.of({ name: 'Lunges' })], '')],
+        LocalDate.of(2026, 4, 1),
+      );
+    const app = await startApp(db, {
+      feedApiService: {
+        getSharedItemAsync: () => Promise.resolve(ApiResult.success({ encryptedPayload: {}, rsaPublicKey: {} })),
+      },
+      encryptionService: {
+        decryptAesCbcAndVerifyRsa256PssAsync: () =>
+          Promise.resolve(toJsonBytes(new SharedProgramBlueprint(lunges()).toJSON())),
+      },
+    });
+    const planId = (programId: string) =>
+      app.getState().program.savedPrograms[programId]!.sessions[0]!.exercises[0]!.exerciseId;
+
+    const planFile = parseProgramBlueprintFile(serializeProgramBlueprint(lunges()));
+    if (!planFile.ok) {
+      throw new Error(planFile.error);
+    }
+    app.store.dispatch(savePlan({ programId: 'plan-file', programBlueprint: planFile.blueprint }));
+    app.store.dispatch(linkPlanExercises({ programId: 'plan-file' }));
+
+    const aiPlan = aiPlanFromJSON({
+      version: 4,
+      name: 'Legs',
+      blueprint: {
+        sessions: [
+          {
+            name: 'Day',
+            exercises: [
+              { type: 'WeightedExerciseBlueprint', name: 'Lunges', plannedSets: [{ reps: { min: 10, max: 10 } }] },
+            ],
+          },
+        ],
+      },
+    });
+    app.store.dispatch(savePlan({ programId: 'ai-plan', programBlueprint: aiPlan.blueprint }));
+    app.store.dispatch(linkPlanExercises({ programId: 'ai-plan' }));
+
+    const csv = sessionsFromNormalized([
+      {
+        contentDateKey: '2026-04-01',
+        date: LocalDate.of(2026, 4, 1),
+        sessionName: 'Imported',
+        exercises: [{ name: 'Lunges', sets: [{ reps: 8, weight: 20, unit: 'kilograms' }] }],
+      },
+    ]);
+    app.store.dispatch(importBackupData({ source: 'external', workouts: csv, programs: {}, successMessage: 'done' }));
+
+    app.store.dispatch(fetchSharedItem({ id: 'shared', key: { value: new Uint8Array() } }));
+    await app.settle();
+
+    expect(planId('plan-file')).toBe('user-lunge');
+    expect(planId('ai-plan')).toBe('user-lunge');
+    const imported = (await storedWorkouts(db)).find((x) => x.blueprint.name === 'Imported')!;
+    expect(imported.recordedExercises[0]!.blueprint.exerciseId).toBe('user-lunge');
+    const shared = app.getState().feed.sharedItem;
+    expect(
+      shared.isSuccess() && shared.data instanceof SharedProgramBlueprint
+        ? shared.data.programBlueprint.sessions[0]!.exercises[0]!.exerciseId
+        : shared,
+    ).toBe('user-lunge');
+    expect(Object.keys(app.getState().storedSessions.savedExercises)).toEqual(['user-lunge']);
   });
 
   it('keeps a renamed stub descriptor when a CSV repeats its original name', async () => {
