@@ -22,4 +22,3 @@ export function legacyNormalizeExerciseName(name: string): string {
 export function legacyStubExerciseId(name: string): ExerciseId {
   return uuidFromName(legacyNormalizeExerciseName(name), STUB_EXERCISE_NAMESPACE);
 }
-
