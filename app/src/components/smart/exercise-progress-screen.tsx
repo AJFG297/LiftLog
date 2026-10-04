@@ -35,7 +35,6 @@ import { selectActiveProgram } from '@/store/program';
 import { setPinnedLifts } from '@/store/settings';
 import { togglePinned } from '@/store/settings/pinned-lifts';
 import {
-  axisOf,
   defaultRangeOf,
   EXERCISE_RANGES,
   exerciseChartOf,
@@ -50,7 +49,7 @@ import {
   repBestsOf,
   RowValueKind,
 } from '@/store/stats/exercise-progress';
-import { ExerciseHistory, ProgressHistory } from '@/store/stats/progress-history';
+import { axisOf, ExerciseHistory, ProgressHistory } from '@/store/stats/progress-history';
 import { RecordListRow } from '@/store/stats/records-list';
 import { selectExerciseById, selectLatestExercises } from '@/store/stored-sessions';
 import { exerciseMetaLabel } from '@/utils/exercise-meta';

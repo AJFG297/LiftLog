@@ -162,7 +162,7 @@ type LoadChange = { axis: 'load'; first: Weight; last: Weight; delta: Weight };
 type RepsChange = { axis: 'reps'; first: number; last: number; delta: number };
 
 interface WindowOf<Axis extends StatAxis, Value, Change> {
-  /** Read off the blueprint it was last logged with: reps for a movement that tracks no load, else load. */
+  /** See {@link axisOf}. */
   axis: Axis;
   /** The points on or after the window's start, oldest first. */
   points: readonly ExercisePoint[];
@@ -175,12 +175,28 @@ interface WindowOf<Axis extends StatAxis, Value, Change> {
 export type ExerciseProgress = WindowOf<'load', Weight, LoadChange> | WindowOf<'reps', number, RepsChange>;
 
 /**
+ * The movement's axis: reps for one that tracks no load, and for a bodyweight movement that never had any load
+ * to estimate from (no bodyweight logged and nothing added), which has no estimate to read. Else load.
+ */
+export function axisOf(history: ExerciseHistory): StatAxis {
+  if (primaryAxisFor(history.blueprint) === 'reps') {
+    return 'reps';
+  }
+  return history.blueprint.resistance === 'bodyweight' && !history.points.some(hasEffectiveLoad) ? 'reps' : 'load';
+}
+
+/** Whether a workout moved any load, bodyweight folded in. */
+function hasEffectiveLoad(point: ExercisePoint): boolean {
+  return point.oneRepMax !== undefined || !point.volume.value.isZero();
+}
+
+/**
  * An exercise's points since `since` (inclusive) and how far it moved over them: the first point's estimated
- * 1RM against the last's, or best reps for a movement that tracks no load.
+ * 1RM against the last's, or best reps on the reps axis (see {@link axisOf}).
  */
 export function progressSince(history: ExerciseHistory, since: LocalDate): ExerciseProgress {
   const points = history.points.filter((point) => !point.date.isBefore(since));
-  if (primaryAxisFor(history.blueprint) === 'reps') {
+  if (axisOf(history) === 'reps') {
     const values = points.flatMap((point) => (point.bestReps > 0 ? [point.bestReps] : []));
     const first = values[0];
     const last = values.at(-1);

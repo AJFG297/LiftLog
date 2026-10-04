@@ -13,7 +13,7 @@ import {
   recentSessionsOf,
   repBestsOf,
 } from '@/store/stats/exercise-progress';
-import { buildProgressHistory } from '@/store/stats/progress-history';
+import { buildProgressHistory, progressSince } from '@/store/stats/progress-history';
 
 const kg = (n: number) => new Weight(n, 'kilograms');
 const day = (month: number, n: number) => LocalDate.of(2026, month, n);
@@ -86,6 +86,8 @@ describe('measuresOf', () => {
     expect(exerciseChartOf(unloaded, dips, 'mostReps', undefined, 'kilograms').sessions.map((s) => s.value)).toEqual([
       10, 12,
     ]);
+    // The Progress lists read it the same way, rather than as 0 kg.
+    expect(progressSince(dips, day(1, 1)).change).toEqual({ axis: 'reps', first: 10, last: 12, delta: 2 });
   });
 
   it('keeps a bodyweight movement on the estimate once it had bodyweight logged or weight added', () => {
@@ -108,6 +110,25 @@ describe('measuresOf', () => {
 
     expect(measuresOf(bodyweightOnly.exercises.get(dip.movementKey())!)).toEqual(['oneRepMax', 'volume']);
     expect(measuresOf(weighted.exercises.get(dip.movementKey())!)).toEqual(['oneRepMax', 'heaviest', 'volume']);
+  });
+
+  it('leaves out the workouts a bodyweight movement had no load in, rather than charting them at 0', () => {
+    const partly = buildProgressHistory([
+      session(day(9, 1), dip, [[0, 10]]),
+      session(day(9, 8), dip, [[0, 12]], 80),
+      session(day(9, 15), dip, [[0, 12]], 80),
+    ]);
+    const dips = partly.exercises.get(dip.movementKey())!;
+
+    const estimates = exerciseChartOf(partly, dips, 'oneRepMax', undefined, 'kilograms');
+    expect(estimates.sessions.map((s) => s.workoutId)).toEqual(['w-2026-09-08', 'w-2026-09-15']);
+    expect(estimates.sessions.some((s) => s.best)).toBe(false);
+    expect(exerciseChartOf(partly, dips, 'volume', undefined, 'kilograms').sessions.map((s) => s.workoutId)).toEqual([
+      'w-2026-09-08',
+      'w-2026-09-15',
+    ]);
+    // The first loaded workout is where the bests start, not a record over the unloaded one.
+    expect(partly.records).toEqual([]);
   });
 });
 

@@ -17,8 +17,10 @@ that model first, then each screen.
     movement twice gives one point.
     - `oneRepMax`: the best Epley estimate over the sets that count towards records (working and failure),
       with bodyweight folded in as records fold it: the same scan as the record rules
-      (`bestOneRepMaxSet`). Undefined for a movement that tracks no load, and when
-      only drop or myo sets were logged.
+      (`bestOneRepMaxSet`). Undefined for a movement that tracks no load, when
+      only drop or myo sets were logged, and when the estimate is zero: a bodyweight movement logged with no
+      bodyweight and nothing added has no load to estimate from. So that workout charts nothing rather than
+      0 kg, and the first workout with a load starts the record bests instead of beating a zero.
     - `bestReps`: the most reps in one of those sets, 0 if none: the axis of a movement that tracks no load.
     - `workingSets`: logged sets that count towards volume (every kind but warm-ups), as Stats' sets per
       week counts them.
@@ -272,8 +274,10 @@ model is `store/stats/exercise-progress.ts`, and the screen only picks and forma
 - **Measure** (`measuresOf`): Est. 1RM · Heaviest · Volume. A movement that tracks no load (resistance None) reads
   Most reps · Total reps instead, in reps. A bodyweight movement stays on the estimate with bodyweight folded in, as
   on Strength, and drops Heaviest if it never had weight added. One whose history never had any load at all (no
-  bodyweight logged and nothing added) would chart flat at 0, so it reads in reps like a no-load movement
-  (`axisOf`). Strength still lists it on the estimate (D5); only the page switches.
+  bodyweight logged and nothing added) has no estimate to read, so it reads in reps like a no-load movement.
+  `axisOf` in `progress-history.ts` decides this for the page and the Progress lists alike, so a list row and
+  the page it opens agree. Workouts without a load in an otherwise loaded history are left off the estimate and
+  volume charts.
 - **Chart card** (`exerciseChartOf`): the picked workout's value, its date ("Last time, Oct 1" for the latest) and
   the set behind it (the estimate's set, or the heaviest set on Heaviest); the change over the range, last value
   against first, through `shownChange` like everywhere else; a line chart with round grid lines

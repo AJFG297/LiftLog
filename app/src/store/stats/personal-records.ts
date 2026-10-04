@@ -20,7 +20,9 @@ export interface OneRepMaxSet {
 
 /**
  * The set with the best Epley estimate in `exercise`, over the logged sets that count towards records, with
- * bodyweight folded in. Undefined for a movement that tracks no load, or with no such set logged.
+ * bodyweight folded in. Undefined for a movement that tracks no load, with no such set logged, and when the
+ * best estimate is zero: a bodyweight movement logged without a bodyweight or added weight has no load to
+ * estimate from, and a zero would read as a 0 kg lift and make the next loaded workout a record.
  */
 export function bestOneRepMaxSet(
   exercise: RecordedWeightedExercise,
@@ -40,7 +42,7 @@ export function bestOneRepMaxSet(
       best = { oneRepMax, weight: potentialSet.weight, reps };
     }
   }
-  return best;
+  return best && !best.oneRepMax.value.isZero() ? best : undefined;
 }
 
 function bestOneRepMax(session: Session): Map<MovementKey, BestOneRepMax> {

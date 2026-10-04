@@ -1,11 +1,9 @@
 import { LocalDate } from '@js-joda/core';
 import { MovementKey } from '@/models/blueprint-models';
 import { Weight, WeightUnit } from '@/models/weight';
-import { primaryAxisFor } from '@/store/stats/calculate-stats';
 import { heaviestSetOf } from '@/store/stats/personal-records';
 import { AmountKind, shownChange, shownWeight } from '@/store/stats/progress-amounts';
-import { ExerciseHistory, ExercisePoint, LiftedSet, ProgressHistory } from '@/store/stats/progress-history';
-import { StatAxis } from '@/store/stats/quantity';
+import { axisOf, ExerciseHistory, ExercisePoint, LiftedSet, ProgressHistory } from '@/store/stats/progress-history';
 import { newestWorkoutFirst, RecordListRow, recordListRowOf } from '@/store/stats/records-list';
 
 /**
@@ -48,22 +46,6 @@ export function defaultRangeOf(exercise: ExerciseHistory, today: LocalDate): Exe
       return !start || exercise.points.filter((point) => !point.date.isBefore(start)).length >= 2;
     }) ?? 'all'
   );
-}
-
-/**
- * The movement's axis: reps for one that tracks no load, as on the Progress tab, and for a bodyweight movement
- * that never had any load to estimate from (no bodyweight logged and nothing added), which would chart flat at 0.
- */
-export function axisOf(exercise: ExerciseHistory): StatAxis {
-  if (primaryAxisFor(exercise.blueprint) === 'reps') {
-    return 'reps';
-  }
-  return exercise.blueprint.resistance === 'bodyweight' && !exercise.points.some(hasEffectiveLoad) ? 'reps' : 'load';
-}
-
-/** Whether a workout moved any load, bodyweight folded in. */
-function hasEffectiveLoad(point: ExercisePoint): boolean {
-  return (point.oneRepMax !== undefined && !point.oneRepMax.value.isZero()) || !point.volume.value.isZero();
 }
 
 /**
@@ -175,7 +157,8 @@ function rawValueOf(point: ExercisePoint, measure: ExerciseMeasure): Weight | nu
     case 'heaviest':
       return heaviestSetOf(point.sets)?.weight;
     case 'volume':
-      return point.workingSets ? point.volume : undefined;
+      // Zero only when nothing was lifted (a bodyweight movement logged without a bodyweight): no value, like the estimate.
+      return point.workingSets && !point.volume.value.isZero() ? point.volume : undefined;
     case 'mostReps':
       return point.bestReps || undefined;
     case 'totalReps':
