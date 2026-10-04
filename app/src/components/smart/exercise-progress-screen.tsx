@@ -33,6 +33,7 @@ import { shortFormatWeightUnit } from '@/models/weight';
 import { useAppSelector, useAppSelectorWithArg } from '@/store';
 import { selectActiveProgram } from '@/store/program';
 import { setPinnedLifts } from '@/store/settings';
+import { togglePinned } from '@/store/settings/pinned-lifts';
 import {
   axisOf,
   defaultRangeOf,
@@ -48,7 +49,6 @@ import {
   recentSessionsOf,
   repBestsOf,
 } from '@/store/stats/exercise-progress';
-import { togglePinned } from '@/store/stats/progress-strength';
 import { ExerciseHistory, ProgressHistory } from '@/store/stats/progress-history';
 import { RecordListRow } from '@/store/stats/records-list';
 import { selectExerciseById, selectLatestExercises } from '@/store/stored-sessions';

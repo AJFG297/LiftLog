@@ -16,7 +16,7 @@ import { newestWorkoutFirst, recordListRowOf, RecordListRow } from '@/store/stat
 export const LIFTS_SHOWN = 4;
 export const RECORDS_SHOWN = 3;
 
-/** One of the most-trained lifts in the range. */
+/** A lift on Strength: pinned, or one of the most trained in the range. */
 export interface LiftRow {
   key: MovementKey;
   exerciseId: ExerciseId;
@@ -45,7 +45,7 @@ export interface LiftRow {
  * pinning never drops a lift the user asked for; it is the most-trained ones that make room. An id with no
  * history (never logged, or merged into another exercise) is skipped.
  */
-export function mostTrainedLifts(
+export function strengthLifts(
   history: ProgressHistory,
   since: LocalDate,
   unit: WeightUnit,
@@ -102,11 +102,6 @@ function liftRowOf(
     },
     lastDate: progress.points.at(-1)?.date,
   };
-}
-
-/** `pinned` with `id` pinned at the end, or unpinned when it already was. */
-export function togglePinned(pinned: readonly ExerciseId[], id: ExerciseId): ExerciseId[] {
-  return pinned.includes(id) ? pinned.filter((x) => x !== id) : [...pinned, id];
 }
 
 function latestAndChange(progress: ExerciseProgress, unit: WeightUnit): Pick<LiftRow, 'latest' | 'change'> {

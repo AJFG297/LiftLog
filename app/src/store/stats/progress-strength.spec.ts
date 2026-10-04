@@ -4,13 +4,13 @@ import { makeWeightedBlueprint } from '@/models/session-models/__test__/helpers'
 import { Weight } from '@/models/weight';
 import { day, exerciseHistory, historyOf, kg, point } from '@/store/stats/__test__/progress-fixtures';
 import { DatedRecord } from '@/store/stats/progress-history';
-import { mostTrainedLifts, recentRecords, togglePinned } from '@/store/stats/progress-strength';
+import { recentRecords, strengthLifts } from '@/store/stats/progress-strength';
 
 // A Monday, where a range starts.
 const since = day(8, 31);
 const key = (name: string) => movementKeyFor(stubExerciseId(name), 'WeightedExerciseBlueprint');
 
-describe('mostTrainedLifts', () => {
+describe('strengthLifts', () => {
   const history = historyOf({
     exercises: [
       exerciseHistory('Bench', [
@@ -43,7 +43,7 @@ describe('mostTrainedLifts', () => {
   });
 
   it('lists the 4 lifts done in the most workouts in the range, the most recent first on a tie', () => {
-    expect(mostTrainedLifts(history, since, 'kilograms').map((lift) => [lift.name, lift.sessions])).toEqual([
+    expect(strengthLifts(history, since, 'kilograms').map((lift) => [lift.name, lift.sessions])).toEqual([
       ['Bench', 5],
       ['Deadlift', 3],
       ['Squat', 3],
@@ -52,7 +52,7 @@ describe('mostTrainedLifts', () => {
   });
 
   it('gives the latest estimated 1RM, the change over the range and the trend', () => {
-    expect(mostTrainedLifts(history, since, 'kilograms')[0]).toEqual({
+    expect(strengthLifts(history, since, 'kilograms')[0]).toEqual({
       key: key('Bench'),
       exerciseId: stubExerciseId('Bench'),
       name: 'Bench',
@@ -66,7 +66,7 @@ describe('mostTrainedLifts', () => {
   });
 
   it('puts pinned lifts first in pin order, then fills up to 4 with the most trained', () => {
-    const lifts = mostTrainedLifts(history, since, 'kilograms', [stubExerciseId('Curl'), stubExerciseId('Squat')]);
+    const lifts = strengthLifts(history, since, 'kilograms', [stubExerciseId('Curl'), stubExerciseId('Squat')]);
 
     expect(lifts.map((lift) => [lift.name, lift.pinned])).toEqual([
       ['Curl', true],
@@ -77,7 +77,7 @@ describe('mostTrainedLifts', () => {
   });
 
   it('shows a pinned lift with nothing in the range', () => {
-    const [lunge] = mostTrainedLifts(history, since, 'kilograms', [stubExerciseId('Lunge')]);
+    const [lunge] = strengthLifts(history, since, 'kilograms', [stubExerciseId('Lunge')]);
 
     expect(lunge).toMatchObject({ name: 'Lunge', pinned: true, sessions: 0, latest: undefined, trend: [] });
   });
@@ -85,7 +85,7 @@ describe('mostTrainedLifts', () => {
   it('shows every pinned lift, even past 4, rather than dropping a pin', () => {
     const pinned = ['Lunge', 'Curl', 'Squat', 'Deadlift', 'Bench'].map(stubExerciseId);
 
-    expect(mostTrainedLifts(history, since, 'kilograms', pinned).map((lift) => lift.name)).toEqual([
+    expect(strengthLifts(history, since, 'kilograms', pinned).map((lift) => lift.name)).toEqual([
       'Lunge',
       'Curl',
       'Squat',
@@ -97,7 +97,7 @@ describe('mostTrainedLifts', () => {
   it('skips a pinned id with no history, and a repeat', () => {
     const pinned = [stubExerciseId('Row'), stubExerciseId('Curl'), stubExerciseId('Curl')];
 
-    expect(mostTrainedLifts(history, since, 'kilograms', pinned).map((lift) => lift.name)).toEqual([
+    expect(strengthLifts(history, since, 'kilograms', pinned).map((lift) => lift.name)).toEqual([
       'Curl',
       'Bench',
       'Deadlift',
@@ -106,7 +106,7 @@ describe('mostTrainedLifts', () => {
   });
 
   it('reads a lift that tracks no load in best reps', () => {
-    expect(mostTrainedLifts(history, since, 'kilograms')[3]).toMatchObject({
+    expect(strengthLifts(history, since, 'kilograms')[3]).toMatchObject({
       axis: 'reps',
       latest: 10,
       change: 2,
@@ -116,7 +116,7 @@ describe('mostTrainedLifts', () => {
 
   it('converts to the unit the user lifts in, to the nearest half, with the change as shown', () => {
     // 107.5 kg is 236.997 lbs and 100 kg is 220.462 lbs: 237 against 220.5.
-    expect(mostTrainedLifts(history, since, 'pounds')[0]).toMatchObject({ latest: 237, change: 16.5 });
+    expect(strengthLifts(history, since, 'pounds')[0]).toMatchObject({ latest: 237, change: 16.5 });
   });
 
   it('shows an estimate to the nearest half, and the change between the halves', () => {
@@ -124,7 +124,7 @@ describe('mostTrainedLifts', () => {
       exercises: [exerciseHistory('Bench', [point(day(9, 1), 3, kg(101.8)), point(day(9, 8), 3, kg(104.3))])],
     });
 
-    expect(mostTrainedLifts(rough, since, 'kilograms')[0]).toMatchObject({ latest: 104.5, change: 2.5 });
+    expect(strengthLifts(rough, since, 'kilograms')[0]).toMatchObject({ latest: 104.5, change: 2.5 });
   });
 
   it('shows a tiny change to a tenth rather than as none', () => {
@@ -132,13 +132,13 @@ describe('mostTrainedLifts', () => {
       exercises: [exerciseHistory('Bench', [point(day(9, 1), 3, kg(100.1)), point(day(9, 8), 3, kg(100.2))])],
     });
 
-    expect(mostTrainedLifts(tiny, since, 'kilograms')[0]).toMatchObject({ latest: 100.2, change: 0.1 });
+    expect(strengthLifts(tiny, since, 'kilograms')[0]).toMatchObject({ latest: 100.2, change: 0.1 });
   });
 
   it('has no change for a lift done once in the range', () => {
     const once = historyOf({ exercises: [exerciseHistory('Curl', [point(day(9, 5), 3, kg(40.3))])] });
 
-    expect(mostTrainedLifts(once, since, 'kilograms')[0]).toMatchObject({
+    expect(strengthLifts(once, since, 'kilograms')[0]).toMatchObject({
       sessions: 1,
       latest: 40.5,
       change: undefined,
@@ -227,12 +227,5 @@ describe('recentRecords', () => {
 
   it('is empty before any record', () => {
     expect(recentRecords(historyOf({}), 'kilograms')).toEqual([]);
-  });
-});
-
-describe('togglePinned', () => {
-  it('pins at the end, and unpins a pinned lift', () => {
-    expect(togglePinned(['a'], 'b')).toEqual(['a', 'b']);
-    expect(togglePinned(['a', 'b', 'c'], 'b')).toEqual(['a', 'c']);
   });
 });

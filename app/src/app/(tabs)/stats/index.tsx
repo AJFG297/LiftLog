@@ -16,7 +16,7 @@ import { ExerciseId } from '@/models/blueprint-models';
 import { useAppSelector } from '@/store';
 import { setProgressTab } from '@/store/settings';
 import { bodyView } from '@/store/stats/progress-body';
-import { mostTrainedLifts, recentRecords } from '@/store/stats/progress-strength';
+import { recentRecords, strengthLifts } from '@/store/stats/progress-strength';
 import {
   DEFAULT_PROGRESS_RANGE,
   hasBodyweight,
@@ -94,7 +94,7 @@ export default function ProgressScreen() {
       case 'strength':
         return (
           <StrengthSection
-            lifts={mostTrainedLifts(history, period.start, unit, pinnedLifts)}
+            lifts={strengthLifts(history, period.start, unit, pinnedLifts)}
             records={recentRecords(history, unit)}
             unit={unitLabel}
             onOpenLift={(lift) => openExercise(lift.exerciseId)}

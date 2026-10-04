@@ -95,7 +95,7 @@ and `ListEmptyState`), `amount-format.ts` (`amountText`, `weightText`, `signedTe
 | File | Gives |
 | --- | --- |
 | `progress-tab.ts` | The tabs, the range table, and `progressPeriod`: the weeks a range covers. |
-| `progress-strength.ts` | `mostTrainedLifts` (pinned lifts first), `togglePinned` and `recentRecords`. |
+| `progress-strength.ts` | `strengthLifts` (pinned lifts first, then the most trained) and `recentRecords`. |
 | `progress-training.ts` | `buildWeeklyTable`, then `trainingView` over it. |
 | `progress-body.ts` | `weighInsOf` and `bodyView`. |
 | `progress-amounts.ts` | How a weight reads: `shownWeight` and `shownChange` (below). |
@@ -138,7 +138,8 @@ hold no history.
   shows, with nothing in the range (a dash and no sparkline) and past 4 too: pinning a fifth lift never drops one the
   user asked for, the most-trained ones make room instead. A pinned id with no history (never logged, or merged into
   another exercise) is skipped. A pinned row has a pin after its name, and the subtitle says the list starts with
-  pinned lifts. `mostTrainedLifts(history, since, unit, pinned)` and `togglePinned` are in `progress-strength.ts`.
+  pinned lifts. `strengthLifts(history, since, unit, pinned)` is in `progress-strength.ts`, and `togglePinned` beside
+  the preference in `store/settings/pinned-lifts.ts`.
   Like every preference, pins are not in backups.
 - **Recent records**: the newest 3 records, whatever the range: the first three rows of the Records list, built
   by the same `recordListRowOf`, with the gain over what each beat. A heaviest record shows its set; an
