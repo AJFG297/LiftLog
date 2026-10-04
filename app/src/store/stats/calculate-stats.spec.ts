@@ -156,7 +156,7 @@ describe('calculateStats', () => {
   });
 
   describe('calculateStats - exercise stats', () => {
-    it('tracks max weight and 1RM per exercise', () => {
+    it('tracks the 1RM per exercise', () => {
       const date = LocalDate.of(2024, 4, 1);
       // 3 sets @ 100kg x 5 reps
       const session = makeSession(date, 'Bench Press', 100, 5, 3);
@@ -166,38 +166,13 @@ describe('calculateStats', () => {
 
       const bench = result.weightedExerciseStats.find((s) => s.exerciseName === 'Bench Press');
       expect(bench).toBeDefined();
-      expect(bench!.maxLiftedPerSessionStatistics.maxValue.value.toNumber()).toBe(100);
 
       // Epley 1RM = weight * (1 + reps/30) = 100 * (1 + 5/30) ≈ 116.67
       const expected1RM = 100 * (1 + 5 / 30);
       expect(bench!.max1RMPerSessionStatistics.maxValue.value.toNumber()).toBeCloseTo(expected1RM, 2);
     });
 
-    it('tracks the best set on both axes, and says which one leads', () => {
-      const date = LocalDate.of(2024, 4, 1);
-      const blueprint = makeBlueprint('Crunch', 3, 10);
-      const sessionBlueprint = makeSessionBlueprint('Core', [blueprint]);
-      const baseTime = makeOffset(date);
-      const exercise = new RecordedWeightedExercise(
-        blueprint,
-        [
-          filledPotentialSet(12, baseTime, new Weight(20, 'kilograms')),
-          filledPotentialSet(20, baseTime.plusSeconds(60), new Weight(20, 'kilograms')),
-          filledPotentialSet(15, baseTime.plusSeconds(120), new Weight(20, 'kilograms')),
-        ],
-        undefined,
-      );
-      const session = new Session('id', sessionBlueprint, [exercise], date, undefined, undefined);
-
-      const crunch = calculateStats([session], 'kilograms', makeRange(date, date)).weightedExerciseStats[0]!;
-
-      expect(crunch.series.reps.maxValue).toBe(20);
-      expect(crunch.series.reps.currentValue).toBe(20);
-      expect(crunch.series.load.maxValue.value.toNumber()).toBe(20);
-      expect(crunch.primary).toBe('load');
-    });
-
-    it('reads an exercise that tracks no load on its reps', () => {
+    it('gives an exercise that tracks no load no volume', () => {
       const date = LocalDate.of(2024, 4, 1);
       const blueprint = makeBlueprint('Crunch', 3, 10).with({ resistance: 'none' });
       const exercise = makeRecordedExercise(blueprint, [20, 20, 20], new Weight(999, 'kilograms'));
@@ -212,73 +187,8 @@ describe('calculateStats', () => {
 
       const crunch = calculateStats([session], 'kilograms', makeRange(date, date)).weightedExerciseStats[0]!;
 
-      expect(crunch.primary).toBe('reps');
-      expect(crunch.series.reps.maxValue).toBe(20);
       // The stored weight contributes nothing, so there is no volume to plot.
       expect(crunch.totalVolumeStatistics.totalValue.value.toNumber()).toBe(0);
-    });
-
-    it('reads a movement on how it is programmed now, not how it started', () => {
-      const d1 = LocalDate.of(2024, 4, 1);
-      const d2 = d1.plusDays(7);
-      const loaded = makeBlueprint('Crunch', 3, 10);
-      const unloaded = loaded.with({ resistance: 'none' });
-      const session = (id: string, date: LocalDate, blueprint: WeightedExerciseBlueprint) =>
-        new Session(
-          id,
-          makeSessionBlueprint('Core', [blueprint]),
-          [makeRecordedExercise(blueprint, [20, 20, 20], new Weight(60, 'kilograms'))],
-          date,
-          undefined,
-          undefined,
-        );
-
-      const stats = calculateStats(
-        [session('s1', d1, loaded), session('s2', d2, unloaded)],
-        'kilograms',
-        makeRange(d1, d2),
-      );
-
-      expect(stats.weightedExerciseStats[0]!.primary).toBe('reps');
-    });
-
-    it('aggregates a reps series without giving it a unit', () => {
-      const d1 = LocalDate.of(2024, 4, 1);
-      const d2 = d1.plusDays(7);
-      const result = calculateStats(
-        [makeSession(d1, 'Squat', 100, 5, 3), makeSession(d2, 'Squat', 100, 8, 3)],
-        'kilograms',
-        makeRange(d1, d2),
-      );
-
-      const reps = result.weightedExerciseStats[0]!.series.reps;
-      expect(reps.statistics.map((x) => x.value)).toEqual([5, 8]);
-      expect(reps.minValue).toBe(5);
-      expect(reps.maxValue).toBe(8);
-      expect(reps.totalValue).toBe(13);
-      expect(reps.currentValue).toBe(8);
-    });
-
-    it('accumulates reps breakdown correctly', () => {
-      const date = LocalDate.of(2024, 4, 1);
-      const blueprint = makeBlueprint('OHP', 3, 8);
-      const sessionBlueprint = makeSessionBlueprint('Push', [blueprint]);
-      const baseTime = makeOffset(date);
-
-      // 2 sets @ 8 reps, 1 set @ 6 reps
-      const potentialSets = [
-        filledPotentialSet(8, baseTime, new Weight(60, 'kilograms')),
-        filledPotentialSet(8, baseTime.plusSeconds(60), new Weight(60, 'kilograms')),
-        filledPotentialSet(6, baseTime.plusSeconds(120), new Weight(60, 'kilograms')),
-      ];
-      const exercise = new RecordedWeightedExercise(blueprint, potentialSets, undefined);
-      const session = new Session('id', sessionBlueprint, [exercise], date, undefined, undefined);
-
-      const result = calculateStats([session], 'kilograms', makeRange(date.minusDays(7), date));
-      const ohp = result.weightedExerciseStats.find((s) => s.exerciseName === 'OHP');
-
-      expect(ohp!.repsStatistics.breakdown[8]?.numberOfSets).toBe(2);
-      expect(ohp!.repsStatistics.breakdown[6]?.numberOfSets).toBe(1);
     });
 
     it('lists the most recently performed exercise first', () => {
@@ -305,20 +215,7 @@ describe('calculateStats', () => {
       const result = calculateStats([s1, s2], 'kilograms', range);
 
       expect(result.weightedExerciseStats).toHaveLength(1);
-      expect(result.weightedExerciseStats[0]!.maxLiftedPerSessionStatistics.statistics).toHaveLength(2);
-    });
-
-    it('computes setsPerWeek across multiple sessions', () => {
-      const from = LocalDate.of(2024, 1, 1);
-      const to = LocalDate.of(2024, 1, 14); // 2 weeks
-      // 3 sets each × 2 sessions = 6 total → 3 sets/week
-      const s1 = makeSession(LocalDate.of(2024, 1, 3), 'Squat', 100, 8, 3);
-      const s2 = makeSession(LocalDate.of(2024, 1, 10), 'Squat', 100, 8, 3);
-
-      const result = calculateStats([s1, s2], 'kilograms', makeRange(from, to));
-      const squat = result.weightedExerciseStats[0]!;
-
-      expect(squat.setsPerWeek).toBeCloseTo(3, 5);
+      expect(result.weightedExerciseStats[0]!.max1RMPerSessionStatistics.statistics).toHaveLength(2);
     });
 
     it('tracks maxValue correctly across sessions with different weights', () => {
@@ -330,8 +227,8 @@ describe('calculateStats', () => {
       const result = calculateStats([s1, s2, s3], 'kilograms', makeRange(date, date.plusDays(14)));
       const squat = result.weightedExerciseStats[0]!;
 
-      expect(squat.maxLiftedPerSessionStatistics.maxValue.value.toNumber()).toBe(120);
-      expect(squat.maxLiftedPerSessionStatistics.currentValue.value.toNumber()).toBe(110);
+      expect(squat.max1RMPerSessionStatistics.maxValue.value.toNumber()).toBeCloseTo(120 * (1 + 5 / 30), 2);
+      expect(squat.max1RMPerSessionStatistics.currentValue.value.toNumber()).toBeCloseTo(110 * (1 + 5 / 30), 2);
     });
 
     it('computes totalVolumeStatistics correctly', () => {
@@ -372,7 +269,7 @@ describe('calculateStats', () => {
   });
 
   describe('calculateStats - bodyweight exercises', () => {
-    it('folds the session bodyweight into max weight, 1RM and volume', () => {
+    it('folds the session bodyweight into 1RM and volume', () => {
       const date = LocalDate.of(2024, 8, 1);
       // bodyweight 80kg + 10kg added, 3 sets × 5 reps → effective load 90kg
       const session = makeSession(date, 'Pull Up', 10, 5, 3, 80, true);
@@ -380,7 +277,6 @@ describe('calculateStats', () => {
       const result = calculateStats([session], 'kilograms', makeRange(date.minusDays(7), date));
       const pullup = result.weightedExerciseStats.find((s) => s.exerciseName === 'Pull Up')!;
 
-      expect(pullup.maxLiftedPerSessionStatistics.maxValue.value.toNumber()).toBe(90);
       expect(pullup.max1RMPerSessionStatistics.maxValue.value.toNumber()).toBeCloseTo(90 * (1 + 5 / 30), 2);
       expect(pullup.totalVolumeStatistics.statistics[0]!.value.value.toNumber()).toBe(90 * 5 * 3);
     });
@@ -405,7 +301,7 @@ describe('calculateStats', () => {
       const result = calculateStats([session], 'kilograms', makeRange(date.minusDays(7), date));
       const pullup = result.weightedExerciseStats.find((s) => s.exerciseName === 'Pull Up')!;
 
-      expect(pullup.maxLiftedPerSessionStatistics.maxValue.value.toNumber()).toBe(60);
+      expect(pullup.max1RMPerSessionStatistics.maxValue.value.toNumber()).toBeCloseTo(60 * (1 + 5 / 30), 2);
     });
 
     it('falls back to only the added weight when no bodyweight is recorded', () => {
@@ -415,7 +311,7 @@ describe('calculateStats', () => {
       const result = calculateStats([session], 'kilograms', makeRange(date.minusDays(7), date));
       const pullup = result.weightedExerciseStats.find((s) => s.exerciseName === 'Pull Up')!;
 
-      expect(pullup.maxLiftedPerSessionStatistics.maxValue.value.toNumber()).toBe(10);
+      expect(pullup.max1RMPerSessionStatistics.maxValue.value.toNumber()).toBeCloseTo(10 * (1 + 5 / 30), 2);
     });
   });
 
@@ -497,11 +393,8 @@ describe('calculateStats', () => {
       expect(result.setsPerWeek).toBeCloseTo(3, 5);
       expect(result.heaviestLift?.weight.value.toNumber()).toBe(100);
       expect(result.maxWeightLiftedInAWorkout?.value.toNumber()).toBe(1500);
-      expect(squat.maxLiftedPerSessionStatistics.maxValue.value.toNumber()).toBe(100);
       expect(squat.max1RMPerSessionStatistics.maxValue.value.toNumber()).toBeCloseTo(100 * (1 + 5 / 30), 2);
       expect(squat.totalVolumeStatistics.maxValue.value.toNumber()).toBe(1500);
-      expect(squat.series.reps.maxValue).toBe(5);
-      expect(squat.repsStatistics.breakdown).toEqual({ 5: { numberOfSets: 3 } });
     });
 
     it('dates a session by its last working set, not a warm-up logged after it', () => {
@@ -514,7 +407,7 @@ describe('calculateStats', () => {
 
       const squat = calculateStats([late], 'kilograms', makeRange(date, date.plusDays(6))).weightedExerciseStats[0]!;
 
-      expect(squat.maxLiftedPerSessionStatistics.statistics.map((x) => x.dateTime)).toEqual([lastWorking]);
+      expect(squat.max1RMPerSessionStatistics.statistics.map((x) => x.dateTime)).toEqual([lastWorking]);
     });
 
     it('gives an exercise with only warm-ups logged no stats of its own', () => {
@@ -564,14 +457,7 @@ describe('calculateStats', () => {
         .weightedExerciseStats[0]!;
 
       expect(curl.totalVolumeStatistics.statistics.map((x) => x.value.value.toNumber())).toEqual([600, 240]);
-      expect(curl.repsStatistics.breakdown).toEqual({
-        10: { numberOfSets: 3 },
-        12: { numberOfSets: 1 },
-        15: { numberOfSets: 1 },
-      });
-      expect(curl.maxLiftedPerSessionStatistics.statistics.map((x) => x.value.value.toNumber())).toEqual([20]);
       expect(curl.max1RMPerSessionStatistics.statistics).toHaveLength(1);
-      expect(curl.series.reps.statistics.map((x) => x.value)).toEqual([10]);
     });
 
     describe('heaviest lift', () => {

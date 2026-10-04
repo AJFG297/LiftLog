@@ -139,7 +139,7 @@ async function whatHangsOff(db: ExpoSQLiteDatabase, exerciseId: string) {
     ),
     stats: stats.weightedExerciseStats
       .filter((x) => x.movementKey === movementKey)
-      .map((x) => x.maxLiftedPerSessionStatistics.maxValue.value.toString()),
+      .map((x) => x.totalVolumeStatistics.maxValue.value.toString()),
     // Records are found per movement; each one names the exercise as it was logged that day.
     records: [...(await repository.personalRecords()).entries()].map(
       ([sessionId, records]) => `${sessionId}: ${records.map((x) => x.exerciseName).join(', ')}`,
@@ -192,7 +192,8 @@ describe('exercise identity through the store', () => {
     await app.settle();
     const after = await whatHangsOff(db, exerciseId);
     expect(after.history).toHaveLength(4);
-    expect(after.stats).toEqual(['110']);
+    // Its heaviest workout's volume: 110 kg × 10 × 3.
+    expect(after.stats).toEqual(['3300']);
     expect(after.records.find((x) => x.startsWith('week-3'))).toContain('Renamed');
 
     // And after a restart, from what is on disk.

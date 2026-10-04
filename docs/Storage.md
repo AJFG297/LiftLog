@@ -280,7 +280,8 @@ Every read below covers _finished_ workouts only: the one in progress (`active =
   The Routines screen's active program card and rows.
 - `startedWorkouts()` - how many workouts were started and the date of the first, over the same workouts:
   the You profile's "N workouts since".
-- `earliestDate()` - `MIN(date)`: where all-time stats start, so deleting the first workout moves it.
+- `earliestDate()` - `MIN(date)`: where the Progress tab's history starts, so deleting the first workout
+  moves it.
 - `dailyActivity()` - one row per day with a started workout: how many and `SUM(volume_kg)`. The
   calendar's counts and levels, the week strips, the streak and "last workout" all derive from it.
 - `volumeScale()` - the 10th/90th percentile of `volume_kg` over started workouts (`volumeScaleOf`).
@@ -348,12 +349,12 @@ The workout screens do that through two more:
 - `hooks/useWorkoutComparison.ts`: the previous comparable workout, the usual duration sample and the
   records a workout set, for the summary and the workout detail.
 
-Stats are the exception that still caches in Redux: `fetchOverallStats` reads `earliestDate()` and
-`finishedBetween()` and keeps the result in `stats.overallView`. The write actions mark it stale at once,
+Stats are the exception that still caches in Redux: `fetchOverallStats` reads `finishedBetween()` over the
+last 90 days (`OVERALL_STATS_DAYS`) and keeps the result in `stats.overallView`. The write actions mark it stale at once,
 and `subscribe` marks it stale again after the commit (`stats/effects.ts`): a fetch that runs between the
 action and the commit (a big import, an edit while Stats is mounted) would otherwise read the old rows
 and clear the flag. Both skip writes that touch only the workout in progress; `setActive` is never skipped,
-since finishing is what makes a workout count. All-time stats rebuild every `Session` in the range (about
+since finishing is what makes a workout count. Stats rebuild every `Session` in the range (about
 0.8 s under Node for 5,000 workouts), which hydration used to pay once, and the Progress tab
 (`useProgressHistory`, see [Progress.md](./Progress.md)) does the same while it is shown; pushing the
 per-movement aggregates into SQL is the follow-up that removes both.

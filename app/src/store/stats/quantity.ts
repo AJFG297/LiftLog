@@ -19,10 +19,3 @@ export const loadOps: QuantityOps<Weight> = {
   isGreaterThan: (a, b) => a.isGreaterThan(b),
   equals: (a, b) => a.equals(b),
 };
-
-export const repsOps: QuantityOps<number> = {
-  zero: 0,
-  plus: (a, b) => a + b,
-  isGreaterThan: (a, b) => a > b,
-  equals: (a, b) => a === b,
-};

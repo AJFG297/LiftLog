@@ -1,17 +1,15 @@
 import { createAction, createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { Duration, LocalDate, OffsetDateTime } from '@js-joda/core';
+import { Duration, OffsetDateTime } from '@js-joda/core';
 import { Weight } from '@/models/weight';
-import { LocalDateRange } from '@/models/time-models';
 import { RemoteData } from '@/models/remote';
 import { ExerciseId, MovementKey } from '@/models/blueprint-models';
-import { StatAxis } from '@/store/stats/quantity';
 
-export type { StatAxis };
+/** How many days back from today the overall stats reach. */
+export const OVERALL_STATS_DAYS = 90;
 
 interface StatsState {
   isDirty: boolean;
   overallViewSessionName: string | undefined;
-  overallViewTime: LocalDateRange | 'all-time';
   overallView: RemoteData<GranularStatisticView>;
 }
 
@@ -26,35 +24,14 @@ interface OptionalTimeTrackedStatistic<T> {
   value: T | undefined;
 }
 
-export interface RepsBreakdownStatistics {
-  breakdown: Record<
-    number,
-    {
-      numberOfSets: number;
-    }
-  >;
-}
-
-/** The best single set of each session, on each axis. */
-export interface ExerciseSeries {
-  load: StatisticOverTime<Weight>;
-  reps: StatisticOverTime<number>;
-}
-
 export interface WeightedExerciseStatistics {
   /** The name it was last logged under. */
   exerciseName: string;
   exerciseId: ExerciseId;
   movementKey: MovementKey;
-  setsPerWeek: number;
-  /** Which axis this exercise is tracked on, and therefore how its chart is labelled. */
-  primary: StatAxis;
-  series: ExerciseSeries;
-  maxLiftedPerSessionStatistics: WeightedStatisticOverTime;
   /** Needs both axes, so an exercise that tracks no load has nothing to offer here. */
   max1RMPerSessionStatistics: WeightedStatisticOverTime;
   totalVolumeStatistics: WeightedStatisticOverTime;
-  repsStatistics: RepsBreakdownStatistics;
 }
 
 export interface StatisticOverTime<T> {
@@ -90,11 +67,9 @@ export interface GranularStatisticView {
   bodyweightStats: WeightedStatisticOverTime;
 }
 
-const today = LocalDate.now();
 const initialState: StatsState = {
   isDirty: true,
   overallViewSessionName: undefined,
-  overallViewTime: { from: today.minusDays(90), to: today },
   overallView: RemoteData.notAsked(),
 };
 
@@ -108,9 +83,6 @@ const statsSlice = createSlice({
     setStatsIsDirty(state, action: PayloadAction<boolean>) {
       state.isDirty = action.payload;
     },
-    setOverallViewTime(state, action: PayloadAction<LocalDateRange | 'all-time'>) {
-      state.overallViewTime = action.payload;
-    },
     setOverallViewSession(state, action: PayloadAction<string | undefined>) {
       state.overallViewSessionName = action.payload;
     },
@@ -120,10 +92,10 @@ const statsSlice = createSlice({
   },
 });
 
-export const { setOverallStats, setStatsIsDirty, setOverallViewTime } = statsSlice.actions;
+export const { setOverallStats, setStatsIsDirty } = statsSlice.actions;
 
 export const { selectOverallView } = statsSlice.selectors;
-/** One weighted exercise's stats, by id: the same exercise under any name, and never a cardio one. */
+/** Calculates the overall stats over the last {@link OVERALL_STATS_DAYS} days, if they are stale. */
 export const fetchOverallStats = createAction('fetchOverallStats');
 
 export const statsReducer = statsSlice.reducer;

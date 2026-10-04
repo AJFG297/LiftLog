@@ -1,6 +1,5 @@
-import { setOverallViewTime, setStatsIsDirty } from './index';
 import { LocalDate } from '@js-joda/core';
-import { fetchOverallStats, setOverallStats } from './index';
+import { fetchOverallStats, OVERALL_STATS_DAYS, setOverallStats, setStatsIsDirty } from './index';
 import { AddEffectFn } from '@/store/store';
 import {
   deleteStoredSession,
@@ -46,17 +45,8 @@ export function applyStatsEffects(addEffect: AddEffectFn) {
     await sleep(200);
     const state = getState();
     try {
-      let timeframe = state.stats.overallViewTime;
-      if (timeframe === 'all-time') {
-        // From the table, so deleting the first workout moves the start.
-        const earliest = await workoutRepository.earliestDate();
-        if (!earliest) {
-          dispatch(setOverallStats(RemoteData.error('No sessions')));
-          dispatch(setStatsIsDirty(true));
-          return;
-        }
-        timeframe = { from: earliest, to: LocalDate.now() };
-      }
+      const today = LocalDate.now();
+      const timeframe = { from: today.minusDays(OVERALL_STATS_DAYS), to: today };
       const sessions = await workoutRepository.finishedBetween(timeframe.from, timeframe.to);
       const stats = calculateStats(sessions, selectPreferredWeightUnit(state), timeframe);
       dispatch(setOverallStats(RemoteData.success(stats)));
@@ -85,9 +75,4 @@ export function applyStatsEffects(addEffect: AddEffectFn) {
       dispatch(setStatsIsDirty(true));
     },
   );
-
-  addEffect(setOverallViewTime, async (_, { dispatch }) => {
-    dispatch(setStatsIsDirty(true));
-    dispatch(fetchOverallStats());
-  });
 }

@@ -35,7 +35,7 @@ import { createEffectStore } from '@/utils/__test__/effect-store';
 import { applyStoredSessionsEffects } from '@/store/stored-sessions/effects';
 import { initializeStoredSessionsStateSlice, selectLatestExercises } from '@/store/stored-sessions';
 import { setIsHydrated as setSettingsIsHydrated } from '@/store/settings';
-import { calculateStats } from '@/store/stats/calculate-stats';
+import { calculateStats, oneRepMaxOf } from '@/store/stats/calculate-stats';
 import type { RootState } from '@/store';
 import {
   mergeExerciseNames,
@@ -220,11 +220,12 @@ describe('mergeExerciseNames', () => {
     // One stats row.
     const range = { from: LocalDate.of(2026, 3, 1), to: LocalDate.of(2026, 3, 31) };
     const stats = calculateStats(await app.workoutRepository.finishedBetween(range.from, range.to), 'kilograms', range);
+    expect(stats.weightedExerciseStats).toHaveLength(3);
+    // Every set is 10 reps, so each row's best estimate is its heaviest weight's.
+    const bestAt = (kg: number) => oneRepMaxOf(new Weight(kg, 'kilograms'), 10);
     expect(
-      stats.weightedExerciseStats
-        .map((x) => `${x.exerciseId} ${x.maxLiftedPerSessionStatistics.maxValue.value.toString()}`)
-        .sort(),
-    ).toEqual([`${stubExerciseId('Bench Press')} 80`, 'Dumbbell Lunges 20', 'user-lunge 42.5'].sort());
+      Object.fromEntries(stats.weightedExerciseStats.map((x) => [x.exerciseId, x.max1RMPerSessionStatistics.maxValue])),
+    ).toEqual({ [stubExerciseId('Bench Press')]: bestAt(80), 'Dumbbell Lunges': bestAt(20), 'user-lunge': bestAt(42.5) });
 
     // Records across both: apart, the second Lunges week would be one.
     const records = await app.workoutRepository.personalRecords();

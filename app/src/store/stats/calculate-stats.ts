@@ -6,13 +6,12 @@ import {
   GranularStatisticView,
   HeaviestLift,
   OptionalStatisticOverTime,
-  RepsBreakdownStatistics,
   StatisticOverTime,
   TimeTrackedStatistic,
   WeightedExerciseStatistics,
   WeightedStatisticOverTime,
 } from '@/store/stats';
-import { loadOps, QuantityOps, repsOps, StatAxis } from '@/store/stats/quantity';
+import { loadOps, QuantityOps, StatAxis } from '@/store/stats/quantity';
 import { Duration, OffsetDateTime, ZoneId } from '@js-joda/core';
 import BigNumber from 'bignumber.js';
 import Enumerable from 'linq';
@@ -120,12 +119,8 @@ export function calculateStats(
     exerciseName: string;
     exerciseId: ExerciseId;
     movementKey: MovementKey;
-    primary: StatAxis;
-    maxWeightStatistics: TimeTrackedStatistic<Weight>[];
-    maxRepsStatistics: TimeTrackedStatistic<number>[];
     max1RMStatistics: TimeTrackedStatistic<Weight>[];
     totalVolumeStatistics: TimeTrackedStatistic<Weight>[];
-    repsStatistics: RepsBreakdownStatistics;
     latestTime: OffsetDateTime;
   }
   const exerciseStatsMap = new Map<MovementKey, ExerciseStatAcc>();
@@ -140,11 +135,7 @@ export function calculateStats(
           exerciseName: blueprint.name,
           exerciseId: blueprint.exerciseId,
           movementKey: key,
-          primary: primaryAxisFor(blueprint),
-          maxWeightStatistics: [],
-          maxRepsStatistics: [],
           max1RMStatistics: [],
-          repsStatistics: { breakdown: {} },
           totalVolumeStatistics: [],
           latestTime: OffsetDateTime.MIN,
         });
@@ -159,19 +150,10 @@ export function calculateStats(
         continue;
       }
 
-      for (const set of volumeSets) {
-        exerciseStats.repsStatistics.breakdown[set.set!.repsCompleted] ??= {
-          numberOfSets: 0,
-        };
-        exerciseStats.repsStatistics.breakdown[set.set!.repsCompleted]!.numberOfSets += 1;
-      }
-
       // Dated by the last working set, so a warm-up logged afterwards doesn't move it.
       const dateTime = ex.lastLoggedWorkingSet!.set!.completionDateTime;
       if (exerciseStats.latestTime.isBefore(dateTime)) {
         exerciseStats.latestTime = dateTime;
-        // How the exercise is programmed now, not how it was the first time it was logged.
-        exerciseStats.primary = primaryAxisFor(blueprint);
       }
       exerciseStats.totalVolumeStatistics.push({
         dateTime,
@@ -182,21 +164,13 @@ export function calculateStats(
       });
 
       // A session of only drop and myo sets still adds volume, but has no record figures to give.
-      const maxWeight = recordSets
-        .map((ps) => ex.effectiveWeight(ps, session.bodyweight))
-        .reduce((a, b) => (a === null ? b : a.isGreaterThan(b) ? a : b), null as null | Weight);
       const max1RM = recordSets
         .filter((ps) => ps.set!.repsCompleted)
         .map((ps) => calculateOneRepMax(ps, ex.effectiveWeight(ps, session.bodyweight)))
         .reduce((a, b) => (a === null ? b : a.isGreaterThan(b) ? a : b), null as null | Weight);
-      if (!maxWeight || !max1RM) {
+      if (!max1RM) {
         continue;
       }
-      exerciseStats.maxWeightStatistics.push({ dateTime, value: maxWeight });
-      exerciseStats.maxRepsStatistics.push({
-        dateTime,
-        value: recordSets.reduce((most, ps) => Math.max(most, ps.set!.repsCompleted), 0),
-      });
       exerciseStats.max1RMStatistics.push({ dateTime, value: max1RM });
     }
   }
@@ -204,27 +178,16 @@ export function calculateStats(
   // Most recently performed first, so what the user is training now heads the list.
   const exerciseStats: WeightedExerciseStatistics[] = Array.from(exerciseStatsMap.values())
     .sort((a, b) => (a.latestTime.isEqual(b.latestTime) ? 0 : a.latestTime.isAfter(b.latestTime) ? -1 : 1))
-    .map((ex) => {
-      const maxLiftedPerSessionStatistics = toStatisticOverTime(ex.maxWeightStatistics, loadOps);
-      const max1RMPerSessionStatistics = toStatisticOverTime(ex.max1RMStatistics, loadOps);
-      return {
-        exerciseName: ex.exerciseName,
-        exerciseId: ex.exerciseId,
-        movementKey: ex.movementKey,
-        setsPerWeek:
-          Object.values(ex.repsStatistics.breakdown).reduce((accum, entry) => accum + entry.numberOfSets, 0) /
-          totalWeeks,
-        primary: ex.primary,
-        series: {
-          load: maxLiftedPerSessionStatistics,
-          reps: toStatisticOverTime(ex.maxRepsStatistics, repsOps),
-        },
-        maxLiftedPerSessionStatistics,
-        max1RMPerSessionStatistics,
-        totalVolumeStatistics: toStatisticOverTime(ex.totalVolumeStatistics, loadOps),
-        repsStatistics: ex.repsStatistics,
-      } satisfies WeightedExerciseStatistics;
-    });
+    .map(
+      (ex) =>
+        ({
+          exerciseName: ex.exerciseName,
+          exerciseId: ex.exerciseId,
+          movementKey: ex.movementKey,
+          max1RMPerSessionStatistics: toStatisticOverTime(ex.max1RMStatistics, loadOps),
+          totalVolumeStatistics: toStatisticOverTime(ex.totalVolumeStatistics, loadOps),
+        }) satisfies WeightedExerciseStatistics,
+    );
 
   // --- Average session length ---
   const sessionDurations: Duration[] = [];
@@ -287,10 +250,7 @@ export function calculateStats(
   };
 }
 
-/**
- * Sort a series by time and roll up its extremes and total. Parametric over the axis's arithmetic,
- * so a rep count aggregates by the same code as a load without ever being treated as a mass.
- */
+/** Sort a series by time and roll up its extremes and total. */
 function toStatisticOverTime<T>(unsortedStats: TimeTrackedStatistic<T>[], ops: QuantityOps<T>): StatisticOverTime<T> {
   const statistics = Enumerable.from(unsortedStats)
     .orderBy((x) => x.dateTime.toString())

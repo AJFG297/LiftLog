@@ -31,7 +31,7 @@ import {
 } from '@/store/stored-sessions';
 import type { RootState } from '@/store/store';
 import type { UnknownAction } from '@reduxjs/toolkit';
-import { fetchOverallStats, setOverallViewTime } from '@/store/stats';
+import { fetchOverallStats } from '@/store/stats';
 import { oneRepMaxOf } from '@/store/stats/calculate-stats';
 import { setIsHydrated as setSettingsIsHydrated } from '@/store/settings';
 
@@ -113,7 +113,7 @@ describe('history read from SQL', () => {
     const { workoutRepository: repository } = app;
     const writes = vi.fn();
     repository.subscribe(writes);
-    app.store.dispatch(setOverallViewTime(march));
+    app.store.dispatch(fetchOverallStats());
     await app.settle();
     expect(app.getState().stats.overallView.unwrapOr(undefined)?.heaviestLift?.weight).toEqual(
       new Weight(105, 'kilograms'),
@@ -266,31 +266,26 @@ describe('history read from SQL', () => {
     expect(app.getState().storedSessions).toMatchObject({ sessions: {}, editingSessionId: undefined });
   });
 
-  it('deleting the earliest workout moves the all-time stats start', async () => {
+  it('deleting a workout drops it from the stats on the next fetch', async () => {
     const app = await startApp(history());
-    const { workoutRepository: repository } = app;
-    app.store.dispatch(setOverallViewTime('all-time'));
+    app.store.dispatch(fetchOverallStats());
     await app.settle();
-    // 2026-03-02 to today is 94 days: 3 workouts over 94/7 weeks.
-    expect((await repository.earliestDate())?.toString()).toBe('2026-03-02');
-    expect(app.getState().stats.overallView.unwrapOr(undefined)?.workoutsPerWeek).toBeCloseTo((3 * 7) / 94, 6);
+    // The last 90 days from June 3 start on March 5, so they hold weeks 1 and 2 over 91 days.
+    expect(app.getState().stats.overallView.unwrapOr(undefined)?.workoutsPerWeek).toBeCloseTo((2 * 7) / 91, 6);
 
-    app.store.dispatch(deleteStoredSession('week-0'));
+    app.store.dispatch(deleteStoredSession('week-1'));
     await app.settle();
 
-    expect((await repository.earliestDate())?.toString()).toBe('2026-03-09');
     expect(app.getState().stats.isDirty).toBe(true);
     app.store.dispatch(fetchOverallStats());
     await app.settle();
-    // 2026-03-09 to today is 87 days: 2 workouts over 87/7 weeks.
-    expect(app.getState().stats.overallView.unwrapOr(undefined)?.workoutsPerWeek).toBeCloseTo((2 * 7) / 87, 6);
-    expect(TODAY.toString()).toBe(LocalDate.now().toString());
+    expect(app.getState().stats.overallView.unwrapOr(undefined)?.workoutsPerWeek).toBeCloseTo(7 / 91, 6);
   });
 
   it('a fetch that overtakes a slow write still ends with stats from the new rows', async () => {
     const app = await startApp(history());
     const { workoutRepository: repository } = app;
-    app.store.dispatch(setOverallViewTime(march));
+    app.store.dispatch(fetchOverallStats());
     await app.settle();
     const heaviest = () => app.getState().stats.overallView.unwrapOr(undefined)?.heaviestLift?.weight;
     expect(heaviest()).toEqual(new Weight(105, 'kilograms'));
@@ -576,7 +571,7 @@ describe('history read from SQL', () => {
     app.store.dispatch(putStoredSession(live));
     app.store.dispatch(setActiveSessionId(live.id));
     await app.settle();
-    app.store.dispatch(setOverallViewTime(march));
+    app.store.dispatch(fetchOverallStats());
     await app.settle();
     expect(app.getState().stats.isDirty).toBe(false);
 
