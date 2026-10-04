@@ -68,8 +68,7 @@ describe('ExerciseResolver', () => {
     const id = r.resolve('Zercher Lunges');
     expect(id).toBe(stubExerciseId('Zercher Lunges'));
     expect(r.resolve('zercher lunges')).toBe(id);
-    // The normaliser keeps these apart; folding them is PM-5's job, not the resolver's.
-    expect(r.resolve('Zercher Lunge')).not.toBe(id);
+    expect(r.resolve('Zercher Lunge')).toBe(id);
     expect(r.stubs[id]).toEqual(descriptor('Zercher Lunges'));
   });
 

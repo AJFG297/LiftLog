@@ -109,7 +109,6 @@ exports[`history aggregates over the 420-session fixture > latest recorded exerc
   "Incline Smith Machine Press_WeightedExerciseBlueprint": "Incline Smith Machine Press | 2026-02-16T08:14:04.922+11:00 | 67.5kilogramsx10/10-10 67.5kilogramsx10/10-10 67.5kilogramsx7/10-10",
   "Lat Pulldown_WeightedExerciseBlueprint": "Lat Pulldown | 2026-05-18T20:55:59.390+10:00 | 74.5kilogramsx7/10-10 74.5kilogramsx6/10-10 79.5kilogramsx10/10-10",
   "Lat-Focused Cable Row_WeightedExerciseBlueprint": "Lat-Focused Cable Row | 2025-10-13T14:37:26.443+11:00 | 77kilogramsx12/12-12 77kilogramsx12/12-12 77kilogramsx12/12-12",
-  "Lateral Raise_WeightedExerciseBlueprint": "Lateral Raise | 2024-01-17T16:01:55.976+11:00 | 7.5kilogramsx8/8-8 9kilogramsx8/8-8 7.5kilogramsx8/8-8 8kilogramsx8/8-8",
   "Lateral Raises_WeightedExerciseBlueprint": "Lateral Raises | 2026-05-20T12:24:12.262+10:00 | 9kilogramsx10/10-10 9kilogramsx10/10-10 9kilogramsx10/10-10",
   "Leg Curl_WeightedExerciseBlueprint": "Leg Curl | 2026-05-20T17:50:26.040+10:00 | 56kilogramsx10/10-10 56kilogramsx10/10-10 56kilogramsx10/10-10",
   "Leg Extension_WeightedExerciseBlueprint": "Leg Extension | 2026-02-09T16:32:11.275+11:00 | 63.5kilogramsx12/12-12 63.5kilogramsx12/12-12 63.5kilogramsx12/12-12",
@@ -14084,8 +14083,10 @@ exports[`history aggregates over the 420-session fixture > overall stats, all-ti
         "max1RMPerSessionStatistics": {
           "currentValue": "11.99999999999999999997kilograms",
           "maxValue": "15.99999999999999999996kilograms",
-          "minValue": "9.33333333333333333331kilograms",
+          "minValue": "8.86666666666666666669kilograms",
           "statistics": [
+            "2024-01-10T14:51:38.308+11:00 8.86666666666666666669kilograms",
+            "2024-01-17T16:01:55.976+11:00 11.40000000000000000003kilograms",
             "2024-01-24T15:02:26.457+11:00 13.3333333333333333333kilograms",
             "2024-02-01T14:13:59.418+11:00 11.99999999999999999997kilograms",
             "2024-02-08T13:18:26.285+11:00 13.3333333333333333333kilograms",
@@ -14105,13 +14106,15 @@ exports[`history aggregates over the 420-session fixture > overall stats, all-ti
             "2024-07-11T13:48:14.273+10:00 12.6kilograms",
             "2026-05-20T12:24:12.262+10:00 11.99999999999999999997kilograms",
           ],
-          "totalValue": "212.5999999999999999995kilograms",
+          "totalValue": "232.86666666666666666622kilograms",
         },
         "maxLiftedPerSessionStatistics": {
           "currentValue": "9kilograms",
           "maxValue": "12kilograms",
           "minValue": "7kilograms",
           "statistics": [
+            "2024-01-10T14:51:38.308+11:00 7kilograms",
+            "2024-01-17T16:01:55.976+11:00 9kilograms",
             "2024-01-24T15:02:26.457+11:00 10kilograms",
             "2024-02-01T14:13:59.418+11:00 9kilograms",
             "2024-02-08T13:18:26.285+11:00 10kilograms",
@@ -14131,7 +14134,7 @@ exports[`history aggregates over the 420-session fixture > overall stats, all-ti
             "2024-07-11T13:48:14.273+10:00 9kilograms",
             "2026-05-20T12:24:12.262+10:00 9kilograms",
           ],
-          "totalValue": "159kilograms",
+          "totalValue": "175kilograms",
         },
         "primary": "load",
         "repsStatistics": {
@@ -14145,6 +14148,9 @@ exports[`history aggregates over the 420-session fixture > overall stats, all-ti
             "12": {
               "numberOfSets": 1,
             },
+            "8": {
+              "numberOfSets": 8,
+            },
             "9": {
               "numberOfSets": 2,
             },
@@ -14156,6 +14162,8 @@ exports[`history aggregates over the 420-session fixture > overall stats, all-ti
             "maxValue": "12kilograms",
             "minValue": "7kilograms",
             "statistics": [
+              "2024-01-10T14:51:38.308+11:00 7kilograms",
+              "2024-01-17T16:01:55.976+11:00 9kilograms",
               "2024-01-24T15:02:26.457+11:00 10kilograms",
               "2024-02-01T14:13:59.418+11:00 9kilograms",
               "2024-02-08T13:18:26.285+11:00 10kilograms",
@@ -14175,13 +14183,15 @@ exports[`history aggregates over the 420-session fixture > overall stats, all-ti
               "2024-07-11T13:48:14.273+10:00 9kilograms",
               "2026-05-20T12:24:12.262+10:00 9kilograms",
             ],
-            "totalValue": "159kilograms",
+            "totalValue": "175kilograms",
           },
           "reps": {
             "currentValue": 10,
             "maxValue": 12,
-            "minValue": 10,
+            "minValue": 8,
             "statistics": [
+              "2024-01-10T14:51:38.308+11:00 8",
+              "2024-01-17T16:01:55.976+11:00 8",
               "2024-01-24T15:02:26.457+11:00 10",
               "2024-02-01T14:13:59.418+11:00 10",
               "2024-02-08T13:18:26.285+11:00 10",
@@ -14201,15 +14211,17 @@ exports[`history aggregates over the 420-session fixture > overall stats, all-ti
               "2024-07-11T13:48:14.273+10:00 12",
               "2026-05-20T12:24:12.262+10:00 10",
             ],
-            "totalValue": 182,
+            "totalValue": 198,
           },
         },
-        "setsPerWeek": 0.354929577,
+        "setsPerWeek": 0.407511737,
         "totalVolumeStatistics": {
           "currentValue": "270kilograms",
           "maxValue": "320kilograms",
           "minValue": "210kilograms",
           "statistics": [
+            "2024-01-10T14:51:38.308+11:00 224kilograms",
+            "2024-01-17T16:01:55.976+11:00 256kilograms",
             "2024-01-24T15:02:26.457+11:00 270kilograms",
             "2024-02-01T14:13:59.418+11:00 270kilograms",
             "2024-02-08T13:18:26.285+11:00 290kilograms",
@@ -14229,7 +14241,7 @@ exports[`history aggregates over the 420-session fixture > overall stats, all-ti
             "2024-07-11T13:48:14.273+10:00 297kilograms",
             "2026-05-20T12:24:12.262+10:00 270kilograms",
           ],
-          "totalValue": "4677kilograms",
+          "totalValue": "5157kilograms",
         },
       },
       {
@@ -27074,70 +27086,6 @@ exports[`history aggregates over the 420-session fixture > overall stats, all-ti
         },
       },
       {
-        "exerciseName": "Lateral Raise",
-        "max1RMPerSessionStatistics": {
-          "currentValue": "11.40000000000000000003kilograms",
-          "maxValue": "11.40000000000000000003kilograms",
-          "minValue": "8.86666666666666666669kilograms",
-          "statistics": [
-            "2024-01-10T14:51:38.308+11:00 8.86666666666666666669kilograms",
-            "2024-01-17T16:01:55.976+11:00 11.40000000000000000003kilograms",
-          ],
-          "totalValue": "20.26666666666666666672kilograms",
-        },
-        "maxLiftedPerSessionStatistics": {
-          "currentValue": "9kilograms",
-          "maxValue": "9kilograms",
-          "minValue": "7kilograms",
-          "statistics": [
-            "2024-01-10T14:51:38.308+11:00 7kilograms",
-            "2024-01-17T16:01:55.976+11:00 9kilograms",
-          ],
-          "totalValue": "16kilograms",
-        },
-        "primary": "load",
-        "repsStatistics": {
-          "breakdown": {
-            "8": {
-              "numberOfSets": 8,
-            },
-          },
-        },
-        "series": {
-          "load": {
-            "currentValue": "9kilograms",
-            "maxValue": "9kilograms",
-            "minValue": "7kilograms",
-            "statistics": [
-              "2024-01-10T14:51:38.308+11:00 7kilograms",
-              "2024-01-17T16:01:55.976+11:00 9kilograms",
-            ],
-            "totalValue": "16kilograms",
-          },
-          "reps": {
-            "currentValue": 8,
-            "maxValue": 8,
-            "minValue": 8,
-            "statistics": [
-              "2024-01-10T14:51:38.308+11:00 8",
-              "2024-01-17T16:01:55.976+11:00 8",
-            ],
-            "totalValue": 16,
-          },
-        },
-        "setsPerWeek": 0.05258216,
-        "totalVolumeStatistics": {
-          "currentValue": "256kilograms",
-          "maxValue": "256kilograms",
-          "minValue": "224kilograms",
-          "statistics": [
-            "2024-01-10T14:51:38.308+11:00 224kilograms",
-            "2024-01-17T16:01:55.976+11:00 256kilograms",
-          ],
-          "totalValue": "480kilograms",
-        },
-      },
-      {
         "exerciseName": "Quad Raises",
         "max1RMPerSessionStatistics": {
           "currentValue": "41.076kilograms",
@@ -29612,6 +29560,12 @@ exports[`history aggregates over the 420-session fixture > per-session personal 
     {
       "exerciseName": "Calf Raises",
       "oneRepMax": "101.25kilograms",
+    },
+  ],
+  "1f821f18-c4d6-4af7-9b9d-741fafa6dbc1": [
+    {
+      "exerciseName": "Lateral Raises",
+      "oneRepMax": "13.3333333333333333333kilograms",
     },
   ],
   "229fdc3d-dd06-4d7f-bed1-2cd3906dd496": [
@@ -33169,10 +33123,6 @@ exports[`history aggregates over the 420-session fixture > recently completed ex
     "Lat-Focused Cable Row | 2024-10-17T13:18:25.259+11:00 | 67kilogramsx12/12-12 67kilogramsx12/12-12 67kilogramsx13/12-12",
     "Lat-Focused Cable Row | 2024-10-10T13:13:44.021+11:00 | 67kilogramsx12/12-12 67kilogramsx12/12-12 67kilogramsx10/12-12",
   ],
-  "lateral raise|WeightedExerciseBlueprint": [
-    "Lateral Raise | 2024-01-17T16:01:55.976+11:00 | 7.5kilogramsx8/8-8 9kilogramsx8/8-8 7.5kilogramsx8/8-8 8kilogramsx8/8-8",
-    "Lateral Raise | 2024-01-10T14:51:38.308+11:00 | 7kilogramsx8/8-8 7kilogramsx8/8-8 7kilogramsx8/8-8 7kilogramsx8/8-8",
-  ],
   "lateral rais|WeightedExerciseBlueprint": [
     "Lateral Raises | 2026-05-20T12:24:12.262+10:00 | 9kilogramsx10/10-10 9kilogramsx10/10-10 9kilogramsx10/10-10",
     "Lateral Raises | 2024-07-11T13:48:14.273+10:00 | 9kilogramsx10/10-10 9kilogramsx11/10-10 9kilogramsx12/10-10",
@@ -33192,6 +33142,8 @@ exports[`history aggregates over the 420-session fixture > recently completed ex
     "Lateral Raises | 2024-02-08T13:18:26.285+11:00 | 10kilogramsx10/10-10 10kilogramsx10/10-10 10kilogramsx9/10-10",
     "Lateral Raises | 2024-02-01T14:13:59.418+11:00 | 9kilogramsx10/10-10 9kilogramsx10/10-10 9kilogramsx10/10-10",
     "Lateral Raises | 2024-01-24T15:02:26.457+11:00 | 10kilogramsx10/10-10 10kilogramsx9/10-10 8kilogramsx10/10-10",
+    "Lateral Raise | 2024-01-17T16:01:55.976+11:00 | 7.5kilogramsx8/8-8 9kilogramsx8/8-8 7.5kilogramsx8/8-8 8kilogramsx8/8-8",
+    "Lateral Raise | 2024-01-10T14:51:38.308+11:00 | 7kilogramsx8/8-8 7kilogramsx8/8-8 7kilogramsx8/8-8 7kilogramsx8/8-8",
   ],
   "leg curl|WeightedExerciseBlueprint": [
     "Leg Curl | 2026-05-20T17:50:26.040+10:00 | 56kilogramsx10/10-10 56kilogramsx10/10-10 56kilogramsx10/10-10",
@@ -34364,7 +34316,7 @@ exports[`history aggregates over the 420-session fixture > recently completed ex
     "Squats | 2023-07-09T05:00:41.945+10:00 | 55kilogramsx8/8-8 55kilogramsx8/8-8 55kilogramsx8/8-8",
     "Squats | 2023-07-06T23:57:46.519+10:00 | 50kilogramsx8/8-8 50kilogramsx8/8-8 50kilogramsx8/8-8",
   ],
-  "standing calf raise|WeightedExerciseBlueprint": [
+  "standing calf rais|WeightedExerciseBlueprint": [
     "Standing Calf Raise | 2026-02-12T08:04:58.893+11:00 | 80kilogramsx12/12-12 80kilogramsx12/12-12 80kilogramsx12/12-12",
     "Standing Calf Raise | 2026-01-29T14:10:30.822+11:00 | 77.5kilogramsx12/12-12 77.5kilogramsx12/12-12 77.5kilogramsx12/12-12",
     "Standing Calf Raise | 2026-01-20T14:44:34.113+11:00 | 75kilogramsx12/12-12 75kilogramsx12/12-12 75kilogramsx12/12-12",

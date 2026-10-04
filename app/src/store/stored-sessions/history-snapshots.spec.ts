@@ -19,7 +19,7 @@ import {
 } from '@/store/activity';
 import { calculateStats } from '@/store/stats/calculate-stats';
 import { GranularStatisticView } from '@/store/stats';
-import { normalizeExerciseName } from '@/models/blueprint-models';
+import { legacyNormalizeExerciseName } from '@/models/legacy-exercise-name';
 import { linkExerciseIds } from '@/services/data-migrations/link-exercise-ids';
 import { selectPreferredWeightUnit, setFirstDayOfWeek, setIsHydrated as setSettingsIsHydrated } from '@/store/settings';
 import { applyStoredSessionsEffects } from '@/store/stored-sessions/effects';
@@ -92,7 +92,8 @@ const state = () => store.getState() as unknown as RootState;
 /**
  * Keys carry exercise ids, which for anything outside the catalog are uuids. Snapshots label them by the
  * exercise's name instead - normalised for a movement, as its key used to be - so they read, and so a diff
- * against the name-keyed snapshots shows only real changes in grouping.
+ * against the name-keyed snapshots shows only real changes in grouping. The fold is the one the keys used,
+ * frozen, so a change to the normaliser shows up only where it merged two exercises.
  */
 function exerciseName(id: string): string {
   const { savedExercises, builtInExercises } = state().storedSessions;
@@ -112,7 +113,7 @@ function byLabel<T>(entries: [label: string, key: string, value: T][]): Record<s
 }
 function labelMovement(key: string): string {
   const split = key.lastIndexOf('|');
-  return `${normalizeExerciseName(exerciseName(key.slice(0, split)))}${key.slice(split)}`;
+  return `${legacyNormalizeExerciseName(exerciseName(key.slice(0, split)))}${key.slice(split)}`;
 }
 
 beforeAll(async () => {
