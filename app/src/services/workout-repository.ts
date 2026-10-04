@@ -13,7 +13,8 @@ import { Transaction, writeAtomically } from '@/db/helpers';
 import { FREEFORM_WORKOUT_NAME, RecordedExercise, Session } from '@/models/session-models';
 import { effectiveLoad } from '@/models/session-models/recorded-weighted-exercise';
 import { SET_KIND_RULES, SetKind } from '@/models/session-models/set-kind';
-import { MovementKey, ProgressionKey, Resistance } from '@/models/blueprint-models';
+import { ExerciseId, MovementKey, ProgressionKey, Resistance, movementKeyFor } from '@/models/blueprint-models';
+import type { ExerciseUsage } from '@/models/exercise-merge';
 import { Weight } from '@/models/weight';
 import { BigNumberJSON, LocalDateJSON, WeightUnitJSON, fromBigNumberJSON } from '@/models/storage/versions/latest';
 import { DailyActivity, VolumeScale } from '@/store/activity/activity-types';
@@ -37,6 +38,8 @@ type Statement = { run(): unknown };
 
 /** A workout row as `readColumns.workout` selects it: the query columns left out, `active` kept. */
 type WorkoutReadRow = Omit<typeof workoutsSchema.$inferSelect, 'referenceTimeMs' | 'volumeKg'>;
+
+const KINDS = ['WeightedExerciseBlueprint', 'CardioExerciseBlueprint'] as const;
 
 // Keeps every statement under SQLite's historical 999 bound-parameter limit.
 const MAX_PARAMETERS = 999;
@@ -200,6 +203,56 @@ export class WorkoutRepository {
         .where(eq(workoutsSchema.id, workoutId));
       return (await this.assemble(workouts, [workoutId]))[0];
     });
+  }
+
+  /** The workouts of `workoutIds` that are stored, in no particular order. Queued behind the writes before it. */
+  getMany(workoutIds: readonly string[]): Promise<Session[]> {
+    return this.inOrder(async () => {
+      const ids = [...workoutIds];
+      const workouts = await children(ids, workoutsSchema.id, (where) =>
+        this.db.select(readColumns.workout).from(workoutsSchema).where(where),
+      );
+      return this.assemble(workouts, ids);
+    });
+  }
+
+  /**
+   * The workouts, the one in progress included, that log any of `exerciseIds`: found by the id their
+   * `movement_key` starts with, through its index, so the rest of the history is never read.
+   */
+  async workoutIdsLogging(exerciseIds: readonly ExerciseId[]): Promise<string[]> {
+    const keys = exerciseIds.flatMap((id) => KINDS.map((kind) => movementKeyFor(id, kind)));
+    const rows = await Promise.all(
+      chunkedValues(keys, MAX_PARAMETERS).map((chunk) =>
+        this.db
+          .selectDistinct({ workoutId: workoutExercisesSchema.workoutId })
+          .from(workoutExercisesSchema)
+          .where(inArray(workoutExercisesSchema.movementKey, chunk)),
+      ),
+    );
+    return [...new Set(rows.flat().map((x) => x.workoutId))];
+  }
+
+  /**
+   * Per exercise id, how many workouts log it (the one in progress included) and the reference time of the
+   * first: what the exercise merge picks a survivor by. One aggregate; no workout is read whole.
+   */
+  async exerciseUsage(): Promise<Record<ExerciseId, ExerciseUsage>> {
+    const key = workoutExercisesSchema.movementKey;
+    // `movement_key` is `<exerciseId>|<blueprint type>`; cutting the type off leaves the id.
+    const exerciseId = sql<string>`substr(${key}, 1, length(${key}) - case ${workoutExercisesSchema.kind}
+      when 'weighted' then ${movementKeyFor('', 'WeightedExerciseBlueprint').length}
+      else ${movementKeyFor('', 'CardioExerciseBlueprint').length} end)`;
+    const rows = await this.db
+      .select({
+        exerciseId,
+        workouts: sql<number>`count(distinct ${workoutExercisesSchema.workoutId})`,
+        firstReferenceTimeMs: sql<number>`min(${workoutsSchema.referenceTimeMs})`,
+      })
+      .from(workoutExercisesSchema)
+      .innerJoin(workoutsSchema, eq(workoutsSchema.id, workoutExercisesSchema.workoutId))
+      .groupBy(exerciseId);
+    return Object.fromEntries(rows.map(({ exerciseId, ...usage }) => [exerciseId, usage]));
   }
 
   /**

@@ -755,6 +755,23 @@ describe('WorkoutRepository', () => {
       expect(await repository.startedWorkouts()).toEqual({ count: 2, firstDate: april(2) });
     });
 
+    it('exerciseUsage counts the workouts logging each exercise, of either kind, and dates the first', async () => {
+      const first = workout(april(10));
+      const second = workout(april(12));
+      await repository.putMany([first, second, lifted('A', april(11), { time: '12:00' })]);
+      await repository.setActive(lifted('Running', april(13), { exercise: 'Bench Press' }));
+
+      expect(await repository.exerciseUsage()).toEqual({
+        [stubExerciseId('Squat')]: { workouts: 3, firstReferenceTimeMs: Date.parse('2026-04-10T09:00:00Z') },
+        [stubExerciseId('Row')]: { workouts: 2, firstReferenceTimeMs: Date.parse('2026-04-10T09:00:00Z') },
+        [stubExerciseId('Bench Press')]: { workouts: 1, firstReferenceTimeMs: Date.parse('2026-04-13T12:00:00Z') },
+      });
+      expect((await repository.workoutIdsLogging([stubExerciseId('Row'), 'nothing'])).sort()).toEqual(
+        [first.id, second.id].sort(),
+      );
+      expect((await repository.getMany([second.id, 'missing'])).map((x) => x.toJSON())).toEqual([second.toJSON()]);
+    });
+
     it('dailyActivity counts and sums the started workouts of each day', async () => {
       await repository.putMany([
         lifted('A', april(10), { kg: 100, reps: [10], time: '08:00' }),
