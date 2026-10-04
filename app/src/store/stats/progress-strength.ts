@@ -1,8 +1,14 @@
 import { LocalDate } from '@js-joda/core';
-import { ExerciseId, MovementKey } from '@/models/blueprint-models';
+import { ExerciseId, MovementKey, movementKeyFor } from '@/models/blueprint-models';
 import { WeightUnit } from '@/models/weight';
 import { shownChange, shownWeight } from '@/store/stats/progress-amounts';
-import { ExerciseProgress, ProgressHistory, progressSince, trendValues } from '@/store/stats/progress-history';
+import {
+  ExerciseHistory,
+  ExerciseProgress,
+  ProgressHistory,
+  progressSince,
+  trendValues,
+} from '@/store/stats/progress-history';
 import { StatAxis } from '@/store/stats/quantity';
 import { newestWorkoutFirst, recordListRowOf, RecordListRow } from '@/store/stats/records-list';
 
@@ -28,21 +34,63 @@ export interface LiftRow {
   change: number | undefined;
   /** The range's values on the axis, oldest first, for the sparkline. */
   trend: number[];
+  /** Pinned to the list from the exercise page, so it shows whatever the range. */
+  pinned: boolean;
 }
 
 /**
- * The lifts done in the most workouts since `since`, at most {@link LIFTS_SHOWN}. Ties go to the one done
- * most recently, then by name.
+ * Strength's lifts: the `pinned` ones first, in the order they were pinned, then the ones done in the most
+ * workouts since `since` until there are {@link LIFTS_SHOWN}. Ties go to the one done most recently, then by
+ * name. A pinned lift always shows, even with nothing in the range and even past {@link LIFTS_SHOWN}, so
+ * pinning never drops a lift the user asked for; it is the most-trained ones that make room. An id with no
+ * history (never logged, or merged into another exercise) is skipped.
  */
-export function mostTrainedLifts(history: ProgressHistory, since: LocalDate, unit: WeightUnit): LiftRow[] {
-  const rows: (LiftRow & { lastDate: LocalDate })[] = [];
+export function mostTrainedLifts(
+  history: ProgressHistory,
+  since: LocalDate,
+  unit: WeightUnit,
+  pinned: readonly ExerciseId[] = [],
+): LiftRow[] {
+  const pinnedKeys = new Set<MovementKey>();
+  const pinnedRows: LiftRow[] = [];
+  for (const id of pinned) {
+    const key = movementKeyFor(id, 'WeightedExerciseBlueprint');
+    const exercise = history.exercises.get(key);
+    if (exercise && !pinnedKeys.has(key)) {
+      pinnedKeys.add(key);
+      pinnedRows.push(liftRowOf(exercise, since, unit, true).row);
+    }
+  }
+
+  const rows: { row: LiftRow; lastDate: LocalDate }[] = [];
   for (const exercise of history.exercises.values()) {
-    const progress = progressSince(exercise, since);
-    const lastPoint = progress.points.at(-1);
-    if (!lastPoint) {
+    if (pinnedKeys.has(exercise.key)) {
       continue;
     }
-    rows.push({
+    const lifted = liftRowOf(exercise, since, unit, false);
+    if (lifted.lastDate) {
+      rows.push({ row: lifted.row, lastDate: lifted.lastDate });
+    }
+  }
+  const mostTrained = rows
+    .sort(
+      (a, b) =>
+        b.row.sessions - a.row.sessions || b.lastDate.compareTo(a.lastDate) || a.row.name.localeCompare(b.row.name),
+    )
+    .slice(0, Math.max(0, LIFTS_SHOWN - pinnedRows.length))
+    .map(({ row }) => row);
+  return [...pinnedRows, ...mostTrained];
+}
+
+function liftRowOf(
+  exercise: ExerciseHistory,
+  since: LocalDate,
+  unit: WeightUnit,
+  pinned: boolean,
+): { row: LiftRow; lastDate: LocalDate | undefined } {
+  const progress = progressSince(exercise, since);
+  return {
+    row: {
       key: exercise.key,
       exerciseId: exercise.blueprint.exerciseId,
       name: exercise.name,
@@ -50,13 +98,15 @@ export function mostTrainedLifts(history: ProgressHistory, since: LocalDate, uni
       sessions: progress.points.length,
       ...latestAndChange(progress, unit),
       trend: trendValues(progress, unit),
-      lastDate: lastPoint.date,
-    });
-  }
-  return rows
-    .sort((a, b) => b.sessions - a.sessions || b.lastDate.compareTo(a.lastDate) || a.name.localeCompare(b.name))
-    .slice(0, LIFTS_SHOWN)
-    .map(({ lastDate: _, ...row }) => row);
+      pinned,
+    },
+    lastDate: progress.points.at(-1)?.date,
+  };
+}
+
+/** `pinned` with `id` pinned at the end, or unpinned when it already was. */
+export function togglePinned(pinned: readonly ExerciseId[], id: ExerciseId): ExerciseId[] {
+  return pinned.includes(id) ? pinned.filter((x) => x !== id) : [...pinned, id];
 }
 
 function latestAndChange(progress: ExerciseProgress, unit: WeightUnit): Pick<LiftRow, 'latest' | 'change'> {

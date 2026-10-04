@@ -4,7 +4,7 @@ import { makeWeightedBlueprint } from '@/models/session-models/__test__/helpers'
 import { Weight } from '@/models/weight';
 import { day, exerciseHistory, historyOf, kg, point } from '@/store/stats/__test__/progress-fixtures';
 import { DatedRecord } from '@/store/stats/progress-history';
-import { mostTrainedLifts, recentRecords } from '@/store/stats/progress-strength';
+import { mostTrainedLifts, recentRecords, togglePinned } from '@/store/stats/progress-strength';
 
 // A Monday, where a range starts.
 const since = day(8, 31);
@@ -61,7 +61,48 @@ describe('mostTrainedLifts', () => {
       latest: 107.5,
       change: 7.5,
       trend: [100, 102.5, 101, 105, 107.5],
+      pinned: false,
     });
+  });
+
+  it('puts pinned lifts first in pin order, then fills up to 4 with the most trained', () => {
+    const lifts = mostTrainedLifts(history, since, 'kilograms', [stubExerciseId('Curl'), stubExerciseId('Squat')]);
+
+    expect(lifts.map((lift) => [lift.name, lift.pinned])).toEqual([
+      ['Curl', true],
+      ['Squat', true],
+      ['Bench', false],
+      ['Deadlift', false],
+    ]);
+  });
+
+  it('shows a pinned lift with nothing in the range', () => {
+    const [lunge] = mostTrainedLifts(history, since, 'kilograms', [stubExerciseId('Lunge')]);
+
+    expect(lunge).toMatchObject({ name: 'Lunge', pinned: true, sessions: 0, latest: undefined, trend: [] });
+  });
+
+  it('shows every pinned lift, even past 4, rather than dropping a pin', () => {
+    const pinned = ['Lunge', 'Curl', 'Squat', 'Deadlift', 'Bench'].map(stubExerciseId);
+
+    expect(mostTrainedLifts(history, since, 'kilograms', pinned).map((lift) => lift.name)).toEqual([
+      'Lunge',
+      'Curl',
+      'Squat',
+      'Deadlift',
+      'Bench',
+    ]);
+  });
+
+  it('skips a pinned id with no history, and a repeat', () => {
+    const pinned = [stubExerciseId('Row'), stubExerciseId('Curl'), stubExerciseId('Curl')];
+
+    expect(mostTrainedLifts(history, since, 'kilograms', pinned).map((lift) => lift.name)).toEqual([
+      'Curl',
+      'Bench',
+      'Deadlift',
+      'Squat',
+    ]);
   });
 
   it('reads a lift that tracks no load in best reps', () => {
@@ -186,5 +227,12 @@ describe('recentRecords', () => {
 
   it('is empty before any record', () => {
     expect(recentRecords(historyOf({}), 'kilograms')).toEqual([]);
+  });
+});
+
+describe('togglePinned', () => {
+  it('pins at the end, and unpins a pinned lift', () => {
+    expect(togglePinned(['a'], 'b')).toEqual(['a', 'b']);
+    expect(togglePinned(['a', 'b', 'c'], 'b')).toEqual(['a', 'c']);
   });
 });

@@ -1011,6 +1011,8 @@
   "progress.tab.empty.button": "Choose a routine",
   "progress.tab.lifts.title": "Lifts",
   "progress.tab.lifts.subtitle": "Your most-trained lifts.",
+  "progress.tab.lifts.pinned.subtitle": "Your pinned lifts, then your most-trained.",
+  "progress.tab.lifts.pinned.label": "Pinned",
   "progress.tab.lifts.all_exercises.button": "All exercises",
   "progress.tab.lifts.one_rep_max.one": "Est. 1RM · 1 session",
   "progress.tab.lifts.one_rep_max.other": "Est. 1RM · {count} sessions",

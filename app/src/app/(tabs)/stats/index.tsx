@@ -69,6 +69,7 @@ export default function ProgressScreen() {
   const firstDayOfWeek = useAppSelector((x) => x.settings.firstDayOfWeek);
   const showBodyweight = useAppSelector((x) => x.settings.showBodyweight);
   const lastTab = useAppSelector((x) => x.settings.progressTab);
+  const pinnedLifts = useAppSelector((x) => x.settings.pinnedLifts);
   const builtInExercises = useAppSelector((x) => x.storedSessions.builtInExercises);
   const savedExercises = useAppSelector((x) => x.storedSessions.savedExercises);
   const [rangeId, setRangeId] = useState<ProgressRangeId>(DEFAULT_PROGRESS_RANGE);
@@ -93,7 +94,7 @@ export default function ProgressScreen() {
       case 'strength':
         return (
           <StrengthSection
-            lifts={mostTrainedLifts(history, period.start, unit)}
+            lifts={mostTrainedLifts(history, period.start, unit, pinnedLifts)}
             records={recentRecords(history, unit)}
             unit={unitLabel}
             onOpenLift={(lift) => openExercise(lift.exerciseId)}
