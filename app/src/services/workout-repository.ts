@@ -13,7 +13,14 @@ import { Transaction, writeAtomically } from '@/db/helpers';
 import { FREEFORM_WORKOUT_NAME, RecordedExercise, Session } from '@/models/session-models';
 import { effectiveLoad } from '@/models/session-models/recorded-weighted-exercise';
 import { SET_KIND_RULES, SetKind } from '@/models/session-models/set-kind';
-import { ExerciseId, MovementKey, ProgressionKey, Resistance, movementKeyFor } from '@/models/blueprint-models';
+import {
+  ExerciseId,
+  MovementKey,
+  ProgressionKey,
+  Resistance,
+  exerciseIdOf,
+  keysOfExercise,
+} from '@/models/blueprint-models';
 import type { ExerciseUsage } from '@/models/exercise-merge';
 import { Weight } from '@/models/weight';
 import { BigNumberJSON, LocalDateJSON, WeightUnitJSON, fromBigNumberJSON } from '@/models/storage/versions/latest';
@@ -38,8 +45,6 @@ type Statement = { run(): unknown };
 
 /** A workout row as `readColumns.workout` selects it: the query columns left out, `active` kept. */
 type WorkoutReadRow = Omit<typeof workoutsSchema.$inferSelect, 'referenceTimeMs' | 'volumeKg'>;
-
-const KINDS = ['WeightedExerciseBlueprint', 'CardioExerciseBlueprint'] as const;
 
 // Keeps every statement under SQLite's historical 999 bound-parameter limit.
 const MAX_PARAMETERS = 999;
@@ -205,23 +210,12 @@ export class WorkoutRepository {
     });
   }
 
-  /** The workouts of `workoutIds` that are stored, in no particular order. Queued behind the writes before it. */
-  getMany(workoutIds: readonly string[]): Promise<Session[]> {
-    return this.inOrder(async () => {
-      const ids = [...workoutIds];
-      const workouts = await children(ids, workoutsSchema.id, (where) =>
-        this.db.select(readColumns.workout).from(workoutsSchema).where(where),
-      );
-      return this.assemble(workouts, ids);
-    });
-  }
-
   /**
    * The workouts, the one in progress included, that log any of `exerciseIds`: found by the id their
    * `movement_key` starts with, through its index, so the rest of the history is never read.
    */
   async workoutIdsLogging(exerciseIds: readonly ExerciseId[]): Promise<string[]> {
-    const keys = exerciseIds.flatMap((id) => KINDS.map((kind) => movementKeyFor(id, kind)));
+    const keys = [...new Set(exerciseIds.flatMap((id) => keysOfExercise(id).map((x) => x.movementKey)))];
     const rows = await Promise.all(
       chunkedValues(keys, MAX_PARAMETERS).map((chunk) =>
         this.db
@@ -235,24 +229,30 @@ export class WorkoutRepository {
 
   /**
    * Per exercise id, how many workouts log it (the one in progress included) and the reference time of the
-   * first: what the exercise merge picks a survivor by. One aggregate; no workout is read whole.
+   * first: what the exercise merge picks a survivor by. One aggregate per movement; no workout is read
+   * whole. A workout logging one exercise both weighted and as cardio counts twice, which only nudges
+   * which of two duplicates survives.
    */
   async exerciseUsage(): Promise<Record<ExerciseId, ExerciseUsage>> {
-    const key = workoutExercisesSchema.movementKey;
-    // `movement_key` is `<exerciseId>|<blueprint type>`; cutting the type off leaves the id.
-    const exerciseId = sql<string>`substr(${key}, 1, length(${key}) - case ${workoutExercisesSchema.kind}
-      when 'weighted' then ${movementKeyFor('', 'WeightedExerciseBlueprint').length}
-      else ${movementKeyFor('', 'CardioExerciseBlueprint').length} end)`;
     const rows = await this.db
       .select({
-        exerciseId,
+        movementKey: workoutExercisesSchema.movementKey,
         workouts: sql<number>`count(distinct ${workoutExercisesSchema.workoutId})`,
         firstReferenceTimeMs: sql<number>`min(${workoutsSchema.referenceTimeMs})`,
       })
       .from(workoutExercisesSchema)
       .innerJoin(workoutsSchema, eq(workoutsSchema.id, workoutExercisesSchema.workoutId))
-      .groupBy(exerciseId);
-    return Object.fromEntries(rows.map(({ exerciseId, ...usage }) => [exerciseId, usage]));
+      .groupBy(workoutExercisesSchema.movementKey);
+    const usage: Record<ExerciseId, ExerciseUsage> = {};
+    for (const row of rows) {
+      const id = exerciseIdOf(row.movementKey as MovementKey);
+      const seen = usage[id];
+      usage[id] = {
+        workouts: (seen?.workouts ?? 0) + row.workouts,
+        firstReferenceTimeMs: Math.min(seen?.firstReferenceTimeMs ?? Infinity, row.firstReferenceTimeMs),
+      };
+    }
+    return usage;
   }
 
   /**
@@ -678,6 +678,48 @@ export class WorkoutRepository {
     return records;
   }
 
+  /**
+   * Points every exercise logged under a key of `survivorOf` at its value, in SQL: the id in the blueprint
+   * JSON and the key columns, then the `lineage` of each workout touched numbered again, since two exercises
+   * of one workout can now share a key. The same rows `putMany` would write for those workouts, without
+   * reading them back; `alsoWrite`'s statements commit in the same transaction.
+   */
+  async repointExercises(
+    survivorOf: ReadonlyMap<ExerciseId, ExerciseId>,
+    alsoWrite: (tx: Transaction) => Statement[] = () => [],
+  ): Promise<void> {
+    const workoutIds = await this.workoutIdsLogging([...survivorOf.keys()]);
+    const { blueprint, movementKey, progressionKey } = workoutExercisesSchema;
+    const survivorKeys = [...new Set(survivorOf.values())].flatMap((id) =>
+      keysOfExercise(id).map((x) => x.movementKey),
+    );
+    await this.write(
+      (tx) => [
+        ...[...survivorOf].flatMap(([from, to]) => {
+          const toKeys = keysOfExercise(to);
+          return keysOfExercise(from).map((fromKey, index) =>
+            tx
+              .update(workoutExercisesSchema)
+              .set({
+                movementKey: toKeys[index]!.movementKey,
+                progressionKey: toKeys[index]!.progressionKey,
+                blueprint: sql`json_set(${blueprint}, '$.exerciseId', ${to})`,
+              })
+              .where(and(eq(movementKey, fromKey.movementKey), eq(progressionKey, fromKey.progressionKey))),
+          );
+        }),
+        ...chunkedValues(survivorKeys, MAX_PARAMETERS).map((keys) =>
+          renumberLineages(
+            tx,
+            sql`${workoutExercisesSchema.workoutId} in (select ${workoutExercisesSchema.workoutId} from ${workoutExercisesSchema} where ${inArray(movementKey, keys)})`,
+          ),
+        ),
+        ...alsoWrite(tx),
+      ],
+      { workoutIds, activeChanged: false },
+    );
+  }
+
   /** Writes one workout's content. */
   put(session: Session): Promise<void> {
     return this.putMany([session]);
@@ -915,4 +957,26 @@ function groupByWorkout<T extends { workoutId: string }>(rows: T[]): Map<string,
     }
   }
   return grouped;
+}
+
+/**
+ * Sets each exercise's `lineage` from its `progression_key`, as `lineageKeys` does on write: the key for its
+ * first place in the workout, `<key>#n` for the n-th. All workouts, or those `workouts` selects.
+ */
+export function renumberLineages(tx: Transaction, workouts?: SQL): Statement {
+  return {
+    run: () =>
+      tx.run(sql`
+        update ${workoutExercisesSchema} set lineage = numbered.lineage from (
+          select workout_id, position,
+            case when row_number() over (partition by workout_id, progression_key order by position) = 1
+              then progression_key
+              else progression_key || '#' || row_number() over (partition by workout_id, progression_key order by position)
+            end as lineage
+          from ${workoutExercisesSchema}
+          ${workouts ? sql`where ${workouts}` : sql``}
+        ) as numbered
+        where numbered.workout_id = ${workoutExercisesSchema}.workout_id and numbered.position = ${workoutExercisesSchema}.position
+      `),
+  };
 }

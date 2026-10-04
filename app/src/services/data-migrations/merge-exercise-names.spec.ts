@@ -18,6 +18,8 @@ import {
 import { toExerciseDescriptorJSON } from '@/models/exercise-models';
 import { stubDescriptor } from '@/models/exercise-resolver';
 import {
+  exerciseIdOf,
+  MovementKey,
   movementKeyFor,
   ProgramBlueprint,
   SessionBlueprint,
@@ -63,6 +65,7 @@ const WEIGHTED = 'WeightedExerciseBlueprint';
 const LUNGES = legacyStubExerciseId('Lunges');
 const BENCH = legacyStubExerciseId('Bench Press');
 const DUMBBELL_LUNGE = legacyStubExerciseId('Dumbbell Lunge');
+const TYPO = legacyStubExerciseId('Bench Presss');
 
 const lunge = makeWeightedBlueprint({ name: 'Lunge', exerciseId: 'user-lunge', sets: 2 });
 const lunges = makeWeightedBlueprint({ name: 'Lunges', exerciseId: LUNGES, sets: 2 });
@@ -135,6 +138,16 @@ async function splitDb(): Promise<ExpoSQLiteDatabase> {
     LocalDate.of(2026, 3, 1),
   );
   await db.insert(programsSchema).values({ id: 'plan', active: true, payload: plan.toJSON() });
+  return db;
+}
+
+/** Adds a stub of the typo "Bench Presss", which the old fold put at Bench Press's new stub id. */
+async function withTypo(db: ExpoSQLiteDatabase) {
+  const typo = makeWeightedBlueprint({ name: 'Bench Presss', exerciseId: TYPO, sets: 2 });
+  await db
+    .insert(exercisesSchema)
+    .values({ id: TYPO, payload: toExerciseDescriptorJSON(stubDescriptor('Bench Presss')) });
+  await new WorkoutRepository(db).putMany([workout('w5', 30, [[typo, 60]])]);
   return db;
 }
 
@@ -303,31 +316,108 @@ describe('mergeExerciseNames', () => {
     );
   });
 
-  it('converges on the same end state when a run stops part way and starts again', async () => {
-    const uninterrupted = await splitDb();
-    await mergeExerciseNames(uninterrupted, [], { batchSize: 1 });
+  it('moves a stub out of the way before giving its id to another, leaving no workout on a deleted exercise', async () => {
+    const db = await withTypo(await splitDb());
 
-    const crashed = await splitDb();
-    const putMany = WorkoutRepository.prototype.putMany;
-    let batches = 0;
-    vi.spyOn(WorkoutRepository.prototype, 'putMany').mockImplementation(function (this: WorkoutRepository, sessions) {
-      if (++batches === 3) {
-        return Promise.reject(new Error('killed'));
-      }
-      return putMany.call(this, sessions);
-    });
-    await expect(mergeExerciseNames(crashed, [], { batchSize: 1 })).rejects.toThrow('killed');
-    vi.restoreAllMocks();
-    // Two workouts moved, two still on the merged ids, and nothing deleted or recorded yet.
-    expect(await new WorkoutRepository(crashed).workoutIdsLogging([LUNGES, BENCH, DUMBBELL_LUNGE])).toHaveLength(2);
-    expect(await crashed.select().from(exercisesSchema)).toHaveLength(Object.keys(descriptors).length + 1);
-    expect((await crashed.select().from(dataMigrationsSchema)).map((x) => x.id)).not.toContain(
-      mergeExerciseNamesDataMigration,
+    const rounds = await mergeExerciseNames(db, []);
+
+    expect(rounds.map((round) => round.map((x) => `${x.normalizedName} -> ${x.survivor.id}`))).toEqual([
+      ['bench presss -> ' + stubExerciseId('Bench Presss'), 'dumbbell lunge -> Dumbbell Lunges', 'lunge -> user-lunge'],
+      ['bench press -> ' + stubExerciseId('Bench Press')],
+    ]);
+    const exercises = new Set((await db.select().from(exercisesSchema)).map((x) => x.id));
+    const rows = await db.select().from(workoutExercisesSchema);
+    for (const row of rows) {
+      const id = exerciseIdOf(row.movementKey as MovementKey);
+      expect(exercises.has(id) || id === 'Dumbbell Lunges').toBe(true);
+    }
+    expect(
+      rows.filter((x) => x.workoutId === 'w1' || x.workoutId === 'w5').map((x) => `${x.workoutId} ${x.movementKey}`),
+    ).toEqual([
+      `w1 user-lunge|${WEIGHTED}`,
+      `w1 ${stubExerciseId('Bench Press')}|${WEIGHTED}`,
+      `w5 ${stubExerciseId('Bench Presss')}|${WEIGHTED}`,
+    ]);
+  });
+
+  it('numbers a workout that logged both exercises as a repeat, and carries each place on', async () => {
+    const db = await splitDb();
+    await new WorkoutRepository(db).putMany([
+      workout('w5', 30, [
+        [lunge, 43],
+        [lunges, 30],
+      ]),
+    ]);
+
+    await runDataMigrations(db);
+
+    const rows = await db.select().from(workoutExercisesSchema);
+    expect(rows.filter((x) => x.workoutId === 'w5').map((x) => x.lineage)).toEqual([
+      `user-lunge_${WEIGHTED}`,
+      `user-lunge_${WEIGHTED}#2`,
+    ]);
+    const app = await startApp(db);
+    const latest = selectLatestExercises(app.getState());
+    const weightOf = (lineage: string) =>
+      (latest[lineage as never] as RecordedWeightedExercise | undefined)?.potentialSets[0]!.weight.value.toNumber();
+    expect([weightOf(`user-lunge_${WEIGHTED}`), weightOf(`user-lunge_${WEIGHTED}#2`)]).toEqual([43, 30]);
+    // A routine with Lunge once carries from the first place; one with it twice carries each place on.
+    const upcoming = await app.sessionService
+      .getUpcomingSessions([new SessionBlueprint('Legs', [lunge, lunge], '')], latest)
+      .next();
+    expect(
+      (upcoming.value as Session).recordedExercises.map((x) =>
+        (x as RecordedWeightedExercise).potentialSets[0]!.weight.value.toNumber(),
+      ),
+    ).toEqual([45.5, 32.5]);
+  });
+
+  it('leaves every row as it was when a round is killed, and finishes on the next run', async () => {
+    const uninterrupted = await withTypo(await splitDb());
+    await mergeExerciseNames(uninterrupted, []);
+
+    const crashed = await withTypo(await splitDb());
+    const before = await tables(crashed);
+    const repoint = WorkoutRepository.prototype.repointExercises;
+    vi.spyOn(WorkoutRepository.prototype, 'repointExercises').mockImplementation(
+      function (this: WorkoutRepository, survivorOf, alsoWrite) {
+        return repoint.call(this, survivorOf, (tx) => [
+          ...alsoWrite!(tx),
+          {
+            run: () => {
+              throw new Error('killed');
+            },
+          },
+        ]);
+      },
     );
+    await expect(mergeExerciseNames(crashed, [])).rejects.toThrow('killed');
+    vi.restoreAllMocks();
+    expect(await tables(crashed)).toEqual(before);
 
-    await mergeExerciseNames(crashed, [], { batchSize: 1 });
+    await mergeExerciseNames(crashed, []);
 
     expect(await tables(crashed)).toEqual(await tables(uninterrupted));
     expect(await planStoredExerciseMerges(crashed, [])).toEqual([]);
+  });
+
+  it('finishes the second round on the next run when killed between rounds', async () => {
+    const uninterrupted = await withTypo(await splitDb());
+    await mergeExerciseNames(uninterrupted, []);
+
+    const crashed = await withTypo(await splitDb());
+    const repoint = WorkoutRepository.prototype.repointExercises;
+    let rounds = 0;
+    vi.spyOn(WorkoutRepository.prototype, 'repointExercises').mockImplementation(
+      function (this: WorkoutRepository, survivorOf, alsoWrite) {
+        return ++rounds === 2 ? Promise.reject(new Error('killed')) : repoint.call(this, survivorOf, alsoWrite);
+      },
+    );
+    await expect(mergeExerciseNames(crashed, [])).rejects.toThrow('killed');
+    vi.restoreAllMocks();
+
+    await mergeExerciseNames(crashed, []);
+
+    expect(await tables(crashed)).toEqual(await tables(uninterrupted));
   });
 });

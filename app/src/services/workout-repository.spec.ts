@@ -25,13 +25,21 @@ import {
   makeSession,
   makeWeightedBlueprint,
 } from '@/models/session-models/__test__/helpers';
-import { workoutsSchema } from '@/db/schema';
+import {
+  cardioSetsSchema,
+  warmupSetsSchema,
+  weightedSetsSchema,
+  workoutExercisesSchema,
+  workoutsSchema,
+} from '@/db/schema';
 import { Weight } from '@/models/weight';
 import { TemporalComparer } from '@/models/comparers';
 import { getSessionReferenceTime } from '@/store/stored-sessions';
 import { findPersonalRecords, RecordLedger, SessionRecord, sessionRecords } from '@/store/stats/personal-records';
 import { oneRepMaxOf } from '@/store/stats/calculate-stats';
 import { volumeScaleOf } from '@/store/activity/volume';
+import { generateSyntheticHistory } from '@/utils/__test__/synthetic-history';
+import { mapSessionExercises } from '@/models/exercise-resolver';
 
 const logger = { info: vi.fn(), error: vi.fn(), warn: vi.fn(), debug: vi.fn() };
 
@@ -769,7 +777,47 @@ describe('WorkoutRepository', () => {
       expect((await repository.workoutIdsLogging([stubExerciseId('Row'), 'nothing'])).sort()).toEqual(
         [first.id, second.id].sort(),
       );
-      expect((await repository.getMany([second.id, 'missing'])).map((x) => x.toJSON())).toEqual([second.toJSON()]);
+    });
+
+    it('repointExercises writes the rows putMany writes for the repointed workouts', async () => {
+      const history = generateSyntheticHistory({ count: 400 });
+      const survivorOf = new Map([
+        [stubExerciseId('Bench Press'), 'bench-press'],
+        // Into an exercise the same workouts log, so they get a repeat.
+        [stubExerciseId('Leg Press'), stubExerciseId('Squat')],
+        [stubExerciseId('Leg Curl'), stubExerciseId('Front Squat')],
+        [stubExerciseId('Rower'), 'rower'],
+        [stubExerciseId('Treadmill'), 'rower'],
+      ]);
+      const viaSql = await createTestDb();
+      await new WorkoutRepository(viaSql).putMany(history);
+      const viaPutMany = await createTestDb();
+      await new WorkoutRepository(viaPutMany).putMany(history);
+
+      await new WorkoutRepository(viaSql).repointExercises(survivorOf);
+      await new WorkoutRepository(viaPutMany).putMany(
+        history.map((session) =>
+          mapSessionExercises(session, (blueprint) => {
+            const to = survivorOf.get(blueprint.exerciseId);
+            return to ? (blueprint.with({ exerciseId: to }) as typeof blueprint) : blueprint;
+          }),
+        ),
+      );
+
+      const rows = async (db: ExpoSQLiteDatabase) => {
+        const sorted = (table: unknown[]) => table.map((row) => JSON.stringify(row)).sort();
+        return {
+          workout: sorted(await db.select().from(workoutsSchema)),
+          workoutExercise: sorted(await db.select().from(workoutExercisesSchema)),
+          weightedSet: sorted(await db.select().from(weightedSetsSchema)),
+          warmupSet: sorted(await db.select().from(warmupSetsSchema)),
+          cardioSet: sorted(await db.select().from(cardioSetsSchema)),
+        };
+      };
+      const repointed = await rows(viaSql);
+      expect(repointed).toEqual(await rows(viaPutMany));
+      expect(repointed.workoutExercise.some((row) => row.includes('#2'))).toBe(true);
+      expect(repointed.workoutExercise.some((row) => row.includes('rower|CardioExerciseBlueprint'))).toBe(true);
     });
 
     it('dailyActivity counts and sums the started workouts of each day', async () => {

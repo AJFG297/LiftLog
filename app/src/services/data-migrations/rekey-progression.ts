@@ -1,6 +1,7 @@
 import { ExpoSQLiteDatabase } from 'drizzle-orm/expo-sqlite';
 import { and, eq, sql } from 'drizzle-orm';
-import { Transaction, writeAtomically } from '@/db/helpers';
+import { writeAtomically } from '@/db/helpers';
+import { renumberLineages } from '@/services/workout-repository';
 import { dataMigrationsSchema, workoutExercisesSchema } from '@/db/schema';
 
 export const rekeyProgressionDataMigration = 'REKEY_PROGRESSION_BY_EXERCISE';
@@ -27,25 +28,4 @@ export async function rekeyProgression(db: ExpoSQLiteDatabase) {
     renumberLineages(tx),
     tx.insert(dataMigrationsSchema).values({ id: rekeyProgressionDataMigration }),
   ]);
-}
-
-/**
- * Sets every exercise's `lineage` from its `progression_key`: the key for its first place in the workout,
- * `<key>#n` for the n-th, as `lineageKeys` does on write. Migration 0013 runs the same update.
- */
-function renumberLineages(tx: Transaction) {
-  return {
-    run: () =>
-      tx.run(sql`
-        update ${workoutExercisesSchema} set lineage = numbered.lineage from (
-          select workout_id, position,
-            case when row_number() over (partition by workout_id, progression_key order by position) = 1
-              then progression_key
-              else progression_key || '#' || row_number() over (partition by workout_id, progression_key order by position)
-            end as lineage
-          from ${workoutExercisesSchema}
-        ) as numbered
-        where numbered.workout_id = ${workoutExercisesSchema}.workout_id and numbered.position = ${workoutExercisesSchema}.position
-      `),
-  };
 }

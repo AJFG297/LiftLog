@@ -1348,6 +1348,30 @@ export function movementKeyFor(exerciseId: ExerciseId, type: ExerciseBlueprint['
   return `${exerciseId}|${type}` as MovementKey;
 }
 
+/** The exercise a movement key (see {@link movementKeyFor}) is of. */
+export function exerciseIdOf(movementKey: MovementKey): ExerciseId {
+  return movementKey.slice(0, movementKey.lastIndexOf('|'));
+}
+
+/**
+ * Every movement and progression key a blueprint of `exerciseId` can have - weighted, and cardio by each
+ * target type - built by the blueprints themselves, so code that rewrites stored keys never spells the
+ * format out.
+ */
+export function keysOfExercise(exerciseId: ExerciseId): { movementKey: MovementKey; progressionKey: ProgressionKey }[] {
+  const cardioSet = CardioExerciseSetBlueprint.empty();
+  const cardioTargets: CardioTarget[] = [
+    { type: 'time', value: Duration.ZERO },
+    { type: 'distance', value: { value: new BigNumber(0), unit: 'metre' } },
+  ];
+  return [
+    WeightedExerciseBlueprint.of({ exerciseId }),
+    ...cardioTargets.map((target) =>
+      CardioExerciseBlueprint.empty().with({ exerciseId, sets: [cardioSet.with({ target })] }),
+    ),
+  ].map((blueprint) => ({ movementKey: blueprint.movementKey(), progressionKey: blueprint.progressionKey() }));
+}
+
 export interface Rest {
   minRest: Duration;
   maxRest: Duration;
