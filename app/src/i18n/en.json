@@ -684,6 +684,7 @@
   "routine_editor.progression.advanced.button": "Advanced",
   "routine_editor.more_options.title": "More options",
   "routine_editor.more_options.body": "Swap the exercise, warm-up loads, rep ranges, resistance, notes and link",
+  "routine_editor.view_progress.body": "Est. 1RM, records and the next target",
   "routine_editor.actions.move_up.button": "Move up",
   "routine_editor.actions.move_down.button": "Move down",
   "routine_editor.actions.superset.button": "Superset",

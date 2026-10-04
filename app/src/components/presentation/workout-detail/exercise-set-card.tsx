@@ -1,8 +1,10 @@
 import { Card } from '@/components/presentation/foundation/card';
+import { MsIconSrc } from '@/components/presentation/foundation/ms-icon-source';
+import { MIN_TOUCH_TARGET } from '@/components/presentation/foundation/touch-target';
 import { SurfaceText } from '@/components/presentation/foundation/surface-text';
 import { spacing, tabularText, useAppTheme } from '@/hooks/useAppTheme';
 import { DetailSetLabel } from '@/models/workout-detail';
-import { View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 /** One set row, already formatted for the table. */
 export interface SetRowCopy {
@@ -30,21 +32,57 @@ interface ExerciseSetCardProps {
   rows: SetRowCopy[];
   /** Shown in place of the table when there are no rows: "Not done", or a cardio exercise's summary. */
   fallbackText: string;
+  /** Opens the exercise's progress from its name; absent for an exercise with no progress page (cardio). */
+  onOpenExercise?: () => void;
+  /** Said after the name when it opens the exercise: "View progress". */
+  openExerciseLabel?: string;
 }
 
 const SET_COLUMN = 36;
 const ONE_REP_MAX_COLUMN = 76;
 
 /** An exercise in a past workout: its logged sets as a table, with e1RM and the record-setting set tagged. */
-export function ExerciseSetCard({ name, note, headings, prLabel, rows, fallbackText }: ExerciseSetCardProps) {
+export function ExerciseSetCard({
+  name,
+  note,
+  headings,
+  prLabel,
+  rows,
+  fallbackText,
+  onOpenExercise,
+  openExerciseLabel,
+}: ExerciseSetCardProps) {
   const { tokens } = useAppTheme();
   const headingStyle = { color: tokens.muted, letterSpacing: 0.7, textTransform: 'uppercase' } as const;
   return (
     <Card style={{ gap: 10 }}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', gap: spacing[2] }}>
-        <SurfaceText font="text-base" weight="600" style={{ color: tokens.ink, flexShrink: 1 }}>
-          {name}
-        </SurfaceText>
+        {onOpenExercise ? (
+          <Pressable
+            onPress={onOpenExercise}
+            accessibilityRole="link"
+            accessibilityLabel={openExerciseLabel ? `${name}, ${openExerciseLabel}` : name}
+            // A 44pt target that takes no more room than the name: the card's padding is above and below it.
+            style={({ pressed }) => ({
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: spacing[0.5],
+              flexShrink: 1,
+              minHeight: MIN_TOUCH_TARGET,
+              marginVertical: -10,
+              opacity: pressed ? 0.6 : 1,
+            })}
+          >
+            <SurfaceText font="text-base" weight="600" style={{ color: tokens.ink, flexShrink: 1 }}>
+              {name}
+            </SurfaceText>
+            <MsIconSrc name="chevronRight" size={18} color={tokens.muted} />
+          </Pressable>
+        ) : (
+          <SurfaceText font="text-base" weight="600" style={{ color: tokens.ink, flexShrink: 1 }}>
+            {name}
+          </SurfaceText>
+        )}
         {note ? (
           <SurfaceText font="text-xs" style={[tabularText, { color: tokens.muted }]}>
             {note}

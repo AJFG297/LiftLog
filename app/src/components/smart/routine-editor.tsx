@@ -89,6 +89,7 @@ import { formatTimeSpan } from '@/utils/format-time-span';
 import { localeFormatBigNumber } from '@/utils/locale-bignumber';
 import { LocalDate } from '@js-joda/core';
 import { useTranslate } from '@tolgee/react';
+import { useOpenExerciseProgress } from '@/hooks/useOpenExerciseProgress';
 import BigNumber from 'bignumber.js';
 import { type Href, useNavigation, useRouter } from 'expo-router';
 import { usePreventRemove } from 'expo-router/react-navigation';
@@ -128,6 +129,7 @@ export function RoutineEditor({ programId, sessionIndex, isNew }: RoutineEditorP
   const { tokens } = useAppTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const openExerciseProgress = useOpenExerciseProgress();
   const goToRoutines = useGoToRoutines();
   const navigation = useNavigation();
   const dispatch = useDispatch();
@@ -577,7 +579,23 @@ export function RoutineEditor({ programId, sessionIndex, isNew }: RoutineEditorP
             />
           </>
         ) : null}
-        <MoreOptionsRow onPress={() => openDetails(index)} />
+        {weighted ? (
+          <LinkRow
+            testID="routine-exercise-progress"
+            title={t('progress.exercise.view_progress.button')}
+            body={t('routine_editor.view_progress.body')}
+            onPress={() => {
+              closePad();
+              openExerciseProgress(weighted.exerciseId);
+            }}
+          />
+        ) : null}
+        <LinkRow
+          testID="routine-exercise-more"
+          title={t('routine_editor.more_options.title')}
+          body={t('routine_editor.more_options.body')}
+          onPress={() => openDetails(index)}
+        />
         <RoutineExerciseActions actions={actions} name={exercise.name} />
       </RoutineExerciseCard>
     );
@@ -902,12 +920,22 @@ export function RoutineEditor({ programId, sessionIndex, isNew }: RoutineEditorP
   );
 }
 
-function MoreOptionsRow({ onPress }: { onPress: () => void }) {
-  const { t } = useTranslate();
+/** A row in an expanded exercise card that opens another screen: More options, View progress. */
+function LinkRow({
+  title,
+  body,
+  onPress,
+  testID,
+}: {
+  title: string;
+  body: string;
+  onPress: () => void;
+  testID: string;
+}) {
   const { tokens } = useAppTheme();
   return (
     <Pressable
-      testID="routine-exercise-more"
+      testID={testID}
       onPress={onPress}
       accessibilityRole="button"
       style={({ pressed }) => ({
@@ -923,10 +951,10 @@ function MoreOptionsRow({ onPress }: { onPress: () => void }) {
     >
       <View style={{ flex: 1, gap: spacing[0.5] }}>
         <SurfaceText font="text-sm" weight="600" style={{ color: tokens.ink }}>
-          {t('routine_editor.more_options.title')}
+          {title}
         </SurfaceText>
         <SurfaceText font="text-xs" style={{ color: tokens.muted }}>
-          {t('routine_editor.more_options.body')}
+          {body}
         </SurfaceText>
       </View>
       <MsIconSrc name="chevronRight" size={20} color={tokens.muted} />
