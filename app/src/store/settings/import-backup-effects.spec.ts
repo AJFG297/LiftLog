@@ -54,7 +54,6 @@ const silentLogger = {
 /** Picks `bytes` as the backup file and runs the restore up to the `importBackupData` it dispatches. */
 async function restore(bytes: Uint8Array) {
   const testBed = createAddEffectTestBed({
-    initialState: { storedSessions: { hiddenBuiltInIds: [] } },
     services: {
       filePickerService: { pickFile: vi.fn().mockResolvedValue({ bytes }) },
       logger: silentLogger,
@@ -77,14 +76,8 @@ describe('import-backup-effects', () => {
 
     expect(restored.workouts).toHaveLength(420);
     expect(Object.values(restored.programs)).toHaveLength(13);
-    // Two of its 962 exercises only differed from another by a plural, and are merged before the restore
-    // reads them: Lateral Raise into Lateral Raises, and Standing Calf Raise into the built-in.
-    expect(Object.values(restored.exercises ?? {})).toHaveLength(960);
-    expect(
-      Object.entries(restored.exercises ?? {})
-        .filter(([, x]) => /^(lateral|standing calf) raises?$/i.test(x.name))
-        .map(([id, x]) => `${id} ${x.name}`),
-    ).toEqual(['Standing Calf Raises Standing Calf Raises', '4BCD892E-8A72-41DF-AA95-3180A3EE0B17 Lateral Raises']);
+    // Read as the backup holds them, plural pairs included: the device merges those once they are written.
+    expect(Object.values(restored.exercises ?? {})).toHaveLength(962);
     expect(restored.feed).toBeDefined();
     expect(restored.successMessage).toBe('Restore complete!');
     expect(restored.source).toBe('backup');
@@ -275,6 +268,7 @@ describe('export then restore', () => {
     const harness = createEffectStore({
       db,
       workoutRepository,
+      keyValueStore: { getItem: () => Promise.resolve(undefined) } as never,
       logger: silentLogger as never,
       tolgee: { t: (s: string) => s } as never,
     });
@@ -299,7 +293,11 @@ describe('restoring a backup taken before the plural merge', () => {
     new Session(
       id,
       new SessionBlueprint('Legs', [blueprint], ''),
-      [makeRecordedExercise(blueprint, [10], undefined, () => OffsetDateTime.of(2026, 3, day, 10, 0, 0, 0, ZoneOffset.UTC))],
+      [
+        makeRecordedExercise(blueprint, [10], undefined, () =>
+          OffsetDateTime.of(2026, 3, day, 10, 0, 0, 0, ZoneOffset.UTC),
+        ),
+      ],
       LocalDate.of(2026, 3, day),
       undefined,
       undefined,
@@ -347,6 +345,8 @@ describe('restoring a backup taken before the plural merge', () => {
       ...ids(1, 2).map((id, i) => workout(id, i + 1, lunge)),
       ...ids(11, 13).map((id, i) => workout(id, i + 11, lunges)),
     ]);
+    const plan = new ProgramBlueprint('Legs', [new SessionBlueprint('Legs', [lunges], '')], LocalDate.of(2026, 3, 1));
+    await backup.db.insert(programsSchema).values({ id: 'legs', active: true, payload: plan.toJSON() });
     const bytes = await getBackupBytes({ expoDb: backup.expoDb, includeFeed: false });
 
     const workoutRepository = new WorkoutRepository(device.db);
@@ -377,5 +377,9 @@ describe('restoring a backup taken before the plural merge', () => {
     ).toEqual(['user-lunge Lunge']);
     expect((await workoutRepository.workoutIdsLogging(['user-lunge'])).toSorted()).toEqual(ids(1, 13).toSorted());
     expect(await workoutRepository.workoutIdsLogging(['user-lunges'])).toEqual([]);
+    // The restored plan's Lunges is the survivor too; the store is what the plans are saved from.
+    expect(
+      harness.getState().program.savedPrograms.legs?.sessions[0]?.exercises.map((x) => `${x.exerciseId} ${x.name}`),
+    ).toEqual(['user-lunge Lunges']);
   });
 });

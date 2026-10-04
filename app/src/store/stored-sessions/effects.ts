@@ -2,6 +2,7 @@ import { AddEffectFn, RootState } from '@/store/store';
 import {
   deleteExercise,
   deleteStoredSession,
+  exercisesMerged,
   initializeStoredSessionsStateSlice,
   openSession,
   setSessionNotFound,
@@ -29,7 +30,8 @@ import { progressionKeyOf } from '@/models/blueprint-models';
 import { WorkoutRepository } from '@/services/workout-repository';
 import type { Session } from '@/models/session-models';
 import { Dispatch } from '@reduxjs/toolkit';
-import { fetchUpcomingSessions } from '@/store/program';
+import { fetchUpcomingSessions, upsertSavedPlans } from '@/store/program';
+import { mergeExerciseNames, repointProgram } from '@/services/data-migrations/merge-exercise-names';
 import { addUnpublishedSessionId } from '@/store/feed';
 import { setStatsIsDirty } from '@/store/stats';
 import { setPreferredLanguage } from '@/store/settings';
@@ -203,9 +205,27 @@ export function applyStoredSessionsEffects(addEffect: AddEffectFn) {
 
   addEffect(
     upsertStoredSessions,
-    async (action, { cancelActiveListeners, dispatch, extra: { logger, workoutRepository } }) => {
+    async (
+      action,
+      { cancelActiveListeners, dispatch, getState, extra: { db, keyValueStore, logger, workoutRepository } },
+    ) => {
       cancelActiveListeners();
       await logger.time('upsertStoredSessions', () => workoutRepository.putMany(action.payload));
+      // A restore can bring back a plural pair the startup merge joined: the device and an older backup, each
+      // merged on its own counts, can keep different survivors. So merge again once the workouts are in,
+      // whatever `data_migrations` says. The exercises came first (`importBackupData`); with nothing split
+      // this plans nothing and writes nothing.
+      const rounds = await mergeExerciseNames(db, await readHiddenBuiltInIds(keyValueStore), workoutRepository);
+      if (rounds.length) {
+        dispatch(exercisesMerged(rounds));
+        const plans = Object.entries(getState().program.savedPrograms).flatMap(([id, program]) => {
+          const repointed = repointProgram(program, rounds);
+          return repointed.equals(program) ? [] : [[id, repointed] as const];
+        });
+        if (plans.length) {
+          dispatch(upsertSavedPlans(Object.fromEntries(plans)));
+        }
+      }
       // A restore or import can move any lineage back; cheaper to re-read them all than to work out which.
       dispatch(setLatestExercises(await workoutRepository.latestPerLineage()));
     },

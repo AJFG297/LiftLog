@@ -30,7 +30,6 @@ import {
   programsSchema,
 } from '@/db/schema';
 import { WorkoutRepository } from '@/services/workout-repository';
-import { mergeExerciseNames } from '@/services/data-migrations/merge-exercise-names';
 import { toRecord } from '@/utils/reduce';
 import {
   sessionUserEventMigrations,
@@ -83,8 +82,10 @@ export function addImportBackupEffects(addEffect: AddEffectFn) {
     if (Object.keys(newExercises).length) {
       dispatch(upsertExercises(newExercises));
     }
-    dispatch(upsertStoredSessions(linkedWorkouts));
+    // After the exercises and the plans: once the workouts are written, the device merges what this brought
+    // back apart, which reads the exercise table and repoints the plans.
     dispatch(upsertSavedPlans(linkedPrograms));
+    dispatch(upsertStoredSessions(linkedWorkouts));
     dispatch(
       showSnackbar({
         text: successMessage,
@@ -95,7 +96,7 @@ export function addImportBackupEffects(addEffect: AddEffectFn) {
     }
   });
 
-  addEffect(importDataSql, async (action, { dispatch, getState, extra: { logger, tolgee } }) => {
+  addEffect(importDataSql, async (action, { dispatch, extra: { logger, tolgee } }) => {
     try {
       const {
         payload: { db: backupDb },
@@ -122,8 +123,8 @@ export function addImportBackupEffects(addEffect: AddEffectFn) {
       });
 
       await migrator.migrate();
-      // A backup from before the plural fix still has Lunge and Lunges apart, and stubs at old ids.
-      await mergeExerciseNames(drizzleBackupDb, getState().storedSessions.hiddenBuiltInIds);
+      // A backup from before the plural fix still has Lunge and Lunges apart, and stubs at old ids. They
+      // are merged on the device once restored (see `upsertStoredSessions`), on the device's counts.
       // A backup's in-progress workout comes back as history: restoring never resumes a workout.
       const { workouts } = await new WorkoutRepository(drizzleBackupDb).loadAll();
       const programs = (await drizzleBackupDb.select().from(programsSchema)).reduce(

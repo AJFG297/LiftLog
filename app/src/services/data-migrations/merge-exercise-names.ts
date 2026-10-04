@@ -45,7 +45,7 @@ export async function planStoredExerciseMerges(
  * Each round is one transaction, so a run that stops part way leaves whole rounds and plans the rest
  * again. Workouts are rewritten in SQL (`WorkoutRepository.repointExercises`): reading and writing back
  * thousands of them took over a second at startup. A user with nothing to merge has none of their data
- * written. Also run after a restore, whose rows can bring a split back.
+ * written. Also run after every restore or import, whatever `data_migrations` says: see `upsertStoredSessions`.
  */
 export async function mergeExerciseNames(
   db: ExpoSQLiteDatabase,
@@ -70,17 +70,13 @@ async function applyExerciseMerges(
   workoutRepository: WorkoutRepository,
   merges: ExerciseMerge[],
 ) {
-  const survivorOf = new Map(merges.flatMap((merge) => merge.mergedIds.map((id) => [id, merge.survivor.id] as const)));
-  const repoint = <T extends ExerciseBlueprint>(blueprint: T): T => {
-    const survivor = survivorOf.get(blueprint.exerciseId);
-    return survivor === undefined ? blueprint : (blueprint.with({ exerciseId: survivor }) as T);
-  };
+  const survivorOf = survivorsOf(merges);
   const survivors = merges.flatMap(({ survivor, survivorDescriptor }) =>
     survivorDescriptor ? [{ id: survivor.id, payload: toExerciseDescriptorJSON(survivorDescriptor) }] : [],
   );
   const programs = (await db.select().from(programsSchema)).flatMap((row) => {
     const program = ProgramBlueprint.fromJSON(programBlueprintMigrations.migrate(row.payload));
-    const payload = mapProgramExercises(program, repoint).toJSON();
+    const payload = repointProgram(program, [merges]).toJSON();
     return JSON.stringify(payload) === JSON.stringify(program.toJSON()) ? [] : [{ id: row.id, payload }];
   });
 
@@ -99,4 +95,19 @@ async function applyExerciseMerges(
       : []),
     ...programs.map(({ id, payload }) => tx.update(programsSchema).set({ payload }).where(eq(programsSchema.id, id))),
   ]);
+}
+
+/** `program` with each merged exercise pointed at its survivor, round after round. */
+export function repointProgram(program: ProgramBlueprint, rounds: readonly ExerciseMerge[][]): ProgramBlueprint {
+  return rounds.reduce((result, merges) => {
+    const survivorOf = survivorsOf(merges);
+    return mapProgramExercises(result, <T extends ExerciseBlueprint>(blueprint: T): T => {
+      const survivor = survivorOf.get(blueprint.exerciseId);
+      return survivor === undefined ? blueprint : (blueprint.with({ exerciseId: survivor }) as T);
+    });
+  }, program);
+}
+
+function survivorsOf(merges: readonly ExerciseMerge[]): Map<ExerciseId, ExerciseId> {
+  return new Map(merges.flatMap((merge) => merge.mergedIds.map((id) => [id, merge.survivor.id] as const)));
 }
