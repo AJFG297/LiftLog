@@ -8,13 +8,19 @@ import { ReactNode } from 'react';
 import { Pressable, View } from 'react-native';
 
 /** What the next session of the routine that plans the exercise opens it on. */
-export function NextTimeCard(props: { title: string; target: string; line: string }) {
+export function NextTimeCard(props: {
+  title: string;
+  target: string;
+  line: string;
+  /** The card read out as one: "Next time: 85 kg × 5. Push A · you hit 8 reps, so +2.5 kg". */
+  spoken: string;
+}) {
   const { tokens } = useAppTheme();
   return (
     <View
       testID="exercise-next-time"
       accessible
-      accessibilityLabel={`${props.title}: ${props.target}. ${props.line}`}
+      accessibilityLabel={props.spoken}
       style={{
         flexDirection: 'row',
         alignItems: 'center',

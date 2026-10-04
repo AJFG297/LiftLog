@@ -128,16 +128,22 @@ export function ExerciseProgressScreen({ exerciseId }: { exerciseId: ExerciseId 
   // Upcoming sessions are in the order the plan comes up; until they load, the plan's own order stands in.
   const routines = upcoming.isSuccess() ? upcoming.data.map((session) => session.blueprint) : program.sessions;
   const nextTime = nextTimeOf(routines, key, latestExercises, unit);
-  const nextTimeCard = nextTime ? (
-    <NextTimeCard
-      title={t('progress.exercise.next.title')}
-      target={targetLabel(t, nextTime.target, nextTime.usesBodyweight)}
-      line={t('progress.exercise.next.line.label', {
-        routine: nextTime.routineName,
-        reason: targetReasonText(t, nextTime.target.reason, 'short'),
-      })}
-    />
-  ) : null;
+  const nextTimeTarget = nextTime && targetLabel(t, nextTime.target, nextTime.usesBodyweight);
+  const nextTimeLine =
+    nextTime &&
+    t('progress.exercise.next.line.label', {
+      routine: nextTime.routineName,
+      reason: targetReasonText(t, nextTime.target.reason, 'short'),
+    });
+  const nextTimeCard =
+    nextTimeTarget && nextTimeLine ? (
+      <NextTimeCard
+        title={t('progress.exercise.next.title')}
+        target={nextTimeTarget}
+        line={nextTimeLine}
+        spoken={t('progress.exercise.next.spoken', { target: nextTimeTarget, line: nextTimeLine })}
+      />
+    ) : null;
 
   return (
     <>
@@ -288,7 +294,11 @@ function ExerciseBody({
                 unit: best.weight && shortFormatWeightUnit(best.weight.unit),
                 date: best.date && shortDate(best.date),
                 spoken: best.weight
-                  ? `${label}: ${weightText(best.weight)}, ${best.date ? longDate(best.date) : ''}`
+                  ? t('progress.exercise.rep_bests.cell.spoken', {
+                      reps: best.reps,
+                      weight: weightText(best.weight),
+                      date: best.date ? longDate(best.date) : '',
+                    })
                   : t('progress.exercise.rep_bests.none.spoken', { reps: best.reps }),
               };
             })}
