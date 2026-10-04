@@ -361,15 +361,18 @@ describe('mergeExerciseNames', () => {
     const weightOf = (lineage: string) =>
       (latest[lineage as never] as RecordedWeightedExercise | undefined)?.potentialSets[0]!.weight.value.toNumber();
     expect([weightOf(`user-lunge_${WEIGHTED}`), weightOf(`user-lunge_${WEIGHTED}#2`)]).toEqual([43, 30]);
-    // A routine with Lunge once carries from the first place; one with it twice carries each place on.
-    const upcoming = await app.sessionService
-      .getUpcomingSessions([new SessionBlueprint('Legs', [lunge, lunge], '')], latest)
-      .next();
-    expect(
-      (upcoming.value as Session).recordedExercises.map((x) =>
+    // As for an exercise logged twice in one workout: a routine with Lunge once carries from the first
+    // place, and one with it twice carries each place on.
+    const carried = async (exercises: WeightedExerciseBlueprint[]) => {
+      const upcoming = await app.sessionService
+        .getUpcomingSessions([new SessionBlueprint('Legs', exercises, '')], latest)
+        .next();
+      return (upcoming.value as Session).recordedExercises.map((x) =>
         (x as RecordedWeightedExercise).potentialSets[0]!.weight.value.toNumber(),
-      ),
-    ).toEqual([45.5, 32.5]);
+      );
+    };
+    expect(await carried([lunge])).toEqual([45.5]);
+    expect(await carried([lunge, lunge])).toEqual([45.5, 32.5]);
   });
 
   it('leaves every row as it was when a round is killed, and finishes on the next run', async () => {
