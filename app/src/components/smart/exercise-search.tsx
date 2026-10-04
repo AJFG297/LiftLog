@@ -1,4 +1,6 @@
 import { ActionButton } from '@/components/presentation/foundation/action-button';
+import { Chip } from '@/components/presentation/foundation/chip';
+import Menu, { type MenuItem } from '@/components/presentation/foundation/menu';
 import { SurfaceText } from '@/components/presentation/foundation/surface-text';
 import { MIN_TOUCH_TARGET } from '@/components/presentation/foundation/touch-target';
 import { ExerciseCreateForm } from '@/components/presentation/workout-editor/exercise-create-form';
@@ -56,7 +58,7 @@ interface CreateDraft {
 }
 
 /**
- * The exercise picker: search, muscle and equipment chips, Recent, then every exercise. Adding, taps pick
+ * The exercise picker: search, muscle chips, an equipment menu, Recent, then every exercise. Adding, taps pick
  * exercises in order and the bottom buttons add them, one after another or as a superset. Swapping, one tap
  * picks. New (or Create "X" when nothing matches) makes a custom exercise and picks it.
  */
@@ -196,6 +198,13 @@ export function ExerciseSearch({ requestId, mode, exerciseName, context }: Exerc
     value: choice,
     label: exerciseMetaLabel(t, 'equipment', choice),
   }));
+  const equipmentLabel = (value: EquipmentChoice | undefined) =>
+    value ? exerciseMetaLabel(t, 'equipment', value) : t('exercise_picker.equipment.any');
+  const equipmentItems: MenuItem[] = [undefined, ...EQUIPMENT_CHOICES].map((value) => ({
+    label: equipmentLabel(value),
+    selected: value === equipment,
+    onPress: () => setEquipment(value),
+  }));
 
   const count = picked.length;
   const canSave = !!creating?.name.trim();
@@ -274,13 +283,30 @@ export function ExerciseSearch({ requestId, mode, exerciseName, context }: Exerc
                 selected={muscle}
                 onSelect={setMuscle}
               />
-              <ChipRow
-                testID="exercise-picker-equipment"
-                accessibilityLabel={t('exercise_picker.equipment.label')}
-                options={[{ value: undefined, label: t('exercise_picker.equipment.any') }, ...equipmentOptions]}
-                selected={equipment}
-                onSelect={setEquipment}
-              />
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                {/* The chip's 4pt touch inset would push its drawn edge in from the muscle chips above. */}
+                <View style={{ marginLeft: -spacing[1] }}>
+                  <Menu
+                    size="content"
+                    items={equipmentItems}
+                    trigger={(open) => (
+                      <Chip
+                        dropdown
+                        testID="exercise-picker-equipment"
+                        label={equipmentLabel(equipment)}
+                        accessibilityLabel={`${t('exercise_picker.equipment.label')}: ${equipmentLabel(equipment)}`}
+                        selected={equipment !== undefined}
+                        onPress={open}
+                      />
+                    )}
+                  />
+                </View>
+                <SurfaceText testID="exercise-picker-count" font="text-sm" style={{ color: tokens.muted }}>
+                  {list.count === 1
+                    ? t('exercise_picker.count.one')
+                    : t('exercise_picker.count.many', { count: list.count })}
+                </SurfaceText>
+              </View>
             </View>
           </>
         )}

@@ -147,12 +147,14 @@ describe('pickerListOf', () => {
   it('reports no match when nothing matches the query and the chips', () => {
     expect(pickerListOf(exercises, [], { ...noFilters, query: 'zercher' })).toEqual({
       rows: [],
+      count: 0,
       noMatch: true,
       hiddenByFilters: false,
       canCreate: true,
     });
     expect(pickerListOf(exercises, [], { query: 'curl', muscle: 'legs', equipment: undefined })).toEqual({
       rows: [],
+      count: 0,
       noMatch: true,
       hiddenByFilters: true,
       canCreate: true,
@@ -162,6 +164,7 @@ describe('pickerListOf', () => {
   it('offers no new exercise when the chips hide one named exactly that', () => {
     expect(pickerListOf(exercises, [], { ...noFilters, query: 'hammer curl', equipment: 'barbell' })).toEqual({
       rows: [],
+      count: 0,
       noMatch: true,
       hiddenByFilters: true,
       canCreate: false,
@@ -173,6 +176,14 @@ describe('pickerListOf', () => {
     const list = pickerListOf(withDumbbellBench, [], { ...noFilters, query: 'bench press', equipment: 'dumbbell' });
     expect(ids(list)).toEqual(['# matches', 'dbBench', '~ Bench Press']);
     expect(list.canCreate).toBe(false);
+  });
+
+  it('counts the exercises it lists, a recent one once', () => {
+    expect(pickerListOf(exercises, [], noFilters).count).toBe(7);
+    expect(pickerListOf(exercises, ['raise', 'bench'], noFilters).count).toBe(7);
+    expect(pickerListOf(exercises, ['curl'], { ...noFilters, muscle: 'arms' }).count).toBe(2);
+    expect(pickerListOf(exercises, ['curl'], { ...noFilters, query: 'cr' }).count).toBe(4);
+    expect(pickerListOf(exercises, [], { ...noFilters, query: 'zercher' }).count).toBe(0);
   });
 });
 
