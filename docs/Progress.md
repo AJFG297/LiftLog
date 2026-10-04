@@ -279,8 +279,11 @@ model is `store/stats/exercise-progress.ts`, and the screen only picks and forma
   - **Record dots** (`hasRecordDots`): on Est. 1RM, every workout whose estimate beat all earlier ones; on Heaviest,
     every heavier weight than ever on an externally loaded exercise (the ledger's heaviest-weight rule). Both are
     judged against the whole history, so a dot doesn't move with the range, and the first workout never has one.
-    The estimate dots mark every better estimate, even in a workout the ledger counts as a heaviest-weight record,
-    since the chart is of the estimate. Volume and reps have none, and no Record key.
+    The page reads the same picks as the ledger: the estimate from `bestOneRepMaxSet` and the heaviest set from
+    `heaviestSetOf` (both in `personal-records.ts`, so one tie-break). Dots and records still differ on purpose:
+    the ledger sets at most one record per movement per workout, a heavier weight winning over a better estimate,
+    while each chart dots every new best on its own measure. So a workout that set a heaviest-weight record also
+    gets an estimate dot when its estimate was a best too. Volume and reps have none, and no Record key.
   - **Picking**: a tap, or a horizontal drag (react-native-gesture-handler; a vertical drag still scrolls), picks
     the nearest workout, with a selection tick. Screen readers adjust the chart a workout at a time. The pick is
     kept by workout id across a change of measure or range while that workout is still there, else it falls back

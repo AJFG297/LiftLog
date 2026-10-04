@@ -2,6 +2,7 @@ import { LocalDate } from '@js-joda/core';
 import { MovementKey } from '@/models/blueprint-models';
 import { Weight, WeightUnit } from '@/models/weight';
 import { primaryAxisFor } from '@/store/stats/calculate-stats';
+import { heaviestSetOf } from '@/store/stats/personal-records';
 import { AmountKind, shownChange, shownWeight } from '@/store/stats/progress-amounts';
 import { ExerciseHistory, ExercisePoint, LiftedSet, ProgressHistory } from '@/store/stats/progress-history';
 import { StatAxis } from '@/store/stats/quantity';
@@ -15,7 +16,6 @@ export type ExerciseMeasure = 'oneRepMax' | 'heaviest' | 'volume' | 'mostReps' |
 
 export const EXERCISE_RANGES = ['3m', '6m', '1y', 'all'] as const;
 export type ExerciseRange = (typeof EXERCISE_RANGES)[number];
-export const DEFAULT_EXERCISE_RANGE: ExerciseRange = '3m';
 
 const RANGE_MONTHS: Record<Exclude<ExerciseRange, 'all'>, number> = { '3m': 3, '6m': 6, '1y': 12 };
 
@@ -220,21 +220,6 @@ function sessionOf(
 
 function shownSet(set: LiftedSet, unit: WeightUnit): ShownSet {
   return { weight: shownWeight(set.weight, 'load', unit), reps: set.reps };
-}
-
-/** The heaviest set, and on a tie on weight the one with more reps, as the record ledger picks it. */
-function heaviestSetOf(sets: readonly LiftedSet[]): LiftedSet | undefined {
-  let heaviest: LiftedSet | undefined;
-  for (const set of sets) {
-    if (
-      !heaviest ||
-      set.weight.isGreaterThan(heaviest.weight) ||
-      (set.weight.equals(heaviest.weight, true) && set.reps > heaviest.reps)
-    ) {
-      heaviest = set;
-    }
-  }
-  return heaviest;
 }
 
 /**
