@@ -51,7 +51,7 @@ Two decisions in the data layer limit the app as history grows:
 - Removing class instances from Redux, or re-enabling `serializableCheck`. The active workout stays a
   `Session` instance.
 - Changing how the normalizer merges and splits names. That becomes a user-facing "merge exercises"
-  feature.
+  feature. (The normalizer's plural bug was fixed after, in PM-5; see the follow-ups.)
 - Repointing the built-in backend away from `api.liftlog.online`. That's tracked by ADR-0001's follow-up.
 
 ## Dropped because there are no users
@@ -346,7 +346,12 @@ Settled differences from the steps below:
 - **Follow-ups:**
   - Per-movement aggregates in SQL for all-time Stats and the Progress tab, which still rebuild every
     workout in their range while shown.
-  - Exercise merge UI and the normalizer fix.
+  - Exercise merge UI. The normalizer fix is done (PM-5): the last word is made singular by a rule table,
+    so `Lunges` meets `Lunge`, and the `MERGE_PLURAL_EXERCISE_NAMES` data migration merged the exercises
+    the old fold had split, repointing workouts (through `WorkoutRepository`, which recomputes the keys and
+    `lineage`) and saved plans, and moving each stub to the id its name now derives. Over the 420-workout
+    fixture it merged Lateral Raise into Lateral Raises and Standing Calf Raise into the built-in Standing
+    Calf Raises; the PM-9 snapshots changed only there. [Storage.md](../Storage.md) has the rules.
   - Rename detection in `blueprint-diff`.
   - Showing descriptor muscles and instructions during a workout.
   - Removing class instances from Redux.

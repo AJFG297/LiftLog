@@ -81,6 +81,13 @@ and never migrated on read. Adding or changing one is a SQL migration that also 
 already stored, as `0013_exercise_lineage.sql` does for `lineage`; and a data migration that rewrites the
 columns it is derived from (`REKEY_PROGRESSION_BY_EXERCISE` rewrites `progression_key`) must derive it again.
 
+A **data migration** (`services/data-migrations/`, run once at startup by `DatabaseImportService` and
+recorded in `data_migration`) changes what rows say rather than their shape. One that rewrites a lot is
+best split as `MERGE_PLURAL_EXERCISE_NAMES` is: a pure planner over what SQL can count, so it can be tested
+and dry-run on a backup (`npm run merge:dry-run`), and an applier whose steps each touch only what still
+needs it, so a run killed part way plans the same work again and finishes it. Rewrite workouts through
+`WorkoutRepository.putMany` so their query columns are derived again.
+
 Because the payload is typed as the any-version union rather than the latest
 shape, `fromJSON` (which wants the latest shape) **won't compile until you
 migrate** - the type system points you at every read site. Writes always
