@@ -26,6 +26,9 @@ import { setLabels, type SetKind, type WorkingListKind } from '@/models/session-
 import { Weight, WeightUnit } from '@/models/weight';
 import { parseRoutineColor, type RoutineColor } from '@/models/routine-color';
 import { uuidFromName } from '@/utils/uuid';
+import { normalizeExerciseName } from './exercise-name';
+
+export { normalizeExerciseName };
 
 export class ProgramBlueprint {
   constructor(
@@ -1275,7 +1278,7 @@ export function stubExerciseId(name: string): ExerciseId {
   return uuidFromName(normalizeExerciseName(name), STUB_EXERCISE_NAMESPACE);
 }
 
-const STUB_EXERCISE_NAMESPACE = '4d6c8a1e-2f3b-5c7d-9e0f-1a2b3c4d5e6f';
+export const STUB_EXERCISE_NAMESPACE = '4d6c8a1e-2f3b-5c7d-9e0f-1a2b3c4d5e6f';
 
 /**
  * Identifies a movement across everything the user has ever logged: the exercise and its kind. Blind
@@ -1338,29 +1341,35 @@ export function latestInLineage<T>(
 }
 
 /**
- * The fuzzy spelling fold the resolver matches names with, for the callers that compare names alone -
- * a saved exercise descriptor, say. Blueprints are compared by id instead.
- */
-export function normalizeExerciseName(name: string): string {
-  if (!name) {
-    return '';
-  }
-  const lowerName = name.toLowerCase().trim().replace(/flies/g, 'flys').replace(/flyes/g, 'flys');
-  const withoutPlural = lowerName.endsWith('es')
-    ? lowerName.slice(0, -2)
-    : lowerName.endsWith('s')
-      ? lowerName.slice(0, -1)
-      : lowerName;
-
-  return withoutPlural;
-}
-
-/**
  * For callers holding an exercise id and a type but no blueprint - a route param, say. Prefer
  * `blueprint.movementKey()` wherever a blueprint is available.
  */
 export function movementKeyFor(exerciseId: ExerciseId, type: ExerciseBlueprint['type']): MovementKey {
   return `${exerciseId}|${type}` as MovementKey;
+}
+
+/** The exercise a movement key (see {@link movementKeyFor}) is of. */
+export function exerciseIdOf(movementKey: MovementKey): ExerciseId {
+  return movementKey.slice(0, movementKey.lastIndexOf('|'));
+}
+
+/**
+ * Every movement and progression key a blueprint of `exerciseId` can have - weighted, and cardio by each
+ * target type - built by the blueprints themselves, so code that rewrites stored keys never spells the
+ * format out.
+ */
+export function keysOfExercise(exerciseId: ExerciseId): { movementKey: MovementKey; progressionKey: ProgressionKey }[] {
+  const cardioSet = CardioExerciseSetBlueprint.empty();
+  const cardioTargets: CardioTarget[] = [
+    { type: 'time', value: Duration.ZERO },
+    { type: 'distance', value: { value: new BigNumber(0), unit: 'metre' } },
+  ];
+  return [
+    WeightedExerciseBlueprint.of({ exerciseId }),
+    ...cardioTargets.map((target) =>
+      CardioExerciseBlueprint.empty().with({ exerciseId, sets: [cardioSet.with({ target })] }),
+    ),
+  ].map((blueprint) => ({ movementKey: blueprint.movementKey(), progressionKey: blueprint.progressionKey() }));
 }
 
 export interface Rest {

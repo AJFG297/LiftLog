@@ -32,6 +32,25 @@ export function toExerciseDescriptorJSON(value: ExerciseDescriptor): ExerciseDes
   return { version: 2, ...value, muscles: musclesOf(value) };
 }
 
+/** Whether two descriptors say the same thing about an exercise. */
+export function descriptorsEqual(a: ExerciseDescriptor, b: ExerciseDescriptor): boolean {
+  return (
+    a.name === b.name &&
+    a.force === b.force &&
+    a.level === b.level &&
+    a.mechanic === b.mechanic &&
+    a.equipment === b.equipment &&
+    a.category === b.category &&
+    a.instructions === b.instructions &&
+    sameList(musclesOf(a), musclesOf(b))
+  );
+}
+
+// Compares the muscles as one list: copies stored before primary and secondary were split hold both in one.
+function sameList(a: readonly string[], b: readonly string[]): boolean {
+  return a.length === b.length && a.every((value, i) => value === b[i]);
+}
+
 /** Every muscle an exercise works, primary ones first, each once. */
 export function musclesOf(exercise: ExerciseDescriptor): string[] {
   return [...new Set([...exercise.primaryMuscles, ...exercise.secondaryMuscles])];

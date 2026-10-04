@@ -82,8 +82,10 @@ export function addImportBackupEffects(addEffect: AddEffectFn) {
     if (Object.keys(newExercises).length) {
       dispatch(upsertExercises(newExercises));
     }
-    dispatch(upsertStoredSessions(linkedWorkouts));
+    // After the exercises and the plans: once the workouts are written, the device merges what this brought
+    // back apart, which reads the exercise table and repoints the plans.
     dispatch(upsertSavedPlans(linkedPrograms));
+    dispatch(upsertStoredSessions(linkedWorkouts));
     dispatch(
       showSnackbar({
         text: successMessage,
@@ -121,6 +123,8 @@ export function addImportBackupEffects(addEffect: AddEffectFn) {
       });
 
       await migrator.migrate();
+      // A backup taken before the plural merge can have Lunge and Lunges apart, and stubs at old-fold ids.
+      // They are merged on the device once restored (see `upsertStoredSessions`), on the device's counts.
       // A backup's in-progress workout comes back as history: restoring never resumes a workout.
       const { workouts } = await new WorkoutRepository(drizzleBackupDb).loadAll();
       const programs = (await drizzleBackupDb.select().from(programsSchema)).reduce(

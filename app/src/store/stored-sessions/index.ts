@@ -5,6 +5,7 @@ import { createAction, createSelector, createSlice, PayloadAction, WritableDraft
 import Enumerable from 'linq';
 import { ExerciseDescriptor, musclesOf } from '@/models/exercise-models';
 import type { LatestPerformance } from '@/services/workout-repository';
+import type { ExerciseMerge } from '@/models/exercise-merge';
 
 interface StoredSessionState {
   isHydrated: boolean;
@@ -197,6 +198,15 @@ const storedSessionsSlice = createSlice({
     setExercises(state, action: PayloadAction<Record<string, ExerciseDescriptor>>) {
       state.savedExercises = action.payload;
     },
+    /** What `mergeExerciseNames` already wrote to the exercise table, in its rounds. Writes nothing. */
+    exercisesMerged(state, action: PayloadAction<ExerciseMerge[][]>) {
+      for (const merge of action.payload.flat()) {
+        merge.mergedIds.forEach((id) => delete state.savedExercises[id]);
+        if (merge.survivorDescriptor) {
+          state.savedExercises[merge.survivor.id] = merge.survivorDescriptor;
+        }
+      }
+    },
     setBuiltInExercises(state, action: PayloadAction<Record<string, ExerciseDescriptor>>) {
       state.builtInExercises = action.payload;
     },
@@ -379,6 +389,7 @@ export const {
   deleteExercise,
   restoreExercise,
   setExercises,
+  exercisesMerged,
   setBuiltInExercises,
   setHiddenBuiltInIds,
   setFilteredExerciseIds,

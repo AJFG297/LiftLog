@@ -2,6 +2,7 @@ import { AddEffectFn, RootState } from '@/store/store';
 import {
   deleteExercise,
   deleteStoredSession,
+  exercisesMerged,
   initializeStoredSessionsStateSlice,
   openSession,
   setSessionNotFound,
@@ -29,7 +30,8 @@ import { progressionKeyOf } from '@/models/blueprint-models';
 import { WorkoutRepository } from '@/services/workout-repository';
 import type { Session } from '@/models/session-models';
 import { Dispatch } from '@reduxjs/toolkit';
-import { fetchUpcomingSessions } from '@/store/program';
+import { fetchUpcomingSessions, upsertSavedPlans } from '@/store/program';
+import { mergeExerciseNames, repointProgram } from '@/services/data-migrations/merge-exercise-names';
 import { addUnpublishedSessionId } from '@/store/feed';
 import { setStatsIsDirty } from '@/store/stats';
 import { setPreferredLanguage } from '@/store/settings';
@@ -42,9 +44,8 @@ import { fromExerciseDescriptorJSON, toExerciseDescriptorJSON } from '@/models/e
 import { exerciseDescriptorMigrations } from '@/models/storage/versions/migrations';
 import { loadBuiltInExercises } from '@/services/exercise-catalog';
 import { missingStubs } from '@/models/exercise-resolver';
+import { readHiddenBuiltInIds, writeHiddenBuiltInIds } from '@/services/hidden-built-in-exercises';
 
-// Built-ins the user deleted, so they stay hidden across restarts and locale switches.
-const hiddenBuiltInExerciseIdsStorageKey = 'HiddenBuiltInExerciseIdList';
 export function applyStoredSessionsEffects(addEffect: AddEffectFn) {
   // Dispatched AFTER settings, so we can safely access settings
   addEffect(
@@ -77,10 +78,7 @@ export function applyStoredSessionsEffects(addEffect: AddEffectFn) {
       const builtInExercises = await loadBuiltInExercises(getState().settings.preferredLanguage);
       dispatch(setBuiltInExercises(builtInExercises));
 
-      const hiddenBuiltInIds = JSON.parse(
-        (await keyValueStore.getItem(hiddenBuiltInExerciseIdsStorageKey)) ?? '[]',
-      ) as string[];
-      dispatch(setHiddenBuiltInIds(hiddenBuiltInIds));
+      dispatch(setHiddenBuiltInIds(await readHiddenBuiltInIds(keyValueStore)));
 
       dispatch(setIsHydrated(true));
       dispatch(fetchUpcomingSessions());
@@ -207,9 +205,27 @@ export function applyStoredSessionsEffects(addEffect: AddEffectFn) {
 
   addEffect(
     upsertStoredSessions,
-    async (action, { cancelActiveListeners, dispatch, extra: { logger, workoutRepository } }) => {
+    async (
+      action,
+      { cancelActiveListeners, dispatch, getState, extra: { db, keyValueStore, logger, workoutRepository } },
+    ) => {
       cancelActiveListeners();
       await logger.time('upsertStoredSessions', () => workoutRepository.putMany(action.payload));
+      // A restore can bring back a plural pair the startup merge joined: the device and an older backup, each
+      // merged on its own counts, can keep different survivors. So merge again once the workouts are in,
+      // whatever `data_migrations` says. The exercises came first (`importBackupData`); with nothing split
+      // this plans nothing and writes nothing.
+      const rounds = await mergeExerciseNames(db, await readHiddenBuiltInIds(keyValueStore), workoutRepository);
+      if (rounds.length) {
+        dispatch(exercisesMerged(rounds));
+        const plans = Object.entries(getState().program.savedPrograms).flatMap(([id, program]) => {
+          const repointed = repointProgram(program, rounds);
+          return repointed.equals(program) ? [] : [[id, repointed] as const];
+        });
+        if (plans.length) {
+          dispatch(upsertSavedPlans(Object.fromEntries(plans)));
+        }
+      }
       // A restore or import can move any lineage back; cheaper to re-read them all than to work out which.
       dispatch(setLatestExercises(await workoutRepository.latestPerLineage()));
     },
@@ -218,20 +234,14 @@ export function applyStoredSessionsEffects(addEffect: AddEffectFn) {
   addEffect(deleteExercise, async (action, { stateAfterReduce, extra: { db, keyValueStore } }) => {
     if (stateAfterReduce.storedSessions.builtInExercises[action.payload]) {
       // Built-ins are tombstoned rather than removed; their override row (if any) is kept for undo.
-      await keyValueStore.setItem(
-        hiddenBuiltInExerciseIdsStorageKey,
-        JSON.stringify(stateAfterReduce.storedSessions.hiddenBuiltInIds),
-      );
+      await writeHiddenBuiltInIds(keyValueStore, stateAfterReduce.storedSessions.hiddenBuiltInIds);
     } else {
       await db.delete(exercisesSchema).where(eq(exercisesSchema.id, action.payload));
     }
   });
 
   addEffect(restoreExercise, async (_, { stateAfterReduce, extra: { keyValueStore } }) => {
-    await keyValueStore.setItem(
-      hiddenBuiltInExerciseIdsStorageKey,
-      JSON.stringify(stateAfterReduce.storedSessions.hiddenBuiltInIds),
-    );
+    await writeHiddenBuiltInIds(keyValueStore, stateAfterReduce.storedSessions.hiddenBuiltInIds);
   });
 
   addEffect(updateExercise, async (action, { extra: { db } }) => {

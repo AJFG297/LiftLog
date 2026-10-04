@@ -89,44 +89,6 @@ describe('blueprint models', () => {
   });
 
   // ---------------------------------------------------------------------------
-  // normalizeExerciseName
-  // ---------------------------------------------------------------------------
-
-  describe('normalizeExerciseName', () => {
-    it('lowercases and trims', () => {
-      expect(normalizeExerciseName('  Bench Press  ')).toBe('bench pres');
-    });
-
-    it('strips trailing "s"', () => {
-      expect(normalizeExerciseName('curls')).toBe('curl');
-    });
-
-    it('strips trailing "es"', () => {
-      expect(normalizeExerciseName('lunges')).toBe('lung');
-    });
-
-    it('normalises "flies" → "flys" then strips the s', () => {
-      expect(normalizeExerciseName('flies')).toBe('fly');
-    });
-
-    it('normalises "flyes" → "flys" then strips the s', () => {
-      expect(normalizeExerciseName('Dumbbell Flyes')).toBe('dumbbell fly');
-    });
-
-    it('treats "Dumbbell Flies" and "Dumbbell Flyes" as equal', () => {
-      expect(normalizeExerciseName('Dumbbell Flies')).toBe(normalizeExerciseName('Dumbbell Flyes'));
-    });
-
-    it('treats differently-cased names as equal', () => {
-      expect(normalizeExerciseName('Squat')).toBe(normalizeExerciseName('squat'));
-    });
-
-    it('returns empty string for undefined/empty input', () => {
-      expect(normalizeExerciseName('')).toBe('');
-    });
-  });
-
-  // ---------------------------------------------------------------------------
   // cardioTargetEquals
   // ---------------------------------------------------------------------------
 

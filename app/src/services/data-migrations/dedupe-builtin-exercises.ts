@@ -3,33 +3,15 @@ import { eq } from 'drizzle-orm';
 import { KeyValueStore } from '../key-value-store';
 import { writeAtomically } from '@/db/helpers';
 import { dataMigrationsSchema, exercisesSchema } from '@/db/schema';
-import { ExerciseDescriptor, musclesOf } from '@/models/exercise-models';
+import { descriptorsEqual } from '@/models/exercise-models';
 import { exerciseDescriptorMigrations } from '@/models/storage/versions/migrations';
 import { loadCanonicalBuiltInExercises } from '@/services/exercise-catalog';
+import { writeHiddenBuiltInIds } from '@/services/hidden-built-in-exercises';
 
 export const dedupeBuiltInExercisesDataMigration = 'DEDUPE_BUILTIN_EXERCISES';
 
 // Legacy list of every built-in that was ever imported into the DB.
-const addedBuiltInExerciseIdsStorageKey = 'AddedBuiltInExerciseIdList';
-const hiddenBuiltInExerciseIdsStorageKey = 'HiddenBuiltInExerciseIdList';
-
-function descriptorsEqual(a: ExerciseDescriptor, b: ExerciseDescriptor): boolean {
-  return (
-    a.name === b.name &&
-    a.force === b.force &&
-    a.level === b.level &&
-    a.mechanic === b.mechanic &&
-    a.equipment === b.equipment &&
-    a.category === b.category &&
-    a.instructions === b.instructions &&
-    sameList(musclesOf(a), musclesOf(b))
-  );
-}
-
-// Compares the muscles as one list: copies stored before primary and secondary were split hold both in one.
-function sameList(a: readonly string[], b: readonly string[]): boolean {
-  return a.length === b.length && a.every((value, i) => value === b[i]);
-}
+export const addedBuiltInExerciseIdsStorageKey = 'AddedBuiltInExerciseIdList';
 
 /**
  * Older versions copied all built-in exercises into the DB. Built-ins are now served from the bundled
@@ -57,5 +39,5 @@ export async function dedupeBuiltInExercises(db: ExpoSQLiteDatabase, keyValueSto
     ...idsToDelete.map((id) => tx.delete(exercisesSchema).where(eq(exercisesSchema.id, id))),
     tx.insert(dataMigrationsSchema).values({ id: dedupeBuiltInExercisesDataMigration }),
   ]);
-  await keyValueStore.setItem(hiddenBuiltInExerciseIdsStorageKey, JSON.stringify(hidden));
+  await writeHiddenBuiltInIds(keyValueStore, hidden);
 }

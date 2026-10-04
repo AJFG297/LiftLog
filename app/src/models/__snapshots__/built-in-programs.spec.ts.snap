@@ -231,7 +231,7 @@ exports[`built-in-programs > 0d0e0860-0555-4b43-bd93-350edd49c6bd migrates to a 
       },
     ],
     "progression": [],
-    "progressionKey": "d727ecb5-0de5-5364-b82d-a6c49660d469_WeightedExerciseBlueprint",
+    "progressionKey": "50583a5b-c219-5e90-a556-f2d144986d19_WeightedExerciseBlueprint",
     "resistance": "external",
   },
   {
@@ -260,7 +260,7 @@ exports[`built-in-programs > 0d0e0860-0555-4b43-bd93-350edd49c6bd migrates to a 
       },
     ],
     "progression": [],
-    "progressionKey": "39a9101b-c78d-5936-8bb4-8237b138990b_WeightedExerciseBlueprint",
+    "progressionKey": "c30d832e-d0ab-5dbb-a625-bdfaa9e6544e_WeightedExerciseBlueprint",
     "resistance": "external",
   },
 ]
@@ -557,7 +557,7 @@ exports[`built-in-programs > 890a285b-f883-4536-a1ce-cbc9e2d90399 migrates to a 
       },
     ],
     "progression": [],
-    "progressionKey": "d727ecb5-0de5-5364-b82d-a6c49660d469_WeightedExerciseBlueprint",
+    "progressionKey": "50583a5b-c219-5e90-a556-f2d144986d19_WeightedExerciseBlueprint",
     "resistance": "external",
   },
   {
@@ -586,7 +586,7 @@ exports[`built-in-programs > 890a285b-f883-4536-a1ce-cbc9e2d90399 migrates to a 
       },
     ],
     "progression": [],
-    "progressionKey": "39a9101b-c78d-5936-8bb4-8237b138990b_WeightedExerciseBlueprint",
+    "progressionKey": "c30d832e-d0ab-5dbb-a625-bdfaa9e6544e_WeightedExerciseBlueprint",
     "resistance": "external",
   },
   {
@@ -658,7 +658,7 @@ exports[`built-in-programs > 5072c29e-1de9-44e0-865f-f65a15e860f7 migrates to a 
         "trigger": "allSetsMetTarget",
       },
     ],
-    "progressionKey": "c6660c24-caf0-5fe3-aa61-1de06802a7c2_WeightedExerciseBlueprint",
+    "progressionKey": "e0b6ca34-09ce-5b76-89dc-6392baadd6db_WeightedExerciseBlueprint",
     "resistance": "external",
   },
   {
@@ -734,7 +734,7 @@ exports[`built-in-programs > 5072c29e-1de9-44e0-865f-f65a15e860f7 migrates to a 
         "trigger": "allSetsMetTarget",
       },
     ],
-    "progressionKey": "b25b42e8-0023-559d-bc28-5e3d4e24319b_WeightedExerciseBlueprint",
+    "progressionKey": "a726904a-8caf-5b5c-8af3-1b95d7d9329c_WeightedExerciseBlueprint",
     "resistance": "external",
   },
   {
@@ -1000,7 +1000,7 @@ exports[`built-in-programs > 5072c29e-1de9-44e0-865f-f65a15e860f7 migrates to a 
         "trigger": "allSetsMetTarget",
       },
     ],
-    "progressionKey": "eda1e55c-feaa-5c92-8b58-cf8650a343e6_WeightedExerciseBlueprint",
+    "progressionKey": "8f65bdd5-54f8-5df0-a44d-6ff581157b83_WeightedExerciseBlueprint",
     "resistance": "external",
   },
   {
@@ -1114,7 +1114,7 @@ exports[`built-in-programs > 5072c29e-1de9-44e0-865f-f65a15e860f7 migrates to a 
         "trigger": "allSetsMetTarget",
       },
     ],
-    "progressionKey": "854d5776-23d3-5f25-8bc8-04d32b6d20a8_WeightedExerciseBlueprint",
+    "progressionKey": "7b5a97ce-528a-5b79-ae94-7c7601ded92c_WeightedExerciseBlueprint",
     "resistance": "external",
   },
   {
@@ -1544,7 +1544,7 @@ exports[`built-in-programs > 347607f0-67b8-4051-bfc2-3b73fccf92d8 migrates to a 
         "trigger": "allSetsMetTarget",
       },
     ],
-    "progressionKey": "c6660c24-caf0-5fe3-aa61-1de06802a7c2_WeightedExerciseBlueprint",
+    "progressionKey": "e0b6ca34-09ce-5b76-89dc-6392baadd6db_WeightedExerciseBlueprint",
     "resistance": "external",
   },
   {
@@ -1589,7 +1589,7 @@ exports[`built-in-programs > 347607f0-67b8-4051-bfc2-3b73fccf92d8 migrates to a 
         "trigger": "allSetsMetTarget",
       },
     ],
-    "progressionKey": "b25b42e8-0023-559d-bc28-5e3d4e24319b_WeightedExerciseBlueprint",
+    "progressionKey": "a726904a-8caf-5b5c-8af3-1b95d7d9329c_WeightedExerciseBlueprint",
     "resistance": "external",
   },
   {
@@ -1949,7 +1949,7 @@ exports[`built-in-programs > 347607f0-67b8-4051-bfc2-3b73fccf92d8 migrates to a 
         "trigger": "allSetsMetTarget",
       },
     ],
-    "progressionKey": "d727ecb5-0de5-5364-b82d-a6c49660d469_WeightedExerciseBlueprint",
+    "progressionKey": "50583a5b-c219-5e90-a556-f2d144986d19_WeightedExerciseBlueprint",
     "resistance": "external",
   },
   {
@@ -2120,7 +2120,7 @@ exports[`built-in-programs > a303c855-9ed7-4ff8-ae60-11e9a573193e migrates to a 
         "trigger": "allSetsMetTarget",
       },
     ],
-    "progressionKey": "c6660c24-caf0-5fe3-aa61-1de06802a7c2_WeightedExerciseBlueprint",
+    "progressionKey": "e0b6ca34-09ce-5b76-89dc-6392baadd6db_WeightedExerciseBlueprint",
     "resistance": "external",
   },
   {
@@ -2220,7 +2220,7 @@ exports[`built-in-programs > a303c855-9ed7-4ff8-ae60-11e9a573193e migrates to a 
         "trigger": "allSetsMetTarget",
       },
     ],
-    "progressionKey": "b25b42e8-0023-559d-bc28-5e3d4e24319b_WeightedExerciseBlueprint",
+    "progressionKey": "a726904a-8caf-5b5c-8af3-1b95d7d9329c_WeightedExerciseBlueprint",
     "resistance": "external",
   },
   {
@@ -2353,7 +2353,7 @@ exports[`built-in-programs > ac80c322-3c0f-42ba-b837-cd998adee25a migrates to a 
         "trigger": "allSetsMetTarget",
       },
     ],
-    "progressionKey": "c6660c24-caf0-5fe3-aa61-1de06802a7c2_WeightedExerciseBlueprint",
+    "progressionKey": "e0b6ca34-09ce-5b76-89dc-6392baadd6db_WeightedExerciseBlueprint",
     "resistance": "external",
   },
   {
@@ -2509,7 +2509,7 @@ exports[`built-in-programs > ac80c322-3c0f-42ba-b837-cd998adee25a migrates to a 
         "trigger": "allSetsMetTarget",
       },
     ],
-    "progressionKey": "b25b42e8-0023-559d-bc28-5e3d4e24319b_WeightedExerciseBlueprint",
+    "progressionKey": "a726904a-8caf-5b5c-8af3-1b95d7d9329c_WeightedExerciseBlueprint",
     "resistance": "external",
   },
   {

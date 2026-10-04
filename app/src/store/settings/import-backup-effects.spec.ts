@@ -24,6 +24,22 @@ import { upsertSavedPlans } from '@/store/program';
 import { showSnackbar } from '@/store/app';
 import { getBackupBytes } from '@/store/settings/util';
 import { loadHistoryFixture } from '@/utils/__test__/history-fixture';
+import { LocalDate, OffsetDateTime, ZoneOffset } from '@js-joda/core';
+import { SessionBlueprint, WeightedExerciseBlueprint } from '@/models/blueprint-models';
+import { makeRecordedExercise } from '@/models/session-models/__test__/helpers';
+import { stubDescriptor } from '@/models/exercise-resolver';
+import { toExerciseDescriptorJSON } from '@/models/exercise-models';
+import { dataMigrationsSchema } from '@/db/schema';
+import { DatabaseImportService } from '@/services/database-import-service';
+import { mergeExerciseNamesDataMigration } from '@/services/data-migrations/merge-exercise-names';
+import { dedupeBuiltInExercisesDataMigration } from '@/services/data-migrations/dedupe-builtin-exercises';
+import { restoreMuscleRolesDataMigration } from '@/services/data-migrations/restore-muscle-roles';
+import { importBackendsDataMigration } from '@/services/data-migrations/import-backends';
+import { seedBackendAssignmentsDataMigration } from '@/services/data-migrations/seed-backend-assignments';
+import { linkExerciseIdsDataMigration } from '@/services/data-migrations/link-exercise-ids';
+import { rekeyProgressionDataMigration } from '@/services/data-migrations/rekey-progression';
+import { initializeStoredSessionsStateSlice } from '@/store/stored-sessions';
+import { setIsHydrated as setSettingsIsHydrated } from '@/store/settings';
 
 vi.stubEnv('TZ', 'UTC');
 
@@ -60,6 +76,7 @@ describe('import-backup-effects', () => {
 
     expect(restored.workouts).toHaveLength(420);
     expect(Object.values(restored.programs)).toHaveLength(13);
+    // Read as the backup holds them, plural pairs included: the device merges those once they are written.
     expect(Object.values(restored.exercises ?? {})).toHaveLength(962);
     expect(restored.feed).toBeDefined();
     expect(restored.successMessage).toBe('Restore complete!');
@@ -251,6 +268,7 @@ describe('export then restore', () => {
     const harness = createEffectStore({
       db,
       workoutRepository,
+      keyValueStore: { getItem: () => Promise.resolve(undefined) } as never,
       logger: silentLogger as never,
       tolgee: { t: (s: string) => s } as never,
     });
@@ -265,5 +283,103 @@ describe('export then restore', () => {
     const stored = await workoutRepository.loadAll();
     expect(stored.activeWorkoutId).toBeUndefined();
     expect(stored.workouts.map((x) => x.id).toSorted()).toEqual(workouts.map((x) => x.id).toSorted());
+  });
+});
+
+describe('restoring a backup taken before the plural merge', () => {
+  const lunge = WeightedExerciseBlueprint.of({ name: 'Lunge', exerciseId: 'user-lunge' });
+  const lunges = WeightedExerciseBlueprint.of({ name: 'Lunges', exerciseId: 'user-lunges' });
+  const workout = (id: string, day: number, blueprint: WeightedExerciseBlueprint) =>
+    new Session(
+      id,
+      new SessionBlueprint('Legs', [blueprint], ''),
+      [
+        makeRecordedExercise(blueprint, [10], undefined, () =>
+          OffsetDateTime.of(2026, 3, day, 10, 0, 0, 0, ZoneOffset.UTC),
+        ),
+      ],
+      LocalDate.of(2026, 3, day),
+      undefined,
+      undefined,
+    );
+  const ids = (from: number, to: number) => Array.from({ length: to - from + 1 }, (_, i) => `w${from + i}`);
+
+  /** A database with Lunge and Lunges apart, as they were before the merge, and every other data migration run. */
+  async function splitDb(workouts: Session[]) {
+    const expoDb = await openDatabaseAsync(':memory:');
+    const db = drizzle(expoDb);
+    await new DatabaseMigrationService(db, silentLogger as never, { importOldData: async () => {} }).migrate();
+    await db
+      .insert(dataMigrationsSchema)
+      .values(
+        [
+          dedupeBuiltInExercisesDataMigration,
+          restoreMuscleRolesDataMigration,
+          importBackendsDataMigration,
+          seedBackendAssignmentsDataMigration,
+          linkExerciseIdsDataMigration,
+          rekeyProgressionDataMigration,
+        ].map((id) => ({ id })),
+      );
+    await upsert(db, exercisesSchema, [
+      { id: 'user-lunge', payload: toExerciseDescriptorJSON(stubDescriptor('Lunge')) },
+      { id: 'user-lunges', payload: toExerciseDescriptorJSON(stubDescriptor('Lunges')) },
+    ]);
+    await new WorkoutRepository(db).putMany(workouts);
+    return { expoDb, db };
+  }
+
+  it('merges again on the device, so a split the backup brings back is closed', async () => {
+    // The device logged Lunge 10 times and Lunges 3 times, and its startup merge kept Lunge.
+    const device = await splitDb([
+      ...ids(1, 10).map((id, i) => workout(id, i + 1, lunge)),
+      ...ids(11, 13).map((id, i) => workout(id, i + 11, lunges)),
+    ]);
+    const keyValueStore = { getItem: () => Promise.resolve(undefined), setItem: () => Promise.resolve() };
+    await new DatabaseImportService(device.db, keyValueStore as never, {} as never).importOldData();
+    expect((await device.db.select().from(dataMigrationsSchema)).map((x) => x.id)).toContain(
+      mergeExerciseNamesDataMigration,
+    );
+    // The backup is older: Lunge twice and Lunges three times, so merged alone it would keep Lunges.
+    const backup = await splitDb([
+      ...ids(1, 2).map((id, i) => workout(id, i + 1, lunge)),
+      ...ids(11, 13).map((id, i) => workout(id, i + 11, lunges)),
+    ]);
+    const plan = new ProgramBlueprint('Legs', [new SessionBlueprint('Legs', [lunges], '')], LocalDate.of(2026, 3, 1));
+    await backup.db.insert(programsSchema).values({ id: 'legs', active: true, payload: plan.toJSON() });
+    const bytes = await getBackupBytes({ expoDb: backup.expoDb, includeFeed: false });
+
+    const workoutRepository = new WorkoutRepository(device.db);
+    const harness = createEffectStore({
+      db: device.db,
+      workoutRepository,
+      keyValueStore: keyValueStore as never,
+      filePickerService: { pickFile: () => Promise.resolve({ bytes }) } as never,
+      logger: silentLogger as never,
+      tolgee: { t: (s: string) => s } as never,
+    });
+    applyStoredSessionsEffects(harness.addEffect);
+    addImportBackupEffects(harness.addEffect);
+    harness.store.dispatch(setSettingsIsHydrated(true));
+    harness.store.dispatch(initializeStoredSessionsStateSlice());
+    await harness.settle();
+
+    harness.store.dispatch(importData());
+    await harness.settle();
+
+    const lungeLike = (record: Record<string, { name: string }>) =>
+      Object.entries(record)
+        .filter(([, x]) => /lunge/i.test(x.name))
+        .map(([id, x]) => `${id} ${x.name}`);
+    expect(lungeLike(harness.getState().storedSessions.savedExercises)).toEqual(['user-lunge Lunge']);
+    expect(
+      lungeLike(Object.fromEntries((await device.db.select().from(exercisesSchema)).map((x) => [x.id, x.payload]))),
+    ).toEqual(['user-lunge Lunge']);
+    expect((await workoutRepository.workoutIdsLogging(['user-lunge'])).toSorted()).toEqual(ids(1, 13).toSorted());
+    expect(await workoutRepository.workoutIdsLogging(['user-lunges'])).toEqual([]);
+    // The restored plan's Lunges is the survivor too; the store is what the plans are saved from.
+    expect(
+      harness.getState().program.savedPrograms.legs?.sessions[0]?.exercises.map((x) => `${x.exerciseId} ${x.name}`),
+    ).toEqual(['user-lunge Lunges']);
   });
 });

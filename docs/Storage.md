@@ -175,6 +175,37 @@ A workout is stored across five tables (`db/schema.ts`), not as one payload:
   by name. Workouts and plans stored
   before ids were linked once by the `LINK_EXERCISE_IDS` data migration
   (`services/data-migrations/link-exercise-ids.ts`), which also rewrote every row's key columns.
+- **The name fold** (`normalizeExerciseName`, `models/blueprint-models/exercise-name.ts`) lowercases, trims
+  and collapses spaces, folds the fly spellings (`Flye`, `Flyes`, `Flies`, `Flys`) to `fly`, and makes the
+  last word singular: an irregulars table first (`abs` and `series` stay, `calves` is `calf`), then
+  `ies` to `y`, `es` after `ss`, `x`, `zz`, `ch` or `sh`, and a plain `s` unless after `s`, `u` or `i`.
+  So `Lunges` meets `Lunge` and `Bench Presses` meets `Bench Press`, while `Ab` and `Abs` stay apart.
+  The old fold stripped any trailing `es` or `s` (`Lunges` to `lung`, `Bench Press` to `bench pres`);
+  it is kept, frozen, as `legacyNormalizeExerciseName` for the merge below, until no data from before the
+  merge can reach the app (the file says when).
+- **Merging plurals.** Linking under the old fold gave `Lunge` and `Lunges` an exercise each, with two
+  histories. The `MERGE_PLURAL_EXERCISE_NAMES` data migration, run after the rekey, joins them
+  (`services/data-migrations/merge-exercise-names.ts`). `planExerciseMerges` (`models/exercise-merge.ts`) is
+  the pure plan: the user's exercises and stubs grouped by the new fold, from the exercise table and one
+  count of workouts per id (`WorkoutRepository.exerciseUsage`). A group's survivor is the built-in of that
+  name (unless the user deleted it, or every member already matched it under the old fold), else the user
+  exercise in the most workouts then the one first logged earliest, else the stub at its new id. It keeps
+  its name and fills its empty equipment, muscles and instructions from the others; a built-in also gains
+  the merged exercises' instructions it lacks, stored as an edit of the built-in, so the user's text is
+  never dropped. A stub alone in its group still moves to the id its name now derives, so `stubExerciseId`
+  of a stub's name is its id again, which unlinked feed items and `missingStubs` rely on. A stub whose new
+  id another stub still holds waits a round for it to move, so no plan both keeps and merges one id.
+  Each round is one transaction: `WorkoutRepository.repointExercises` rewrites the blueprint id and key
+  columns of the workouts logging a merged id in SQL and renumbers their `lineage` (a test holds it to
+  the rows `putMany` writes), and the same transaction writes the survivors, repoints saved plans and
+  deletes the merged descriptors. A run that stops part way plans the rest again and finishes it; a user
+  with nothing to merge has none of their data written. No per-exercise setting is keyed by a user
+  exercise or stub id (the hidden list and edits are keyed by built-in ids, which never merge away), so
+  there is nothing else to repoint. A restore or import runs the merge again on the device once its
+  workouts are written (`upsertStoredSessions`), whatever `data_migration` says, and applies it to the
+  store's exercises and plans: the device and an older backup can each have kept a different survivor.
+  `npm run merge-exercises:dry-run` runs it on a copy of any backup (`LIFTLOG_MERGE_DRY_RUN=<file>`) or
+  of the synthetic history (`=synthetic`) and prints every round.
 - **Query columns** are computed on write, for SQL to order and aggregate. They are never read back:
   - `workout`: `reference_time_ms` (`getSessionReferenceTime`) and `volume_kg` (`sessionVolume`)
   - `workout_exercise`: `movement_key`, `progression_key`, `lineage` (`lineageKeys`: the progression key,
@@ -353,6 +384,9 @@ The workout storage is pinned by:
   migrator reads the folder, so without this a migration missing from `migrations.js` would pass every
   test and never run on a device. `drizzle/exercise-lineage.spec.ts` holds migration 0013's backfill of
   `lineage` to `lineageKeys`.
+- `services/data-migrations/merge-exercise-names.spec.ts`: the plural merge through the store and the
+  repository (one exercise, history, stats row, records and carry-over), a second run changing nothing, a
+  user with no duplicates written nothing, and a run killed part way converging on the same end state.
 - `store/settings/import-backup-effects.spec.ts`: restores `utils/__test__/backup.liftlogbackup.sqlite.gz`,
   a backup made by this app's own export, round-trips export then restore, and rejects a pre-relational
   backup.

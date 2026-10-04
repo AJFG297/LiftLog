@@ -7,7 +7,12 @@ import {
   stubExerciseId,
 } from '@/models/blueprint-models';
 import { ExerciseDescriptor } from '@/models/exercise-models';
-import { RecordedExercise, RecordedWeightedExercise, Session } from '@/models/session-models';
+import { Session } from '@/models/session-models';
+import {
+  mapProgramExercises,
+  mapSessionBlueprintExercises,
+  mapSessionExercises,
+} from '@/models/map-exercise-blueprints';
 
 /** Every name a built-in goes by, keyed by its id: the English name, then each locale's. */
 export type BuiltInExerciseNames = Record<ExerciseId, readonly string[]>;
@@ -94,24 +99,15 @@ export class ExerciseResolver {
   }
 
   linkSessionBlueprint(session: SessionBlueprint): SessionBlueprint {
-    return session.with({ exercises: session.exercises.map((x) => this.link(x)) });
+    return mapSessionBlueprintExercises(session, (x) => this.link(x));
   }
 
   linkProgram(program: ProgramBlueprint): ProgramBlueprint {
-    return program.with({ sessions: program.sessions.map((x) => this.linkSessionBlueprint(x)) });
+    return mapProgramExercises(program, (x) => this.link(x));
   }
 
   linkSession(session: Session): Session {
-    return session.with({
-      blueprint: this.linkSessionBlueprint(session.blueprint),
-      recordedExercises: session.recordedExercises.map((x) => this.linkRecorded(x)),
-    });
-  }
-
-  private linkRecorded(exercise: RecordedExercise): RecordedExercise {
-    return exercise instanceof RecordedWeightedExercise
-      ? exercise.with({ blueprint: this.link(exercise.blueprint) })
-      : exercise.with({ blueprint: this.link(exercise.blueprint) });
+    return mapSessionExercises(session, (x) => this.link(x));
   }
 
   private match(name: string): ExerciseId | undefined {
