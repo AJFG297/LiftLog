@@ -804,18 +804,24 @@ describe('WorkoutRepository', () => {
         ),
       );
 
+      // The stored text of every column, unparsed, so the blueprint JSON that `json_set` writes is compared
+      // byte for byte with the one `putMany` serialises.
       const rows = async (db: ExpoSQLiteDatabase) => {
-        const sorted = (table: unknown[]) => table.map((row) => JSON.stringify(row)).sort();
+        const sorted = async (table: unknown) =>
+          (await Promise.resolve(db.all<unknown>(sql`select * from ${table}`)))
+            .map((row) => JSON.stringify(row))
+            .sort();
         return {
-          workout: sorted(await db.select().from(workoutsSchema)),
-          workoutExercise: sorted(await db.select().from(workoutExercisesSchema)),
-          weightedSet: sorted(await db.select().from(weightedSetsSchema)),
-          warmupSet: sorted(await db.select().from(warmupSetsSchema)),
-          cardioSet: sorted(await db.select().from(cardioSetsSchema)),
+          workout: await sorted(workoutsSchema),
+          workoutExercise: await sorted(workoutExercisesSchema),
+          weightedSet: await sorted(weightedSetsSchema),
+          warmupSet: await sorted(warmupSetsSchema),
+          cardioSet: await sorted(cardioSetsSchema),
         };
       };
       const repointed = await rows(viaSql);
       expect(repointed).toEqual(await rows(viaPutMany));
+      expect(repointed.workoutExercise[0]).toContain('"blueprint":"{');
       expect(repointed.workoutExercise.some((row) => row.includes('#2'))).toBe(true);
       expect(repointed.workoutExercise.some((row) => row.includes('rower|CardioExerciseBlueprint'))).toBe(true);
     });

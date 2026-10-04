@@ -283,10 +283,10 @@ describe('mergeExerciseNames', () => {
     const after = await tables(db);
 
     expect(await planStoredExerciseMerges(db, [])).toEqual([]);
-    const putMany = vi.spyOn(WorkoutRepository.prototype, 'putMany');
+    const repoint = vi.spyOn(WorkoutRepository.prototype, 'repointExercises');
     await mergeExerciseNames(db, []);
 
-    expect(putMany).not.toHaveBeenCalled();
+    expect(repoint).not.toHaveBeenCalled();
     expect(await tables(db)).toEqual(after);
   });
 
@@ -298,11 +298,11 @@ describe('mergeExerciseNames', () => {
       { id: stubExerciseId('Sissy Squat'), payload: toExerciseDescriptorJSON(stubDescriptor('Sissy Squat')) },
     ]);
     const before = await tables(db);
-    const putMany = vi.spyOn(WorkoutRepository.prototype, 'putMany');
+    const repoint = vi.spyOn(WorkoutRepository.prototype, 'repointExercises');
 
     await runDataMigrations(db);
 
-    expect(putMany).not.toHaveBeenCalled();
+    expect(repoint).not.toHaveBeenCalled();
     expect(await tables(db)).toEqual(before);
     expect((await db.select().from(dataMigrationsSchema)).map((x) => x.id)).toContain(mergeExerciseNamesDataMigration);
   });

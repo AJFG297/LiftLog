@@ -39,6 +39,12 @@ function applied(saved: Record<string, ExerciseDescriptor>, merges: ExerciseMerg
   return result;
 }
 
+/** The ids `merges` keep, and the ids they merge away: never one id in both. */
+function expectDisjoint(merges: ExerciseMerge[]) {
+  const survivors = new Set(merges.map((x) => x.survivor.id));
+  expect(merges.flatMap((x) => x.mergedIds).filter((id) => survivors.has(id))).toEqual([]);
+}
+
 const used = (workouts: number, firstReferenceTimeMs: number): ExerciseUsage => ({ workouts, firstReferenceTimeMs });
 
 describe('planExerciseMerges', () => {
@@ -210,6 +216,11 @@ describe('planExerciseMerges', () => {
       },
     ]);
     expect(plan(applied(applied(saved, first), second))).toEqual([]);
+    expectDisjoint(first);
+    expectDisjoint(second);
+    // Planned as one round, Bench Presss's id would be both Bench Press's survivor and merged away.
+    expect(first.flatMap((x) => x.mergedIds)).toContain(stubExerciseId('Bench Press'));
+    expect(first.map((x) => x.survivor.id)).not.toContain(stubExerciseId('Bench Press'));
   });
 
   it('keeps a stub where it is when its new id belongs to an exercise that stays', () => {
