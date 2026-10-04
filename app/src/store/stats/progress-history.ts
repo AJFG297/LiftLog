@@ -19,6 +19,23 @@ export interface ExercisePoint {
   bestReps: number;
   /** Logged sets that count towards volume (every kind but warm-ups), as Stats' sets per week counts them. */
   workingSets: number;
+  /** The set {@link oneRepMax} comes from, as lifted. */
+  oneRepMaxSet: LiftedSet | undefined;
+  /** Every logged set that counts towards records, as lifted, in the order done: the exercise page's heaviest and reps bests. */
+  sets: readonly LiftedSet[];
+  /**
+   * Load times reps over the sets that count towards volume, bodyweight folded in as for the estimate. Nothing
+   * (`Weight.NIL`) for a movement that tracks no load.
+   */
+  volume: Weight;
+  /** Reps over the sets that count towards volume: the volume of a movement that tracks no load. */
+  totalReps: number;
+}
+
+/** A logged set: the weight as lifted (added weight on a bodyweight movement) and the reps. */
+export interface LiftedSet {
+  weight: Weight;
+  reps: number;
 }
 
 export interface ExerciseHistory {
@@ -108,22 +125,34 @@ function pointsOf(session: Session): Map<MovementKey, { blueprint: WeightedExerc
 
 function pointOf(session: Session, exercise: RecordedWeightedExercise): ExercisePoint {
   const counted = exercise.setsCountingTowards('countsTowardsPrs');
+  const volumeSets = exercise.setsCountingTowards('countsTowardsVolume').filter((x) => x.set);
+  const best = bestOneRepMaxSet(exercise, session.bodyweight);
   return {
     workoutId: session.id,
     date: session.date,
-    oneRepMax: bestOneRepMaxSet(exercise, session.bodyweight)?.oneRepMax,
+    oneRepMax: best?.oneRepMax,
+    oneRepMaxSet: best && { weight: best.weight, reps: best.reps },
     bestReps: Math.max(0, ...counted.map((potentialSet) => potentialSet.set?.repsCompleted ?? 0)),
-    workingSets: exercise.setsCountingTowards('countsTowardsVolume').filter((x) => x.set).length,
+    workingSets: volumeSets.length,
+    sets: counted.flatMap((potentialSet) =>
+      potentialSet.set?.repsCompleted ? [{ weight: potentialSet.weight, reps: potentialSet.set.repsCompleted }] : [],
+    ),
+    volume: exercise.tracksResistance ? exercise.totalWeightLiftedWith(session.bodyweight) : Weight.NIL,
+    totalReps: volumeSets.reduce((total, potentialSet) => total + (potentialSet.set?.repsCompleted ?? 0), 0),
   };
 }
 
 function merged(a: ExercisePoint, b: ExercisePoint): ExercisePoint {
-  const oneRepMax = !a.oneRepMax || (b.oneRepMax && b.oneRepMax.isGreaterThan(a.oneRepMax)) ? b.oneRepMax : a.oneRepMax;
+  const bFirst = !a.oneRepMax || (b.oneRepMax && b.oneRepMax.isGreaterThan(a.oneRepMax));
   return {
     ...a,
-    oneRepMax,
+    oneRepMax: bFirst ? b.oneRepMax : a.oneRepMax,
+    oneRepMaxSet: bFirst ? b.oneRepMaxSet : a.oneRepMaxSet,
     bestReps: Math.max(a.bestReps, b.bestReps),
     workingSets: a.workingSets + b.workingSets,
+    sets: [...a.sets, ...b.sets],
+    volume: a.volume.plus(b.volume),
+    totalReps: a.totalReps + b.totalReps,
   };
 }
 
