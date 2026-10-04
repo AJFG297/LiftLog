@@ -167,6 +167,27 @@ describe('planExerciseMerges', () => {
     ]);
   });
 
+  it("keeps the user's own instructions beside a built-in's, under the built-in's name", () => {
+    const singular = legacyStubExerciseId('Dumbbell Lunge');
+    const saved = {
+      u: { ...stubDescriptor('Dumbbell Lunge'), instructions: 'Knee over toe.' },
+      [singular]: { ...stubDescriptor('dumbbell lunge'), instructions: 'Step forward.' },
+    };
+
+    expect(plan(saved, { u: used(2, 1) })).toEqual([
+      {
+        normalizedName: 'dumbbell lunge',
+        survivor: { id: 'Dumbbell Lunges', kind: 'builtin' },
+        mergedIds: [singular, 'u'].sort(),
+        // An edit of the built-in, as the user would make one: its own text first, then what it lacked.
+        survivorDescriptor: { ...builtInLunges, instructions: 'Step forward.\n\nKnee over toe.' },
+      },
+    ]);
+    // Text already in the built-in's, the user's own edit of it included, isn't added twice.
+    const edited = { ...builtInLunges, instructions: 'Step forward.\n\nKnee over toe.' };
+    expect(plan({ ...saved, 'Dumbbell Lunges': edited })[0]!.survivorDescriptor).toBeUndefined();
+  });
+
   it('leaves an exercise the user made beside a built-in of the same name', () => {
     expect(plan({ mine: stubDescriptor('Dumbbell Lunges') })).toEqual([]);
   });
