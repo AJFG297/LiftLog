@@ -32,10 +32,12 @@ interface ExerciseSetCardProps {
   rows: SetRowCopy[];
   /** Shown in place of the table when there are no rows: "Not done", or a cardio exercise's summary. */
   fallbackText: string;
-  /** Opens the exercise's progress from its name; absent for an exercise with no progress page (cardio). */
-  onOpenExercise?: () => void;
-  /** Said after the name when it opens the exercise: "View progress". */
-  openExerciseLabel?: string;
+  /** Makes the name open the exercise's progress; absent for an exercise with no progress page (cardio). */
+  openExercise?: {
+    onPress: () => void;
+    /** The name as a screen reader hears the link: "Bench Press, view progress". */
+    accessibilityLabel: string;
+  };
 }
 
 const SET_COLUMN = 36;
@@ -49,19 +51,18 @@ export function ExerciseSetCard({
   prLabel,
   rows,
   fallbackText,
-  onOpenExercise,
-  openExerciseLabel,
+  openExercise,
 }: ExerciseSetCardProps) {
   const { tokens } = useAppTheme();
   const headingStyle = { color: tokens.muted, letterSpacing: 0.7, textTransform: 'uppercase' } as const;
   return (
     <Card style={{ gap: 10 }}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', gap: spacing[2] }}>
-        {onOpenExercise ? (
+        {openExercise ? (
           <Pressable
-            onPress={onOpenExercise}
+            onPress={openExercise.onPress}
             accessibilityRole="link"
-            accessibilityLabel={openExerciseLabel ? `${name}, ${openExerciseLabel}` : name}
+            accessibilityLabel={openExercise.accessibilityLabel}
             // A 44pt target that takes no more room than the name: the card's padding is above and below it.
             style={({ pressed }) => ({
               flexDirection: 'row',

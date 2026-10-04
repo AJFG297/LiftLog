@@ -1323,6 +1323,7 @@
   "live_workout.summary.subtitle": "{weight} lifted so far",
   "live_workout.empty.body": "This workout has no exercises yet.",
   "workout_detail.open.hint": "Opens the workout",
+  "workout_detail.exercise.open.spoken": "{name}, view progress",
   "workout_detail.program_day.label": "{program} · Day {day}",
   "workout_detail.date_time.label": "{date} · {time}",
   "workout_detail.duration.label": "Duration",

@@ -281,8 +281,14 @@ export function WorkoutDetail({ sessionId }: { sessionId: string }) {
               headings={headings}
               prLabel={t('workout_detail.pr.label')}
               rows={(rows ?? []).map((row) => rowCopy(row, unit, t))}
-              onOpenExercise={weighted ? () => openExerciseProgress(exercise.blueprint.exerciseId) : undefined}
-              openExerciseLabel={t('progress.exercise.view_progress.button')}
+              openExercise={
+                weighted
+                  ? {
+                      onPress: () => openExerciseProgress(exercise.blueprint.exerciseId),
+                      accessibilityLabel: t('workout_detail.exercise.open.spoken', { name: exercise.blueprint.name }),
+                    }
+                  : undefined
+              }
               fallbackText={
                 weighted || !exercise.isStarted
                   ? t('workout_detail.not_done.label')
