@@ -42,9 +42,8 @@ import { fromExerciseDescriptorJSON, toExerciseDescriptorJSON } from '@/models/e
 import { exerciseDescriptorMigrations } from '@/models/storage/versions/migrations';
 import { loadBuiltInExercises } from '@/services/exercise-catalog';
 import { missingStubs } from '@/models/exercise-resolver';
+import { readHiddenBuiltInIds, writeHiddenBuiltInIds } from '@/services/hidden-built-in-exercises';
 
-// Built-ins the user deleted, so they stay hidden across restarts and locale switches.
-const hiddenBuiltInExerciseIdsStorageKey = 'HiddenBuiltInExerciseIdList';
 export function applyStoredSessionsEffects(addEffect: AddEffectFn) {
   // Dispatched AFTER settings, so we can safely access settings
   addEffect(
@@ -77,10 +76,7 @@ export function applyStoredSessionsEffects(addEffect: AddEffectFn) {
       const builtInExercises = await loadBuiltInExercises(getState().settings.preferredLanguage);
       dispatch(setBuiltInExercises(builtInExercises));
 
-      const hiddenBuiltInIds = JSON.parse(
-        (await keyValueStore.getItem(hiddenBuiltInExerciseIdsStorageKey)) ?? '[]',
-      ) as string[];
-      dispatch(setHiddenBuiltInIds(hiddenBuiltInIds));
+      dispatch(setHiddenBuiltInIds(await readHiddenBuiltInIds(keyValueStore)));
 
       dispatch(setIsHydrated(true));
       dispatch(fetchUpcomingSessions());
@@ -218,20 +214,14 @@ export function applyStoredSessionsEffects(addEffect: AddEffectFn) {
   addEffect(deleteExercise, async (action, { stateAfterReduce, extra: { db, keyValueStore } }) => {
     if (stateAfterReduce.storedSessions.builtInExercises[action.payload]) {
       // Built-ins are tombstoned rather than removed; their override row (if any) is kept for undo.
-      await keyValueStore.setItem(
-        hiddenBuiltInExerciseIdsStorageKey,
-        JSON.stringify(stateAfterReduce.storedSessions.hiddenBuiltInIds),
-      );
+      await writeHiddenBuiltInIds(keyValueStore, stateAfterReduce.storedSessions.hiddenBuiltInIds);
     } else {
       await db.delete(exercisesSchema).where(eq(exercisesSchema.id, action.payload));
     }
   });
 
   addEffect(restoreExercise, async (_, { stateAfterReduce, extra: { keyValueStore } }) => {
-    await keyValueStore.setItem(
-      hiddenBuiltInExerciseIdsStorageKey,
-      JSON.stringify(stateAfterReduce.storedSessions.hiddenBuiltInIds),
-    );
+    await writeHiddenBuiltInIds(keyValueStore, stateAfterReduce.storedSessions.hiddenBuiltInIds);
   });
 
   addEffect(updateExercise, async (action, { extra: { db } }) => {

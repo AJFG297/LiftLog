@@ -6,12 +6,12 @@ import { dataMigrationsSchema, exercisesSchema } from '@/db/schema';
 import { descriptorsEqual } from '@/models/exercise-models';
 import { exerciseDescriptorMigrations } from '@/models/storage/versions/migrations';
 import { loadCanonicalBuiltInExercises } from '@/services/exercise-catalog';
+import { writeHiddenBuiltInIds } from '@/services/hidden-built-in-exercises';
 
 export const dedupeBuiltInExercisesDataMigration = 'DEDUPE_BUILTIN_EXERCISES';
 
 // Legacy list of every built-in that was ever imported into the DB.
 const addedBuiltInExerciseIdsStorageKey = 'AddedBuiltInExerciseIdList';
-export const hiddenBuiltInExerciseIdsStorageKey = 'HiddenBuiltInExerciseIdList';
 
 /**
  * Older versions copied all built-in exercises into the DB. Built-ins are now served from the bundled
@@ -39,5 +39,5 @@ export async function dedupeBuiltInExercises(db: ExpoSQLiteDatabase, keyValueSto
     ...idsToDelete.map((id) => tx.delete(exercisesSchema).where(eq(exercisesSchema.id, id))),
     tx.insert(dataMigrationsSchema).values({ id: dedupeBuiltInExercisesDataMigration }),
   ]);
-  await keyValueStore.setItem(hiddenBuiltInExerciseIdsStorageKey, JSON.stringify(hidden));
+  await writeHiddenBuiltInIds(keyValueStore, hidden);
 }
