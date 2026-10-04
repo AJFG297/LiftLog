@@ -1,7 +1,7 @@
-import { ProgressionKey, SessionBlueprint } from '@/models/blueprint-models';
+import { SessionBlueprint } from '@/models/blueprint-models';
 import { WeightUnit } from '@/models/weight';
-import { RecordedExercise, Session } from '@/models/session-models';
-import { nextSessionExercises } from '@/models/session-models/next-exercise';
+import { Session } from '@/models/session-models';
+import { LatestByLineage, nextSessionExercises } from '@/models/session-models/next-exercise';
 import type { WorkoutRepository } from '@/services/workout-repository';
 import type { RootState } from '@/store';
 import { selectActiveSession } from '@/store/stored-sessions';
@@ -19,7 +19,7 @@ export class SessionService {
 
   async *getUpcomingSessions(
     sessionBlueprints: SessionBlueprint[],
-    latestExercises: Record<ProgressionKey, RecordedExercise | undefined>,
+    latestExercises: LatestByLineage,
   ): AsyncIterableIterator<Session> {
     const currentState = this.getState();
     const currentSession = selectActiveSession(currentState);
@@ -54,18 +54,11 @@ export class SessionService {
     }
   }
 
-  public hydrateSessionFromBlueprint(
-    blueprint: SessionBlueprint,
-    latestExercises: Record<ProgressionKey, RecordedExercise | undefined>,
-  ): Session {
+  public hydrateSessionFromBlueprint(blueprint: SessionBlueprint, latestExercises: LatestByLineage): Session {
     return this.createNewSession(blueprint, latestExercises);
   }
 
-  private createNewSession(
-    sessionBlueprint: SessionBlueprint,
-    // Keyed by lineage (see `lineageKeys`), as the store's `latestExercises` is.
-    latestRecordedExercises: Record<ProgressionKey, RecordedExercise | undefined>,
-  ): Session {
+  private createNewSession(sessionBlueprint: SessionBlueprint, latestRecordedExercises: LatestByLineage): Session {
     return new Session(
       uuid(),
       sessionBlueprint,
