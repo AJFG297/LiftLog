@@ -349,7 +349,8 @@ Settled differences from the steps below:
   - Exercise merge UI. The normalizer fix is done (PM-5): the last word is made singular by a rule table,
     so `Lunges` meets `Lunge`, and the `MERGE_PLURAL_EXERCISE_NAMES` data migration merged the exercises
     the old fold had split, repointing workouts (through `WorkoutRepository`, which recomputes the keys and
-    `lineage`) and saved plans, and moving each stub to the id its name now derives. Over the 420-workout
+    `lineage`) and saved plans, and moving each stub to the id its name now derives. It runs again after
+    every restore, so a backup can't bring a split back. Over the 420-workout
     fixture it merged Lateral Raise into Lateral Raises and Standing Calf Raise into the built-in Standing
     Calf Raises; the PM-9 snapshots changed only there. [Storage.md](../Storage.md) has the rules.
   - Rename detection in `blueprint-diff`.
