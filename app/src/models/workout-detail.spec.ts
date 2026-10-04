@@ -6,14 +6,9 @@ import { makeWeightedBlueprint } from '@/models/session-models/__test__/helpers'
 import { Rpe } from '@/models/session-models/rpe';
 import { withSetKind } from '@/models/session-models/set-entry';
 import { Weight } from '@/models/weight';
-import {
-  DetailSetRow,
-  repeatSession,
-  routineFromSession,
-  sessionSetRows,
-  uniqueRoutineName,
-} from '@/models/workout-detail';
+import { DetailSetRow, routineFromSession, sessionSetRows, uniqueRoutineName } from '@/models/workout-detail';
 import { RecordLedger, sessionRecords } from '@/store/stats/personal-records';
+import { SessionService } from '@/services/session-service';
 
 const kg = (n: number) => new Weight(n, 'kilograms');
 const at = OffsetDateTime.parse('2026-09-23T18:04:00Z');
@@ -151,20 +146,28 @@ describe('routineFromSession', () => {
   });
 });
 
-describe('repeatSession', () => {
-  it('starts the same structure afresh as a new workout with nothing logged', () => {
-    const again = repeatSession(today, LocalDate.of(2026, 9, 30), 'again');
+describe('SessionService.repeatSession', () => {
+  it('starts the workout as it ended up that day afresh, with nothing logged', () => {
+    const service = new SessionService({} as never, () => ({ settings: { useImperialUnits: false } }) as never);
+    const again = service.repeatSession(today.with({ bodyweight: kg(80) }), {});
 
-    expect(again.id).toBe('again');
-    expect(again.date.toString()).toBe('2026-09-30');
+    expect(again.id).not.toBe(today.id);
     expect(again.reflection).toBeUndefined();
-    expect(again.blueprint.equals(today.blueprint)).toBe(true);
+    expect(again.bodyweight).toEqual(kg(80));
+    expect(again.blueprint.name).toBe('Push');
+    expect(again.blueprint.notes).toBe('Chest first');
     expect(again.isStarted).toBe(false);
     expect(
       again.recordedExercises.map((x) =>
-        x instanceof RecordedWeightedExercise ? x.potentialSets.map((s) => s.weight.value.toNumber()) : [],
+        x instanceof RecordedWeightedExercise
+          ? [x.blueprint.name, x.warmupSets.length, x.potentialSets.map((s) => `${s.kind} ${s.target.min}`)]
+          : [],
       ),
-    ).toEqual([[90, 90, 70], [50, 50], [0]]);
+    ).toEqual([
+      ['Bench Press', 1, ['working 5', 'working 5', 'drop 5']],
+      ['Overhead Press', 0, ['working 8', 'working 8']],
+      ['Cable Fly', 0, ['working 10']],
+    ]);
   });
 });
 

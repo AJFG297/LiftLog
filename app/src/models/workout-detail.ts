@@ -5,7 +5,6 @@ import { LetteredSetKind, setKindHas } from '@/models/session-models/set-kind';
 import { Weight } from '@/models/weight';
 import { calculateOneRepMax } from '@/store/stats/calculate-stats';
 import { SessionRecord } from '@/store/stats/personal-records';
-import { LocalDate } from '@js-joda/core';
 
 /**
  * A past workout's structure as a new routine: its exercises as they ended up that day, including any
@@ -43,14 +42,6 @@ function warmupAsDone(exercise: RecordedWeightedExercise, planned: PlannedWarmup
     reps: planned.reps,
     load: slot.weight.value.isZero() ? undefined : { type: 'absolute', weight: slot.weight },
   };
-}
-
-/**
- * A past workout to do again: the same exercises and sets, nothing logged, as a new workout on `date`.
- * The logged weights stay as the new workout's placeholders, as the history's "start this workout" did.
- */
-export function repeatSession(session: Session, date: LocalDate, id: string): Session {
-  return session.withNothingCompleted().with({ id, date, restTimer: undefined, reflection: undefined });
 }
 
 /** `name` if the plan has no routine called that yet, otherwise the first free "name 2", "name 3" and so on. */

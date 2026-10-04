@@ -8,6 +8,7 @@ import { WorkoutRepository } from '@/services/workout-repository';
 import {
   CardioExerciseBlueprint,
   CardioExerciseSetBlueprint,
+  ProgressionRule,
   SessionBlueprint,
   WeightedExerciseBlueprint,
 } from '@/models/blueprint-models';
@@ -30,11 +31,12 @@ import {
   initializeStoredSessionsStateSlice,
   putStoredSession,
   selectCarryOver,
+  selectLatestExercises,
   setActiveSessionId,
   updateStoredSession,
 } from '@/store/stored-sessions';
 import { setIsHydrated as setSettingsIsHydrated } from '@/store/settings';
-import { repeatSession } from '@/models/workout-detail';
+import { SessionService } from '@/services/session-service';
 
 /**
  * Every way an exercise enters a workout opens it on the numbers a routine would: the latest performance
@@ -93,6 +95,8 @@ async function startApp(sessions: Session[]) {
 }
 
 type App = Awaited<ReturnType<typeof startApp>>;
+
+const serviceOf = (app: App) => new SessionService(app.workoutRepository, app.getState);
 
 /** Starts a freeform workout, as the Home screen's empty workout does. */
 async function startFreeform(app: App): Promise<string> {
@@ -326,7 +330,7 @@ describe('swapping an exercise (PM-41)', () => {
 /** What the workout detail's Do again starts, for the past workout `id` read from the tables. */
 async function doAgain(app: App, id: string): Promise<Session> {
   const past = await app.workoutRepository.get(id);
-  return repeatSession(past!, LocalDate.of(2026, 10, 4), 'again');
+  return serviceOf(app).repeatSession(past!, selectLatestExercises(app.getState()));
 }
 
 function weightsOf(session: Session) {
@@ -372,5 +376,16 @@ describe('Do again (PM-42)', () => {
       ['60x8', '60x8', '60x8'],
     ]);
     expect(again.isStarted).toBe(false);
+  });
+
+  it('applies the progression the latest performance earned, as a routine would', async () => {
+    const progressing = benchFives.with({ progression: [ProgressionRule.load(BigNumber(2.5))] });
+    const app = await startApp([
+      pastWorkout('sep-14', LocalDate.of(2026, 9, 14), [{ blueprint: progressing, kg: 80, reps: [5, 5, 5, 5] }]),
+      pastWorkout('sep-25', LocalDate.of(2026, 9, 25), [{ blueprint: progressing, kg: 82.5, reps: [5, 5, 5, 5] }]),
+      pastWorkout('sep-28', LocalDate.of(2026, 9, 28), [{ blueprint: row, kg: 60, reps: [8, 8, 8] }]),
+    ]);
+
+    expect(weightsOf(await doAgain(app, 'sep-14'))).toEqual([['85x5', '85x5', '85x5', '85x5']]);
   });
 });
