@@ -72,6 +72,11 @@ transformer (don't import that subpath yourself - it isn't in the package `expor
   typecheck). `Row`'s `horizontalArrangement` takes `{ spacedBy: n }`, not a string.
 - Compose `Text` is invisible to Maestro's view hierarchy - a Compose button can't be tapped by label;
   tap by `point`. Expo-ui switches on Android carry no `testID`.
+- A `Host` that **floats over other content** lets taps fall through to gesture handlers underneath.
+  react-native-gesture-handler treats a view group with no background as see-through, and a Host is one, so a
+  `GestureDetector` row below it takes the tap and cancels the touch Compose was handling. Wrap the Host
+  the way `page-actions.android.tsx` does: a `View collapsable={false}` with a `Gesture.Manual()` that fails on
+  touches up, which claims the touch without ever activating.
 
 ## iOS (SwiftUI) notes
 
