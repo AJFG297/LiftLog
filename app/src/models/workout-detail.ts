@@ -24,6 +24,28 @@ export function routineFromSession(session: Session, name: string): SessionBluep
 }
 
 /**
+ * A past workout's structure to do again: {@link routineFromSession}'s, with every set's rep target and
+ * kind as that workout had them, a target changed for that day only included. Save as routine leaves
+ * those to the plan, since a target changed during a workout is not a change to the routine.
+ */
+export function repeatBlueprint(session: Session): SessionBlueprint {
+  const routine = routineFromSession(session, session.blueprint.name);
+  return routine.with({
+    exercises: routine.exercises.map((planned, index) => {
+      const recorded = session.recordedExercises[index];
+      return planned instanceof WeightedExerciseBlueprint && recorded instanceof RecordedWeightedExercise
+        ? planned.with({
+            plannedSets: recorded.potentialSets.map((slot) => ({
+              reps: slot.target,
+              kind: slot.kind === 'warmup' ? 'working' : slot.kind,
+            })),
+          })
+        : planned;
+    }),
+  });
+}
+
+/**
  * The warm-up at `index` as it was done. Editing a warm-up's weight during a workout leaves the plan alone,
  * so a set turned warm-up keeps the weight it had when it was turned, and a warm-up planned without a load
  * has none. One logged at another weight than the plan gives it takes that weight. A percentage stays a

@@ -37,8 +37,10 @@ function slot(weight: number, reps: number | undefined, kind: PotentialSet['kind
   });
 }
 
+/** Each set chasing the target its plan gives it, as a workout started from the plan does. */
 function exercise(blueprint: WeightedExerciseBlueprint, sets: PotentialSet[], warmups: PotentialSet[] = []) {
-  return new RecordedWeightedExercise(blueprint, sets, undefined).with({ warmupSets: warmups });
+  const targeted = sets.map((set, index) => set.with({ target: blueprint.repsTargetForSet(index) }));
+  return new RecordedWeightedExercise(blueprint, targeted, undefined).with({ warmupSets: warmups });
 }
 
 function workout(id: string, day: number, exercises: RecordedWeightedExercise[]) {

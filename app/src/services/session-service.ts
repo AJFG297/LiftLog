@@ -2,7 +2,7 @@ import { ProgressionKey, SessionBlueprint, lineageKeys } from '@/models/blueprin
 import { WeightUnit } from '@/models/weight';
 import { RecordedExercise, Session } from '@/models/session-models';
 import { LatestByLineage, nextRecordedExercise } from '@/models/session-models/carry-over';
-import { routineFromSession } from '@/models/workout-detail';
+import { repeatBlueprint } from '@/models/workout-detail';
 import type { WorkoutRepository } from '@/services/workout-repository';
 import type { RootState } from '@/store';
 import { selectActiveSession } from '@/store/stored-sessions';
@@ -63,12 +63,12 @@ export class SessionService {
   }
 
   /**
-   * A past workout to do again: its structure as it ended up that day (see `routineFromSession`), opened on
-   * the latest numbers and progression exactly as starting it as a routine would, not on that day's
-   * weights. Nothing is logged. The bodyweight is the workout's own.
+   * A past workout to do again: its structure and rep targets as they were that day (see `repeatBlueprint`),
+   * opened on the latest numbers and progression exactly as starting it as a routine would, not on that
+   * day's weights. Nothing is logged. The bodyweight is the workout's own.
    */
   public repeatSession(session: Session, latestExercises: LatestByLineage): Session {
-    return this.createNewSession(routineFromSession(session, session.blueprint.name), latestExercises).with({
+    return this.createNewSession(repeatBlueprint(session), latestExercises).with({
       bodyweight: session.bodyweight,
     });
   }

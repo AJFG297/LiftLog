@@ -42,7 +42,7 @@ import {
 import { setIsHydrated as setSettingsIsHydrated } from '@/store/settings';
 import { SessionService } from '@/services/session-service';
 import { sessionWithExerciseEdited } from '@/models/session-models/carry-over';
-import { routineFromSession } from '@/models/workout-detail';
+import { repeatBlueprint } from '@/models/workout-detail';
 
 /**
  * Every way an exercise enters a workout opens it on the numbers a routine would: the latest performance
@@ -526,7 +526,7 @@ describe('every entry path opens what the routine path opens', () => {
     const latest = selectLatestExercises(app.getState());
 
     const again = serviceOf(app).repeatSession(past, latest);
-    const routine = serviceOf(app).hydrateSessionFromBlueprint(routineFromSession(past, past.blueprint.name), latest);
+    const routine = serviceOf(app).hydrateSessionFromBlueprint(repeatBlueprint(past), latest);
 
     expect(weightsOf(again)).toEqual([
       ['85x5', '85x5', '85x5'],
