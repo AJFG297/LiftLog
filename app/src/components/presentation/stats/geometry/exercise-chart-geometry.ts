@@ -1,3 +1,4 @@
+import { roundGridStep } from '@/components/presentation/stats/geometry/grid-step';
 import { linePath } from '@/components/presentation/stats/geometry/line-path';
 
 /** Room on the right for the grid labels, and below for the dates. */
@@ -8,7 +9,7 @@ const TOP = 14;
 /** At most this many gaps between grid lines, so three or four labels. */
 const MAX_GRID_GAPS = 3;
 /** Round steps under 10, scaled by powers of ten for larger values. */
-const GRID_STEP_MANTISSAS = [1, 2, 2.5, 5];
+const GRID_STEP_MANTISSAS = [1, 2, 2.5, 5] as const;
 
 export interface ExerciseChartGeometry {
   /** The line through every point; undefined for a single point, which is drawn alone. */
@@ -59,14 +60,10 @@ export function exerciseChartGeometry(
  * below `lowest` to the one at or above `highest`, are at most {@link MAX_GRID_GAPS} apart.
  */
 function gridStepFor(lowest: number, highest: number): number {
-  for (let scale = 1; ; scale *= 10) {
-    const step = GRID_STEP_MANTISSAS.map((m) => m * scale).find(
-      (candidate) => Math.ceil(highest / candidate) - Math.floor(lowest / candidate) <= MAX_GRID_GAPS,
-    );
-    if (step !== undefined) {
-      return step;
-    }
-  }
+  return roundGridStep((step) => Math.ceil(highest / step) - Math.floor(lowest / step) <= MAX_GRID_GAPS, {
+    mantissas: GRID_STEP_MANTISSAS,
+    min: 1,
+  });
 }
 
 /** The index of the point nearest `x` across: what a tap or a drag at `x` picks. */
