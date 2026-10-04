@@ -197,7 +197,7 @@ function ExerciseBody({
   const [selectedWorkoutId, setSelectedWorkoutId] = useState<string | undefined>(undefined);
 
   const measures = measuresOf(exercise);
-  const measure = chosenMeasure && measures.includes(chosenMeasure) ? chosenMeasure : measures[0]!;
+  const measure = chosenMeasure && measures.includes(chosenMeasure) ? chosenMeasure : measures[0];
   const range = chosenRange ?? defaultRangeOf(exercise, today);
   const chart = exerciseChartOf(history, exercise, measure, rangeStart(range, today), unit, selectedWorkoutId);
   const selected = chart.selected === undefined ? undefined : chart.sessions[chart.selected];

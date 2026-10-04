@@ -225,7 +225,11 @@ describe('mergeExerciseNames', () => {
     const bestAt = (kg: number) => oneRepMaxOf(new Weight(kg, 'kilograms'), 10);
     expect(
       Object.fromEntries(stats.weightedExerciseStats.map((x) => [x.exerciseId, x.max1RMPerSessionStatistics.maxValue])),
-    ).toEqual({ [stubExerciseId('Bench Press')]: bestAt(80), 'Dumbbell Lunges': bestAt(20), 'user-lunge': bestAt(42.5) });
+    ).toEqual({
+      [stubExerciseId('Bench Press')]: bestAt(80),
+      'Dumbbell Lunges': bestAt(20),
+      'user-lunge': bestAt(42.5),
+    });
 
     // Records across both: apart, the second Lunges week would be one.
     const records = await app.workoutRepository.personalRecords();
