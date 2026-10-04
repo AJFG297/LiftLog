@@ -6,18 +6,22 @@ import { Weight, WeightUnit } from '@/models/weight';
  * - `estimate`: an estimated 1RM. It is a calculation, so it shows to the nearest half of the user's unit.
  * - `load`: what was on the bar. It shows as lifted, to at most two places, unless it was lifted in the other
  *   unit: converted, it shows to the nearest half too, so 62.5 kg reads 138 lbs rather than 137.79.
+ * - `volume`: a workout's load times reps. It runs to thousands, so it shows to the whole of the user's unit.
  */
-export type AmountKind = 'estimate' | 'load';
+export type AmountKind = 'estimate' | 'load' | 'volume';
 
-/** The steps a value can show to, coarsest first. Halves unless that would hide a real difference. */
-const STEPS = ['half', 'tenth', 'hundredth'] as const;
+/**
+ * The steps a value can show to, coarsest first: its kind's own (a half, or a whole for volume), unless that
+ * would hide a real difference.
+ */
+const STEPS = ['usual', 'tenth', 'hundredth'] as const;
 type Step = (typeof STEPS)[number];
 
 const AS_LIFTED_DECIMALS = 2;
 
 /** `weight` as the Progress screens show it, in `unit`. */
 export function shownWeight(weight: Weight, kind: AmountKind, unit: WeightUnit): Weight {
-  return shownTo(weight, kind, unit, 'half');
+  return shownTo(weight, kind, unit, 'usual');
 }
 
 /** A value against an earlier one, both as shown, and the change between them. */
@@ -36,7 +40,7 @@ export interface ShownChange {
  */
 export function shownChange(value: Weight, previous: Weight, kind: AmountKind, unit: WeightUnit): ShownChange {
   const direction = value.convertTo(unit).value.comparedTo(previous.convertTo(unit).value);
-  let shown = withChange(shownPair(value, previous, kind, unit, 'half'));
+  let shown = withChange(shownPair(value, previous, kind, unit, 'usual'));
   for (const step of STEPS.slice(1)) {
     if (shown.change.value.comparedTo(0) === direction) {
       break;
@@ -68,9 +72,12 @@ function shownTo(weight: Weight, kind: AmountKind, unit: WeightUnit, step: Step)
   if (kind === 'load' && asLifted) {
     return converted.with({ value: converted.value.decimalPlaces(AS_LIFTED_DECIMALS) });
   }
-  return converted.with({
-    value: step === 'half' ? toHalf(converted.value) : converted.value.decimalPlaces(step === 'tenth' ? 1 : 2),
-  });
+  if (step === 'usual') {
+    return converted.with({
+      value: kind === 'volume' ? converted.value.integerValue(BigNumber.ROUND_HALF_UP) : toHalf(converted.value),
+    });
+  }
+  return converted.with({ value: converted.value.decimalPlaces(step === 'tenth' ? 1 : 2) });
 }
 
 function toHalf(value: BigNumber): BigNumber {

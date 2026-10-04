@@ -157,6 +157,19 @@ describe('exerciseChartOf', () => {
     expect(chartOf('oneRepMax', day(9, 20)).change).toBeUndefined();
   });
 
+  it('refines a volume change the whole numbers would hide, as every change on Progress is', () => {
+    const volumeOf = (sets: [number, number][]) => {
+      const tiny = buildProgressHistory([session(day(9, 1), bench, [[60, 5]]), session(day(9, 8), bench, sets)]);
+      return exerciseChartOf(tiny, tiny.exercises.get(bench.movementKey())!, 'volume', undefined, 'kilograms');
+    };
+
+    // 300 against 300.4: both read 300, so the change shows a place finer rather than "Same".
+    expect(volumeOf([[60.08, 5]])).toMatchObject({ sessions: [{ value: 300 }, { value: 300 }], change: 0.4 });
+    expect(volumeOf([[59.92, 5]]).change).toBe(-0.4);
+    expect(volumeOf([[60, 5]]).change).toBe(0);
+    expect(volumeOf([[62, 5]]).change).toBe(10);
+  });
+
   it('tags the workouts where the record ledger set a record', () => {
     expect(chartOf('volume').sessions.map((s) => s.record)).toEqual([false, true, true, true, false]);
   });

@@ -108,6 +108,7 @@ reads the same on Strength and on Records:
 - An estimated 1RM (`'estimate'`) shows in the user's unit to the nearest half: "104.5 kg".
 - A weight that was on the bar (`'load'`) shows as lifted, to at most two places, in the unit it was lifted in.
   Converted to the other unit, it shows to the nearest half too: 62.5 kg reads "138 lbs", not "137.79".
+- A workout's volume (`'volume'`) shows to the whole of the user's unit: "840 kg".
 - A gain or a change is always the difference of the two values as shown (`shownChange`), so a row adds up as
   it reads. When the two would show alike although they differ, a real but tiny gain, both show a place finer,
   to a tenth and then a hundredth, and the gain reads "+0.1" or "+0.03" rather than "+0".

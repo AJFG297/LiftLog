@@ -173,14 +173,15 @@ function rawValueOf(point: ExercisePoint, measure: ExerciseMeasure): Weight | nu
   }
 }
 
-const KIND_OF: Partial<Record<ExerciseMeasure, AmountKind>> = { oneRepMax: 'estimate', heaviest: 'load' };
+const KIND_OF: Partial<Record<ExerciseMeasure, AmountKind>> = {
+  oneRepMax: 'estimate',
+  heaviest: 'load',
+  volume: 'volume',
+};
 
 function shownNumber(value: Weight | number, measure: ExerciseMeasure, unit: WeightUnit): number {
-  if (typeof value === 'number') {
-    return value;
-  }
   const kind = KIND_OF[measure];
-  return kind ? shownWeight(value, kind, unit).value.toNumber() : Math.round(value.convertTo(unit).value.toNumber());
+  return typeof value === 'number' || !kind ? Number(value) : shownWeight(value, kind, unit).value.toNumber();
 }
 
 function sessionOf(
@@ -212,7 +213,7 @@ function sessionOf(
     set,
     rowValue,
     sets: point.workingSets,
-    volume: reps ? point.totalReps : Math.round(point.volume.convertTo(unit).value.toNumber()),
+    volume: reps ? point.totalReps : shownWeight(point.volume, 'volume', unit).value.toNumber(),
     record: recordWorkouts.has(point.workoutId),
   };
 }
