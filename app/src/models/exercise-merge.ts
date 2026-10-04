@@ -53,7 +53,9 @@ interface Member {
  *   2. otherwise the user exercise logged in the most workouts, then the one first logged earliest (moving
  *      workouts to it only makes it more so, so a re-run after a crash picks it again);
  *   3. otherwise the stub, at the id its name now derives: the one already there, else the one logged most.
- * It keeps its own fields and fills empty equipment, muscles and instructions from the others.
+ * It keeps its own fields and fills empty equipment, muscles and instructions from the others. A built-in
+ * also gains the merged exercises' instructions it doesn't already hold, so a merge never drops what the
+ * user wrote: stored as an edit of the built-in, which is how the user keeps their own text on one.
  *
  * A stub alone in its group still moves when its stored id came from the old fold, so a blueprint that
  * derives its id at runtime (a friend's feed item, a placeholder) keeps finding it.
@@ -85,7 +87,7 @@ export function planExerciseMerges({
     const builtIn = builtIns.byKey.get(key);
     if (builtIn && members.some((member) => !builtIns.legacyKeys.get(builtIn)!.has(legacy(member)))) {
       const current = savedExercises[builtIn] ?? builtInExercises[builtIn]!;
-      const filled = fill(current, ordered);
+      const filled = { ...fill(current, ordered), instructions: joinInstructions(current.instructions, ordered) };
       merges.push({
         normalizedName: key,
         survivor: { id: builtIn, kind: 'builtin' },
@@ -210,4 +212,12 @@ function fill(survivor: ExerciseDescriptor, others: readonly Member[]): Exercise
     secondaryMuscles: hasMuscles ? survivor.secondaryMuscles : (withMuscles?.secondaryMuscles ?? []),
     instructions: survivor.instructions || (donors.find((x) => x.instructions)?.instructions ?? ''),
   };
+}
+
+/** `instructions`, then each member's own that it doesn't already hold, a paragraph each. */
+function joinInstructions(instructions: string, members: readonly Member[]): string {
+  return members.reduce((text, member) => {
+    const own = member.descriptor.instructions.trim();
+    return !own || text.includes(own) ? text : text ? `${text}\n\n${own}` : own;
+  }, instructions);
 }
