@@ -1,10 +1,10 @@
 import { RecordedExercise, Session } from '@/models/session-models';
-import { lineageKeys, ProgressionKey } from '@/models/blueprint-models';
+import { lineageKeys, ProgressionKey, progressionKeyOf } from '@/models/blueprint-models';
 import { OffsetDateTime, ZoneId } from '@js-joda/core';
 import { createAction, createSelector, createSlice, PayloadAction, WritableDraft } from '@reduxjs/toolkit';
 import Enumerable from 'linq';
 import { ExerciseDescriptor, musclesOf } from '@/models/exercise-models';
-import type { LatestPerformance } from '@/services/workout-repository';
+import type { LatestPerformance, WorkoutRepository } from '@/services/workout-repository';
 import type { ExerciseMerge } from '@/models/exercise-merge';
 import type { CarryOver } from '@/models/session-models/carry-over';
 import type { RootState } from '@/store/store';
@@ -401,9 +401,8 @@ export const { selectSession, selectActiveSession, selectActiveSessionId, select
   storedSessionsSlice.selectors;
 
 /**
- * What an exercise added to or swapped into workout `sessionId` opens on. The cache's entries that came
- * from that workout are left out, since a workout is not its own last time. The cache holds no entry from
- * before them, so such a lineage falls back as one never done would (see `latestInLineage`).
+ * The carry-over cache as workout `sessionId` sees it: without the entries that came from that workout,
+ * since a workout is not its own last time. Use {@link withCarryOver} for an exercise entering it.
  */
 export function selectCarryOver(state: RootState, sessionId: string): CarryOver {
   const { latestExercises, latestExerciseWorkoutIds } = state.storedSessions;
@@ -411,6 +410,48 @@ export function selectCarryOver(state: RootState, sessionId: string): CarryOver 
     Object.entries(latestExercises).filter(([key]) => latestExerciseWorkoutIds[key as ProgressionKey] !== sessionId),
   );
   return { latest, unit: state.settings.useImperialUnits ? 'pounds' : 'kilograms' };
+}
+
+/**
+ * Hands `apply` what exercises of `progressionKeys` added to or swapped into workout `sessionId` open on.
+ * From the cache, synchronously, unless it holds that workout's own performance of one of them (a set
+ * logged today): the cache keeps nothing from before it, so those keys are read from the tables without
+ * the workout first. `apply` must address the workout by id, as it can run after the workout has changed.
+ */
+export async function withCarryOver(
+  state: RootState,
+  workoutRepository: Pick<WorkoutRepository, 'latestPerLineage'>,
+  sessionId: string,
+  progressionKeys: readonly ProgressionKey[],
+  apply: (carryOver: CarryOver) => void,
+): Promise<void> {
+  const cached = selectCarryOver(state, sessionId);
+  const { latestExerciseWorkoutIds } = state.storedSessions;
+  const own = [
+    ...new Set(
+      (Object.keys(latestExerciseWorkoutIds) as ProgressionKey[])
+        .filter((key) => latestExerciseWorkoutIds[key] === sessionId)
+        .map(progressionKeyOf)
+        .filter((key) => progressionKeys.includes(key)),
+    ),
+  ];
+  if (!own.length) {
+    apply(cached);
+    return;
+  }
+  let before: Record<ProgressionKey, LatestPerformance>;
+  try {
+    before = await workoutRepository.latestPerLineage({ progressionKeys: own, excludeWorkoutId: sessionId });
+  } catch {
+    // The exercise still goes in, on the cache's numbers, rather than the add or swap being lost.
+    apply(cached);
+    return;
+  }
+  const latest = { ...cached.latest };
+  for (const [key, performance] of Object.entries(before) as [ProgressionKey, LatestPerformance][]) {
+    latest[key] = performance.exercise;
+  }
+  apply({ ...cached, latest });
 }
 
 /** Fired when a session is done being edited: publish it, export it, and re-derive what depends on it. */

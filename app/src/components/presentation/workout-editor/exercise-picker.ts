@@ -265,12 +265,13 @@ export function sessionWithExerciseSwapped(
   if (!current) {
     return session;
   }
+  return sessionWithExerciseReplaced(session, index, blueprintSwappedTo(current.blueprint, picked), carryOver);
+}
+
+/** The same plan for the picked exercise: its name and id, so its history follows it. */
+export function blueprintSwappedTo(blueprint: ExerciseBlueprint, picked: PickedExerciseRef): ExerciseBlueprint {
   const exercise = { name: picked.name, exerciseId: picked.id };
-  const blueprint =
-    current.blueprint instanceof WeightedExerciseBlueprint
-      ? current.blueprint.with(exercise)
-      : current.blueprint.with(exercise);
-  return sessionWithExerciseReplaced(session, index, blueprint, carryOver);
+  return blueprint instanceof WeightedExerciseBlueprint ? blueprint.with(exercise) : blueprint.with(exercise);
 }
 
 /** A to Z, with unnamed exercises (one left blank in Settings > Exercises) last rather than first. */

@@ -12,11 +12,15 @@ import { getSessionExerciseEditorHref } from '@/components/smart/session-exercis
 import { useExerciseSearch } from '@/hooks/useExerciseSearch';
 import { LiveSetEntry } from '@/hooks/useLiveSetEntry';
 import { usesBodyweight, useTodaysTarget } from '@/hooks/useTodaysTarget';
-import { sessionWithExerciseSwapped } from '@/components/presentation/workout-editor/exercise-picker';
+import {
+  blueprintSwappedTo,
+  sessionWithExerciseSwapped,
+} from '@/components/presentation/workout-editor/exercise-picker';
+import { useServices } from '@/components/smart/services-provider';
 import { RecordedExercise, RecordedWeightedExercise, Session } from '@/models/session-models';
 import { exerciseGroupsOf, exerciseLabelOf } from '@/models/session-models/exercise-groups';
 import { RootState, useAppSelector } from '@/store';
-import { selectCarryOver, selectExercises } from '@/store/stored-sessions';
+import { selectExercises, withCarryOver } from '@/store/stored-sessions';
 import { translateExerciseMeta } from '@/utils/exercise-meta';
 import { formatTimeSpan } from '@/utils/format-time-span';
 import { openUrl } from '@/utils/open-url';
@@ -43,6 +47,7 @@ export function LiveExerciseCard(props: LiveExerciseCardProps) {
   const { t } = useTranslate();
   const { push } = useRouter();
   const store = useStore<RootState>();
+  const { workoutRepository } = useServices();
   const exercises = useAppSelector(selectExercises);
   const targetFor = useTodaysTarget(session);
   const [notesOpen, setNotesOpen] = useState(false);
@@ -51,9 +56,21 @@ export function LiveExerciseCard(props: LiveExerciseCardProps) {
 
   const openSearch = useExerciseSearch(
     (picked) => {
-      const carryOver = selectCarryOver(store.getState(), session.id);
+      const state = store.getState();
+      const swappedOut = state.storedSessions.sessions[session.id]?.recordedExercises[exerciseIndex]?.blueprint;
+      if (!swappedOut) {
+        return;
+      }
       const ref = { id: picked.id, name: picked.descriptor.name };
-      updateSession((s) => sessionWithExerciseSwapped(s, exerciseIndex, ref, carryOver));
+      const key = blueprintSwappedTo(swappedOut, ref).progressionKey();
+      void withCarryOver(state, workoutRepository, session.id, [key], (carryOver) =>
+        updateSession((s) =>
+          // With a lookup in between, the exercise can have been edited, moved or removed meanwhile.
+          s.recordedExercises[exerciseIndex]?.blueprint === swappedOut
+            ? sessionWithExerciseSwapped(s, exerciseIndex, ref, carryOver)
+            : s,
+        ),
+      );
     },
     {
       name: session.blueprint.name,

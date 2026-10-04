@@ -1,7 +1,8 @@
-import { sessionWithPickAdded } from '@/components/presentation/workout-editor/exercise-picker';
+import { blueprintsForPick, sessionWithPickAdded } from '@/components/presentation/workout-editor/exercise-picker';
+import { useServices } from '@/components/smart/services-provider';
 import { useExercisePicker } from '@/hooks/useExerciseSearch';
 import { RootState, useAppSelectorWithArg } from '@/store';
-import { selectCarryOver, selectSession, updateStoredSession } from '@/store/stored-sessions';
+import { selectSession, updateStoredSession, withCarryOver } from '@/store/stored-sessions';
 import { useDispatch, useStore } from 'react-redux';
 
 /**
@@ -16,24 +17,31 @@ export function useAddExercise(sessionId: string | undefined, options?: { onAdde
   const session = useAppSelectorWithArg(selectSession, sessionId ?? '');
   const dispatch = useDispatch();
   const store = useStore<RootState>();
+  const { workoutRepository } = useServices();
   const onAdded = options?.onAdded;
 
   const open = useExercisePicker(
     (pick) => {
       const state = store.getState();
-      const current = sessionId ? state.storedSessions.sessions[sessionId] : undefined;
-      if (!sessionId || !current || !pick.exercises.length) {
+      if (!sessionId || !state.storedSessions.sessions[sessionId] || !pick.exercises.length) {
         return;
       }
       const picked = pick.exercises.map((exercise) => ({ id: exercise.id, name: exercise.descriptor.name }));
-      const carryOver = selectCarryOver(state, sessionId);
-      dispatch(
-        updateStoredSession({
-          sessionId,
-          update: (s) => sessionWithPickAdded(s, picked, pick.asSuperset, carryOver),
-        }),
-      );
-      onAdded?.(current.recordedExercises.length);
+      const keys = blueprintsForPick(picked, false).map((blueprint) => blueprint.progressionKey());
+      void withCarryOver(state, workoutRepository, sessionId, keys, (carryOver) => {
+        // Read again: with a lookup in between, the workout may have changed or closed meanwhile.
+        const current = store.getState().storedSessions.sessions[sessionId];
+        if (!current) {
+          return;
+        }
+        dispatch(
+          updateStoredSession({
+            sessionId,
+            update: (s) => sessionWithPickAdded(s, picked, pick.asSuperset, carryOver),
+          }),
+        );
+        onAdded?.(current.recordedExercises.length);
+      });
     },
     { requestId: `add-exercise:${sessionId ?? ''}` },
   );
