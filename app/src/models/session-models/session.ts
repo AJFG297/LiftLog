@@ -216,14 +216,13 @@ export class Session {
     return session;
   }
 
-  withAddedExercise(exercise: ExerciseBlueprint, useImperialUnits: boolean): Session {
+  /** The workout with `exercise` and its plan added to the end. */
+  withAddedExercise(exercise: RecordedExercise): Session {
     return this.with({
       blueprint: this.blueprint.with({
-        exercises: this.blueprint.exercises.concat(exercise),
+        exercises: this.blueprint.exercises.concat(exercise.blueprint),
       }),
-      recordedExercises: this.recordedExercises.concat(
-        createEmptyRecordedExercise(exercise, useImperialUnits ? 'pounds' : 'kilograms'),
-      ),
+      recordedExercises: this.recordedExercises.concat(exercise),
     });
   }
 

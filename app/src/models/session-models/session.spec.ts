@@ -400,31 +400,18 @@ describe('Session.withCycledExerciseReps', () => {
 describe('Session.withAddedExercise', () => {
   it('appends the exercise to both recordedExercises and blueprint', () => {
     const session = makeSession([makeWeightedBlueprint({ name: 'Squat' })]);
-    const newBp = makeWeightedBlueprint({ name: 'Bench' });
-    const updated = session.withAddedExercise(newBp, false);
+    const bench = RecordedWeightedExercise.empty(makeWeightedBlueprint({ name: 'Bench' }), 'pounds');
+    const updated = session.withAddedExercise(bench);
 
     expect(updated.recordedExercises).toHaveLength(2);
     expect(updated.blueprint.exercises).toHaveLength(2);
-    expect(updated.recordedExercises[1]!.blueprint.name).toBe('Bench');
-  });
-
-  it('uses kilograms when useImperialUnits is false', () => {
-    const session = makeSession([]);
-    const updated = session.withAddedExercise(makeWeightedBlueprint(), false);
-    const sets = (updated.recordedExercises[0]! as RecordedWeightedExercise).potentialSets;
-    expect(sets.every((s) => s.weight.unit === 'kilograms')).toBe(true);
-  });
-
-  it('uses pounds when useImperialUnits is true', () => {
-    const session = makeSession([]);
-    const updated = session.withAddedExercise(makeWeightedBlueprint(), true);
-    const sets = (updated.recordedExercises[0]! as RecordedWeightedExercise).potentialSets;
-    expect(sets.every((s) => s.weight.unit === 'pounds')).toBe(true);
+    expect(updated.recordedExercises[1]).toBe(bench);
+    expect(updated.blueprint.exercises[1]).toBe(bench.blueprint);
   });
 
   it('does not mutate the original session', () => {
     const session = makeSession([makeWeightedBlueprint()]);
-    session.withAddedExercise(makeWeightedBlueprint({ name: 'Bench' }), false);
+    session.withAddedExercise(RecordedWeightedExercise.empty(makeWeightedBlueprint({ name: 'Bench' }), 'kilograms'));
     expect(session.recordedExercises).toHaveLength(1);
   });
 });
@@ -772,7 +759,13 @@ describe('Session.equals', () => {
 
   it('is false when the exercise count differs', () => {
     const session = makeSession([makeWeightedBlueprint()]);
-    expect(session.equals(session.withAddedExercise(makeWeightedBlueprint({ name: 'Bench' }), false))).toBe(false);
+    expect(
+      session.equals(
+        session.withAddedExercise(
+          RecordedWeightedExercise.empty(makeWeightedBlueprint({ name: 'Bench' }), 'kilograms'),
+        ),
+      ),
+    ).toBe(false);
   });
 });
 

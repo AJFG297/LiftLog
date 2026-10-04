@@ -6,6 +6,8 @@ import Enumerable from 'linq';
 import { ExerciseDescriptor, musclesOf } from '@/models/exercise-models';
 import type { LatestPerformance } from '@/services/workout-repository';
 import type { ExerciseMerge } from '@/models/exercise-merge';
+import type { CarryOver } from '@/models/session-models/carry-over';
+import type { RootState } from '@/store/store';
 
 interface StoredSessionState {
   isHydrated: boolean;
@@ -397,6 +399,19 @@ export const {
 
 export const { selectSession, selectActiveSession, selectActiveSessionId, selectExercises, selectLatestExercises } =
   storedSessionsSlice.selectors;
+
+/**
+ * What an exercise added to or swapped into workout `sessionId` opens on. The cache's entries that came
+ * from that workout are left out, since a workout is not its own last time. The cache holds no entry from
+ * before them, so such a lineage falls back as one never done would (see `latestInLineage`).
+ */
+export function selectCarryOver(state: RootState, sessionId: string): CarryOver {
+  const { latestExercises, latestExerciseWorkoutIds } = state.storedSessions;
+  const latest = Object.fromEntries(
+    Object.entries(latestExercises).filter(([key]) => latestExerciseWorkoutIds[key as ProgressionKey] !== sessionId),
+  );
+  return { latest, unit: state.settings.useImperialUnits ? 'pounds' : 'kilograms' };
+}
 
 /** Fired when a session is done being edited: publish it, export it, and re-derive what depends on it. */
 export const sessionFinished = createAction<string>('sessionFinished');

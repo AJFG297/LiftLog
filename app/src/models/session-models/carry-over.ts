@@ -13,6 +13,12 @@ import { Weight, WeightUnit } from '@/models/weight';
 /** The latest performance of each lineage, keyed by `lineageKeys`, as the store's `latestExercises` is. */
 export type LatestByLineage = Readonly<Record<ProgressionKey, RecordedExercise | undefined>>;
 
+/** What an exercise entering a workout is opened from: see {@link nextRecordedExercise}. */
+export interface CarryOver {
+  latest: LatestByLineage;
+  unit: WeightUnit;
+}
+
 /**
  * `blueprint` as it opens in a new workout at the place whose lineage is `lineage`: last time's numbers
  * carried onto its sets and moved by any progression rule they earned, with warm-ups built from the plan.

@@ -77,7 +77,7 @@ const benchWithDrop = withSetKind(
 const today = workout('today', 23, [
   benchWithDrop,
   exercise(press, [slot(50, 8, 'working', 8), slot(50, 7, 'working', 9.5)]),
-]).withAddedExercise(fly, false);
+]).withAddedExercise(RecordedWeightedExercise.empty(fly, 'kilograms'));
 
 function describeRows(rows: DetailSetRow[] | undefined) {
   return rows?.map((row) => ({

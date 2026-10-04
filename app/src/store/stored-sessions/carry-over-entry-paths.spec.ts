@@ -14,6 +14,7 @@ import { applyStoredSessionsEffects } from '@/store/stored-sessions/effects';
 import {
   initializeStoredSessionsStateSlice,
   putStoredSession,
+  selectCarryOver,
   setActiveSessionId,
   updateStoredSession,
 } from '@/store/stored-sessions';
@@ -88,10 +89,11 @@ async function startFreeform(app: App): Promise<string> {
 
 /** What `useAddExercise` dispatches when the picker hands back a pick. */
 async function addThroughPicker(app: App, sessionId: string, picked: PickedExerciseRef[]) {
+  const carryOver = selectCarryOver(app.getState(), sessionId);
   app.store.dispatch(
     updateStoredSession({
       sessionId,
-      update: (s) => sessionWithPickAdded(s, picked, false, false),
+      update: (s) => sessionWithPickAdded(s, picked, false, carryOver),
     }),
   );
   await app.settle();
@@ -120,6 +122,77 @@ describe('adding an exercise through the picker (PM-41)', () => {
     ]);
     const sessionId = await startFreeform(app);
 
+    await addThroughPicker(app, sessionId, [{ id: 'Lunge', name: 'Lunge' }]);
+
+    expect(setsOf(app, sessionId, 0)).toEqual(opened(45, 10));
+  });
+
+  it('opens an exercise never done at 0', async () => {
+    const app = await startApp([
+      pastWorkout('sep-28', LocalDate.of(2026, 9, 28), [{ blueprint: lunge, kg: 45, reps: [10, 10, 10] }]),
+    ]);
+    const sessionId = await startFreeform(app);
+
+    await addThroughPicker(app, sessionId, [{ id: 'Deadlift', name: 'Deadlift' }]);
+
+    expect(setsOf(app, sessionId, 0)).toEqual(opened(0, 10));
+  });
+
+  it('opens a second place of an exercise on that place last time', async () => {
+    const app = await startApp([
+      pastWorkout('sep-28', LocalDate.of(2026, 9, 28), [
+        { blueprint: lunge, kg: 45, reps: [10, 10, 10] },
+        { blueprint: lunge, kg: 30, reps: [10, 10, 10] },
+      ]),
+    ]);
+    const sessionId = await startFreeform(app);
+
+    await addThroughPicker(app, sessionId, [{ id: 'Lunge', name: 'Lunge' }]);
+    await addThroughPicker(app, sessionId, [{ id: 'Lunge', name: 'Lunge' }]);
+
+    expect(setsOf(app, sessionId, 0)).toEqual(opened(45, 10));
+    expect(setsOf(app, sessionId, 1)).toEqual(opened(30, 10));
+  });
+
+  it('opens a second place never done as one on the first place last time', async () => {
+    const app = await startApp([
+      pastWorkout('sep-28', LocalDate.of(2026, 9, 28), [{ blueprint: lunge, kg: 45, reps: [10, 10, 10] }]),
+    ]);
+    const sessionId = await startFreeform(app);
+
+    await addThroughPicker(app, sessionId, [{ id: 'Lunge', name: 'Lunge' }]);
+    await addThroughPicker(app, sessionId, [{ id: 'Lunge', name: 'Lunge' }]);
+
+    expect(setsOf(app, sessionId, 1)).toEqual(opened(45, 10));
+  });
+
+  it('never carries from the workout it is added to', async () => {
+    const app = await startApp([
+      pastWorkout('sep-28', LocalDate.of(2026, 9, 28), [{ blueprint: lunge, kg: 45, reps: [10, 10, 10] }]),
+    ]);
+    const sessionId = await startFreeform(app);
+    await addThroughPicker(app, sessionId, [{ id: 'Lunge', name: 'Lunge' }]);
+    const key = lunge.progressionKey();
+
+    // A set of Lunge at 60 kg, logged today: the cache's Lunge is now this workout's.
+    app.store.dispatch(
+      updateStoredSession({
+        sessionId,
+        update: (s) => {
+          const exercise = s.recordedExercises[0] as RecordedWeightedExercise;
+          return s
+            .withExercise(0, exercise.withWeight(0, new Weight(60, 'kilograms'), 'allSets'))
+            .withCycledExerciseReps(0, 0, OffsetDateTime.of(2026, 10, 4, 9, 0, 0, 0, ZoneOffset.UTC));
+        },
+      }),
+    );
+    await app.settle();
+    expect(app.getState().storedSessions.latestExerciseWorkoutIds[key]).toBe(sessionId);
+    expect(selectCarryOver(app.getState(), sessionId).latest[key]).toBeUndefined();
+
+    // The Lunge is removed, then added again: it opens on Sep 28, not on the set it replaced.
+    app.store.dispatch(updateStoredSession({ sessionId, update: (s) => s.withRemovedExercise(0) }));
+    await app.settle();
     await addThroughPicker(app, sessionId, [{ id: 'Lunge', name: 'Lunge' }]);
 
     expect(setsOf(app, sessionId, 0)).toEqual(opened(45, 10));

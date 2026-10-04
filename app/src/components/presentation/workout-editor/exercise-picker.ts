@@ -1,8 +1,9 @@
 import { fuzzyMatchScore } from '@/models/exercise-fuzzy-match';
-import { ExerciseBlueprint, Rest, WeightedExerciseBlueprint } from '@/models/blueprint-models';
+import { ExerciseBlueprint, lineageKeys, Rest, WeightedExerciseBlueprint } from '@/models/blueprint-models';
 import { ExerciseDescriptor } from '@/models/exercise-models';
 import { MuscleGroup, muscleGroupOf } from '@/models/muscle-groups';
 import { RecordedWeightedExercise, Session } from '@/models/session-models';
+import { CarryOver, nextRecordedExercise } from '@/models/session-models/carry-over';
 import type { OffsetDateTime } from '@js-joda/core';
 
 /**
@@ -216,12 +217,15 @@ export function withPickAppended(
   return [...kept, ...blueprintsForPick(picked, asSuperset)];
 }
 
-/** The workout with a pick added to the end, clearing a stranded superset flag as {@link withPickAppended} does. */
+/**
+ * The workout with a pick added to the end, clearing a stranded superset flag as {@link withPickAppended} does.
+ * Each exercise opens on what its place would carry over in a routine (see {@link nextRecordedExercise}).
+ */
 export function sessionWithPickAdded(
   session: Session,
   picked: readonly PickedExerciseRef[],
   asSuperset: boolean,
-  useImperialUnits: boolean,
+  { latest, unit }: CarryOver,
 ): Session {
   if (!picked.length) {
     return session;
@@ -239,8 +243,10 @@ export function sessionWithPickAdded(
       blueprint: session.blueprint.with({ exercises: recordedExercises.map((exercise) => exercise.blueprint) }),
     });
   }
-  return blueprintsForPick(picked, asSuperset).reduce(
-    (next, blueprint) => next.withAddedExercise(blueprint, useImperialUnits),
+  const added = blueprintsForPick(picked, asSuperset);
+  const lineages = lineageKeys([...result.blueprint.exercises, ...added]).slice(result.blueprint.exercises.length);
+  return added.reduce(
+    (next, blueprint, index) => next.withAddedExercise(nextRecordedExercise(blueprint, lineages[index]!, latest, unit)),
     result,
   );
 }
