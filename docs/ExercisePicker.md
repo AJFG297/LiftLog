@@ -50,21 +50,25 @@ The routine or workout's name and exercise ids travel as route params, so a row 
   recently, newest first (`recentExerciseIds`, from `storedSessions.latestExercises`).
 - With a search: the fuzzy matches (`models/exercise-fuzzy-match.ts`), best first, and Recent has no section of
   its own. If no exercise in the whole catalog is named exactly what was typed, a **Create "X"** row ends
-  the list. If one is but the chips hide it, the row offers to clear the chips instead, so a filter never
-  leads to a duplicate. If nothing the chips allow matches, the screen says so and offers Create "X", or
-  Clear filters when the chips hide a match.
-- A new search or chip remounts the list, so it starts at the top.
+  the list. If one is but the filters hide it, the row offers to clear the filters instead, so a filter never
+  leads to a duplicate. If nothing the filters allow matches, the screen says so and offers Create "X", or
+  Clear filters when the filters hide a match.
+- A new search, chip or equipment remounts the list, so it starts at the top.
 - **Muscle chips** (All, Chest, Back, Shoulders, Arms, Legs, Core) group the catalog's muscles (`muscleGroupOf`), labelled by `muscleGroupLabel`, which All exercises' chips share. An exercise
   files under its first primary muscle (`ExerciseDescriptor.primaryMuscles`). Filing by any muscle would put
   every press and row under Arms, through their secondary muscles. Neck is under All only.
-- **Equipment chips** use the catalog's own words, labelled from the same `exercise.equipment.*` keys as
-  each row's meta, so a chip and its rows read alike ("Bodyweight" for `body only`). An E-Z bar counts as a
-  barbell, and anything outside the list (foam roll, medicine ball, none) as Other.
+- **Equipment** is one pill under the muscle chips. It reads Any equipment and opens a native menu, with a
+  checkmark on the current choice. Once one is chosen, the pill takes its name and the accent fill. The
+  choices use the catalog's own words, labelled from the same `exercise.equipment.*` keys as each row's
+  meta, so the pill and its rows read alike ("Bodyweight" for `body only`). An E-Z bar counts as a barbell,
+  and anything outside the list (foam roll, medicine ball, none) as Other.
+- **The count** sits beside the pill: how many exercises the list shows ("94 exercises"), so a filter's
+  effect is visible before scrolling (`PickerList.count`).
 
 ## New exercises
 
 **New**, or Create "X", opens a form in the picker with the name (prefilled with the search), the muscles
-(all primary; the first one tapped is the main one) and the equipment. The muscle and equipment chips that were on start
+(all primary; the first one tapped is the main one) and the equipment. The muscle chip and equipment that were on start
 it off when they name one. Create saves it as a custom exercise and picks it: added to the selection, or,
 when swapping, picked straight away.
 
