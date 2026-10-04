@@ -13,6 +13,13 @@ import { newestWorkoutFirst, RecordListRow, recordListRowOf } from '@/store/stat
  * volume of each workout; one that tracks no load reads the most reps in a set and the reps in all.
  */
 export type ExerciseMeasure = 'oneRepMax' | 'heaviest' | 'volume' | 'mostReps' | 'totalReps';
+/** The measures one exercise offers: two or three. */
+export type ExerciseMeasures =
+  | readonly [ExerciseMeasure, ExerciseMeasure]
+  | readonly [ExerciseMeasure, ExerciseMeasure, ExerciseMeasure];
+
+/** What a Last times row closes on (see {@link ExerciseSession.rowValue}). */
+export type RowValueKind = 'oneRepMax' | 'heaviest' | 'mostReps';
 
 export const EXERCISE_RANGES = ['3m', '6m', '1y', 'all'] as const;
 export type ExerciseRange = (typeof EXERCISE_RANGES)[number];
@@ -63,7 +70,7 @@ function hasEffectiveLoad(point: ExercisePoint): boolean {
  * The measures the switch offers, the first being the default: reps on the reps axis (see {@link axisOf}).
  * Heaviest needs a weight on the bar: a bodyweight movement that never had any added has nothing to chart there.
  */
-export function measuresOf(exercise: ExerciseHistory): ExerciseMeasure[] {
+export function measuresOf(exercise: ExerciseHistory): ExerciseMeasures {
   if (axisOf(exercise) === 'reps') {
     return ['mostReps', 'totalReps'];
   }
@@ -108,6 +115,8 @@ export interface ExerciseSession {
 
 export interface ExerciseChart {
   measure: ExerciseMeasure;
+  /** What every session's `rowValue` is. */
+  rowValue: RowValueKind;
   /** The workouts in the range with a value on the measure, oldest first. */
   sessions: ExerciseSession[];
   /** The last value less the first, as shown; undefined with fewer than two. */
@@ -151,6 +160,7 @@ export function exerciseChartOf(
   const selectedIndex = sessions.findIndex((session) => session.workoutId === selectedWorkoutId);
   return {
     measure,
+    rowValue: rowValueKindOf(measure),
     sessions,
     change: changeOver(sessions, raw, measure, unit),
     selected: sessions.length ? (selectedIndex >= 0 ? selectedIndex : sessions.length - 1) : undefined,
@@ -192,17 +202,17 @@ function sessionOf(
   best: boolean,
   recordWorkouts: ReadonlySet<string>,
 ): ExerciseSession {
-  const reps = measure === 'mostReps' || measure === 'totalReps';
-  const estimateSet = point.oneRepMaxSet && shownSet(point.oneRepMaxSet, unit);
+  const kind = rowValueKindOf(measure);
+  const reps = kind === 'mostReps';
   const heaviest = heaviestSetOf(point.sets);
   const set = reps
     ? { weight: undefined, reps: point.bestReps }
-    : measure === 'heaviest'
+    : kind === 'heaviest'
       ? heaviest && shownSet(heaviest, unit)
-      : estimateSet;
+      : point.oneRepMaxSet && shownSet(point.oneRepMaxSet, unit);
   const rowValue = reps
     ? point.bestReps
-    : measure === 'heaviest'
+    : kind === 'heaviest'
       ? heaviest && shownWeight(heaviest.weight, 'load', unit).value.toNumber()
       : point.oneRepMax && shownWeight(point.oneRepMax, 'estimate', unit).value.toNumber();
   return {
@@ -216,6 +226,20 @@ function sessionOf(
     volume: reps ? point.totalReps : shownWeight(point.volume, 'volume', unit).value.toNumber(),
     record: recordWorkouts.has(point.workoutId),
   };
+}
+
+/** Volume's row closes on the estimate, since the volume is in the row already. */
+function rowValueKindOf(measure: ExerciseMeasure): RowValueKind {
+  switch (measure) {
+    case 'mostReps':
+    case 'totalReps':
+      return 'mostReps';
+    case 'heaviest':
+      return 'heaviest';
+    case 'oneRepMax':
+    case 'volume':
+      return 'oneRepMax';
+  }
 }
 
 function shownSet(set: LiftedSet, unit: WeightUnit): ShownSet {

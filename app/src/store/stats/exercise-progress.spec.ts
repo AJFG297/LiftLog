@@ -79,10 +79,7 @@ describe('measuresOf', () => {
   });
 
   it('reads a bodyweight movement in reps while it never had any load, bodyweight or added', () => {
-    const unloaded = buildProgressHistory([
-      session(day(9, 1), dip, [[0, 10]]),
-      session(day(9, 8), dip, [[0, 12]]),
-    ]);
+    const unloaded = buildProgressHistory([session(day(9, 1), dip, [[0, 10]]), session(day(9, 8), dip, [[0, 12]])]);
     const dips = unloaded.exercises.get(dip.movementKey())!;
 
     expect(measuresOf(dips)).toEqual(['mostReps', 'totalReps']);
@@ -181,6 +178,11 @@ describe('exerciseChartOf', () => {
     expect(july('heaviest')).toMatchObject({ set: { weight: kg(60), reps: 8 }, rowValue: 60 });
     // Volume is in the row already, so the row closes on the estimate.
     expect(july('volume')).toMatchObject({ set: { weight: kg(60), reps: 8 }, rowValue: 76, volume: 840 });
+    expect([chartOf('oneRepMax').rowValue, chartOf('heaviest').rowValue, chartOf('volume').rowValue]).toEqual([
+      'oneRepMax',
+      'heaviest',
+      'oneRepMax',
+    ]);
   });
 
   it('picks the latest by default, and keeps a pick while it is in range', () => {
@@ -211,6 +213,7 @@ describe('exerciseChartOf', () => {
     ]);
     const pushUps = reps.exercises.get(pushUp.movementKey())!;
 
+    expect(exerciseChartOf(reps, pushUps, 'totalReps', undefined, 'kilograms').rowValue).toBe('mostReps');
     expect(exerciseChartOf(reps, pushUps, 'mostReps', undefined, 'kilograms')).toMatchObject({
       sessions: [
         { value: 20, best: false, set: { weight: undefined, reps: 20 }, volume: 35 },

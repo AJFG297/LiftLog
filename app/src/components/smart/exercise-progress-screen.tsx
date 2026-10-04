@@ -1,6 +1,6 @@
 import type { TranslateFn } from '@/i18n/translate-fn';
 import FullHeightScrollView from '@/components/layout/full-height-scroll-view';
-import { SegmentedControl, SegmentedOption } from '@/components/presentation/foundation/segmented-control';
+import { SegmentedControl, segmentedOptions } from '@/components/presentation/foundation/segmented-control';
 import { targetLabel, targetReasonText } from '@/components/presentation/live-workout/target-text';
 import { amountText, signedText, weightText } from '@/components/presentation/stats/amount-format';
 import { ExerciseChart } from '@/components/presentation/stats/exercise/exercise-chart';
@@ -48,6 +48,7 @@ import {
   rangeStart,
   recentSessionsOf,
   repBestsOf,
+  RowValueKind,
 } from '@/store/stats/exercise-progress';
 import { ExerciseHistory, ProgressHistory } from '@/store/stats/progress-history';
 import { RecordListRow } from '@/store/stats/records-list';
@@ -72,6 +73,12 @@ const MEASURE_LABELS: Record<ExerciseMeasure, { option: TranslationKey; hero: Tr
   volume: { option: 'progress.exercise.measure.volume.label', hero: 'progress.exercise.hero.volume.label' },
   mostReps: { option: 'progress.exercise.measure.most_reps.label', hero: 'progress.exercise.hero.most_reps.label' },
   totalReps: { option: 'progress.exercise.measure.total_reps.label', hero: 'progress.exercise.hero.total_reps.label' },
+};
+
+const ROW_VALUE_LABELS: Record<RowValueKind, TranslationKey> = {
+  oneRepMax: 'progress.exercise.recent.value.one_rep_max.label',
+  heaviest: 'progress.exercise.recent.value.heaviest.label',
+  mostReps: 'progress.exercise.recent.value.most_reps.label',
 };
 
 const RANGE_LABELS: Record<ExerciseRange, { chip: TranslationKey; spoken: TranslationKey; since: TranslationKey }> = {
@@ -227,11 +234,7 @@ function ExerciseBody({
   const repBests = repBestsOf(exercise, unit);
   const recent = recentSessionsOf(chart);
   const records = isReps ? undefined : exerciseRecordsOf(history, exercise.key, unit);
-  const rowValueLabel = isReps
-    ? t('progress.exercise.recent.value.most_reps.label')
-    : measure === 'heaviest'
-      ? t('progress.exercise.recent.value.heaviest.label')
-      : t('progress.exercise.recent.value.one_rep_max.label');
+  const rowValueLabel = t(ROW_VALUE_LABELS[chart.rowValue]);
   const volumeUnit = isReps ? t('progress.reps_unit.label') : unitLabel;
 
   return (
@@ -241,10 +244,7 @@ function ExerciseBody({
         accessibilityLabel={t('progress.exercise.measure.label')}
         value={measure}
         onChange={setMeasure}
-        options={
-          // `map` widens to an array; there are always two or three measures.
-          measures.map((value) => ({ value, label: t(MEASURE_LABELS[value].option) })) as unknown as MeasureOptions
-        }
+        options={segmentedOptions(measures, (value) => t(MEASURE_LABELS[value].option))}
       />
       <ExerciseChartCard
         hero={hero}
@@ -271,7 +271,7 @@ function ExerciseBody({
           spoken: t(RANGE_LABELS[value].spoken),
         }))}
         range={range}
-        onRange={(value) => setRange(value as ExerciseRange)}
+        onRange={setRange}
         legend={hasRecordDots(exercise, measure) ? t('progress.exercise.legend.record.label') : undefined}
         note={measure === 'oneRepMax' ? t('progress.exercise.one_rep_max.note.body') : undefined}
       />
@@ -362,12 +362,6 @@ function ExerciseBody({
     </>
   );
 }
-
-type MeasureOptions = readonly [
-  SegmentedOption<ExerciseMeasure>,
-  SegmentedOption<ExerciseMeasure>,
-  SegmentedOption<ExerciseMeasure>,
-];
 
 function recordTimelineRow(
   t: TranslateFn,

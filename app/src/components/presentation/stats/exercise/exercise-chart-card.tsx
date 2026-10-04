@@ -34,7 +34,7 @@ export interface ExerciseChange {
   since: string;
 }
 
-interface ExerciseChartCardProps {
+interface ExerciseChartCardProps<R extends string> {
   /** Undefined while the range holds no workouts. */
   hero: ExerciseHero | undefined;
   change: ExerciseChange | undefined;
@@ -44,9 +44,9 @@ interface ExerciseChartCardProps {
   emptyText: string | undefined;
   /** Under the chart: too few workouts for a trend. */
   sparseText: string | undefined;
-  ranges: readonly { value: string; label: string; spoken: string }[];
-  range: string;
-  onRange: (range: string) => void;
+  ranges: readonly { value: R; label: string; spoken: string }[];
+  range: R;
+  onRange: (range: R) => void;
   /** The "Record" key for the dots, on a measure that has them. */
   legend: string | undefined;
   /** Est. 1RM's line on how it is estimated. */
@@ -54,7 +54,7 @@ interface ExerciseChartCardProps {
 }
 
 /** The exercise page's chart card: the picked workout's value, the change over the range, the chart and the range. */
-export function ExerciseChartCard(props: ExerciseChartCardProps) {
+export function ExerciseChartCard<R extends string>(props: ExerciseChartCardProps<R>) {
   const { tokens } = useAppTheme();
   const toneColor = useToneColor();
   return (
