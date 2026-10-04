@@ -1,9 +1,8 @@
 import type { TranslateFn } from '@/i18n/translate-fn';
 import FullHeightScrollView from '@/components/layout/full-height-scroll-view';
 import { SegmentedControl, SegmentedOption } from '@/components/presentation/foundation/segmented-control';
-import { formatWeightText } from '@/components/presentation/foundation/weight-format';
-import { targetLabel } from '@/components/presentation/live-workout/target-text';
-import { amountText, signedText } from '@/components/presentation/stats/amount-format';
+import { targetLabel, targetReasonText } from '@/components/presentation/live-workout/target-text';
+import { amountText, signedText, weightText } from '@/components/presentation/stats/amount-format';
 import { ExerciseChart } from '@/components/presentation/stats/exercise/exercise-chart';
 import {
   ExerciseChange,
@@ -20,6 +19,7 @@ import {
 } from '@/components/presentation/stats/exercise/exercise-sections';
 import { SetLabels, SetSpans, setText } from '@/components/presentation/stats/exercise/set-text';
 import { ListCard, ListEmptyLine, ListEmptyState } from '@/components/presentation/stats/list-parts';
+import { recordKindLabel } from '@/components/presentation/stats/record-text';
 import { ProgressSection } from '@/components/presentation/stats/progress/progress-section';
 import { numberStyle, spacing } from '@/hooks/useAppTheme';
 import { useFormatDate } from '@/hooks/useFormatDate';
@@ -29,7 +29,6 @@ import { useToday } from '@/hooks/useToday';
 import { ExerciseId, movementKeyFor } from '@/models/blueprint-models';
 import { ExerciseDescriptor } from '@/models/exercise-models';
 import { nextTimeOf } from '@/models/session-models/next-exercise';
-import { TargetReason } from '@/models/session-models/todays-target';
 import { shortFormatWeightUnit } from '@/models/weight';
 import { useAppSelector, useAppSelectorWithArg } from '@/store';
 import { selectActiveProgram } from '@/store/program';
@@ -128,7 +127,7 @@ export function ExerciseProgressScreen({ exerciseId }: { exerciseId: ExerciseId 
       target={targetLabel(t, nextTime.target, nextTime.usesBodyweight)}
       line={t('progress.exercise.next.line.label', {
         routine: nextTime.routineName,
-        reason: nextTimeReason(t, nextTime.target.reason),
+        reason: targetReasonText(t, nextTime.target.reason, 'short'),
       })}
     />
   ) : null;
@@ -289,7 +288,7 @@ function ExerciseBody({
                 unit: best.weight && shortFormatWeightUnit(best.weight.unit),
                 date: best.date && shortDate(best.date),
                 spoken: best.weight
-                  ? `${label}: ${weight} ${shortFormatWeightUnit(best.weight.unit)}, ${best.date ? longDate(best.date) : ''}`
+                  ? `${label}: ${weightText(best.weight)}, ${best.date ? longDate(best.date) : ''}`
                   : t('progress.exercise.rep_bests.none.spoken', { reps: best.reps }),
               };
             })}
@@ -377,10 +376,7 @@ function recordTimelineRow(
   longDate: (date: LocalDate) => string,
 ): RecordTimelineRow {
   const unit = shortFormatWeightUnit(row.value.unit);
-  const kind =
-    row.kind === 'heaviestWeight'
-      ? t('progress.records.kind.heaviest.label')
-      : t('progress.records.kind.one_rep_max.label');
+  const kind = recordKindLabel(t, row.kind);
   const set = row.kind === 'heaviestWeight' ? { weight: row.value, reps: row.reps } : undefined;
   const gain = signedText(row.gain.value).text;
   return {
@@ -396,12 +392,7 @@ function recordTimelineRow(
     ),
     date: longDate(row.date),
     gain: gain && `${gain} ${unit}`,
-    spoken: [
-      kind,
-      set ? setText(set, setLabels) : `${amountText(row.value.value)} ${unit}`,
-      longDate(row.date),
-      gain && `${gain} ${unit}`,
-    ]
+    spoken: [kind, set ? setText(set, setLabels) : weightText(row.value), longDate(row.date), gain && `${gain} ${unit}`]
       .filter(Boolean)
       .join(', '),
   };
@@ -417,37 +408,4 @@ function metaLine(t: TranslateFn, descriptor: ExerciseDescriptor | undefined): s
     ...(descriptor.equipment ? [exerciseMetaLabel(t, 'equipment', descriptor.equipment)] : []),
   ];
   return parts.length ? parts.join(' · ') : undefined;
-}
-
-/** Why the next workout opens where it does, short enough to follow the routine's name on one line. */
-function nextTimeReason(t: TranslateFn, reason: TargetReason): string {
-  switch (reason.kind) {
-    case 'firstTime':
-      return t('progress.exercise.next.reason.first_time.label');
-    case 'newScheme':
-      return t('progress.exercise.next.reason.new_scheme.label');
-    case 'weightUp':
-      return reason.lastTime
-        ? t('progress.exercise.next.reason.weight_up_hit.label', {
-            reps: reason.lastTime.reps,
-            weight: formatWeightText(reason.by),
-          })
-        : t('progress.exercise.next.reason.weight_up.label', { weight: formatWeightText(reason.by) });
-    case 'weightDown':
-      return t('progress.exercise.next.reason.weight_down.label', { weight: formatWeightText(reason.by) });
-    case 'repsUp':
-      return reason.by === 1
-        ? t('progress.exercise.next.reason.rep_up.label')
-        : t('progress.exercise.next.reason.reps_up.label', { reps: reason.by });
-    case 'repeatAfterSuccess':
-      return t('progress.exercise.next.reason.repeat_success.label');
-    case 'repeatAfterMiss':
-      return reason.reps === undefined
-        ? t('progress.exercise.next.reason.repeat_skipped.label', { set: reason.setLabel })
-        : t('progress.exercise.next.reason.repeat_miss.label', {
-            set: reason.setLabel,
-            reps: reason.reps,
-            target: reason.target,
-          });
-  }
 }

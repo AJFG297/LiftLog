@@ -88,8 +88,8 @@ The screen calls `useProgressHistory()` once. Every number comes from pure funct
 file per part, and the components in `components/presentation/stats/progress/` only format and draw them. What
 the Records and All exercises lists share with the tab sits one folder up, in `components/presentation/stats/`:
 `list-parts.tsx` (`ListCard`, `useRowDivider`, `useToneColor`, `ListEmptyLine`, and the list pages' `ListPageTitle`
-and `ListEmptyState`), `amount-format.ts` (`amountText`, `signedText`, `signedAmount`) and `amount-text.tsx`
-(`AmountText`). A change's direction is one `ChangeTone` (`gain`, `fall`, `none`, from `toneOf` in
+and `ListEmptyState`), `amount-format.ts` (`amountText`, `weightText`, `signedText`, `signedAmount`),
+`record-text.ts` (`recordKindLabel`) and `amount-text.tsx` (`AmountText`). A change's direction is one `ChangeTone` (`gain`, `fall`, `none`, from `toneOf` in
 `progress-amounts.ts`) on every screen.
 
 | File | Gives |
@@ -294,7 +294,8 @@ model is `store/stats/exercise-progress.ts`, and the screen only picks and forma
 - **Next time** (`nextTimeOf` in `models/session-models/next-exercise.ts`): the top set the next workout will open
   on, and why, from the first routine of the active program to come up (`program.upcomingSessions`' order, else
   the plan's) that plans the exercise. It runs the same code session creation does and reads the reason through
-  `todaysTarget`, so it agrees with the workout's Today line. Hidden when no routine in the active program has it.
+  `todaysTarget`, so it agrees with the workout's Today line. The reason is worded by the same switch as that
+  line (`targetReasonText` in `live-workout/target-text.ts`, in its `short` form). Hidden when no routine in the active program has it.
   See [Progression.md](./Progression.md).
 - **Best weight by reps** (`repBestsOf`): the heaviest weight lifted for at least 5, 6, 7 and 8 reps over the whole
   history, dated by the first workout that lifted it, as lifted. Only for an externally loaded exercise: a

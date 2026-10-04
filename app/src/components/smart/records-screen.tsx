@@ -2,14 +2,14 @@ import type { TranslateFn } from '@/i18n/translate-fn';
 import FullHeightScrollView from '@/components/layout/full-height-scroll-view';
 import { SegmentedControl } from '@/components/presentation/foundation/segmented-control';
 import { SurfaceText } from '@/components/presentation/foundation/surface-text';
-import { amountText } from '@/components/presentation/stats/amount-format';
+import { weightText } from '@/components/presentation/stats/amount-format';
 import { ListCard, ListEmptyState, ListPageTitle } from '@/components/presentation/stats/list-parts';
 import { RecordRow } from '@/components/presentation/stats/record-row';
+import { recordKindLabel } from '@/components/presentation/stats/record-text';
 import { spacing, useAppTheme } from '@/hooks/useAppTheme';
 import { FormatDate, useFormatDate } from '@/hooks/useFormatDate';
 import { usePreferredWeightUnit } from '@/hooks/usePreferredWeightUnit';
 import { useProgressHistory } from '@/hooks/useProgressHistory';
-import { shortFormatWeightUnit, Weight } from '@/models/weight';
 import { RecordFilter, RecordListRow, recordsListOf } from '@/store/stats/records-list';
 import { LocalDate, YearMonth } from '@js-joda/core';
 import { useTranslate } from '@tolgee/react';
@@ -98,7 +98,7 @@ export function RecordsScreen() {
                     row={row}
                     index={index}
                     weekday={formatDate(row.date, { weekday: 'short' })}
-                    kindLabel={kindLabel(t, row)}
+                    kindLabel={recordKindLabel(t, row.kind)}
                     shows="record"
                     detail={wasText(t, row)}
                     accessibilityLabel={spokenRecord(t, formatDate, row)}
@@ -135,16 +135,6 @@ function RecordsEmptyState({ t, filter }: { t: TranslateFn; filter: RecordFilter
   }
 }
 
-function kindLabel(t: TranslateFn, row: RecordListRow): string {
-  return row.kind === 'heaviestWeight'
-    ? t('progress.records.kind.heaviest.label')
-    : t('progress.records.kind.one_rep_max.label');
-}
-
-function weightText(weight: Weight): string {
-  return `${amountText(weight.value)} ${shortFormatWeightUnit(weight.unit)}`;
-}
-
 function wasText(t: TranslateFn, row: RecordListRow): string {
   const was = t('progress.was.label', { value: weightText(row.previous) });
   return row.kind === 'estimatedOneRepMax'
@@ -159,7 +149,7 @@ function spokenRecord(t: TranslateFn, formatDate: FormatDate, row: RecordListRow
       : `${weightText(row.value)}, ${weightText(row.estimatedFrom.weight)} × ${row.estimatedFrom.reps}`;
   return t('progress.records.row.spoken.label', {
     exercise: row.exerciseName,
-    kind: kindLabel(t, row),
+    kind: recordKindLabel(t, row.kind),
     value,
     previous: weightText(row.previous),
     gain: weightText(row.gain),
