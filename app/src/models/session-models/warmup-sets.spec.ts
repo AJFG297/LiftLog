@@ -120,11 +120,6 @@ describe('warm-up slots', () => {
     expect(rebuilt.equals(exercise)).toBe(true);
     expect(rebuilt.equals(exercise.withWarmupRepCount(0, 4, tick()))).toBe(false);
   });
-
-  it('are cleared by withNothingCompleted', () => {
-    const cleared = withWarmups().withWarmupRepCount(0, 5, tick()).withNothingCompleted();
-    expect(cleared.warmupSets.every((s) => !s.set)).toBe(true);
-  });
 });
 
 describe('warm-ups never count', () => {

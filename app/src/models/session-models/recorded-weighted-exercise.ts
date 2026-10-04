@@ -219,14 +219,6 @@ export class RecordedWeightedExercise {
     );
   }
 
-  withNothingCompleted(): RecordedWeightedExercise {
-    return this.with({
-      notes: undefined,
-      potentialSets: this.potentialSets.map((ps) => ps.with({ set: undefined, rpe: undefined })),
-      warmupSets: this.warmupSets.map((ps) => ps.with({ set: undefined, rpe: undefined })),
-    });
-  }
-
   /** Picking an RPE never logs the set: it can be chosen first and the set tapped afterwards. */
   withRpe(setIndex: number, rpe: Rpe | undefined): RecordedWeightedExercise {
     return this.withSet(setIndex, (s) => s.with({ rpe }));

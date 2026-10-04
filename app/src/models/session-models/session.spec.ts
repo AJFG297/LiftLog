@@ -772,25 +772,6 @@ describe('Session.equals', () => {
 // ─── structural mutations ─────────────────────────────────────────────────────
 
 describe('Session structural mutations', () => {
-  it('withNothingCompleted clears recorded sets across exercises', () => {
-    const t = tick();
-    const bp = makeWeightedBlueprint();
-    const exercise = new RecordedWeightedExercise(bp, [filledPotentialSet(10, t)], 'note');
-    const session = new Session(
-      uuid(),
-      new SessionBlueprint('Test', [bp], ''),
-      [exercise],
-      LocalDate.of(2025, 4, 5),
-      undefined,
-      undefined,
-    );
-
-    const result = session.withNothingCompleted();
-
-    expect((result.recordedExercises[0] as RecordedWeightedExercise).potentialSets[0]!.set).toBeUndefined();
-    expect(result.isStarted).toBe(false);
-  });
-
   it('withRemovedExercise removes from both recordedExercises and the blueprint', () => {
     const session = makeSession([makeWeightedBlueprint({ name: 'Squat' }), makeWeightedBlueprint({ name: 'Bench' })]);
 

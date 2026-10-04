@@ -55,35 +55,6 @@ describe('RecordedWeightedExercise.withWeight', () => {
   });
 });
 
-// ─── withNothingCompleted ─────────────────────────────────────────────────────
-
-describe('RecordedWeightedExercise.withNothingCompleted', () => {
-  it('clears all recorded sets and notes', () => {
-    const bp = makeWeightedBlueprint();
-    const t = tick();
-    const exercise = new RecordedWeightedExercise(
-      bp,
-      [filledPotentialSet(10, t), filledPotentialSet(10, t.plusSeconds(30))],
-      'some note',
-    );
-
-    const result = exercise.withNothingCompleted();
-
-    expect(result.potentialSets.every((s) => s.set === undefined)).toBe(true);
-    expect(result.notes).toBeUndefined();
-  });
-
-  it('preserves weights after clearing', () => {
-    const bp = makeWeightedBlueprint();
-    const t = tick();
-    const weight = new Weight(80, 'kilograms');
-    const exercise = new RecordedWeightedExercise(bp, [filledPotentialSet(10, t, weight)], undefined);
-
-    const result = exercise.withNothingCompleted();
-    expect(result.potentialSets[0]!.weight).toEqual(weight);
-  });
-});
-
 // ─── getSet ───────────────────────────────────────────────────────────────────
 
 describe('RecordedWeightedExercise.getSet', () => {
@@ -423,15 +394,6 @@ describe('RecordedWeightedExercise RPE', () => {
       undefined,
     );
     expect(exercise.withoutUnloggedRpe()).toBe(exercise);
-  });
-
-  it('withNothingCompleted clears RPE along with the sets', () => {
-    const exercise = new RecordedWeightedExercise(
-      makeWeightedBlueprint(),
-      [filledPotentialSet(10, tick()).with({ rpe: 8 })],
-      undefined,
-    );
-    expect(exercise.withNothingCompleted().getSet(0).rpe).toBeUndefined();
   });
 
   it('round-trips RPE through JSON', () => {

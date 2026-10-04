@@ -7,20 +7,6 @@ import { tick, makeCardioBlueprint, makeCardioSetBlueprint } from './__test__/he
 
 const distance: Distance = { value: BigNumber(5), unit: 'kilometre' };
 
-describe('RecordedCardioExercise.withNothingCompleted', () => {
-  it('clears completionDateTime and notes', () => {
-    const bp = makeCardioBlueprint(2);
-    const exercise = RecordedCardioExercise.empty(bp);
-    const withData = exercise.withSet(0, (s) =>
-      s.with({ completionDateTime: tick(), duration: Duration.ofMinutes(10) }),
-    );
-    const result = withData.withNothingCompleted();
-
-    expect(result.sets.every((s) => s.completionDateTime === undefined)).toBe(true);
-    expect(result.notes).toBeUndefined();
-  });
-});
-
 // ─── withSet / withAllSets ────────────────────────────────────────────────────
 
 describe('RecordedCardioExercise.withSet', () => {

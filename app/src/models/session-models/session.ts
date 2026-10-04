@@ -292,12 +292,6 @@ export class Session {
     });
   }
 
-  withNothingCompleted(): Session {
-    return this.with({
-      recordedExercises: this.recordedExercises.map((re) => re.withNothingCompleted()),
-    });
-  }
-
   /** See {@link RecordedWeightedExercise.withoutUnloggedRpe}. Returns `this` when there is nothing to drop. */
   withoutUnloggedRpe(): Session {
     const recordedExercises = this.recordedExercises.map((re) =>
