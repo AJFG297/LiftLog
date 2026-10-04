@@ -190,8 +190,11 @@ const KIND_OF: Partial<Record<ExerciseMeasure, AmountKind>> = {
 };
 
 function shownNumber(value: Weight | number, measure: ExerciseMeasure, unit: WeightUnit): number {
+  if (typeof value === 'number') {
+    return value;
+  }
   const kind = KIND_OF[measure];
-  return typeof value === 'number' || !kind ? Number(value) : shownWeight(value, kind, unit).value.toNumber();
+  return kind ? shownWeight(value, kind, unit).value.toNumber() : value.convertTo(unit).value.toNumber();
 }
 
 function sessionOf(
