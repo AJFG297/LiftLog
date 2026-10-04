@@ -123,7 +123,10 @@ session), `applyProgression`, `applyEarnedProgression` and `ProgressionRule.isEa
 (`bestSetIndex`, `bestSetMetTarget`) and fitting last time onto today's sets
 (`RecordedWeightedExercise.carriedInto`) in `app/src/models/session-models/recorded-weighted-exercise.ts`;
 what each set kind carries in `app/src/models/session-models/set-kind.ts`; session start in
-`app/src/services/session-service.ts`; the editor in
+`app/src/services/session-service.ts`, which opens each exercise through `nextSessionExercises` in
+`app/src/models/session-models/next-exercise.ts`: carry over, then the earned rule, then the warm-ups. The
+exercise page's Next time card reads the same code (`nextTimeOf`, with `todaysTarget` for the reason), so it
+always says what the next workout will open on; the editor in
 `app/src/components/presentation/workout-editor/progressive-overload.tsx`. The stored
 `workout_exercise.progression_key` column was rewritten to the new key by the
 `REKEY_PROGRESSION_BY_EXERCISE` data migration (`app/src/services/data-migrations/rekey-progression.ts`).

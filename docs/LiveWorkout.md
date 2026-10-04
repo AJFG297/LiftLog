@@ -16,7 +16,9 @@ and the number pad, and PM-30 moved rest into the header.
   screen moves to the first one added.
 - **Focus page**: a card per exercise (`LiveExerciseCard`) with a meta line (equipment, rest or its place
   in a superset, and how many working sets), the History, Warm-up, Note and Swap shortcuts, the Today
-  target card, and the set table (see below). A superset page starts with a banner. Cardio exercises still
+  target card, and the set table (see below). Its menu (⋯) has Edit, View progress (a weighted exercise's
+  [progress page](./Progress.md#the-exercise-page); a menu item rather than a tap on the name, so a tap
+  mid-set never leaves the workout), Remove and the exercise's link. A superset page starts with a banner. Cardio exercises still
   use the older set tiles.
 - **Up next bar** (`UpNextBar`): the next unfinished page. It fills with the accent once the page on
   screen is done, and turns into Finish when nothing after it is left. A running cardio clock docks above
