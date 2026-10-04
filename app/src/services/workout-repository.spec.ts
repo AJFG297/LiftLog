@@ -39,7 +39,7 @@ import { findPersonalRecords, RecordLedger, SessionRecord, sessionRecords } from
 import { oneRepMaxOf } from '@/store/stats/calculate-stats';
 import { volumeScaleOf } from '@/store/activity/volume';
 import { generateSyntheticHistory } from '@/utils/__test__/synthetic-history';
-import { mapSessionExercises } from '@/models/exercise-resolver';
+import { mapSessionExercises } from '@/models/map-exercise-blueprints';
 
 const logger = { info: vi.fn(), error: vi.fn(), warn: vi.fn(), debug: vi.fn() };
 

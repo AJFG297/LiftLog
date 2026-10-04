@@ -4,7 +4,7 @@ import { dataMigrationsSchema, exercisesSchema, programsSchema } from '@/db/sche
 import { ExerciseBlueprint, ExerciseId, ProgramBlueprint } from '@/models/blueprint-models';
 import { fromExerciseDescriptorJSON, toExerciseDescriptorJSON } from '@/models/exercise-models';
 import { ExerciseMerge, planExerciseMerges } from '@/models/exercise-merge';
-import { mapProgramExercises } from '@/models/exercise-resolver';
+import { mapProgramExercises } from '@/models/map-exercise-blueprints';
 import { exerciseDescriptorMigrations, programBlueprintMigrations } from '@/models/storage/versions/migrations';
 import { loadBuiltInExerciseNames, loadCanonicalBuiltInExercises } from '@/services/exercise-catalog';
 import { WorkoutRepository } from '@/services/workout-repository';

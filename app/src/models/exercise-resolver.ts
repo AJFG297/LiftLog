@@ -7,7 +7,12 @@ import {
   stubExerciseId,
 } from '@/models/blueprint-models';
 import { ExerciseDescriptor } from '@/models/exercise-models';
-import { RecordedExercise, RecordedWeightedExercise, Session } from '@/models/session-models';
+import { Session } from '@/models/session-models';
+import {
+  mapProgramExercises,
+  mapSessionBlueprintExercises,
+  mapSessionExercises,
+} from '@/models/map-exercise-blueprints';
 
 /** Every name a built-in goes by, keyed by its id: the English name, then each locale's. */
 export type BuiltInExerciseNames = Record<ExerciseId, readonly string[]>;
@@ -136,29 +141,6 @@ export class ExerciseResolver {
     }
     return id;
   }
-}
-
-type MapBlueprint = <T extends ExerciseBlueprint>(blueprint: T) => T;
-
-export function mapSessionBlueprintExercises(session: SessionBlueprint, map: MapBlueprint): SessionBlueprint {
-  return session.with({ exercises: session.exercises.map(map) });
-}
-
-export function mapProgramExercises(program: ProgramBlueprint, map: MapBlueprint): ProgramBlueprint {
-  return program.with({ sessions: program.sessions.map((x) => mapSessionBlueprintExercises(x, map)) });
-}
-
-/** The session with `map` applied to every exercise blueprint in it: its plan's and each recorded one's. */
-export function mapSessionExercises(session: Session, map: MapBlueprint): Session {
-  return session.with({
-    blueprint: mapSessionBlueprintExercises(session.blueprint, map),
-    recordedExercises: session.recordedExercises.map(
-      (exercise): RecordedExercise =>
-        exercise instanceof RecordedWeightedExercise
-          ? exercise.with({ blueprint: map(exercise.blueprint) })
-          : exercise.with({ blueprint: map(exercise.blueprint) }),
-    ),
-  });
 }
 
 /** A new exercise knowing only its name, the same shape the exercise search makes one in. */
