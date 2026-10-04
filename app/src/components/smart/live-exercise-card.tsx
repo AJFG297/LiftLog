@@ -12,12 +12,11 @@ import { getSessionExerciseEditorHref } from '@/components/smart/session-exercis
 import { useExerciseSearch } from '@/hooks/useExerciseSearch';
 import { LiveSetEntry } from '@/hooks/useLiveSetEntry';
 import { usesBodyweight, useTodaysTarget } from '@/hooks/useTodaysTarget';
-import { ExerciseBlueprint, WeightedExerciseBlueprint } from '@/models/blueprint-models';
+import { sessionWithExerciseSwapped } from '@/components/presentation/workout-editor/exercise-picker';
 import { RecordedExercise, RecordedWeightedExercise, Session } from '@/models/session-models';
 import { exerciseGroupsOf, exerciseLabelOf } from '@/models/session-models/exercise-groups';
-import { useAppSelector } from '@/store';
-import { PickedExercise } from '@/store/app';
-import { selectExercises } from '@/store/stored-sessions';
+import { RootState, useAppSelector } from '@/store';
+import { selectCarryOver, selectExercises } from '@/store/stored-sessions';
 import { translateExerciseMeta } from '@/utils/exercise-meta';
 import { formatTimeSpan } from '@/utils/format-time-span';
 import { openUrl } from '@/utils/open-url';
@@ -25,6 +24,7 @@ import { useTranslate } from '@tolgee/react';
 import { useRouter } from 'expo-router';
 import { type Ref, useState } from 'react';
 import { View } from 'react-native';
+import { useStore } from 'react-redux';
 
 interface LiveExerciseCardProps {
   session: Session;
@@ -42,7 +42,7 @@ export function LiveExerciseCard(props: LiveExerciseCardProps) {
   const { session, exerciseIndex, updateSession } = props;
   const { t } = useTranslate();
   const { push } = useRouter();
-  const useImperialUnits = useAppSelector((x) => x.settings.useImperialUnits);
+  const store = useStore<RootState>();
   const exercises = useAppSelector(selectExercises);
   const targetFor = useTodaysTarget(session);
   const [notesOpen, setNotesOpen] = useState(false);
@@ -50,11 +50,11 @@ export function LiveExerciseCard(props: LiveExerciseCardProps) {
   const exercise = session.recordedExercises[exerciseIndex];
 
   const openSearch = useExerciseSearch(
-    (picked) =>
-      updateSession((s) => {
-        const current = s.recordedExercises[exerciseIndex];
-        return current ? s.withEditedExercise(exerciseIndex, swapped(current.blueprint, picked), useImperialUnits) : s;
-      }),
+    (picked) => {
+      const carryOver = selectCarryOver(store.getState(), session.id);
+      const ref = { id: picked.id, name: picked.descriptor.name };
+      updateSession((s) => sessionWithExerciseSwapped(s, exerciseIndex, ref, carryOver));
+    },
     {
       name: session.blueprint.name,
       exerciseIds: session.recordedExercises.map((recorded) => recorded.blueprint.exerciseId),
@@ -225,12 +225,6 @@ export function LiveExerciseCard(props: LiveExerciseCardProps) {
       />
     </>
   );
-}
-
-/** The same plan for a different exercise: the picked one's name and id, so its history follows it. */
-function swapped(blueprint: ExerciseBlueprint, picked: PickedExercise): ExerciseBlueprint {
-  const exercise = { name: picked.descriptor.name, exerciseId: picked.id };
-  return blueprint instanceof WeightedExerciseBlueprint ? blueprint.with(exercise) : blueprint.with(exercise);
 }
 
 function withNotes(exercise: RecordedExercise, notes: string): RecordedExercise {

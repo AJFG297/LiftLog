@@ -2,7 +2,13 @@ import { fuzzyMatchScore } from '@/models/exercise-fuzzy-match';
 import { ExerciseBlueprint, lineageKeys, Rest, WeightedExerciseBlueprint } from '@/models/blueprint-models';
 import { ExerciseDescriptor } from '@/models/exercise-models';
 import { MuscleGroup, muscleGroupOf } from '@/models/muscle-groups';
-import { RecordedWeightedExercise, Session } from '@/models/session-models';
+import {
+  PotentialSet,
+  RecordedCardioExercise,
+  RecordedExercise,
+  RecordedWeightedExercise,
+  Session,
+} from '@/models/session-models';
 import { CarryOver, nextRecordedExercise } from '@/models/session-models/carry-over';
 import type { OffsetDateTime } from '@js-joda/core';
 
@@ -249,6 +255,51 @@ export function sessionWithPickAdded(
     (next, blueprint, index) => next.withAddedExercise(nextRecordedExercise(blueprint, lineages[index]!, latest, unit)),
     result,
   );
+}
+
+/**
+ * The workout with the exercise at `index` swapped for `picked`: the same plan under the picked exercise's
+ * name and id, so its history follows it, opened on what that exercise carries over at this place, as an
+ * add would. Sets already logged stay as they were.
+ */
+export function sessionWithExerciseSwapped(
+  session: Session,
+  index: number,
+  picked: PickedExerciseRef,
+  { latest, unit }: CarryOver,
+): Session {
+  const current = session.recordedExercises[index];
+  if (!current) {
+    return session;
+  }
+  const exercise = { name: picked.name, exerciseId: picked.id };
+  const blueprint =
+    current.blueprint instanceof WeightedExerciseBlueprint
+      ? current.blueprint.with(exercise)
+      : current.blueprint.with(exercise);
+  const lineage = lineageKeys(session.blueprint.exercises.with(index, blueprint))[index]!;
+  return session.withExercise(index, keepingLogged(current, nextRecordedExercise(blueprint, lineage, latest, unit)));
+}
+
+function keepingLogged(current: RecordedExercise, opened: RecordedExercise): RecordedExercise {
+  if (current instanceof RecordedWeightedExercise && opened instanceof RecordedWeightedExercise) {
+    const keep = (was: readonly PotentialSet[]) => (slot: PotentialSet, i: number) => (was[i]?.set ? was[i] : slot);
+    return opened.with({
+      potentialSets: opened.potentialSets.map(keep(current.potentialSets)),
+      warmupSets: opened.warmupSets.map(keep(current.warmupSets)),
+      notes: current.notes,
+    });
+  }
+  if (current instanceof RecordedCardioExercise && opened instanceof RecordedCardioExercise) {
+    return opened.with({
+      sets: opened.sets.map((set, i) => {
+        const was = current.sets[i];
+        return was?.completionDateTime || was?.currentBlockStartTime ? was : set;
+      }),
+      notes: current.notes,
+    });
+  }
+  return opened;
 }
 
 /** A to Z, with unnamed exercises (one left blank in Settings > Exercises) last rather than first. */

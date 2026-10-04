@@ -1,14 +1,29 @@
 import { describe, expect, it, vi } from 'vitest';
 import { drizzle } from 'drizzle-orm/expo-sqlite';
 import { openDatabaseAsync } from 'expo-sqlite';
-import { LocalDate, OffsetDateTime, ZoneOffset } from '@js-joda/core';
+import { Duration, LocalDate, OffsetDateTime, ZoneOffset } from '@js-joda/core';
+import BigNumber from 'bignumber.js';
 import { DatabaseMigrationService } from '@/services/database-migration-service';
 import { WorkoutRepository } from '@/services/workout-repository';
-import { SessionBlueprint, WeightedExerciseBlueprint } from '@/models/blueprint-models';
-import { RecordedWeightedExercise, Session } from '@/models/session-models';
+import {
+  CardioExerciseBlueprint,
+  CardioExerciseSetBlueprint,
+  SessionBlueprint,
+  WeightedExerciseBlueprint,
+} from '@/models/blueprint-models';
+import {
+  RecordedCardioExercise,
+  RecordedCardioExerciseSet,
+  RecordedWeightedExercise,
+  Session,
+} from '@/models/session-models';
 import { Weight } from '@/models/weight';
 import { makeRecordedExercise, makeWeightedBlueprint } from '@/models/session-models/__test__/helpers';
-import { PickedExerciseRef, sessionWithPickAdded } from '@/components/presentation/workout-editor/exercise-picker';
+import {
+  PickedExerciseRef,
+  sessionWithExerciseSwapped,
+  sessionWithPickAdded,
+} from '@/components/presentation/workout-editor/exercise-picker';
 import { createEffectStore } from '@/utils/__test__/effect-store';
 import { applyStoredSessionsEffects } from '@/store/stored-sessions/effects';
 import {
@@ -196,5 +211,113 @@ describe('adding an exercise through the picker (PM-41)', () => {
     await addThroughPicker(app, sessionId, [{ id: 'Lunge', name: 'Lunge' }]);
 
     expect(setsOf(app, sessionId, 0)).toEqual(opened(45, 10));
+  });
+});
+
+/** What the live exercise card's Swap dispatches when the picker hands back an exercise. */
+async function swapThroughPicker(app: App, sessionId: string, index: number, picked: PickedExerciseRef) {
+  const carryOver = selectCarryOver(app.getState(), sessionId);
+  app.store.dispatch(
+    updateStoredSession({
+      sessionId,
+      update: (s) => sessionWithExerciseSwapped(s, index, picked, carryOver),
+    }),
+  );
+  await app.settle();
+}
+
+const bench = makeWeightedBlueprint({ name: 'Bench Press', exerciseId: 'Bench Press', sets: 3, progression: [] });
+
+describe('swapping an exercise (PM-41)', () => {
+  it('opens the exercise swapped in on its own carried weight, as an add would', async () => {
+    const app = await startApp([
+      pastWorkout('sep-28', LocalDate.of(2026, 9, 28), [
+        { blueprint: bench, kg: 80, reps: [10, 10, 10] },
+        { blueprint: lunge, kg: 45, reps: [10, 10, 10] },
+      ]),
+    ]);
+    const sessionId = await startFreeform(app);
+    await addThroughPicker(app, sessionId, [{ id: 'Bench Press', name: 'Bench Press' }]);
+    expect(setsOf(app, sessionId, 0)).toEqual(opened(80, 10));
+
+    await swapThroughPicker(app, sessionId, 0, { id: 'Lunge', name: 'Lunge' });
+
+    const session = app.getState().storedSessions.sessions[sessionId]!;
+    expect(session.blueprint.exercises.map((x) => x.exerciseId)).toEqual(['Lunge']);
+    expect(setsOf(app, sessionId, 0)).toEqual(opened(45, 10));
+  });
+
+  it('keeps the sets already logged and opens the rest on the carried weight', async () => {
+    const app = await startApp([
+      pastWorkout('sep-28', LocalDate.of(2026, 9, 28), [
+        { blueprint: bench, kg: 80, reps: [10, 10, 10] },
+        { blueprint: lunge, kg: 45, reps: [10, 10, 10] },
+      ]),
+    ]);
+    const sessionId = await startFreeform(app);
+    await addThroughPicker(app, sessionId, [{ id: 'Bench Press', name: 'Bench Press' }]);
+    app.store.dispatch(
+      updateStoredSession({
+        sessionId,
+        update: (s) => s.withCycledExerciseReps(0, 0, OffsetDateTime.of(2026, 10, 4, 9, 0, 0, 0, ZoneOffset.UTC)),
+      }),
+    );
+    await app.settle();
+
+    await swapThroughPicker(app, sessionId, 0, { id: 'Lunge', name: 'Lunge' });
+
+    expect(setsOf(app, sessionId, 0)).toEqual([
+      { kg: 80, unit: 'kilograms', reps: 10, logged: true },
+      { kg: 45, unit: 'kilograms', reps: 10, logged: false },
+      { kg: 45, unit: 'kilograms', reps: 10, logged: false },
+    ]);
+  });
+
+  it('carries incline and resistance into a cardio exercise swapped in', async () => {
+    const machineSet = new CardioExerciseSetBlueprint(
+      { type: 'time', value: Duration.ofMinutes(20) },
+      true,
+      false,
+      true,
+      true,
+      false,
+      false,
+      undefined,
+    );
+    const treadmill = new CardioExerciseBlueprint('Treadmill', [machineSet], '', '', 'Treadmill');
+    const bike = new CardioExerciseBlueprint('Bike', [machineSet], '', '', 'Bike');
+    const lastBike = RecordedCardioExercise.empty(bike).with({
+      sets: [
+        RecordedCardioExerciseSet.empty(machineSet).with({
+          completionDateTime: OffsetDateTime.of(2026, 9, 28, 10, 0, 0, 0, ZoneOffset.UTC),
+          duration: Duration.ofMinutes(20),
+          incline: BigNumber(3),
+          resistance: BigNumber(7),
+        }),
+      ],
+    });
+    const cardio = (exercise: CardioExerciseBlueprint) => new SessionBlueprint('Cardio', [exercise], '');
+    const app = await startApp([
+      new Session('sep-28', cardio(bike), [lastBike], LocalDate.of(2026, 9, 28), undefined, undefined),
+    ]);
+    const live = new Session(
+      'live',
+      cardio(treadmill),
+      [RecordedCardioExercise.empty(treadmill)],
+      LocalDate.of(2026, 10, 4),
+      undefined,
+      undefined,
+    );
+    app.store.dispatch(putStoredSession(live));
+    app.store.dispatch(setActiveSessionId(live.id));
+    await app.settle();
+
+    await swapThroughPicker(app, live.id, 0, { id: 'Bike', name: 'Bike' });
+
+    const swapped = app.getState().storedSessions.sessions[live.id]!.recordedExercises[0] as RecordedCardioExercise;
+    expect(swapped.blueprint.exerciseId).toBe('Bike');
+    expect(
+      swapped.sets.map((set) => [set.incline?.toNumber(), set.resistance?.toNumber(), !!set.completionDateTime]),
+    ).toEqual([[3, 7, false]]);
   });
 });
