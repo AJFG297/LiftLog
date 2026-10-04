@@ -6,14 +6,13 @@ import {
   lineageKeys,
   MovementKey,
   ProgressionKey,
-  progressionKeyOf,
   SessionBlueprint,
   WeightedExerciseBlueprint,
 } from '@/models/blueprint-models';
 import { RecordedCardioExercise, RecordedCardioExerciseSet } from '@/models/session-models/recorded-cardio-exercise';
 import type { RecordedExercise } from '@/models/session-models/recorded-exercise';
 import { PotentialSet, RecordedWeightedExercise } from '@/models/session-models/recorded-weighted-exercise';
-import { TodaysTarget, todaysTarget } from '@/models/session-models/todays-target';
+import { carriedFrom, TodaysTarget, todaysTarget } from '@/models/session-models/todays-target';
 import { Weight, WeightUnit } from '@/models/weight';
 
 /** The latest performance of each lineage (see `lineageKeys`), as the store's `latestExercises` holds them. */
@@ -105,13 +104,13 @@ export function nextTimeOf(
     if (!(planned instanceof WeightedExerciseBlueprint)) {
       continue;
     }
-    const last = latestInLineage(latest, lineageKeys(routine.exercises)[index]!);
-    const lastWeighted = last instanceof RecordedWeightedExercise ? last : undefined;
-    const key = planned.progressionKey();
-    const doneBefore = Object.entries(latest).some(
-      ([lineage, performance]) => performance && progressionKeyOf(lineage as ProgressionKey) === key,
-    );
-    const target = todaysTarget(nextWeightedExerciseOf(planned, lastWeighted, unit), lastWeighted, doneBefore);
+    const lineage = lineageKeys(routine.exercises)[index]!;
+    const last = latestInLineage(latest, lineage);
+    const opened = nextWeightedExerciseOf(planned, last instanceof RecordedWeightedExercise ? last : undefined, unit);
+    // Measured as the workout's Today line measures it (`useTodaysTarget`), so the two read alike. Every
+    // performance of a weighted exercise is weighted, so finding none means it was never done.
+    const previous = carriedFrom(opened, lineage, latest);
+    const target = todaysTarget(opened, previous, previous !== undefined);
     return target && { routineName: routine.name, target, usesBodyweight: planned.resistance === 'bodyweight' };
   }
   return undefined;
