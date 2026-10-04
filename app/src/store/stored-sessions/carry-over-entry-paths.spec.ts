@@ -188,36 +188,47 @@ describe('adding an exercise through the picker (PM-41)', () => {
     expect(setsOf(app, sessionId, 1)).toEqual(opened(45, 10));
   });
 
-  it('never carries from the workout it is added to', async () => {
-    const app = await startApp([
-      pastWorkout('sep-28', LocalDate.of(2026, 9, 28), [{ blueprint: lunge, kg: 45, reps: [10, 10, 10] }]),
-    ]);
-    const sessionId = await startFreeform(app);
-    await addThroughPicker(app, sessionId, [{ id: 'Lunge', name: 'Lunge' }]);
-    const key = lunge.progressionKey();
+  describe('when the workout has already logged it', () => {
+    /** A freeform workout with Lunge added and a set of it logged at 60 kg: the cache's Lunge is now its own. */
+    async function lungeLoggedToday() {
+      const app = await startApp([
+        pastWorkout('sep-28', LocalDate.of(2026, 9, 28), [{ blueprint: lunge, kg: 45, reps: [10, 10, 10] }]),
+      ]);
+      const sessionId = await startFreeform(app);
+      await addThroughPicker(app, sessionId, [{ id: 'Lunge', name: 'Lunge' }]);
+      app.store.dispatch(
+        updateStoredSession({
+          sessionId,
+          update: (s) => {
+            const exercise = s.recordedExercises[0] as RecordedWeightedExercise;
+            return s
+              .withExercise(0, exercise.withWeight(0, new Weight(60, 'kilograms'), 'allSets'))
+              .withCycledExerciseReps(0, 0, OffsetDateTime.of(2026, 10, 4, 9, 0, 0, 0, ZoneOffset.UTC));
+          },
+        }),
+      );
+      await app.settle();
+      expect(app.getState().storedSessions.latestExerciseWorkoutIds[lunge.progressionKey()]).toBe(sessionId);
+      return { app, sessionId };
+    }
 
-    // A set of Lunge at 60 kg, logged today: the cache's Lunge is now this workout's.
-    app.store.dispatch(
-      updateStoredSession({
-        sessionId,
-        update: (s) => {
-          const exercise = s.recordedExercises[0] as RecordedWeightedExercise;
-          return s
-            .withExercise(0, exercise.withWeight(0, new Weight(60, 'kilograms'), 'allSets'))
-            .withCycledExerciseReps(0, 0, OffsetDateTime.of(2026, 10, 4, 9, 0, 0, 0, ZoneOffset.UTC));
-        },
-      }),
-    );
-    await app.settle();
-    expect(app.getState().storedSessions.latestExerciseWorkoutIds[key]).toBe(sessionId);
-    expect(selectCarryOver(app.getState(), sessionId).latest[key]).toBeUndefined();
+    it('opens a second Lunge on the last workout, not on today', async () => {
+      const { app, sessionId } = await lungeLoggedToday();
 
-    // The Lunge is removed, then added again: it opens on Sep 28, not on the set it replaced.
-    app.store.dispatch(updateStoredSession({ sessionId, update: (s) => s.withRemovedExercise(0) }));
-    await app.settle();
-    await addThroughPicker(app, sessionId, [{ id: 'Lunge', name: 'Lunge' }]);
+      await addThroughPicker(app, sessionId, [{ id: 'Lunge', name: 'Lunge' }]);
 
-    expect(setsOf(app, sessionId, 0)).toEqual(opened(45, 10));
+      expect(setsOf(app, sessionId, 1)).toEqual(opened(45, 10));
+    });
+
+    it('opens it on the last workout when removed and added straight back', async () => {
+      const { app, sessionId } = await lungeLoggedToday();
+
+      // Added again before the removal's write lands, while the cache still holds today's set.
+      app.store.dispatch(updateStoredSession({ sessionId, update: (s) => s.withRemovedExercise(0) }));
+      await addThroughPicker(app, sessionId, [{ id: 'Lunge', name: 'Lunge' }]);
+
+      expect(setsOf(app, sessionId, 0)).toEqual(opened(45, 10));
+    });
   });
 });
 
