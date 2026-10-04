@@ -43,14 +43,25 @@ export function defaultRangeOf(exercise: ExerciseHistory, today: LocalDate): Exe
   );
 }
 
-/** The movement's axis: best reps for one that tracks no load, as on the Progress tab. */
+/**
+ * The movement's axis: reps for one that tracks no load, as on the Progress tab, and for a bodyweight movement
+ * that never had any load to estimate from (no bodyweight logged and nothing added), which would chart flat at 0.
+ */
 export function axisOf(exercise: ExerciseHistory): StatAxis {
-  return primaryAxisFor(exercise.blueprint);
+  if (primaryAxisFor(exercise.blueprint) === 'reps') {
+    return 'reps';
+  }
+  return exercise.blueprint.resistance === 'bodyweight' && !exercise.points.some(hasEffectiveLoad) ? 'reps' : 'load';
+}
+
+/** Whether a workout moved any load, bodyweight folded in. */
+function hasEffectiveLoad(point: ExercisePoint): boolean {
+  return (point.oneRepMax !== undefined && !point.oneRepMax.value.isZero()) || !point.volume.value.isZero();
 }
 
 /**
- * The measures the switch offers, the first being the default. Heaviest needs a weight on the bar: a bodyweight
- * movement that never had any added has nothing to chart there.
+ * The measures the switch offers, the first being the default: reps on the reps axis (see {@link axisOf}).
+ * Heaviest needs a weight on the bar: a bodyweight movement that never had any added has nothing to chart there.
  */
 export function measuresOf(exercise: ExerciseHistory): ExerciseMeasure[] {
   if (axisOf(exercise) === 'reps') {
@@ -293,11 +304,11 @@ export interface RepBest {
 
 /**
  * Best weight by reps over the whole history, one per {@link REP_BEST_COUNTS}: the heaviest set of at least
- * that many reps, dated by the first workout that did it. Undefined where it doesn't apply: on a movement that
- * tracks no load, or that never had weight on the bar.
+ * that many reps, dated by the first workout that did it. Only for an externally loaded exercise: a bodyweight
+ * movement's sets hold only what was added, which says little on its own, and a no-load one has no weight.
  */
 export function repBestsOf(exercise: ExerciseHistory, unit: WeightUnit): RepBest[] | undefined {
-  if (!measuresOf(exercise).includes('heaviest')) {
+  if (exercise.blueprint.resistance !== 'external') {
     return undefined;
   }
   return REP_BEST_COUNTS.map((reps) => {

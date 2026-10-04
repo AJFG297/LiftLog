@@ -30,7 +30,7 @@ import { ExerciseId, movementKeyFor } from '@/models/blueprint-models';
 import { ExerciseDescriptor } from '@/models/exercise-models';
 import { nextTimeOf } from '@/models/session-models/next-exercise';
 import { TargetReason } from '@/models/session-models/todays-target';
-import { shortFormatWeightUnit, Weight } from '@/models/weight';
+import { shortFormatWeightUnit } from '@/models/weight';
 import { useAppSelector, useAppSelectorWithArg } from '@/store';
 import { selectActiveProgram } from '@/store/program';
 import { setPinnedLifts } from '@/store/settings';
@@ -282,7 +282,7 @@ function ExerciseBody({
           <RepBestsCard
             cells={repBests.map((best) => {
               const label = t('progress.exercise.rep_bests.reps.label', { reps: best.reps });
-              const weight = best.weight && repBestText(best.weight, setLabels.usesBodyweight);
+              const weight = best.weight && amountText(best.weight.value);
               return {
                 label,
                 amount: weight ?? '–',
@@ -369,12 +369,6 @@ type MeasureOptions = readonly [
   SegmentedOption<ExerciseMeasure>,
   SegmentedOption<ExerciseMeasure>,
 ];
-
-/** A bodyweight movement's best is what was added, so it reads "+10" rather than a weight on its own. */
-function repBestText(weight: Weight, usesBodyweight: boolean): string {
-  const text = amountText(weight.value);
-  return usesBodyweight && weight.value.isPositive() && !weight.value.isZero() ? `+${text}` : text;
-}
 
 function recordTimelineRow(
   t: TranslateFn,

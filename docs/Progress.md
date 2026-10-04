@@ -267,7 +267,9 @@ model is `store/stats/exercise-progress.ts`, and the screen only picks and forma
   then the muscles (primary, then secondary, at most 3) and equipment from the catalog, then the name.
 - **Measure** (`measuresOf`): Est. 1RM · Heaviest · Volume. A movement that tracks no load (resistance None) reads
   Most reps · Total reps instead, in reps. A bodyweight movement stays on the estimate with bodyweight folded in, as
-  on Strength, and drops Heaviest if it never had weight added.
+  on Strength, and drops Heaviest if it never had weight added. One whose history never had any load at all (no
+  bodyweight logged and nothing added) would chart flat at 0, so it reads in reps like a no-load movement
+  (`axisOf`). Strength still lists it on the estimate (D5); only the page switches.
 - **Chart card** (`exerciseChartOf`): the picked workout's value, its date ("Last time, Oct 1" for the latest) and
   the set behind it (the estimate's set, or the heaviest set on Heaviest); the change over the range, last value
   against first, through `shownChange` like everywhere else; a line chart with round grid lines
@@ -291,8 +293,8 @@ model is `store/stats/exercise-progress.ts`, and the screen only picks and forma
   `todaysTarget`, so it agrees with the workout's Today line. Hidden when no routine in the active program has it.
   See [Progression.md](./Progression.md).
 - **Best weight by reps** (`repBestsOf`): the heaviest weight lifted for at least 5, 6, 7 and 8 reps over the whole
-  history, dated by the first workout that lifted it, as lifted. Not shown where it doesn't apply: a movement
-  that tracks no load, or a bodyweight movement never loaded.
+  history, dated by the first workout that lifted it, as lifted. Only for an externally loaded exercise: a
+  bodyweight movement's sets hold only the weight added, and a no-load one has none.
 - **Last 5 times** (`recentSessionsOf`): the chart's latest five workouts, newest first: the date, the set behind
   the value, the sets and volume, and on the right the estimated 1RM (the heaviest weight on Heaviest, most reps
   for a no-load movement). On Volume the right shows the estimate, as the board does, since the volume is already in

@@ -78,6 +78,30 @@ describe('measuresOf', () => {
     expect(measuresOf(reps.exercises.get(pushUp.movementKey())!)).toEqual(['mostReps', 'totalReps']);
   });
 
+  it('reads a bodyweight movement in reps while it never had any load, bodyweight or added', () => {
+    const unloaded = buildProgressHistory([
+      session(day(9, 1), dip, [[0, 10]]),
+      session(day(9, 8), dip, [[0, 12]]),
+    ]);
+    const dips = unloaded.exercises.get(dip.movementKey())!;
+
+    expect(measuresOf(dips)).toEqual(['mostReps', 'totalReps']);
+    expect(exerciseChartOf(unloaded, dips, 'mostReps', undefined, 'kilograms').sessions.map((s) => s.value)).toEqual([
+      10, 12,
+    ]);
+  });
+
+  it('keeps a bodyweight movement on the estimate once it had bodyweight logged or weight added', () => {
+    const withBodyweight = buildProgressHistory([
+      session(day(9, 1), dip, [[0, 10]]),
+      session(day(9, 8), dip, [[0, 12]], 80),
+    ]);
+    const withAdded = buildProgressHistory([session(day(9, 1), dip, [[0, 10]]), session(day(9, 8), dip, [[10, 6]])]);
+
+    expect(measuresOf(withBodyweight.exercises.get(dip.movementKey())!)[0]).toBe('oneRepMax');
+    expect(measuresOf(withAdded.exercises.get(dip.movementKey())!)[0]).toBe('oneRepMax');
+  });
+
   it('leaves heaviest out for a bodyweight movement that never had weight added', () => {
     const bodyweightOnly = buildProgressHistory([session(day(9, 1), dip, [[0, 10]], 80)]);
     const weighted = buildProgressHistory([
@@ -225,6 +249,12 @@ describe('repBestsOf', () => {
     const reps = buildProgressHistory([session(day(9, 1), pushUp, [[0, 20]])]);
 
     expect(repBestsOf(reps.exercises.get(pushUp.movementKey())!, 'kilograms')).toBeUndefined();
+  });
+
+  it('does not apply to a bodyweight movement, even with weight added', () => {
+    const weighted = buildProgressHistory([session(day(9, 1), dip, [[10, 6]], 80)]);
+
+    expect(repBestsOf(weighted.exercises.get(dip.movementKey())!, 'kilograms')).toBeUndefined();
   });
 });
 
