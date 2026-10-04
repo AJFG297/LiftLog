@@ -23,4 +23,11 @@ describe('roundGridStep', () => {
   it('includes 2.5 when the mantissas do', () => {
     expect(roundGridStep((step) => step >= 21, { mantissas: [1, 2, 2.5, 5], min: 1 })).toBe(25);
   });
+
+  it('gives up on a span no step fits, such as NaN from corrupt data, instead of hanging', () => {
+    const span = Number.NaN;
+    const step = roundGridStep((candidate) => Math.floor(span / candidate) + 1 <= 6, { mantissas: [1, 2, 5], min: 1 });
+
+    expect(step).toBe(5e14);
+  });
 });
