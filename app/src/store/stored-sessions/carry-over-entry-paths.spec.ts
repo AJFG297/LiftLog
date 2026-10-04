@@ -34,6 +34,7 @@ import {
   updateStoredSession,
 } from '@/store/stored-sessions';
 import { setIsHydrated as setSettingsIsHydrated } from '@/store/settings';
+import { repeatSession } from '@/models/workout-detail';
 
 /**
  * Every way an exercise enters a workout opens it on the numbers a routine would: the latest performance
@@ -88,7 +89,7 @@ async function startApp(sessions: Session[]) {
   harness.store.dispatch(setSettingsIsHydrated(true));
   harness.store.dispatch(initializeStoredSessionsStateSlice());
   await harness.settle();
-  return harness;
+  return { ...harness, workoutRepository };
 }
 
 type App = Awaited<ReturnType<typeof startApp>>;
@@ -319,5 +320,57 @@ describe('swapping an exercise (PM-41)', () => {
     expect(
       swapped.sets.map((set) => [set.incline?.toNumber(), set.resistance?.toNumber(), !!set.completionDateTime]),
     ).toEqual([[3, 7, false]]);
+  });
+});
+
+/** What the workout detail's Do again starts, for the past workout `id` read from the tables. */
+async function doAgain(app: App, id: string): Promise<Session> {
+  const past = await app.workoutRepository.get(id);
+  return repeatSession(past!, LocalDate.of(2026, 10, 4), 'again');
+}
+
+function weightsOf(session: Session) {
+  return session.recordedExercises.map((exercise) =>
+    exercise instanceof RecordedWeightedExercise
+      ? exercise.potentialSets.map((slot) => `${slot.weight.value.toNumber()}x${slot.target.min}`)
+      : [],
+  );
+}
+
+const row = makeWeightedBlueprint({
+  name: 'Row',
+  exerciseId: 'Row',
+  sets: 3,
+  repsConfig: { type: 'fixed', reps: 8 },
+  progression: [],
+});
+
+describe('Do again (PM-42)', () => {
+  const benchFives = makeWeightedBlueprint({
+    name: 'Bench Press',
+    exerciseId: 'Bench Press',
+    sets: 4,
+    repsConfig: { type: 'fixed', reps: 5 },
+    progression: [],
+  });
+  const benchEights = benchFives.with({ sets: 3, repsConfig: { type: 'fixed', reps: 8 } });
+
+  it("opens each exercise on the latest weight, in the chosen workout's order, sets and reps", async () => {
+    const app = await startApp([
+      pastWorkout('sep-14', LocalDate.of(2026, 9, 14), [
+        { blueprint: benchFives, kg: 80, reps: [5, 5, 5, 5] },
+        { blueprint: row, kg: 60, reps: [8, 8, 8] },
+      ]),
+      pastWorkout('sep-25', LocalDate.of(2026, 9, 25), [{ blueprint: benchEights, kg: 82.5, reps: [8, 8, 8] }]),
+    ]);
+
+    const again = await doAgain(app, 'sep-14');
+
+    expect(again.blueprint.exercises.map((x) => x.name)).toEqual(['Bench Press', 'Row']);
+    expect(weightsOf(again)).toEqual([
+      ['82.5x5', '82.5x5', '82.5x5', '82.5x5'],
+      ['60x8', '60x8', '60x8'],
+    ]);
+    expect(again.isStarted).toBe(false);
   });
 });
