@@ -1,21 +1,7 @@
-import {
-  ProgressionKey,
-  SessionBlueprint,
-  ExerciseBlueprint,
-  CardioExerciseBlueprint,
-  applyEarnedProgression,
-  latestInLineage,
-  lineageKeys,
-} from '@/models/blueprint-models';
-import { Weight, WeightUnit } from '@/models/weight';
-import {
-  PotentialSet,
-  RecordedCardioExercise,
-  RecordedCardioExerciseSet,
-  RecordedExercise,
-  RecordedWeightedExercise,
-  Session,
-} from '@/models/session-models';
+import { ProgressionKey, SessionBlueprint, lineageKeys } from '@/models/blueprint-models';
+import { WeightUnit } from '@/models/weight';
+import { RecordedExercise, Session } from '@/models/session-models';
+import { LatestByLineage, nextRecordedExercise } from '@/models/session-models/carry-over';
 import type { WorkoutRepository } from '@/services/workout-repository';
 import type { RootState } from '@/store';
 import { selectActiveSession } from '@/store/stored-sessions';
@@ -75,47 +61,15 @@ export class SessionService {
     return this.createNewSession(blueprint, latestExercises);
   }
 
-  private createNewSession(
-    sessionBlueprint: SessionBlueprint,
-    // Keyed by lineage (see `lineageKeys`), as the store's `latestExercises` is.
-    latestRecordedExercises: Record<ProgressionKey, RecordedExercise | undefined>,
-  ): Session {
-    // oxlint-disable-next-line typescript/no-this-alias
-    const $this = this;
+  private createNewSession(sessionBlueprint: SessionBlueprint, latestRecordedExercises: LatestByLineage): Session {
     const lineages = lineageKeys(sessionBlueprint.exercises);
-    function getNextExercise(e: ExerciseBlueprint, index: number): RecordedExercise {
-      const lastExercise = latestInLineage(latestRecordedExercises, lineages[index]!);
-      if (e instanceof CardioExerciseBlueprint) {
-        const cardioLastExercise = lastExercise instanceof RecordedCardioExercise ? lastExercise : undefined;
-        return RecordedCardioExercise.empty(e).with({
-          sets: e.sets.map((s, i) =>
-            RecordedCardioExerciseSet.empty(s).with({
-              incline: cardioLastExercise?.sets[i]?.incline,
-              resistance: cardioLastExercise?.sets[i]?.resistance,
-            }),
-          ),
-        });
-      }
-      const weightedLastExercise = lastExercise instanceof RecordedWeightedExercise ? lastExercise : undefined;
-      const unit = $this.getDefaultWeightUnit();
-      const newExercise = weightedLastExercise
-        ? weightedLastExercise.carriedInto(e, unit)
-        : new RecordedWeightedExercise(
-            e,
-            e.plannedSets.map((s) => PotentialSet.of({ weight: new Weight(0, unit), target: s.reps, kind: s.kind })),
-            undefined,
-          );
-      const progressed = weightedLastExercise
-        ? applyEarnedProgression(e.progression, newExercise, weightedLastExercise)
-        : newExercise;
-      // Built from the plan rather than carried, and only now, so a percentage follows today's
-      // progressed working weight.
-      return progressed.withWarmupsFromPlan($this.getDefaultWeightUnit());
-    }
+    const unit = this.getDefaultWeightUnit();
     return new Session(
       uuid(),
       sessionBlueprint,
-      sessionBlueprint.exercises.map(getNextExercise),
+      sessionBlueprint.exercises.map((e, index) =>
+        nextRecordedExercise(e, lineages[index]!, latestRecordedExercises, unit),
+      ),
       LocalDate.now(),
       undefined,
       undefined,
