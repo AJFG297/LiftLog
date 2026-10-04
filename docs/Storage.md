@@ -198,7 +198,7 @@ A workout is stored across five tables (`db/schema.ts`), not as one payload:
   again and finishes them; a user with nothing to merge has none of their data written. No per-exercise
   setting is keyed by a user exercise or stub id (the hidden list and edits are keyed by built-in ids,
   which never merge away), so there is nothing else to repoint. A restored backup is merged before it is
-  read, so an older backup can't bring the split back. `npm run merge:dry-run` prints the plan for any
+  read, so an older backup can't bring the split back. `npm run merge-exercises:dry-run` prints the plan for any
   backup (`LIFTLOG_MERGE_DRY_RUN=<file>`) or the synthetic history (`=synthetic`).
 - **Query columns** are computed on write, for SQL to order and aggregate. They are never read back:
   - `workout`: `reference_time_ms` (`getSessionReferenceTime`) and `volume_kg` (`sessionVolume`)

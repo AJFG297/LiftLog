@@ -11,7 +11,7 @@ import { writeHiddenBuiltInIds } from '@/services/hidden-built-in-exercises';
 export const dedupeBuiltInExercisesDataMigration = 'DEDUPE_BUILTIN_EXERCISES';
 
 // Legacy list of every built-in that was ever imported into the DB.
-const addedBuiltInExerciseIdsStorageKey = 'AddedBuiltInExerciseIdList';
+export const addedBuiltInExerciseIdsStorageKey = 'AddedBuiltInExerciseIdList';
 
 /**
  * Older versions copied all built-in exercises into the DB. Built-ins are now served from the bundled
