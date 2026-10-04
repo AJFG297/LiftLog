@@ -184,6 +184,58 @@ describe('planExerciseMerges', () => {
     ).toEqual([]);
   });
 
+  it('never makes one id both a survivor and merged: a stub in the way moves first', () => {
+    // "Bench Presss" folded to `bench press` before, so its stub sits at Bench Press's new id.
+    const bench = legacyStubExerciseId('Bench Press');
+    const typo = legacyStubExerciseId('Bench Presss');
+    expect(typo).toBe(stubExerciseId('Bench Press'));
+    const saved = { [bench]: stubDescriptor('Bench Press'), [typo]: stubDescriptor('Bench Presss') };
+
+    const first = plan(saved);
+    expect(first).toEqual([
+      {
+        normalizedName: 'bench presss',
+        survivor: { id: stubExerciseId('Bench Presss'), kind: 'stub' },
+        mergedIds: [typo],
+        survivorDescriptor: stubDescriptor('Bench Presss'),
+      },
+    ]);
+    const second = plan(applied(saved, first));
+    expect(second).toEqual([
+      {
+        normalizedName: 'bench press',
+        survivor: { id: typo, kind: 'stub' },
+        mergedIds: [bench],
+        survivorDescriptor: stubDescriptor('Bench Press'),
+      },
+    ]);
+    expect(plan(applied(applied(saved, first), second))).toEqual([]);
+  });
+
+  it('keeps a stub where it is when its new id belongs to an exercise that stays', () => {
+    const bench = legacyStubExerciseId('Bench Press');
+    // A stub of "Bench Presss" the user renamed: it stays put, at Bench Press's new id.
+    const renamed = legacyStubExerciseId('Bench Presss');
+    expect(plan({ [bench]: stubDescriptor('Bench Press'), [renamed]: stubDescriptor('My press') })).toEqual([]);
+    expect(
+      plan(
+        {
+          [bench]: stubDescriptor('Bench Press'),
+          [legacyStubExerciseId('Bench  Press')]: stubDescriptor('Bench  Press'),
+          [renamed]: stubDescriptor('My press'),
+        },
+        { [legacyStubExerciseId('Bench  Press')]: used(1, 5) },
+      ),
+    ).toEqual([
+      {
+        normalizedName: 'bench press',
+        survivor: { id: legacyStubExerciseId('Bench  Press'), kind: 'stub' },
+        mergedIds: [bench],
+        survivorDescriptor: stubDescriptor('Bench  Press'),
+      },
+    ]);
+  });
+
   it('plans nothing once applied, and nothing for a user with no duplicates', () => {
     const saved = {
       'user-lunge': stubDescriptor('Lunge'),

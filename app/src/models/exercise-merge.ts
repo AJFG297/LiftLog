@@ -1,5 +1,5 @@
 import { ExerciseId, normalizeExerciseName, stubExerciseId } from '@/models/blueprint-models';
-import { ExerciseDescriptor } from '@/models/exercise-models';
+import { descriptorsEqual, ExerciseDescriptor } from '@/models/exercise-models';
 import type { BuiltInExerciseNames } from '@/models/exercise-resolver';
 import { legacyNormalizeExerciseName, legacyStubExerciseId } from '@/models/legacy-exercise-name';
 
@@ -79,7 +79,7 @@ export function planExerciseMerges({
     groups.set(key, [...(groups.get(key) ?? []), { id, descriptor, kind, usage: usage[id] }]);
   }
 
-  const merges: ExerciseMerge[] = [];
+  const merges: (ExerciseMerge & { ordered: Member[] })[] = [];
   for (const [key, members] of groups) {
     const ordered = [...members].sort(bySurvivorRule);
     const builtIn = builtIns.byKey.get(key);
@@ -90,12 +90,12 @@ export function planExerciseMerges({
         normalizedName: key,
         survivor: { id: builtIn, kind: 'builtin' },
         mergedIds: members.map((x) => x.id).sort(),
-        survivorDescriptor: sameDescriptor(filled, current) ? undefined : filled,
+        survivorDescriptor: descriptorsEqual(filled, current) ? undefined : filled,
+        ordered,
       });
       continue;
     }
-    // A stub already at the derived id survives as it is, so a re-run after a crash, which finds the
-    // survivor written there and some workouts moved to it, picks the same one.
+    // A stub already at the derived id survives as it is, rather than one that would move onto it.
     const survivor =
       ordered.find((x) => x.kind === 'user') ??
       ordered.find((x) => x.id === stubExerciseId(x.descriptor.name)) ??
@@ -113,9 +113,45 @@ export function planExerciseMerges({
       survivor: { id: survivorId, kind: survivor.kind },
       mergedIds,
       survivorDescriptor: fill(survivor.descriptor, ordered),
+      ordered,
     });
   }
-  return merges.sort((a, b) => a.normalizedName.localeCompare(b.normalizedName));
+  return withoutOverlap(merges, savedExercises).sort((a, b) => a.normalizedName.localeCompare(b.normalizedName));
+}
+
+/**
+ * A stub's new id can be another exercise's old one: "Bench Presss" folded to `bench press` before, so its
+ * stub sits where Bench Press's stub now belongs. Taking that id would merge the two. So a stub group
+ * whose new id is held by an exercise outside it waits for the next round when that exercise is moving
+ * away in this one, and otherwise stays where it is. No id is then both a survivor and merged.
+ */
+function withoutOverlap(
+  merges: (ExerciseMerge & { ordered: Member[] })[],
+  savedExercises: Record<ExerciseId, ExerciseDescriptor>,
+): ExerciseMerge[] {
+  const moving = new Set(merges.flatMap((x) => x.mergedIds));
+  const result: ExerciseMerge[] = [];
+  for (const { ordered, ...merge } of merges) {
+    const { id } = merge.survivor;
+    const heldByAnother = id in savedExercises && !ordered.some((member) => member.id === id);
+    if (merge.survivor.kind !== 'stub' || !heldByAnother) {
+      result.push(merge);
+    } else if (!moving.has(id)) {
+      const [survivor, ...others] = ordered;
+      if (others.length) {
+        result.push({
+          ...merge,
+          survivor: { id: survivor!.id, kind: 'stub' },
+          mergedIds: others.map((x) => x.id).sort(),
+        });
+      }
+    }
+  }
+  const survivors = new Set(result.map((x) => x.survivor.id));
+  if (result.some((merge) => merge.mergedIds.some((id) => survivors.has(id)))) {
+    throw new Error('An exercise merge plan both keeps and merges one id');
+  }
+  return result;
 }
 
 /**
@@ -174,13 +210,4 @@ function fill(survivor: ExerciseDescriptor, others: readonly Member[]): Exercise
     secondaryMuscles: hasMuscles ? survivor.secondaryMuscles : (withMuscles?.secondaryMuscles ?? []),
     instructions: survivor.instructions || (donors.find((x) => x.instructions)?.instructions ?? ''),
   };
-}
-
-function sameDescriptor(a: ExerciseDescriptor, b: ExerciseDescriptor): boolean {
-  return (
-    a.equipment === b.equipment &&
-    a.instructions === b.instructions &&
-    a.primaryMuscles.join() === b.primaryMuscles.join() &&
-    a.secondaryMuscles.join() === b.secondaryMuscles.join()
-  );
 }
