@@ -37,6 +37,7 @@ import {
 } from '@/store/stored-sessions';
 import { setIsHydrated as setSettingsIsHydrated } from '@/store/settings';
 import { SessionService } from '@/services/session-service';
+import { sessionWithExerciseEdited } from '@/models/session-models/carry-over';
 import { routineFromSession } from '@/models/workout-detail';
 
 /**
@@ -277,6 +278,40 @@ describe('swapping an exercise (PM-41)', () => {
       { kg: 45, unit: 'kilograms', reps: 10, logged: false },
       { kg: 45, unit: 'kilograms', reps: 10, logged: false },
     ]);
+  });
+
+  it("opens an exercise picked in the exercise editor as a swap does, and keeps today's numbers for other edits", async () => {
+    const app = await startApp([
+      pastWorkout('sep-28', LocalDate.of(2026, 9, 28), [
+        { blueprint: bench, kg: 80, reps: [10, 10, 10] },
+        { blueprint: lunge, kg: 45, reps: [10, 10, 10] },
+      ]),
+    ]);
+    const sessionId = await startFreeform(app);
+    await addThroughPicker(app, sessionId, [{ id: 'Bench Press', name: 'Bench Press' }]);
+    /** What the exercise editor dispatches when it is dismissed with `edit` applied to the draft. */
+    const editInEditor = async (edit: (blueprint: WeightedExerciseBlueprint) => WeightedExerciseBlueprint) => {
+      const carryOver = selectCarryOver(app.getState(), sessionId);
+      app.store.dispatch(
+        updateStoredSession({
+          sessionId,
+          update: (s) =>
+            sessionWithExerciseEdited(
+              s,
+              0,
+              edit(s.recordedExercises[0]!.blueprint as WeightedExerciseBlueprint),
+              carryOver,
+            ),
+        }),
+      );
+      await app.settle();
+    };
+
+    await editInEditor((blueprint) => blueprint.with({ sets: 4 }));
+    expect(setsOf(app, sessionId, 0)).toEqual(opened(80, 10, 4));
+
+    await editInEditor((blueprint) => blueprint.with({ name: 'Lunge', exerciseId: 'Lunge' }));
+    expect(setsOf(app, sessionId, 0)).toEqual(opened(45, 10, 4));
   });
 
   it('carries incline and resistance into a cardio exercise swapped in', async () => {

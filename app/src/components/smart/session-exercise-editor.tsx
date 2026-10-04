@@ -1,14 +1,15 @@
 import FullHeightScrollView from '@/components/layout/full-height-scroll-view';
 import { ExerciseEditor } from '@/components/presentation/workout-editor/exercise-editor';
 import { ExerciseBlueprint } from '@/models/blueprint-models';
-import { useAppSelector, useAppSelectorWithArg } from '@/store';
-import { selectSession, updateStoredSession } from '@/store/stored-sessions';
+import { sessionWithExerciseEdited } from '@/models/session-models/carry-over';
+import { RootState, useAppSelectorWithArg } from '@/store';
+import { selectCarryOver, selectSession, updateStoredSession } from '@/store/stored-sessions';
 import { useTranslate } from '@tolgee/react';
 import { Href, Stack, useRouter } from 'expo-router';
 import { HeaderHeightContext } from 'expo-router/react-navigation';
 import { useContext, useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useStore } from 'react-redux';
 import { useOnDismiss } from '@/hooks/useOnDismiss';
 
 export function getSessionExerciseEditorHref(sessionId: string, index: number): Href {
@@ -18,9 +19,9 @@ export function getSessionExerciseEditorHref(sessionId: string, index: number): 
 export function SessionExerciseEditor(props: { sessionId: string; index: number }) {
   const { t } = useTranslate();
   const exerciseIndex = props.index;
-  const useImperialUnits = useAppSelector((x) => x.settings.useImperialUnits);
   const session = useAppSelectorWithArg(selectSession, props.sessionId);
   const dispatch = useDispatch();
+  const store = useStore<RootState>();
   const { dismiss } = useRouter();
 
   const exercise = session?.recordedExercises[exerciseIndex]?.blueprint;
@@ -40,12 +41,13 @@ export function SessionExerciseEditor(props: { sessionId: string; index: number 
     if (!updated) {
       return;
     }
+    const carryOver = selectCarryOver(store.getState(), props.sessionId);
     dispatch(
       updateStoredSession({
         sessionId: props.sessionId,
         // The exercise can have been removed while the editor was open, in which case the edit is moot.
         update: (s) =>
-          s.recordedExercises[exerciseIndex] ? s.withEditedExercise(exerciseIndex, updated, useImperialUnits) : s,
+          s.recordedExercises[exerciseIndex] ? sessionWithExerciseEdited(s, exerciseIndex, updated, carryOver) : s,
       }),
     );
   });

@@ -3,11 +3,13 @@ import {
   CardioExerciseBlueprint,
   ExerciseBlueprint,
   latestInLineage,
+  lineageKeys,
   ProgressionKey,
 } from '@/models/blueprint-models';
 import { RecordedCardioExercise, RecordedCardioExerciseSet } from '@/models/session-models/recorded-cardio-exercise';
 import type { RecordedExercise } from '@/models/session-models/recorded-exercise';
 import { PotentialSet, RecordedWeightedExercise } from '@/models/session-models/recorded-weighted-exercise';
+import type { Session } from '@/models/session-models/session';
 import { Weight, WeightUnit } from '@/models/weight';
 
 /** The latest performance of each lineage, keyed by `lineageKeys`, as the store's `latestExercises` is. */
@@ -59,4 +61,61 @@ export function nextRecordedExercise(
   // Built from the plan rather than carried, and only now, so a percentage follows today's
   // progressed working weight.
   return progressed.withWarmupsFromPlan(unit);
+}
+
+/**
+ * The workout with the exercise at `index` replaced by a different exercise planned as `blueprint`, opened
+ * on what it carries over at that place, as an add would. Sets already logged stay as they were.
+ */
+export function sessionWithExerciseReplaced(
+  session: Session,
+  index: number,
+  blueprint: ExerciseBlueprint,
+  { latest, unit }: CarryOver,
+): Session {
+  const current = session.recordedExercises[index];
+  if (!current) {
+    return session;
+  }
+  const lineage = lineageKeys(session.blueprint.exercises.with(index, blueprint))[index]!;
+  return session.withExercise(index, keepingLogged(current, nextRecordedExercise(blueprint, lineage, latest, unit)));
+}
+
+/**
+ * The exercise editor's edit of the exercise at `index`. Picking another exercise by name, or turning it
+ * weighted or cardio, makes it a different movement, which opens as a swap does
+ * ({@link sessionWithExerciseReplaced}); any other edit keeps today's numbers (`Session.withEditedExercise`).
+ */
+export function sessionWithExerciseEdited(
+  session: Session,
+  index: number,
+  blueprint: ExerciseBlueprint,
+  carryOver: CarryOver,
+): Session {
+  const current = session.recordedExercises[index];
+  if (!current || current.blueprint.movementKey() !== blueprint.movementKey()) {
+    return sessionWithExerciseReplaced(session, index, blueprint, carryOver);
+  }
+  return session.withEditedExercise(index, blueprint, carryOver.unit === 'pounds');
+}
+
+function keepingLogged(current: RecordedExercise, opened: RecordedExercise): RecordedExercise {
+  if (current instanceof RecordedWeightedExercise && opened instanceof RecordedWeightedExercise) {
+    const keep = (was: readonly PotentialSet[]) => (slot: PotentialSet, i: number) => (was[i]?.set ? was[i] : slot);
+    return opened.with({
+      potentialSets: opened.potentialSets.map(keep(current.potentialSets)),
+      warmupSets: opened.warmupSets.map(keep(current.warmupSets)),
+      notes: current.notes,
+    });
+  }
+  if (current instanceof RecordedCardioExercise && opened instanceof RecordedCardioExercise) {
+    return opened.with({
+      sets: opened.sets.map((set, i) => {
+        const was = current.sets[i];
+        return was?.completionDateTime || was?.currentBlockStartTime ? was : set;
+      }),
+      notes: current.notes,
+    });
+  }
+  return opened;
 }
