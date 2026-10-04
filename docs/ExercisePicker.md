@@ -30,6 +30,12 @@ rules (`blueprintsForPick`). A superset flag left on the old last exercise linke
 the new ones, so it's cleared (`withPickAppended`, `sessionWithPickAdded`). In the routine editor the first
 exercise added opens expanded; in the live workout the screen moves to it.
 
+In a workout, each exercise added opens on the numbers a routine would give it at that place: last time's
+weight carried over, and the second of an exercise already in the workout on that exercise's second place
+last time (see [Progression.md](./Progression.md)). A swap keeps the plan (sets, reps, rest) under the picked
+exercise and opens it the same way, keeping any set already logged (`sessionWithExerciseSwapped`). Both read the
+carry-over cache without the workout's own entries (`selectCarryOver`).
+
 ## How the result comes back
 
 The picker is its own route, so it can't call back. It puts `{ requestId, exercises, asSuperset }` in

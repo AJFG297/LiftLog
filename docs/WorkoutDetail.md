@@ -25,9 +25,13 @@ card's summary (the summary is the button, so the card's own buttons stay reacha
 
 ## What it does
 
-- **Do again** starts a new workout with the same exercises and sets, nothing logged, through the usual start path
-  (`useStartWorkoutWithConfirmation`), which asks first when another workout is in progress. `repeatSession` makes
-  it: the logged weights become the new workout's placeholders.
+- **Do again** starts a new workout with the same exercises, sets and rep targets, nothing logged, through the
+  usual start path (`useStartWorkoutWithConfirmation`), which asks first when another workout is in progress.
+  `SessionService.repeatSession` makes it: the workout's structure as Save as routine takes it
+  (`routineFromSession`), opened as starting that routine would, so weights carry over from the latest
+  performance and earned progression applies (see [Progression.md](./Progression.md)). That day's weights are
+  not reused: repeating a deliberately light day opens at the latest weights. History's Start this workout does
+  the same.
 - **Save as routine** adds the workout's structure (`routineFromSession`, built from `session.blueprint`: the
   exercises as they ended up that day) to the **active plan**, named after the workout, or "Push 2" and so on when
   the name is taken (`uniqueRoutineName`). A toast offers Undo. Editing a warm-up's weight during a workout leaves
