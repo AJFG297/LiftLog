@@ -123,8 +123,8 @@ export function addImportBackupEffects(addEffect: AddEffectFn) {
       });
 
       await migrator.migrate();
-      // A backup from before the plural fix still has Lunge and Lunges apart, and stubs at old ids. They
-      // are merged on the device once restored (see `upsertStoredSessions`), on the device's counts.
+      // A backup taken before the plural merge can have Lunge and Lunges apart, and stubs at old-fold ids.
+      // They are merged on the device once restored (see `upsertStoredSessions`), on the device's counts.
       // A backup's in-progress workout comes back as history: restoring never resumes a workout.
       const { workouts } = await new WorkoutRepository(drizzleBackupDb).loadAll();
       const programs = (await drizzleBackupDb.select().from(programsSchema)).reduce(

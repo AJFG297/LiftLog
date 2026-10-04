@@ -2,9 +2,15 @@ import { ExerciseId, STUB_EXERCISE_NAMESPACE } from '@/models/blueprint-models';
 import { uuidFromName } from '@/utils/uuid';
 
 /**
- * The name fold before PM-5, frozen: it stripped a trailing "es", or else a trailing "s", so `Lunges`
- * became `lung` and `Bench Press` became `bench pres`. Stubs stored before the fix carry ids derived
- * from it, which is how the merge migration tells a stub from a user's own exercise. Never change it.
+ * The old name fold, frozen: it stripped a trailing "es", or else a trailing "s", so `Lunges` became `lung`
+ * and `Bench Press` became `bench pres`. Stubs made under it carry ids derived from it, which is how the
+ * plural merge (`planExerciseMerges`) tells a stub from a user's own exercise. Never change it.
+ *
+ * Only data from before `MERGE_PLURAL_EXERCISE_NAMES` holds such ids: a phone that hasn't run it yet, or a
+ * backup taken before it ran, which a restore merges on the device. Delete this file, with the old-fold
+ * checks in `planExerciseMerges` and the dry run's legacy linking, once neither can reach the app: when
+ * restores refuse backups from before the merge (as `importDataSql` refuses pre-relational ones) and no
+ * supported build predates it.
  */
 export function legacyNormalizeExerciseName(name: string): string {
   if (!name) {
@@ -18,7 +24,7 @@ export function legacyNormalizeExerciseName(name: string): string {
       : lowerName;
 }
 
-/** `stubExerciseId` as it was derived before PM-5. */
+/** `stubExerciseId` under the old fold: the id a stub made before the plural merge has. */
 export function legacyStubExerciseId(name: string): ExerciseId {
   return uuidFromName(legacyNormalizeExerciseName(name), STUB_EXERCISE_NAMESPACE);
 }

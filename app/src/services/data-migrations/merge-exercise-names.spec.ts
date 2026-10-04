@@ -112,7 +112,7 @@ const descriptors = {
   [DUMBBELL_LUNGE]: stubDescriptor('Dumbbell Lunge'),
 };
 
-/** A database as a build from before the fix left it, every earlier data migration already run. */
+/** A database as a build with the old fold left it, every earlier data migration already run. */
 async function splitDb(): Promise<ExpoSQLiteDatabase> {
   const db = drizzle(await openDatabaseAsync(':memory:'));
   await new DatabaseMigrationService(db, logger as never, { importOldData: async () => {} }).migrate();

@@ -31,8 +31,8 @@ import { generateSyntheticHistory } from '@/utils/__test__/synthetic-history';
  *   LIFTLOG_MERGE_DRY_RUN=path/to/backup.liftlogbackup.sqlite.gz npm run merge-exercises:dry-run
  *   LIFTLOG_MERGE_DRY_RUN=synthetic npm run merge-exercises:dry-run   (LIFTLOG_BENCH_SESSIONS sets the size)
  *
- * Data that was never linked to exercise ids is linked first with the fold from before the fix, the way a
- * phone on an older build linked it, so the plan is the one that phone would run.
+ * Data that was never linked to exercise ids is linked first with the old fold (`legacyNormalizeExerciseName`),
+ * the way a phone on an older build linked it, so the plan is the one that phone would run.
  *
  * Deleted built-ins come from the backup the way the phone gets them: the built-in de-dup lists them in the
  * key-value store and the merge reads them back. A backup from before the de-dup holds a copy of every
