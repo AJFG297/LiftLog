@@ -13,8 +13,10 @@ import {
   WeightedExerciseBlueprint,
 } from '@/models/blueprint-models';
 import {
+  PotentialSet,
   RecordedCardioExercise,
   RecordedCardioExerciseSet,
+  RecordedSet,
   RecordedWeightedExercise,
   Session,
 } from '@/models/session-models';
@@ -452,6 +454,36 @@ describe('Do again (PM-42)', () => {
       ['60x8', '60x8', '60x8'],
     ]);
     expect(again.isStarted).toBe(false);
+  });
+
+  it('keeps the rep targets that workout had, though they were changed for that day only', async () => {
+    // Sep 14's plan said 3 × 5, but that day each set's target was turned down to 3.
+    const day = (set: number) => OffsetDateTime.of(2026, 9, 14, 10, 0, set, 0, ZoneOffset.UTC);
+    const threes = new RecordedWeightedExercise(
+      benchFives.with({ sets: 3 }),
+      [0, 1, 2].map((set) =>
+        PotentialSet.of({
+          weight: new Weight(90, 'kilograms'),
+          target: { min: 3, max: 3 },
+          set: RecordedSet.of({ repsCompleted: 3, completionDateTime: day(set) }),
+        }),
+      ),
+      undefined,
+    );
+    const sep14 = new Session(
+      'sep-14',
+      new SessionBlueprint('Push', [threes.blueprint], ''),
+      [threes],
+      LocalDate.of(2026, 9, 14),
+      undefined,
+      undefined,
+    );
+    const app = await startApp([
+      sep14,
+      pastWorkout('sep-25', LocalDate.of(2026, 9, 25), [{ blueprint: benchFives, kg: 82.5, reps: [5, 5, 5, 5] }]),
+    ]);
+
+    expect(weightsOf(await doAgain(app, 'sep-14'))).toEqual([['82.5x3', '82.5x3', '82.5x3']]);
   });
 
   it('applies the progression the latest performance earned, as a routine would', async () => {
