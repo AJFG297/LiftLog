@@ -128,8 +128,9 @@ session), `applyProgression`, `applyEarnedProgression` and `ProgressionRule.isEa
 what each set kind carries in `app/src/models/session-models/set-kind.ts`; one exercise opened on last
 time (`nextRecordedExercise`, which routine start, add, swap and Do again all go through) and a swap
 (`sessionWithExerciseReplaced`) in `app/src/models/session-models/carry-over.ts`; the cache minus the
-workout's own entries for an add or swap (`selectCarryOver`) in `app/src/store/stored-sessions/index.ts`;
-session start and Do again (`repeatSession`) in `app/src/services/session-service.ts`; the editor in
+workout's own entries for an add or swap, read from the tables when an entry is the workout's own
+(`withCarryOver`), in `app/src/store/stored-sessions/index.ts`; Do again's structure (`repeatBlueprint`) in
+`app/src/models/workout-detail.ts`; session start and Do again (`repeatSession`) in `app/src/services/session-service.ts`; the editor in
 `app/src/components/presentation/workout-editor/progressive-overload.tsx`. The stored
 `workout_exercise.progression_key` column was rewritten to the new key by the
 `REKEY_PROGRESSION_BY_EXERCISE` data migration (`app/src/services/data-migrations/rekey-progression.ts`).
