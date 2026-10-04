@@ -6,9 +6,11 @@ import { PreferenceService } from './preference-service';
 import {
   dedupeBuiltInExercises,
   dedupeBuiltInExercisesDataMigration,
+  hiddenBuiltInExerciseIdsStorageKey,
 } from '@/services/data-migrations/dedupe-builtin-exercises';
 import { importBackends, importBackendsDataMigration } from '@/services/data-migrations/import-backends';
 import { linkExerciseIds, linkExerciseIdsDataMigration } from '@/services/data-migrations/link-exercise-ids';
+import { mergeExerciseNames, mergeExerciseNamesDataMigration } from '@/services/data-migrations/merge-exercise-names';
 import { rekeyProgression, rekeyProgressionDataMigration } from '@/services/data-migrations/rekey-progression';
 import { restoreMuscleRoles, restoreMuscleRolesDataMigration } from '@/services/data-migrations/restore-muscle-roles';
 import {
@@ -51,7 +53,15 @@ export class DatabaseImportService implements DatabaseImporter {
     if (!dataMigrationsRun.includes(rekeyProgressionDataMigration)) {
       await rekeyProgression(this.db);
     }
+    // After linking, which made the stubs it merges.
+    if (!dataMigrationsRun.includes(mergeExerciseNamesDataMigration)) {
+      await mergeExerciseNames(this.db, await hiddenBuiltInIds(this.keyValueStore));
+    }
 
     console.info('Imported old data to DB in ' + (performance.now() - now) + 'ms');
   }
+}
+
+async function hiddenBuiltInIds(keyValueStore: KeyValueStore): Promise<string[]> {
+  return JSON.parse((await keyValueStore.getItem(hiddenBuiltInExerciseIdsStorageKey)) ?? '[]') as string[];
 }

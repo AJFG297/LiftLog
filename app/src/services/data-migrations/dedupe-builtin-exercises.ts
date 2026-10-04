@@ -11,7 +11,7 @@ export const dedupeBuiltInExercisesDataMigration = 'DEDUPE_BUILTIN_EXERCISES';
 
 // Legacy list of every built-in that was ever imported into the DB.
 const addedBuiltInExerciseIdsStorageKey = 'AddedBuiltInExerciseIdList';
-const hiddenBuiltInExerciseIdsStorageKey = 'HiddenBuiltInExerciseIdList';
+export const hiddenBuiltInExerciseIdsStorageKey = 'HiddenBuiltInExerciseIdList';
 
 function descriptorsEqual(a: ExerciseDescriptor, b: ExerciseDescriptor): boolean {
   return (

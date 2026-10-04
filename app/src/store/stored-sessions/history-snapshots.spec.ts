@@ -21,6 +21,7 @@ import { calculateStats } from '@/store/stats/calculate-stats';
 import { GranularStatisticView } from '@/store/stats';
 import { legacyNormalizeExerciseName } from '@/models/legacy-exercise-name';
 import { linkExerciseIds } from '@/services/data-migrations/link-exercise-ids';
+import { mergeExerciseNames } from '@/services/data-migrations/merge-exercise-names';
 import { selectPreferredWeightUnit, setFirstDayOfWeek, setIsHydrated as setSettingsIsHydrated } from '@/store/settings';
 import { applyStoredSessionsEffects } from '@/store/stored-sessions/effects';
 import { DatabaseMigrationService } from '@/services/database-migration-service';
@@ -69,8 +70,10 @@ async function loadHistory(history: Session[]) {
   await new DatabaseMigrationService(db, silentLogger as never, { importOldData: async () => {} }).migrate();
   const workoutRepository = new WorkoutRepository(db);
   await workoutRepository.putMany(history);
-  // The fixture predates exercise ids, like a development install's history: startup links it by name.
+  // The fixture predates exercise ids, like a development install's history: startup links it by name,
+  // then merges plurals (nothing left to merge: linking already used the fixed fold).
   await linkExerciseIds(db);
+  await mergeExerciseNames(db, []);
 
   const harness = createEffectStore({
     db,

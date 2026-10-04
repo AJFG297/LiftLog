@@ -78,7 +78,7 @@ describe('planExerciseMerges', () => {
     expect(plan(saved, { c: used(0, 100) })[0]!.survivor).toEqual({ id: 'c', kind: 'user' });
   });
 
-  it('merges stubs alone at the id the name now derives, named as the stub logged most', () => {
+  it('merges stubs alone into the stub already at the id the name now derives', () => {
     const lunge = legacyStubExerciseId('Lunge');
     const lunges = legacyStubExerciseId('Lunges');
     // The old fold gave "Lunge" the key the new one gives both, so its id already is the new one.
@@ -91,7 +91,26 @@ describe('planExerciseMerges', () => {
         normalizedName: 'lunge',
         survivor: { id: lunge, kind: 'stub' },
         mergedIds: [lunges],
-        survivorDescriptor: stubDescriptor('Lunges'),
+        survivorDescriptor: stubDescriptor('Lunge'),
+      },
+    ]);
+  });
+
+  it('merges stubs none of which is at the derived id there, named as the one logged most', () => {
+    const spaced = legacyStubExerciseId('Bench  Press');
+    const plain = legacyStubExerciseId('Bench Press');
+
+    expect(
+      plan(
+        { [spaced]: stubDescriptor('Bench  Press'), [plain]: stubDescriptor('Bench Press') },
+        { [spaced]: used(1, 5) },
+      ),
+    ).toEqual([
+      {
+        normalizedName: 'bench press',
+        survivor: { id: stubExerciseId('Bench Press'), kind: 'stub' },
+        mergedIds: [spaced, plain].sort(),
+        survivorDescriptor: stubDescriptor('Bench  Press'),
       },
     ]);
   });

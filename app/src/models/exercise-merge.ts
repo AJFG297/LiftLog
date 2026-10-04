@@ -50,8 +50,9 @@ interface Member {
  * The user's exercises and stubs are grouped by normalised name. The survivor of a group is:
  *   1. the built-in with that name, as the resolver would link it, unless the user deleted it or every
  *      member already matched it under the old fold (an exercise the user made beside it on purpose);
- *   2. otherwise the user exercise logged in the most workouts, then the one first logged earliest;
- *   3. otherwise the stub, at the id its name now derives, named as the stub logged most.
+ *   2. otherwise the user exercise logged in the most workouts, then the one first logged earliest (moving
+ *      workouts to it only makes it more so, so a re-run after a crash picks it again);
+ *   3. otherwise the stub, at the id its name now derives: the one already there, else the one logged most.
  * It keeps its own fields and fills empty equipment, muscles and instructions from the others.
  *
  * A stub alone in its group still moves when its stored id came from the old fold, so a blueprint that
@@ -88,15 +89,22 @@ export function planExerciseMerges({
       merges.push({
         normalizedName: key,
         survivor: { id: builtIn, kind: 'builtin' },
-        mergedIds: members.map((x) => x.id),
+        mergedIds: members.map((x) => x.id).sort(),
         survivorDescriptor: sameDescriptor(filled, current) ? undefined : filled,
       });
       continue;
     }
-    const users = ordered.filter((x) => x.kind === 'user');
-    const survivor = users[0] ?? ordered[0]!;
+    // A stub already at the derived id survives as it is, so a re-run after a crash, which finds the
+    // survivor written there and some workouts moved to it, picks the same one.
+    const survivor =
+      ordered.find((x) => x.kind === 'user') ??
+      ordered.find((x) => x.id === stubExerciseId(x.descriptor.name)) ??
+      ordered[0]!;
     const survivorId = survivor.kind === 'user' ? survivor.id : stubExerciseId(survivor.descriptor.name);
-    const mergedIds = members.map((x) => x.id).filter((id) => id !== survivorId);
+    const mergedIds = members
+      .map((x) => x.id)
+      .filter((id) => id !== survivorId)
+      .sort();
     if (!mergedIds.length) {
       continue;
     }
