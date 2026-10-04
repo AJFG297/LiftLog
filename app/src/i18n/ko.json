@@ -335,7 +335,6 @@
   "settings.use_imperial_units.subtitle": "kg 대신 파운드(lb) 사용",
   "stats.no_data.message": "선택한 기간에 데이터가 없습니다.",
   "stats.select_period.label": "기간 선택",
-  "stats.weighted_exercise_list.title": "중량 운동",
   "stats.stats.title": "통계",
   "stats.exercise.overview.title": "요약",
   "stats.exercise.max_weight.title": "최대 중량",
