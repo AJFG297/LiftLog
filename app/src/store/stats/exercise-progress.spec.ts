@@ -5,6 +5,7 @@ import { makeWeightedBlueprint } from '@/models/session-models/__test__/helpers'
 import { PotentialSet, RecordedSet, RecordedWeightedExercise, Session } from '@/models/session-models';
 import { Weight } from '@/models/weight';
 import {
+  defaultRangeOf,
   exerciseChartOf,
   exerciseRecordsOf,
   measuresOf,
@@ -244,5 +245,14 @@ describe('rangeStart', () => {
     expect(rangeStart('3m', today)).toEqual(day(7, 1));
     expect(rangeStart('1y', today)).toEqual(LocalDate.of(2025, 10, 1));
     expect(rangeStart('all', today)).toBeUndefined();
+  });
+});
+
+describe('defaultRangeOf', () => {
+  it('opens on the shortest range with a trend in it, else all', () => {
+    // July, August and two in September are within three months of October 1.
+    expect(defaultRangeOf(benchHistory, today)).toBe('3m');
+    expect(defaultRangeOf(benchHistory, day(12, 15))).toBe('6m');
+    expect(defaultRangeOf(benchHistory, LocalDate.of(2027, 9, 10))).toBe('all');
   });
 });

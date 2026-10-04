@@ -30,6 +30,19 @@ export function rangeStart(range: ExerciseRange, today: LocalDate): LocalDate | 
   return range === 'all' ? undefined : today.minusMonths(RANGE_MONTHS[range]);
 }
 
+/**
+ * The range the page opens on: the shortest that holds at least two workouts, so there is a trend to read,
+ * else all of them. Someone who last did a lift in the spring doesn't open on an empty chart.
+ */
+export function defaultRangeOf(exercise: ExerciseHistory, today: LocalDate): ExerciseRange {
+  return (
+    EXERCISE_RANGES.find((range) => {
+      const start = rangeStart(range, today);
+      return !start || exercise.points.filter((point) => !point.date.isBefore(start)).length >= 2;
+    }) ?? 'all'
+  );
+}
+
 /** The movement's axis: best reps for one that tracks no load, as on the Progress tab. */
 export function axisOf(exercise: ExerciseHistory): StatAxis {
   return primaryAxisFor(exercise.blueprint);
@@ -219,16 +232,14 @@ function heaviestSetOf(sets: readonly LiftedSet[]): LiftedSet | undefined {
  * have no records, so no dots.
  */
 function bestsOn(exercise: ExerciseHistory, measure: ExerciseMeasure): Set<string> {
+  const bests = new Set<string>();
+  if (!hasRecordDots(exercise, measure)) {
+    return bests;
+  }
   const read =
     measure === 'oneRepMax'
       ? (point: ExercisePoint) => point.oneRepMax
-      : measure === 'heaviest' && exercise.blueprint.resistance === 'external'
-        ? (point: ExercisePoint) => heaviestSetOf(point.sets)?.weight
-        : undefined;
-  const bests = new Set<string>();
-  if (!read) {
-    return bests;
-  }
+      : (point: ExercisePoint) => heaviestSetOf(point.sets)?.weight;
   let best: Weight | undefined;
   for (const point of exercise.points) {
     const value = read(point);
@@ -243,6 +254,11 @@ function bestsOn(exercise: ExerciseHistory, measure: ExerciseMeasure): Set<strin
     }
   }
   return bests;
+}
+
+/** Whether the chart on `measure` can mark records, so whether it needs the Record key. */
+export function hasRecordDots(exercise: ExerciseHistory, measure: ExerciseMeasure): boolean {
+  return measure === 'oneRepMax' || (measure === 'heaviest' && exercise.blueprint.resistance === 'external');
 }
 
 function changeOver(

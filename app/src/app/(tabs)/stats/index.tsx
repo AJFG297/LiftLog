@@ -32,7 +32,7 @@ import { buildWeeklyTable, MuscleKey, trainingView } from '@/store/stats/progres
 import { exerciseMetaLabel } from '@/utils/exercise-meta';
 import { TranslationKey, useTranslate } from '@tolgee/react';
 import { Stack, useRouter } from 'expo-router';
-import { useOpenExerciseStats } from '@/hooks/useOpenExerciseStats';
+import { useOpenExerciseProgress } from '@/hooks/useOpenExerciseProgress';
 import { useState } from 'react';
 import { View } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
@@ -59,7 +59,7 @@ export default function ProgressScreen() {
   const { tokens } = useAppTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const openExerciseStats = useOpenExerciseStats();
+  const openExerciseProgress = useOpenExerciseProgress();
   const dispatch = useDispatch();
   const goToRoutines = useGoToRoutines();
   const formatDate = useFormatDate();
@@ -82,7 +82,7 @@ export default function ProgressScreen() {
   const shortDate = (date: Parameters<typeof formatDate>[0]) => formatDate(date, { month: 'short', day: 'numeric' });
   const openExercise = (exerciseId: ExerciseId | undefined) => {
     if (exerciseId) {
-      openExerciseStats(exerciseId);
+      openExerciseProgress(exerciseId);
     }
   };
 

@@ -1,9 +1,9 @@
-import { createAction, createSelector, createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { createAction, createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { Duration, LocalDate, OffsetDateTime } from '@js-joda/core';
 import { Weight } from '@/models/weight';
 import { LocalDateRange } from '@/models/time-models';
 import { RemoteData } from '@/models/remote';
-import { ExerciseId, MovementKey, movementKeyFor } from '@/models/blueprint-models';
+import { ExerciseId, MovementKey } from '@/models/blueprint-models';
 import { StatAxis } from '@/store/stats/quantity';
 
 export type { StatAxis };
@@ -124,15 +124,6 @@ export const { setOverallStats, setStatsIsDirty, setOverallViewTime } = statsSli
 
 export const { selectOverallView } = statsSlice.selectors;
 /** One weighted exercise's stats, by id: the same exercise under any name, and never a cardio one. */
-export const selectExerciseView = createSelector(
-  selectOverallView,
-  (_, exerciseId: ExerciseId) => exerciseId,
-  (state: RemoteData<GranularStatisticView>, exerciseId: ExerciseId) => {
-    const key = movementKeyFor(exerciseId, 'WeightedExerciseBlueprint');
-    return state.map((x) => x.weightedExerciseStats.find((ex) => ex.movementKey === key));
-  },
-);
-
 export const fetchOverallStats = createAction('fetchOverallStats');
 
 export const statsReducer = statsSlice.reducer;

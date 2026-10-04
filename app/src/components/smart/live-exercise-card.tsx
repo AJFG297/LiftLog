@@ -5,7 +5,6 @@ import { ExerciseShortcut, FocusExerciseCard } from '@/components/presentation/l
 import { targetLabel, targetReasonText } from '@/components/presentation/live-workout/target-text';
 import RecordedExerciseNotesEditor from '@/components/presentation/workout/recorded-exercise-notes-editor';
 import { getExerciseHistoryHref } from '@/components/smart/exercise-history';
-import { getExerciseStatsHref } from '@/components/smart/exercise-stats-href';
 import { LiveSetTable } from '@/components/smart/live-set-table';
 import { RecordedExerciseView } from '@/components/smart/recorded-exercise-view';
 import { getSessionExerciseEditorHref } from '@/components/smart/session-exercise-editor';
@@ -23,6 +22,7 @@ import { formatTimeSpan } from '@/utils/format-time-span';
 import { openUrl } from '@/utils/open-url';
 import { useTranslate } from '@tolgee/react';
 import { useRouter } from 'expo-router';
+import { useOpenExerciseProgress } from '@/hooks/useOpenExerciseProgress';
 import { type Ref, useState } from 'react';
 import { View } from 'react-native';
 
@@ -42,6 +42,7 @@ export function LiveExerciseCard(props: LiveExerciseCardProps) {
   const { session, exerciseIndex, updateSession } = props;
   const { t } = useTranslate();
   const { push } = useRouter();
+  const openExerciseProgress = useOpenExerciseProgress();
   const useImperialUnits = useAppSelector((x) => x.settings.useImperialUnits);
   const exercises = useAppSelector(selectExercises);
   const targetFor = useTodaysTarget(session);
@@ -117,13 +118,10 @@ export function LiveExerciseCard(props: LiveExerciseCardProps) {
     ...(isWeighted
       ? [
           {
-            label: t('stats.stats.title'),
-            icon: 'analytics',
-            systemImage: 'chart.bar',
-            onPress: () =>
-              push(getExerciseStatsHref(blueprint.exerciseId), {
-                withAnchor: true,
-              }),
+            label: t('progress.exercise.view_progress.button'),
+            icon: 'trendingUp',
+            systemImage: 'chart.line.uptrend.xyaxis',
+            onPress: () => openExerciseProgress(blueprint.exerciseId),
           } satisfies MenuItem,
         ]
       : []),

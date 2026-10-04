@@ -71,6 +71,9 @@ function Layout() {
       <Stack.Screen name="workout-editor" />
       <Stack.Screen name="workout-detail/index" />
       <Stack.Screen name="workout-detail/edit" />
+      {/* Over the tabs, so an exercise opens from any of them and Back returns to where it was opened. */}
+      <Stack.Screen name="exercise-progress" />
+      <Stack.Screen name="records" />
       <Stack.Screen name="session/post-workout" options={{ headerShown: false }} />
       <Stack.Screen name="diff-save" options={formSheetOptions([0.75, 0.95])} />
       <Stack.Screen name="routine-set-type" options={formSheetOptions([0.8, 0.95])} />
