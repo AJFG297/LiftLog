@@ -37,6 +37,7 @@ import {
 } from '@/store/stored-sessions';
 import { setIsHydrated as setSettingsIsHydrated } from '@/store/settings';
 import { SessionService } from '@/services/session-service';
+import { routineFromSession } from '@/models/workout-detail';
 
 /**
  * Every way an exercise enters a workout opens it on the numbers a routine would: the latest performance
@@ -387,5 +388,73 @@ describe('Do again (PM-42)', () => {
     ]);
 
     expect(weightsOf(await doAgain(app, 'sep-14'))).toEqual([['85x5', '85x5', '85x5', '85x5']]);
+  });
+});
+
+describe('every entry path opens what the routine path opens', () => {
+  const heavy = makeWeightedBlueprint({
+    name: 'Bench Press',
+    exerciseId: 'Bench Press',
+    sets: 3,
+    repsConfig: { type: 'fixed', reps: 5 },
+    warmupSets: [{ load: undefined, reps: 8 }],
+  });
+  const backOff = heavy.with({ sets: 2, repsConfig: { type: 'fixed', reps: 10 }, warmupSets: [] });
+  const history = () => [
+    pastWorkout('sep-14', LocalDate.of(2026, 9, 14), [
+      { blueprint: heavy, kg: 80, reps: [5, 5, 5] },
+      { blueprint: backOff, kg: 60, reps: [10, 10] },
+      { blueprint: row, kg: 50, reps: [8, 8, 8] },
+    ]),
+    pastWorkout('sep-25', LocalDate.of(2026, 9, 25), [
+      { blueprint: heavy, kg: 82.5, reps: [5, 5, 4] },
+      { blueprint: backOff, kg: 62.5, reps: [10, 10] },
+      { blueprint: row, kg: 55, reps: [8, 8, 8] },
+    ]),
+  ];
+
+  it('Do again opens the same exercises as starting that workout as a routine', async () => {
+    const app = await startApp(history());
+    const past = (await app.workoutRepository.get('sep-14'))!;
+    const latest = selectLatestExercises(app.getState());
+
+    const again = serviceOf(app).repeatSession(past, latest);
+    const routine = serviceOf(app).hydrateSessionFromBlueprint(routineFromSession(past, past.blueprint.name), latest);
+
+    expect(weightsOf(again)).toEqual([
+      ['85x5', '85x5', '85x5'],
+      ['65x10', '65x10'],
+      ['55x8', '55x8', '55x8'],
+    ]);
+    expect(again.recordedExercises).toHaveLength(routine.recordedExercises.length);
+    again.recordedExercises.forEach((exercise, index) =>
+      expect(exercise.equals(routine.recordedExercises[index])).toBe(true),
+    );
+  });
+
+  it('adding through the picker opens the same exercises as a routine of the same picks', async () => {
+    const app = await startApp(history());
+    const sessionId = await startFreeform(app);
+    const picks = [
+      { id: 'Bench Press', name: 'Bench Press' },
+      { id: 'Row', name: 'Row' },
+    ];
+
+    await addThroughPicker(app, sessionId, picks);
+    await addThroughPicker(app, sessionId, [picks[0]!]);
+
+    const added = app.getState().storedSessions.sessions[sessionId]!;
+    const routine = serviceOf(app).hydrateSessionFromBlueprint(
+      new SessionBlueprint('Picked', added.blueprint.exercises, ''),
+      selectLatestExercises(app.getState()),
+    );
+    expect(weightsOf(added)).toEqual([
+      ['82.5x10', '82.5x10', '82.5x10'],
+      ['55x10', '55x10', '55x10'],
+      ['62.5x10', '62.5x10', '62.5x10'],
+    ]);
+    added.recordedExercises.forEach((exercise, index) =>
+      expect(exercise.equals(routine.recordedExercises[index])).toBe(true),
+    );
   });
 });
