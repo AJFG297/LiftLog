@@ -136,11 +136,13 @@ hold no history.
 - **Pinned lifts** come first: the `pinnedLifts` preference (exercise ids, in the order pinned, stored as JSON;
   set from the exercise page's Pin to Progress). The most-trained lifts fill the rest up to 4. A pinned lift always
   shows, with nothing in the range (a dash and no sparkline) and past 4 too: pinning a fifth lift never drops one the
-  user asked for, the most-trained ones make room instead. A pinned id with no history (never logged, or merged into
-  another exercise) is skipped. A pinned row has a pin after its name, and the subtitle says the list starts with
-  pinned lifts. `strengthLifts(history, since, unit, pinned)` is in `progress-strength.ts`, and `togglePinned` beside
-  the preference in `store/settings/pinned-lifts.ts`.
-  Like every preference, pins are not in backups.
+  user asked for, the most-trained ones make room instead. A pinned row has a pin after its name, and the subtitle
+  says the list starts with pinned lifts. `strengthLifts(history, since, unit, pinned)` is in `progress-strength.ts`,
+  and `togglePinned` beside the preference in `store/settings/pinned-lifts.ts`.
+  Pins are a preference, so like every preference they are not in backups and a restore doesn't carry them: restoring
+  onto a new install starts with none. The stored ids are never rewritten, so one that no longer resolves to a
+  history (never logged, merged away into another exercise, or missing from a restored history) is skipped rather
+  than shown.
 - **Recent records**: the newest 3 records, whatever the range: the first three rows of the Records list, built
   by the same `recordListRowOf`, with the gain over what each beat. A heaviest record shows its set; an
   estimated-1RM one shows the set the estimate comes from.
