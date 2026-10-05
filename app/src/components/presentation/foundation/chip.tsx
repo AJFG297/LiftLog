@@ -1,4 +1,5 @@
 import { haptics } from '@/components/presentation/foundation/haptics';
+import Icon from '@/components/presentation/foundation/icon';
 import { SurfaceText } from '@/components/presentation/foundation/surface-text';
 import { MIN_TOUCH_TARGET } from '@/components/presentation/foundation/touch-target';
 import { spacing, useAppTheme } from '@/hooks/useAppTheme';
@@ -13,6 +14,8 @@ interface ChipProps {
   onPress: () => void;
   /** Sets a label that is only a number ("7.5", "1:30") in Geist Mono. */
   numeric?: boolean;
+  /** Draws a dropdown arrow after the label, for a chip that opens a menu rather than toggling. */
+  dropdown?: boolean;
   /** Read out instead of `label`, e.g. "RPE 8" for a chip showing "8". */
   accessibilityLabel?: string;
   /** Places the chip's touch target in its row. Pass `{ flexGrow: 1 }` to share a row's width between chips. */
@@ -24,6 +27,8 @@ interface ChipProps {
 
 /**
  * A toggle for filters, rest presets and RPE. Screen readers hear it as a toggle button that is on or off.
+ * With `dropdown`, it opens a menu instead: an arrow follows the label and it reads as a plain button, filled
+ * when the menu has a choice.
  * At least 36pt square on screen, so eight RPE values fit a phone's width. The touch target is the drawn chip
  * plus a 4pt inset all round, so it is at least 44pt on each axis.
  */
@@ -32,12 +37,14 @@ export function Chip({
   selected,
   onPress,
   numeric,
+  dropdown,
   accessibilityLabel,
   style,
   contentStyle,
   testID,
 }: ChipProps) {
   const { tokens } = useAppTheme();
+  const labelColor = selected ? tokens.onAccent : tokens.ink;
   return (
     <Pressable
       testID={testID}
@@ -45,8 +52,8 @@ export function Chip({
         haptics.selection();
         onPress();
       }}
-      accessibilityRole="togglebutton"
-      accessibilityState={{ checked: selected }}
+      accessibilityRole={dropdown ? 'button' : 'togglebutton'}
+      accessibilityState={dropdown ? undefined : { checked: selected }}
       accessibilityLabel={accessibilityLabel ?? label}
       style={[{ padding: TARGET_INSET }, style]}
     >
@@ -64,18 +71,14 @@ export function Chip({
               backgroundColor: selected ? tokens.accent : pressed ? tokens.track : tokens.card,
               borderColor: selected ? tokens.accent : tokens.line,
             },
+            dropdown && { flexDirection: 'row', gap: spacing[0.5] },
             contentStyle,
           ]}
         >
-          <SurfaceText
-            font="text-sm"
-            numeric={numeric}
-            weight="600"
-            numberOfLines={1}
-            style={{ color: selected ? tokens.onAccent : tokens.ink }}
-          >
+          <SurfaceText font="text-sm" numeric={numeric} weight="600" numberOfLines={1} style={{ color: labelColor }}>
             {label}
           </SurfaceText>
+          {dropdown && <Icon source="menu-down" size={20} color={labelColor} />}
         </View>
       )}
     </Pressable>

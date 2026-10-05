@@ -343,7 +343,6 @@
   "stats.no_data.message": "Não há dados no período selecionado.",
   "stats.select_period.label": "Selecionar período",
   "stats.stats.title": "Estatísticas",
-  "stats.weighted_exercise_list.title": "Exercícios com carga",
   "time_period_select.all_time.label": "Histórico completo",
   "time_period_select.custom.label": "Personalizar",
   "time_period_select.num_days.label": "Últimos {count} dias",

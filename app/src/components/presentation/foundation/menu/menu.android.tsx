@@ -45,6 +45,11 @@ export default function Menu({ trigger, items }: MenuProps) {
                     <DropdownMenuItem.Text>
                       <Text>{item.label}</Text>
                     </DropdownMenuItem.Text>
+                    {item.selected && (
+                      <DropdownMenuItem.TrailingIcon>
+                        <Icon source="check" size={24} />
+                      </DropdownMenuItem.TrailingIcon>
+                    )}
                   </DropdownMenuItem>
                 ))}
               </DropdownMenu.Items>

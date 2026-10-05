@@ -210,9 +210,9 @@ function buildStatsSessionData(dispatch: ReturnType<typeof useDispatch>) {
   const push = (daysAgo: number, idx: number) => {
     let s = Session.freeformSession(LocalDate.now().minusDays(daysAgo), bw)
       .withName('Push')
-      .withAddedExercise(ex('Bench Press', 4, 8), false)
-      .withAddedExercise(ex('Overhead Press', 3, 8), false)
-      .withAddedExercise(ex('Tricep Pushdown', 3, 12), false);
+      .withAddedExercise(RecordedWeightedExercise.empty(ex('Bench Press', 4, 8), 'kilograms'))
+      .withAddedExercise(RecordedWeightedExercise.empty(ex('Overhead Press', 3, 8), 'kilograms'))
+      .withAddedExercise(RecordedWeightedExercise.empty(ex('Tricep Pushdown', 3, 12), 'kilograms'));
     s = completeEx(s, 0, prog(idx, 65, 2.5), 4, 8, daysAgo, 0);
     s = completeEx(s, 1, prog(idx, 45, 1.25), 3, 8, daysAgo, 20);
     s = completeEx(s, 2, prog(idx, 25, 1.25), 3, 12, daysAgo, 40);
@@ -222,9 +222,9 @@ function buildStatsSessionData(dispatch: ReturnType<typeof useDispatch>) {
   const pull = (daysAgo: number, idx: number) => {
     let s = Session.freeformSession(LocalDate.now().minusDays(daysAgo), bw)
       .withName('Pull')
-      .withAddedExercise(ex('Barbell Row', 4, 8), false)
-      .withAddedExercise(ex('Pull-ups', 3, 8), false)
-      .withAddedExercise(ex('Bicep Curl', 3, 12), false);
+      .withAddedExercise(RecordedWeightedExercise.empty(ex('Barbell Row', 4, 8), 'kilograms'))
+      .withAddedExercise(RecordedWeightedExercise.empty(ex('Pull-ups', 3, 8), 'kilograms'))
+      .withAddedExercise(RecordedWeightedExercise.empty(ex('Bicep Curl', 3, 12), 'kilograms'));
     s = completeEx(s, 0, prog(idx, 60, 2.5), 4, 8, daysAgo, 0);
     s = completeEx(s, 1, 0, 3, 8, daysAgo, 20);
     s = completeEx(s, 2, prog(idx, 12.5, 1.25), 3, 12, daysAgo, 40);
@@ -234,9 +234,9 @@ function buildStatsSessionData(dispatch: ReturnType<typeof useDispatch>) {
   const legs = (daysAgo: number, idx: number) => {
     let s = Session.freeformSession(LocalDate.now().minusDays(daysAgo), bw)
       .withName('Legs')
-      .withAddedExercise(ex('Squat', 4, 5), false)
-      .withAddedExercise(ex('Romanian Deadlift', 3, 8), false)
-      .withAddedExercise(ex('Leg Press', 3, 10), false);
+      .withAddedExercise(RecordedWeightedExercise.empty(ex('Squat', 4, 5), 'kilograms'))
+      .withAddedExercise(RecordedWeightedExercise.empty(ex('Romanian Deadlift', 3, 8), 'kilograms'))
+      .withAddedExercise(RecordedWeightedExercise.empty(ex('Leg Press', 3, 10), 'kilograms'));
     s = completeEx(s, 0, prog(idx, 80, 2.5), 4, 5, daysAgo, 0);
     s = completeEx(s, 1, prog(idx, 70, 2.5), 3, 8, daysAgo, 20);
     s = completeEx(s, 2, prog(idx, 100, 5), 3, 10, daysAgo, 40);
@@ -390,33 +390,39 @@ function PrepareWorkoutPage() {
   const dispatch = useDispatch();
   useMountEffect(() => {
     let session = Session.freeformSession(LocalDate.now(), new Weight(80, 'kilograms')).withAddedExercise(
-      WeightedExerciseBlueprint.empty().with({
-        name: 'Squats',
-        repsConfig: { type: 'fixed', reps: 10 },
-        sets: 3,
-      }),
-      false,
+      RecordedWeightedExercise.empty(
+        WeightedExerciseBlueprint.empty().with({
+          name: 'Squats',
+          repsConfig: { type: 'fixed', reps: 10 },
+          sets: 3,
+        }),
+        'kilograms',
+      ),
     );
     session = setExerciseWeight(session, 0, 100);
     session = session
       .withCycledExerciseReps(0, 0, OffsetDateTime.now())
       .with({ restTimer: new RestTimer(OffsetDateTime.now().minusSeconds(45)) })
       .withAddedExercise(
-        WeightedExerciseBlueprint.empty().with({
-          name: 'Bench Press',
-          repsConfig: { type: 'fixed', reps: 12 },
-          sets: 3,
-        }),
-        false,
+        RecordedWeightedExercise.empty(
+          WeightedExerciseBlueprint.empty().with({
+            name: 'Bench Press',
+            repsConfig: { type: 'fixed', reps: 12 },
+            sets: 3,
+          }),
+          'kilograms',
+        ),
       );
     session = setExerciseWeight(session, 1, 80);
     session = session.withAddedExercise(
-      WeightedExerciseBlueprint.empty().with({
-        name: 'Deadlift',
-        repsConfig: { type: 'fixed', reps: 6 },
-        sets: 2,
-      }),
-      false,
+      RecordedWeightedExercise.empty(
+        WeightedExerciseBlueprint.empty().with({
+          name: 'Deadlift',
+          repsConfig: { type: 'fixed', reps: 6 },
+          sets: 2,
+        }),
+        'kilograms',
+      ),
     );
     session = setExerciseWeight(session, 2, 120);
     dispatch(putStoredSession(session));

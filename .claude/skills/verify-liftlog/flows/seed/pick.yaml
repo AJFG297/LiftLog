@@ -1,0 +1,9 @@
+appId: com.ajfg297.liftlog
+---
+# In the exercise picker: search for NAME and tick its row. NAME must be the catalog's exact name.
+- runFlow:
+    file: search.yaml
+    env:
+      NAME: ${NAME}
+- tapOn:
+    id: 'exercise-picker-row-${NAME}'

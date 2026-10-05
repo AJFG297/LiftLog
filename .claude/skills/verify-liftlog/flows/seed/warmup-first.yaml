@@ -1,0 +1,15 @@
+appId: com.ajfg297.liftlog
+---
+# In the routine editor, with the first exercise expanded: add a set and turn the first one into a
+# warm-up (1 warm-up + 3 x 10), then switch its progression from Off to Add weight, so the next workout
+# of this routine is heavier and sets a personal record.
+- tapOn: 'Add set'
+- tapOn: 'Set 1, change set type'
+- tapOn:
+    id: 'set-type-warmup'
+- assertVisible: '1 warm-up \+ 3 × 10.*'
+- scrollUntilVisible:
+    element:
+      text: 'Add weight'
+    direction: DOWN
+- tapOn: 'Add weight'

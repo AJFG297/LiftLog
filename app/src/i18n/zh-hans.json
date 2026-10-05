@@ -336,7 +336,6 @@
   "settings.use_imperial_units.subtitle": "以磅为单位",
   "stats.no_data.message": "该周期内没有数据记录。",
   "stats.select_period.label": "选择周期",
-  "stats.weighted_exercise_list.title": "负重训练",
   "stats.stats.title": "统计",
   "stats.exercise.overview.title": "概览",
   "stats.exercise.volume_per_workout.title": "每次训练容量",

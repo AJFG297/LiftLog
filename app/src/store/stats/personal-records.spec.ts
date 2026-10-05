@@ -189,7 +189,11 @@ describe('findPersonalRecords for exercises that track no load', () => {
   });
 
   it('leaves an exercise with only warm-ups logged out of the running best', () => {
-    const warmupsOnly = withWarmup(exercise('Squat', kg(100), 5), kg(150), 5).withNothingCompleted();
+    const warmupsOnly = withWarmup(exercise('Squat', kg(100), 5), kg(150), 5).withRepCount(
+      0,
+      undefined,
+      OffsetDateTime.parse('2026-01-01T09:55:00Z'),
+    );
     const records = findPersonalRecords([
       session('s1', day(1), [warmupsOnly.withWarmupRepCount(0, 5, OffsetDateTime.parse('2026-01-01T09:55:00Z'))]),
       session('s2', day(8), [exercise('Squat', kg(110), 5)]),

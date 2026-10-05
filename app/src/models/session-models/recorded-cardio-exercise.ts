@@ -281,13 +281,6 @@ export class RecordedCardioExercise {
       .at(0);
   }
 
-  withNothingCompleted(): RecordedCardioExercise {
-    return this.with({
-      notes: undefined,
-      sets: this.blueprint.sets.map((s) => RecordedCardioExerciseSet.empty(s)),
-    });
-  }
-
   withSet(setIndex: number, reducer: (s: RecordedCardioExerciseSet) => RecordedCardioExerciseSet) {
     const existingSet = this.sets[setIndex];
     if (!existingSet) {

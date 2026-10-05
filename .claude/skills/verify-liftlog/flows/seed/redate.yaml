@@ -1,0 +1,26 @@
+appId: com.ajfg297.liftlog
+---
+# From Home: moves the newest workout DAYS_AGO days into the past in All history's editor. A workout just
+# finished is dated today, the newest date, so it is the first card in All history.
+- scrollUntilVisible:
+    element:
+      id: 'home-all-history'
+    direction: DOWN
+- tapOn:
+    id: 'home-all-history'
+- scrollUntilVisible:
+    element:
+      id: 'history-edit-workout'
+    direction: DOWN
+- tapOn:
+    id: 'history-edit-workout'
+# The date field takes MM/DD/YYYY in the emulator's en-US locale.
+- evalScript: ${var d = new Date(Date.now() - DAYS_AGO * 86400000); output.day = ('0' + (d.getMonth() + 1)).slice(-2) + '/' + ('0' + d.getDate()).slice(-2) + '/' + d.getFullYear()}
+- tapOn:
+    id: 'session-date-input'
+- eraseText: 12
+- inputText: ${output.day}
+- hideKeyboard
+- tapOn:
+    id: 'finish-session-button'
+- back

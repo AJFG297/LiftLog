@@ -6,6 +6,7 @@ import {
   SessionBlueprint,
   WeightedExerciseBlueprint,
 } from '@/models/blueprint-models';
+import { RecordedWeightedExercise } from '@/models/session-models';
 import { makeSession, makeWeightedBlueprint } from '@/models/session-models/__test__/helpers';
 import { getPlanDiff } from '@/store/program/helpers';
 
@@ -22,7 +23,9 @@ describe('getPlanDiff', () => {
 
   it('returns a diff against the same-named session in the plan', () => {
     const original = makeSession([makeWeightedBlueprint({ name: 'Squat' })]);
-    const edited = original.withAddedExercise(makeWeightedBlueprint({ name: 'Bench' }), false);
+    const edited = original.withAddedExercise(
+      RecordedWeightedExercise.empty(makeWeightedBlueprint({ name: 'Bench' }), 'kilograms'),
+    );
     const program = programWith([original.blueprint]);
 
     const result = getPlanDiff(program, edited, 'plan-id')!;
@@ -47,7 +50,9 @@ describe('getPlanDiff', () => {
 
   it('records which plan the diff was computed against', () => {
     const original = makeSession([makeWeightedBlueprint({ name: 'Squat' })]);
-    const edited = original.withAddedExercise(makeWeightedBlueprint({ name: 'Bench' }), false);
+    const edited = original.withAddedExercise(
+      RecordedWeightedExercise.empty(makeWeightedBlueprint({ name: 'Bench' }), 'kilograms'),
+    );
 
     expect(getPlanDiff(programWith([original.blueprint]), edited, 'plan-id')?.programId).toBe('plan-id');
     expect(getPlanDiff(programWith([]), edited, 'plan-id')?.programId).toBe('plan-id');

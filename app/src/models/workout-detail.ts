@@ -5,7 +5,6 @@ import { LetteredSetKind, setKindHas } from '@/models/session-models/set-kind';
 import { Weight } from '@/models/weight';
 import { calculateOneRepMax } from '@/store/stats/calculate-stats';
 import { SessionRecord } from '@/store/stats/personal-records';
-import { LocalDate } from '@js-joda/core';
 
 /**
  * A past workout's structure as a new routine: its exercises as they ended up that day, including any
@@ -19,6 +18,28 @@ export function routineFromSession(session: Session, name: string): SessionBluep
       const recorded = session.recordedExercises[index];
       return planned instanceof WeightedExerciseBlueprint && recorded instanceof RecordedWeightedExercise
         ? planned.with({ warmupSets: planned.warmupSets.map((warmup, i) => warmupAsDone(recorded, warmup, i)) })
+        : planned;
+    }),
+  });
+}
+
+/**
+ * A past workout's structure to do again: {@link routineFromSession}'s, with every set's rep target and
+ * kind as that workout had them, a target changed for that day only included. Save as routine leaves
+ * those to the plan, since a target changed during a workout is not a change to the routine.
+ */
+export function repeatBlueprint(session: Session): SessionBlueprint {
+  const routine = routineFromSession(session, session.blueprint.name);
+  return routine.with({
+    exercises: routine.exercises.map((planned, index) => {
+      const recorded = session.recordedExercises[index];
+      return planned instanceof WeightedExerciseBlueprint && recorded instanceof RecordedWeightedExercise
+        ? planned.with({
+            plannedSets: recorded.potentialSets.map((slot) => ({
+              reps: slot.target,
+              kind: slot.kind === 'warmup' ? 'working' : slot.kind,
+            })),
+          })
         : planned;
     }),
   });
@@ -43,14 +64,6 @@ function warmupAsDone(exercise: RecordedWeightedExercise, planned: PlannedWarmup
     reps: planned.reps,
     load: slot.weight.value.isZero() ? undefined : { type: 'absolute', weight: slot.weight },
   };
-}
-
-/**
- * A past workout to do again: the same exercises and sets, nothing logged, as a new workout on `date`.
- * The logged weights stay as the new workout's placeholders, as the history's "start this workout" did.
- */
-export function repeatSession(session: Session, date: LocalDate, id: string): Session {
-  return session.withNothingCompleted().with({ id, date, restTimer: undefined, reflection: undefined });
 }
 
 /** `name` if the plan has no routine called that yet, otherwise the first free "name 2", "name 3" and so on. */

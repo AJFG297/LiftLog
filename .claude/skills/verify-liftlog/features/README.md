@@ -9,9 +9,11 @@ before driving the app, then use the matching feature file as the recipe. Comman
 - `verify.sh up` has run from this checkout and `verify.sh doctor` prints `doctor: healthy`.
 - `verify.sh flow .claude/skills/verify-liftlog/flows/ready.yaml` exited 0 in this run (welcome wizard and dev-menu
   sheet are out of the way; the Home tab is up).
-- The emulator's app data persists between runs. Check the starting state instead of assuming an empty app:
-  `verify.sh db "select count(*), sum(active) from workout;"`, and on Home, whether the workout-in-progress bar
-  (`workout-in-progress-bar`) is up.
+- The emulator's app data persists between runs, and the next `up` may land on another slot. Start from a known
+  state: `verify.sh seed ppl-history` for plans and two weeks of history, or `verify.sh seed empty` for an
+  onboarded app with no history (see [fixtures](../fixtures/README.md)). Without a seed, check the starting state
+  instead of assuming an empty app: `verify.sh db "select count(*), sum(active) from workout;"`, and on Home,
+  whether the workout-in-progress bar (`workout-in-progress-bar`) is up.
 - The tabs are Home, Routines, Progress and You. All history and the feed are pages, not tabs: Home →
   `All history`, and You → `Feed` (only with Show feed on).
 - Never drive `emulator-5554` or any device that `doctor` does not report as ours.
