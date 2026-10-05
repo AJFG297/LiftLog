@@ -3,7 +3,11 @@ import { Duration, LocalDate } from '@js-joda/core';
 import { ProgramBlueprint, Rest, SessionBlueprint, WeightedExerciseBlueprint } from '@/models/blueprint-models';
 import { diffSessionBlueprints } from '@/models/blueprint-diff';
 import {
+  durationOfRestPick,
   programWithExerciseRest,
+  REST_PICK_MINUTES,
+  REST_PICK_SECONDS,
+  restPickOf,
   routineExerciseLocation,
   routineExerciseRest,
   sessionWithExerciseRest,
@@ -127,5 +131,66 @@ describe('saving a rest as the default', () => {
     const diff = getPlanDiff(savedPlan, savedWorkout, 'plan')!;
     expect(diff.type).toBe('diff');
     expect(routineChanges(diff.diff).map((row) => row.kind)).toEqual(['setCount']);
+  });
+});
+
+describe('restPickOf', () => {
+  const pick = (s: number) => restPickOf(Duration.ofSeconds(s));
+
+  it('splits a rest into minutes and seconds', () => {
+    expect(pick(150)).toEqual({ minutes: 2, seconds: 30 });
+    expect(pick(0)).toEqual({ minutes: 0, seconds: 0 });
+  });
+
+  it('rounds to the nearest 5 seconds', () => {
+    expect(pick(152)).toEqual({ minutes: 2, seconds: 30 });
+    expect(pick(153)).toEqual({ minutes: 2, seconds: 35 });
+    expect(restPickOf(Duration.ofMillis(152_500))).toEqual({ minutes: 2, seconds: 35 });
+  });
+
+  it('carries 60 seconds into the minutes', () => {
+    expect(pick(58)).toEqual({ minutes: 1, seconds: 0 });
+    expect(pick(598)).toEqual({ minutes: 10, seconds: 0 });
+  });
+
+  it('holds a rest past the last wheel position to 10:55', () => {
+    expect(pick(655)).toEqual({ minutes: 10, seconds: 55 });
+    expect(pick(658)).toEqual({ minutes: 10, seconds: 55 });
+    expect(pick(700)).toEqual({ minutes: 10, seconds: 55 });
+  });
+});
+
+describe('durationOfRestPick', () => {
+  it('is the pick in seconds', () => {
+    expect(seconds(durationOfRestPick({ minutes: 2, seconds: 30 }))).toBe(150);
+    expect(seconds(durationOfRestPick({ minutes: 10, seconds: 55 }))).toBe(655);
+  });
+
+  it('round-trips every wheel position', () => {
+    for (const minutes of REST_PICK_MINUTES) {
+      for (const s of REST_PICK_SECONDS) {
+        expect(restPickOf(durationOfRestPick({ minutes, seconds: s }))).toEqual({ minutes, seconds: s });
+      }
+    }
+  });
+
+  it('offers 0 to 10 minutes and 0 to 55 seconds in steps of 5', () => {
+    expect(REST_PICK_MINUTES).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    expect(REST_PICK_SECONDS).toEqual([0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55]);
+  });
+});
+
+describe('a rest picked for this workout only', () => {
+  it('is offered to the routine when the workout finishes', () => {
+    const workout = pushWorkout();
+    const plan = program(workout.blueprint);
+    const picked = durationOfRestPick({ minutes: 1, seconds: 45 });
+
+    const changed = sessionWithExerciseRest(workout, 0, withMinRest(rest, picked));
+
+    const rows = routineChanges(getPlanDiff(plan, changed, 'plan')!.diff);
+    expect(rows).toEqual([expect.objectContaining({ kind: 'rest', exerciseName: 'Bench Press' })]);
+    const row = rows[0] as Extract<(typeof rows)[number], { kind: 'rest' }>;
+    expect([seconds(row.from), seconds(row.to)]).toEqual([150, 105]);
   });
 });
