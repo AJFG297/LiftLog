@@ -702,7 +702,7 @@
   "routine_editor.start.describe.title": "Describe it",
   "routine_editor.start.describe.body": "Tell the AI planner your goals and it drafts a program.",
   "routine_editor.start.import.title": "Import",
-  "routine_editor.start.import.body": "A plan file shared with you or exported from LiftLog",
+  "routine_editor.start.import.body": "A spreadsheet (.xlsx or .csv) or a LiftLog plan file",
   "routine_editor.start.program.title": "Start from a program",
   "routine_editor.start.program.body": "Stronglifts 5×5, PHUL, Starting Strength and more",
   "routine_editor.ask_ai.title": "Ask AI to change this routine",
