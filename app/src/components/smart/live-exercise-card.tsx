@@ -47,7 +47,7 @@ export function LiveExerciseCard(props: LiveExerciseCardProps) {
   const { t } = useTranslate();
   const { push } = useRouter();
   const store = useStore<RootState>();
-  const { workoutRepository } = useServices();
+  const services = useServices();
   const exercises = useAppSelector(selectExercises);
   const targetFor = useTodaysTarget(session);
   const [notesOpen, setNotesOpen] = useState(false);
@@ -63,7 +63,7 @@ export function LiveExerciseCard(props: LiveExerciseCardProps) {
       }
       const ref = { id: picked.id, name: picked.descriptor.name };
       const key = blueprintSwappedTo(swappedOut, ref).progressionKey();
-      void withCarryOver(store.getState, workoutRepository, session.id, [key], (carryOver) =>
+      void withCarryOver(store.getState, services, session.id, [key], (carryOver) =>
         updateSession((s) =>
           // With a lookup in between, the exercise can have been edited, moved or removed meanwhile.
           s.recordedExercises[exerciseIndex]?.blueprint === swappedOut

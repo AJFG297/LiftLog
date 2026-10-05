@@ -5,6 +5,7 @@ import { createAction, createSelector, createSlice, PayloadAction, WritableDraft
 import Enumerable from 'linq';
 import { ExerciseDescriptor, musclesOf } from '@/models/exercise-models';
 import type { LatestPerformance, WorkoutRepository } from '@/services/workout-repository';
+import type { Logger } from '@/services/logger';
 import type { ExerciseMerge } from '@/models/exercise-merge';
 import type { CarryOver } from '@/models/session-models/carry-over';
 import type { RootState } from '@/store/store';
@@ -416,17 +417,24 @@ export function selectCarryOver(state: RootState, sessionId: string): CarryOver 
 // so one waiting on a read holds back those picked after it.
 const pendingCarryOver = new Map<string, Promise<void>>();
 
+/** What {@link withCarryOver} reads the tables with, and reports a failed read to. */
+export interface CarryOverServices {
+  workoutRepository: Pick<WorkoutRepository, 'latestPerLineage'>;
+  logger: Pick<Logger, 'error'>;
+}
+
 /**
  * Hands `apply` what exercises of `progressionKeys` added to or swapped into workout `sessionId` open on.
  * From the cache, synchronously, unless it holds that workout's own performance of one of them (a set
  * logged today): the cache keeps nothing from before it, so those keys are read from the tables without
- * the workout first. Calls for one workout apply in the order they were made, so one made while another
+ * the workout first. If that read fails they open on the cache as it is, today's numbers included, rather
+ * than at nothing. Calls for one workout apply in the order they were made, so one made while another
  * waits on its read waits behind it. `apply` must address the workout by id, as it can run after the
  * workout has changed.
  */
 export function withCarryOver(
   getState: () => RootState,
-  workoutRepository: Pick<WorkoutRepository, 'latestPerLineage'>,
+  services: CarryOverServices,
   sessionId: string,
   progressionKeys: readonly ProgressionKey[],
   apply: (carryOver: CarryOver) => void,
@@ -438,7 +446,7 @@ export function withCarryOver(
   }
   const run = (async () => {
     await pending;
-    apply(await carryOverFor(getState, workoutRepository, sessionId, progressionKeys));
+    apply(await carryOverFor(getState, services, sessionId, progressionKeys));
   })();
   const settled: Promise<void> = run
     .catch(() => {})
@@ -453,7 +461,7 @@ export function withCarryOver(
 
 async function carryOverFor(
   getState: () => RootState,
-  workoutRepository: Pick<WorkoutRepository, 'latestPerLineage'>,
+  { workoutRepository, logger }: CarryOverServices,
   sessionId: string,
   progressionKeys: readonly ProgressionKey[],
 ): Promise<CarryOver> {
@@ -461,19 +469,21 @@ async function carryOverFor(
   if (!own.length) {
     return selectCarryOver(getState(), sessionId);
   }
-  let before: Record<ProgressionKey, LatestPerformance>;
+  let before: Record<ProgressionKey, RecordedExercise | undefined>;
   try {
-    before = await workoutRepository.latestPerLineage({ progressionKeys: own, excludeWorkoutId: sessionId });
-  } catch {
-    // The exercise still goes in, on the cache's numbers, rather than the add or swap being lost.
-    return selectCarryOver(getState(), sessionId);
+    const read = await workoutRepository.latestPerLineage({ progressionKeys: own, excludeWorkoutId: sessionId });
+    before = Object.fromEntries(Object.entries(read).map(([key, performance]) => [key, performance.exercise]));
+  } catch (error) {
+    logger.error(`Couldn't read last time for ${own.join(', ')}; opening on the cache`, error);
+    const { latestExercises } = getState().storedSessions;
+    before = Object.fromEntries(
+      (Object.keys(latestExercises) as ProgressionKey[])
+        .filter((key) => own.includes(progressionKeyOf(key)))
+        .map((key) => [key, latestExercises[key]]),
+    );
   }
   const cached = selectCarryOver(getState(), sessionId);
-  const latest = { ...cached.latest };
-  for (const [key, performance] of Object.entries(before) as [ProgressionKey, LatestPerformance][]) {
-    latest[key] = performance.exercise;
-  }
-  return { ...cached, latest };
+  return { ...cached, latest: { ...cached.latest, ...before } };
 }
 
 /** The keys of `progressionKeys` whose cached latest came from workout `sessionId` itself. */

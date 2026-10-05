@@ -98,7 +98,7 @@ async function startApp(sessions: Session[]) {
   harness.store.dispatch(setSettingsIsHydrated(true));
   harness.store.dispatch(initializeStoredSessionsStateSlice());
   await harness.settle();
-  return { ...harness, workoutRepository };
+  return { ...harness, workoutRepository, logger };
 }
 
 type App = Awaited<ReturnType<typeof startApp>>;
@@ -120,7 +120,7 @@ async function startFreeform(app: App): Promise<string> {
  */
 function startAdding(app: App, sessionId: string, picked: PickedExerciseRef[]): Promise<void> {
   const keys = blueprintsForPick(picked, false).map((blueprint) => blueprint.progressionKey());
-  return withCarryOver(app.getState, app.workoutRepository, sessionId, keys, (carryOver) =>
+  return withCarryOver(app.getState, app, sessionId, keys, (carryOver) =>
     app.store.dispatch(
       updateStoredSession({
         sessionId,
@@ -278,13 +278,18 @@ describe('adding an exercise through the picker (PM-41)', () => {
       const failingRepository = { latestPerLineage: () => Promise.reject(failure) };
       logger.error.mockClear();
 
-      await withCarryOver(app.getState, failingRepository, sessionId, [lunge.progressionKey()], (carryOver) =>
-        app.store.dispatch(
-          updateStoredSession({
-            sessionId,
-            update: (s) => sessionWithPickAdded(s, [{ id: 'Lunge', name: 'Lunge' }], false, carryOver),
-          }),
-        ),
+      await withCarryOver(
+        app.getState,
+        { workoutRepository: failingRepository, logger },
+        sessionId,
+        [lunge.progressionKey()],
+        (carryOver) =>
+          app.store.dispatch(
+            updateStoredSession({
+              sessionId,
+              update: (s) => sessionWithPickAdded(s, [{ id: 'Lunge', name: 'Lunge' }], false, carryOver),
+            }),
+          ),
       );
       await app.settle();
 
@@ -311,7 +316,7 @@ async function swapThroughPicker(app: App, sessionId: string, index: number, pic
   const state = app.getState();
   const swappedOut = state.storedSessions.sessions[sessionId]!.recordedExercises[index]!.blueprint;
   const key = blueprintSwappedTo(swappedOut, picked).progressionKey();
-  await withCarryOver(app.getState, app.workoutRepository, sessionId, [key], (carryOver) =>
+  await withCarryOver(app.getState, app, sessionId, [key], (carryOver) =>
     app.store.dispatch(
       updateStoredSession({
         sessionId,
@@ -387,7 +392,7 @@ describe('swapping an exercise (PM-41)', () => {
       const edited = state.storedSessions.sessions[sessionId]!.recordedExercises[0]!.blueprint;
       const updated = edit(edited as WeightedExerciseBlueprint);
       const keys = edited.movementKey() === updated.movementKey() ? [] : [updated.progressionKey()];
-      await withCarryOver(app.getState, app.workoutRepository, sessionId, keys, (carryOver) =>
+      await withCarryOver(app.getState, app, sessionId, keys, (carryOver) =>
         app.store.dispatch(
           updateStoredSession({ sessionId, update: (s) => sessionWithExerciseEdited(s, 0, updated, carryOver) }),
         ),

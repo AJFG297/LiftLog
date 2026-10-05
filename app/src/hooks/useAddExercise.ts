@@ -17,7 +17,7 @@ export function useAddExercise(sessionId: string | undefined, options?: { onAdde
   const session = useAppSelectorWithArg(selectSession, sessionId ?? '');
   const dispatch = useDispatch();
   const store = useStore<RootState>();
-  const { workoutRepository } = useServices();
+  const services = useServices();
   const onAdded = options?.onAdded;
 
   const open = useExercisePicker(
@@ -28,7 +28,7 @@ export function useAddExercise(sessionId: string | undefined, options?: { onAdde
       }
       const picked = pick.exercises.map((exercise) => ({ id: exercise.id, name: exercise.descriptor.name }));
       const keys = blueprintsForPick(picked, false).map((blueprint) => blueprint.progressionKey());
-      void withCarryOver(store.getState, workoutRepository, sessionId, keys, (carryOver) => {
+      void withCarryOver(store.getState, services, sessionId, keys, (carryOver) => {
         // Read again: with a lookup in between, the workout may have changed or closed meanwhile.
         const current = store.getState().storedSessions.sessions[sessionId];
         if (!current) {

@@ -23,7 +23,7 @@ export function SessionExerciseEditor(props: { sessionId: string; index: number 
   const session = useAppSelectorWithArg(selectSession, props.sessionId);
   const dispatch = useDispatch();
   const store = useStore<RootState>();
-  const { workoutRepository } = useServices();
+  const services = useServices();
   const { dismiss } = useRouter();
 
   const exercise = session?.recordedExercises[exerciseIndex]?.blueprint;
@@ -51,7 +51,7 @@ export function SessionExerciseEditor(props: { sessionId: string; index: number 
     }
     // Only another movement opens on carried numbers, so only that can need the tables read.
     const keys = edited.movementKey() === updated.movementKey() ? [] : [updated.progressionKey()];
-    void withCarryOver(store.getState, workoutRepository, props.sessionId, keys, (carryOver) =>
+    void withCarryOver(store.getState, services, props.sessionId, keys, (carryOver) =>
       dispatch(
         updateStoredSession({
           sessionId: props.sessionId,
