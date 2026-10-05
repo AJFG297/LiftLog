@@ -42,6 +42,7 @@ import {
 import { setIsHydrated as setSettingsIsHydrated } from '@/store/settings';
 import { SessionService } from '@/services/session-service';
 import { sessionWithExerciseEdited } from '@/models/session-models/carry-over';
+import { withAddedSet } from '@/models/session-models/set-entry';
 import { carriedFrom, todaysTarget } from '@/models/session-models/todays-target';
 import { repeatBlueprint } from '@/models/workout-detail';
 
@@ -300,6 +301,29 @@ describe('adding an exercise through the picker (PM-41)', () => {
       );
     });
 
+    it('swaps in an exercise whose plan got a set added while it was read', async () => {
+      const { app, sessionId } = await lungeLoggedToday();
+      await addThroughPicker(app, sessionId, [{ id: 'Bench Press', name: 'Bench Press' }]);
+
+      const swapping = startSwapping(app, sessionId, 1, { id: 'Lunge', name: 'Lunge' });
+      // The live set table's Add set, tapped on the exercise before the swap lands.
+      app.store.dispatch(
+        updateStoredSession({
+          sessionId,
+          update: (s) => {
+            const exercise = s.recordedExercises[1] as RecordedWeightedExercise;
+            return s.withExercise(1, withAddedSet({ exercise, drafts: {} }, 'kilograms').exercise);
+          },
+        }),
+      );
+      await swapping;
+      await app.settle();
+
+      const session = app.getState().storedSessions.sessions[sessionId]!;
+      expect(session.recordedExercises.map((x) => x.blueprint.name)).toEqual(['Lunge', 'Lunge']);
+      expect(setsOf(app, sessionId, 1)).toEqual(opened(45, 10, 4));
+    });
+
     it('swaps in an exercise it already logged on the last workout', async () => {
       const { app, sessionId } = await lungeLoggedToday();
       await addThroughPicker(app, sessionId, [{ id: 'Bench Press', name: 'Bench Press' }]);
@@ -311,12 +335,14 @@ describe('adding an exercise through the picker (PM-41)', () => {
   });
 });
 
-/** What the live exercise card's Swap dispatches when the picker hands back an exercise. */
-async function swapThroughPicker(app: App, sessionId: string, index: number, picked: PickedExerciseRef) {
-  const state = app.getState();
-  const swappedOut = state.storedSessions.sessions[sessionId]!.recordedExercises[index]!.blueprint;
+/**
+ * What the live exercise card's Swap dispatches when the picker hands back an exercise. The app does not
+ * wait for it; the promise is for a test to wait on.
+ */
+function startSwapping(app: App, sessionId: string, index: number, picked: PickedExerciseRef): Promise<void> {
+  const swappedOut = app.getState().storedSessions.sessions[sessionId]!.recordedExercises[index]!.blueprint;
   const key = blueprintSwappedTo(swappedOut, picked).progressionKey();
-  await withCarryOver(app.getState, app, sessionId, [key], (carryOver) =>
+  return withCarryOver(app.getState, app, sessionId, [key], (carryOver) =>
     app.store.dispatch(
       updateStoredSession({
         sessionId,
@@ -327,6 +353,10 @@ async function swapThroughPicker(app: App, sessionId: string, index: number, pic
       }),
     ),
   );
+}
+
+async function swapThroughPicker(app: App, sessionId: string, index: number, picked: PickedExerciseRef) {
+  await startSwapping(app, sessionId, index, picked);
   await app.settle();
 }
 
