@@ -346,10 +346,7 @@ function startSwapping(app: App, sessionId: string, index: number, picked: Picke
     app.store.dispatch(
       updateStoredSession({
         sessionId,
-        update: (s) =>
-          s.recordedExercises[index]?.blueprint === swappedOut
-            ? sessionWithExerciseSwapped(s, index, picked, carryOver)
-            : s,
+        update: (s) => sessionWithExerciseSwapped(s, index, swappedOut.movementKey(), picked, carryOver),
       }),
     ),
   );

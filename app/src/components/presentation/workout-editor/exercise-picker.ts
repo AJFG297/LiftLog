@@ -1,5 +1,11 @@
 import { fuzzyMatchScore } from '@/models/exercise-fuzzy-match';
-import { ExerciseBlueprint, lineageKeys, Rest, WeightedExerciseBlueprint } from '@/models/blueprint-models';
+import {
+  ExerciseBlueprint,
+  lineageKeys,
+  MovementKey,
+  Rest,
+  WeightedExerciseBlueprint,
+} from '@/models/blueprint-models';
 import { ExerciseDescriptor } from '@/models/exercise-models';
 import { MuscleGroup, muscleGroupOf } from '@/models/muscle-groups';
 import { RecordedWeightedExercise, Session } from '@/models/session-models';
@@ -252,17 +258,20 @@ export function sessionWithPickAdded(
 }
 
 /**
- * The workout with the exercise at `index` swapped for `picked`: the same plan under the picked exercise's
- * name and id, so its history follows it (see {@link sessionWithExerciseReplaced}).
+ * The workout with the exercise at `index`, `swappedOut`, swapped for `picked`: its plan as it is now, under
+ * the picked exercise's name and id, so its history follows it (see {@link sessionWithExerciseReplaced}).
+ * Unchanged if that place no longer holds `swappedOut`, which a swap waiting on a read can find; an edit of
+ * its plan meanwhile is kept.
  */
 export function sessionWithExerciseSwapped(
   session: Session,
   index: number,
+  swappedOut: MovementKey,
   picked: PickedExerciseRef,
   carryOver: CarryOver,
 ): Session {
   const current = session.recordedExercises[index];
-  if (!current) {
+  if (current?.movementKey() !== swappedOut) {
     return session;
   }
   return sessionWithExerciseReplaced(session, index, blueprintSwappedTo(current.blueprint, picked), carryOver);
