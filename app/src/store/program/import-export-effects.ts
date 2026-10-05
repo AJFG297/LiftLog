@@ -1,5 +1,6 @@
 import { PLAN_FILE_EXTENSION, PLAN_FILE_MIME, serializeProgramBlueprint } from '@/models/plan-file';
 import { parsePlanImport, type PlanImportFailure } from '@/services/plan-import';
+import { convertSpreadsheetWithAi } from '@/store/ai-planner';
 import { showSnackbar } from '@/store/app';
 import {
   exportPlan,
@@ -63,7 +64,21 @@ export function applyProgramImportExportEffects(addEffect: AddEffectFn) {
     const result = parsePlanImport(payload);
     if (!result.ok) {
       logger.error('Failed to import plan file', { failure: result.failure, error: result.error });
-      dispatch(showSnackbar({ text: tolgee.t(PLAN_IMPORT_ERROR_KEYS[result.failure]) }));
+      const text = tolgee.t(PLAN_IMPORT_ERROR_KEYS[result.failure]);
+      if (result.failure === 'noRoutineTable') {
+        dispatch(
+          showSnackbar({
+            text,
+            action: tolgee.t('plan.import.convert_with_ai.button'),
+            dispatchAction: convertSpreadsheetWithAi({
+              fileName: payload.name || result.planName,
+              sheets: result.sheets,
+            }),
+          }),
+        );
+        return;
+      }
+      dispatch(showSnackbar({ text }));
       return;
     }
     dispatch(setPendingImport({ programBlueprint: result.blueprint }));
