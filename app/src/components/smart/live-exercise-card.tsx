@@ -9,6 +9,7 @@ import { getExerciseStatsHref } from '@/components/smart/exercise-stats-href';
 import { LiveSetTable } from '@/components/smart/live-set-table';
 import { RecordedExerciseView } from '@/components/smart/recorded-exercise-view';
 import { getSessionExerciseEditorHref } from '@/components/smart/session-exercise-editor';
+import { useCarryOver } from '@/hooks/useCarryOver';
 import { useExerciseSearch } from '@/hooks/useExerciseSearch';
 import { LiveSetEntry } from '@/hooks/useLiveSetEntry';
 import { usesBodyweight, useTodaysTarget } from '@/hooks/useTodaysTarget';
@@ -16,11 +17,10 @@ import {
   blueprintSwappedTo,
   sessionWithExerciseSwapped,
 } from '@/components/presentation/workout-editor/exercise-picker';
-import { useServices } from '@/components/smart/services-provider';
 import { RecordedExercise, RecordedWeightedExercise, Session } from '@/models/session-models';
 import { exerciseGroupsOf, exerciseLabelOf } from '@/models/session-models/exercise-groups';
 import { RootState, useAppSelector } from '@/store';
-import { selectExercises, withCarryOver } from '@/store/stored-sessions';
+import { selectExercises } from '@/store/stored-sessions';
 import { translateExerciseMeta } from '@/utils/exercise-meta';
 import { formatTimeSpan } from '@/utils/format-time-span';
 import { openUrl } from '@/utils/open-url';
@@ -47,7 +47,7 @@ export function LiveExerciseCard(props: LiveExerciseCardProps) {
   const { t } = useTranslate();
   const { push } = useRouter();
   const store = useStore<RootState>();
-  const services = useServices();
+  const withCarryOver = useCarryOver();
   const exercises = useAppSelector(selectExercises);
   const targetFor = useTodaysTarget(session);
   const [notesOpen, setNotesOpen] = useState(false);
@@ -63,7 +63,7 @@ export function LiveExerciseCard(props: LiveExerciseCardProps) {
       }
       const ref = { id: picked.id, name: picked.descriptor.name };
       const key = blueprintSwappedTo(swappedOut, ref).progressionKey();
-      void withCarryOver(store.getState, services, session.id, [key], (carryOver) =>
+      withCarryOver(session.id, [key], (carryOver) =>
         updateSession((s) => sessionWithExerciseSwapped(s, exerciseIndex, swappedOut.movementKey(), ref, carryOver)),
       );
     },

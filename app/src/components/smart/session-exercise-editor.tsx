@@ -3,8 +3,7 @@ import { ExerciseEditor } from '@/components/presentation/workout-editor/exercis
 import { ExerciseBlueprint } from '@/models/blueprint-models';
 import { sessionWithExerciseEdited } from '@/models/session-models/carry-over';
 import { RootState, useAppSelectorWithArg } from '@/store';
-import { selectSession, updateStoredSession, withCarryOver } from '@/store/stored-sessions';
-import { useServices } from '@/components/smart/services-provider';
+import { selectSession, updateStoredSession } from '@/store/stored-sessions';
 import { useTranslate } from '@tolgee/react';
 import { Href, Stack, useRouter } from 'expo-router';
 import { HeaderHeightContext } from 'expo-router/react-navigation';
@@ -12,6 +11,7 @@ import { useContext, useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
 import { useDispatch, useStore } from 'react-redux';
 import { useOnDismiss } from '@/hooks/useOnDismiss';
+import { useCarryOver } from '@/hooks/useCarryOver';
 
 export function getSessionExerciseEditorHref(sessionId: string, index: number): Href {
   return `/exercise-editor?sessionId=${encodeURIComponent(sessionId)}&index=${index}` as Href;
@@ -23,7 +23,7 @@ export function SessionExerciseEditor(props: { sessionId: string; index: number 
   const session = useAppSelectorWithArg(selectSession, props.sessionId);
   const dispatch = useDispatch();
   const store = useStore<RootState>();
-  const services = useServices();
+  const withCarryOver = useCarryOver();
   const { dismiss } = useRouter();
 
   const exercise = session?.recordedExercises[exerciseIndex]?.blueprint;
@@ -51,7 +51,7 @@ export function SessionExerciseEditor(props: { sessionId: string; index: number 
     }
     // Only another movement opens on carried numbers, so only that can need the tables read.
     const keys = edited.movementKey() === updated.movementKey() ? [] : [updated.progressionKey()];
-    void withCarryOver(store.getState, services, props.sessionId, keys, (carryOver) =>
+    withCarryOver(props.sessionId, keys, (carryOver) =>
       dispatch(
         updateStoredSession({
           sessionId: props.sessionId,
