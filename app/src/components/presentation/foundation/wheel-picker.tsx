@@ -1,15 +1,28 @@
 import { haptics } from '@/components/presentation/foundation/haptics';
 import { SurfaceText } from '@/components/presentation/foundation/surface-text';
 import { spacing, useAppTheme } from '@/hooks/useAppTheme';
-import { useEffect, useRef, useState } from 'react';
-import { NativeScrollEvent, NativeSyntheticEvent, Pressable, StyleSheet, View } from 'react-native';
-import { ScrollView } from 'react-native-gesture-handler';
+import { useEffect, useState } from 'react';
+import { StyleSheet, View } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Animated, {
+  Easing,
+  useAnimatedReaction,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 
 const ROW_HEIGHT = 44;
 const VISIBLE_ROWS = 3;
 /** Rows above and below the selection band. */
 const EDGE_ROWS = Math.floor(VISIBLE_ROWS / 2);
 const COLUMN_WIDTH = 56;
+/** How far past either end the wheel can be pulled before it stops following the finger. */
+const OVERSCROLL = ROW_HEIGHT / 2;
+/** Seconds of a fling's speed added to where it lets go, to pick the row it coasts to. */
+const FLING_PROJECTION = 0.12;
+const SETTLE = { duration: 220, easing: Easing.out(Easing.cubic) };
 
 /** Height of the picker: three 44pt rows, the middle one picked. */
 export const WHEEL_PICKER_HEIGHT = ROW_HEIGHT * VISIBLE_ROWS;
@@ -36,8 +49,8 @@ interface WheelPickerProps {
 }
 
 /**
- * Side-by-side scrolling wheels, one per column, each settling on the row in the band across the middle:
- * minutes and seconds of a rest, say. Screen readers hear each column as an adjustable value.
+ * Side-by-side wheels, one per column, each settling on the row in the band across the middle: minutes
+ * and seconds of a rest, say. Screen readers hear each column as an adjustable value.
  */
 export function WheelPicker({ columns, testID }: WheelPickerProps) {
   const { tokens } = useAppTheme();
@@ -68,39 +81,85 @@ export function WheelPicker({ columns, testID }: WheelPickerProps) {
   );
 }
 
+/**
+ * A column is a pan gesture over a moving list, not a scroll view. On Android a sheet takes over a scroll
+ * view's drag once it reaches its end, and only defers to the first scroll view it finds. The pan claims
+ * the touch for the gesture handler root as soon as it moves vertically, which cancels the sheet's drag.
+ */
 function WheelColumn({ column, testID }: { column: WheelPickerColumn; testID: string | undefined }) {
   const { tokens } = useAppTheme();
   const { options, value, onChange, unit } = column;
-  const scrollRef = useRef<ScrollView>(null);
   const index = Math.max(
     0,
     options.findIndex((option) => option.value === value),
   );
+  const lastRow = options.length - 1;
+  // Pixels the list has moved up: row n sits in the band at n * ROW_HEIGHT.
+  const position = useSharedValue(index * ROW_HEIGHT);
+  const start = useSharedValue(0);
+  const dragging = useSharedValue(false);
   // The row under the band as the wheel moves, ahead of the value, which only changes once it settles.
   const [centred, setCentred] = useState(index);
   const selected = options[index];
 
-  const rowAt = (offsetY: number) => Math.min(options.length - 1, Math.max(0, Math.round(offsetY / ROW_HEIGHT)));
-
-  // Brings the wheel to a value set from outside it: a tapped row, or a screen reader's swipe.
-  useEffect(() => {
-    scrollRef.current?.scrollTo({ y: index * ROW_HEIGHT, animated: true });
-  }, [index]);
-
-  const onScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const row = rowAt(event.nativeEvent.contentOffset.y);
-    if (row !== centred) {
-      setCentred(row);
-      haptics.selection();
-    }
-  };
-
-  const commit = (offsetY: number) => {
-    const option = options[rowAt(offsetY)];
+  const commit = (row: number) => {
+    const option = options[row];
     if (option && option.value !== value) {
       onChange(option.value);
     }
   };
+
+  const onCentred = (row: number) => {
+    setCentred(row);
+    haptics.selection();
+  };
+
+  // Brings the wheel to a value set from outside it: a tapped row, or a screen reader's swipe.
+  useEffect(() => {
+    if (!dragging.get()) {
+      position.set(withTiming(index * ROW_HEIGHT, SETTLE));
+    }
+  }, [index, position, dragging]);
+
+  useAnimatedReaction(
+    () => Math.min(lastRow, Math.max(0, Math.round(position.get() / ROW_HEIGHT))),
+    (row, previous) => {
+      if (previous !== null && row !== previous) {
+        scheduleOnRN(onCentred, row);
+      }
+    },
+  );
+
+  const pan = Gesture.Pan()
+    .activeOffsetY([-4, 4])
+    .onBegin(() => {
+      start.set(position.get());
+    })
+    .onStart(() => {
+      dragging.set(true);
+    })
+    .onUpdate((event) => {
+      const next = start.get() - event.translationY;
+      position.set(Math.min(lastRow * ROW_HEIGHT + OVERSCROLL, Math.max(-OVERSCROLL, next)));
+    })
+    .onEnd((event) => {
+      const projected = position.get() - event.velocityY * FLING_PROJECTION;
+      const row = Math.min(lastRow, Math.max(0, Math.round(projected / ROW_HEIGHT)));
+      position.set(withTiming(row * ROW_HEIGHT, SETTLE));
+      scheduleOnRN(commit, row);
+    })
+    .onFinalize(() => {
+      dragging.set(false);
+    });
+
+  const tap = Gesture.Tap()
+    .runOnJS(true)
+    .onEnd((event) => {
+      const row = centred + Math.round((event.y - EDGE_ROWS * ROW_HEIGHT - ROW_HEIGHT / 2) / ROW_HEIGHT);
+      commit(Math.min(lastRow, Math.max(0, row)));
+    });
+
+  const listStyle = useAnimatedStyle(() => ({ transform: [{ translateY: -position.get() }] }));
 
   const step = (by: number) => {
     const option = options[index + by];
@@ -120,50 +179,31 @@ function WheelColumn({ column, testID }: { column: WheelPickerColumn; testID: st
       onAccessibilityAction={(event) => step(event.nativeEvent.actionName === 'increment' ? 1 : -1)}
       style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[2] }}
     >
-      <ScrollView
-        ref={scrollRef}
-        style={{ width: COLUMN_WIDTH, height: WHEEL_PICKER_HEIGHT }}
-        contentContainerStyle={{ paddingVertical: EDGE_ROWS * ROW_HEIGHT }}
-        // The initial offset, before the first layout; onLayout repeats it where that is ignored.
-        contentOffset={{ x: 0, y: index * ROW_HEIGHT }}
-        onLayout={() => scrollRef.current?.scrollTo({ y: index * ROW_HEIGHT, animated: false })}
-        snapToInterval={ROW_HEIGHT}
-        decelerationRate="fast"
-        showsVerticalScrollIndicator={false}
-        // Inside an Android sheet, lets the wheel scroll instead of dragging the sheet.
-        nestedScrollEnabled
-        scrollEventThrottle={16}
-        onScroll={onScroll}
-        onMomentumScrollEnd={(event) => commit(event.nativeEvent.contentOffset.y)}
-        onScrollEndDrag={(event) => {
-          // A drag released on a row has no momentum to settle, so no momentum end follows it.
-          const y = event.nativeEvent.contentOffset.y;
-          if (Math.abs(y - rowAt(y) * ROW_HEIGHT) < 1) {
-            commit(y);
-          }
-        }}
-      >
-        {options.map((option, i) => {
-          const distance = Math.abs(i - centred);
-          return (
-            <Pressable
-              key={option.value}
-              testID={testID && `${testID}-${option.value}`}
-              onPress={() => option.value !== value && onChange(option.value)}
-              style={{ height: ROW_HEIGHT, alignItems: 'flex-end', justifyContent: 'center' }}
-            >
-              <SurfaceText
-                font="text-2xl"
-                numeric
-                weight={distance === 0 ? '600' : undefined}
-                style={{ color: distance === 0 ? tokens.ink : distance === 1 ? tokens.muted : tokens.faint }}
-              >
-                {option.label}
-              </SurfaceText>
-            </Pressable>
-          );
-        })}
-      </ScrollView>
+      <GestureDetector gesture={Gesture.Exclusive(pan, tap)}>
+        <View style={{ width: COLUMN_WIDTH, height: WHEEL_PICKER_HEIGHT, overflow: 'hidden' }}>
+          <Animated.View style={[{ paddingTop: EDGE_ROWS * ROW_HEIGHT }, listStyle]}>
+            {options.map((option, i) => {
+              const distance = Math.abs(i - centred);
+              return (
+                <View
+                  key={option.value}
+                  testID={testID && `${testID}-${option.value}`}
+                  style={{ height: ROW_HEIGHT, alignItems: 'flex-end', justifyContent: 'center' }}
+                >
+                  <SurfaceText
+                    font="text-2xl"
+                    numeric
+                    weight={distance === 0 ? '600' : undefined}
+                    style={{ color: distance === 0 ? tokens.ink : distance === 1 ? tokens.muted : tokens.faint }}
+                  >
+                    {option.label}
+                  </SurfaceText>
+                </View>
+              );
+            })}
+          </Animated.View>
+        </View>
+      </GestureDetector>
       <SurfaceText font="text-base" weight="600" style={{ color: tokens.muted, minWidth: 32 }}>
         {unit}
       </SurfaceText>
