@@ -36,7 +36,7 @@ import {
   removeSessionFromProgram,
   selectActiveProgram,
 } from '@/store/program';
-import { deleteStoredSession, putStoredSession, selectLatestExercises, sessionFinished } from '@/store/stored-sessions';
+import { deleteStoredSession, putStoredSession, sessionFinished } from '@/store/stored-sessions';
 import { useServices } from '@/components/smart/services-provider';
 import { formatTimeRange } from '@/utils/format-time-range';
 import { localeFormatBigNumber } from '@/utils/locale-bignumber';
@@ -74,7 +74,6 @@ export function WorkoutDetail({ sessionId }: { sessionId: string }) {
   const sentReactions = useAppSelector(selectSentReactionsByEvent);
   const { start, confirmationDialog } = useStartWorkoutWithConfirmation();
   const { sessionService } = useServices();
-  const latestExercises = useAppSelector(selectLatestExercises);
   const [deleting, setDeleting] = useState(false);
 
   if (!session) {
@@ -96,7 +95,7 @@ export function WorkoutDetail({ sessionId }: { sessionId: string }) {
     bestSetComparisons(session, comparison?.previous).map((x) => [x.key, x.change]),
   );
 
-  const doAgain = () => start(sessionService.repeatSession(session, latestExercises));
+  const doAgain = () => start(sessionService.repeatSession(session));
 
   const saveAsRoutine = () => {
     const name = uniqueRoutineName(

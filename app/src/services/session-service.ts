@@ -5,7 +5,7 @@ import { LatestByLineage, nextRecordedExercise } from '@/models/session-models/c
 import { repeatBlueprint } from '@/models/workout-detail';
 import type { WorkoutRepository } from '@/services/workout-repository';
 import type { RootState } from '@/store';
-import { selectActiveSession } from '@/store/stored-sessions';
+import { selectActiveSession, selectLatestExercises } from '@/store/stored-sessions';
 import { uuid } from '@/utils/uuid';
 import { LocalDate } from '@js-joda/core';
 
@@ -64,11 +64,11 @@ export class SessionService {
 
   /**
    * A past workout to do again: its structure and rep targets as they were that day (see `repeatBlueprint`),
-   * opened on the latest numbers and progression exactly as starting it as a routine would, not on that
-   * day's weights. Nothing is logged. The bodyweight is the workout's own.
+   * opened on the latest numbers in the store's carry-over cache and progression exactly as starting it as
+   * a routine would, not on that day's weights. Nothing is logged. The bodyweight is the workout's own.
    */
-  public repeatSession(session: Session, latestExercises: LatestByLineage): Session {
-    return this.createNewSession(repeatBlueprint(session), latestExercises).with({
+  public repeatSession(session: Session): Session {
+    return this.createNewSession(repeatBlueprint(session), selectLatestExercises(this.getState())).with({
       bodyweight: session.bodyweight,
     });
   }

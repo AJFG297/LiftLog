@@ -19,12 +19,7 @@ import { useWorkoutQuery } from '@/hooks/useWorkoutQuery';
 import { Session } from '@/models/session-models';
 import { useAppSelector } from '@/store';
 import { addUnpublishedSessionId, encryptAndShare, removeReactionsForEvents } from '@/store/feed';
-import {
-  deleteStoredSession,
-  putStoredSession,
-  selectActiveSession,
-  selectLatestExercises,
-} from '@/store/stored-sessions';
+import { deleteStoredSession, putStoredSession, selectActiveSession } from '@/store/stored-sessions';
 import { useServices } from '@/components/smart/services-provider';
 import { LocalDate, YearMonth } from '@js-joda/core';
 import { T, useTranslate } from '@tolgee/react';
@@ -71,7 +66,6 @@ export default function History() {
   const currentWorkoutSession = useAppSelector(selectActiveSession);
   const startWorkoutSession = useStartWorkout();
   const { sessionService } = useServices();
-  const latestExercises = useAppSelector(selectLatestExercises);
   const onSelectSession = (session: Session) => {
     push(`/history/edit?sessionId=${encodeURIComponent(session.id)}`);
   };
@@ -101,7 +95,7 @@ export default function History() {
       setSelectedWorkout(session);
       setReplaceCurrentSessionConfirmOpen(true);
     } else {
-      startWorkoutSession(sessionService.repeatSession(session, latestExercises));
+      startWorkoutSession(sessionService.repeatSession(session));
       setReplaceCurrentSessionConfirmOpen(false);
       setSelectedWorkout(undefined);
 
