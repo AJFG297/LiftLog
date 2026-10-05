@@ -150,8 +150,11 @@ describe('routineFromSession', () => {
 
 describe('SessionService.repeatSession', () => {
   it('starts the workout as it ended up that day afresh, with nothing logged', () => {
-    const service = new SessionService({} as never, () => ({ settings: { useImperialUnits: false } }) as never);
-    const again = service.repeatSession(today.with({ bodyweight: kg(80) }), {});
+    const service = new SessionService(
+      {} as never,
+      () => ({ settings: { useImperialUnits: false }, storedSessions: { latestExercises: {} } }) as never,
+    );
+    const again = service.repeatSession(today.with({ bodyweight: kg(80) }));
 
     expect(again.id).not.toBe(today.id);
     expect(again.reflection).toBeUndefined();

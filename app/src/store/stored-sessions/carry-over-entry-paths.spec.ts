@@ -431,7 +431,7 @@ describe('swapping an exercise (PM-41)', () => {
 /** What the workout detail's Do again starts, for the past workout `id` read from the tables. */
 async function doAgain(app: App, id: string): Promise<Session> {
   const past = await app.workoutRepository.get(id);
-  return serviceOf(app).repeatSession(past!, selectLatestExercises(app.getState()));
+  return serviceOf(app).repeatSession(past!);
 }
 
 function weightsOf(session: Session) {
@@ -565,7 +565,7 @@ describe('every entry path opens what the routine path opens', () => {
     const past = (await app.workoutRepository.get('sep-14'))!;
     const latest = selectLatestExercises(app.getState());
 
-    const again = serviceOf(app).repeatSession(past, latest);
+    const again = serviceOf(app).repeatSession(past);
     const routine = serviceOf(app).hydrateSessionFromBlueprint(repeatBlueprint(past), latest);
 
     expect(weightsOf(again)).toEqual([
