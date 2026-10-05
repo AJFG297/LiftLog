@@ -42,6 +42,7 @@ import {
 import { setIsHydrated as setSettingsIsHydrated } from '@/store/settings';
 import { SessionService } from '@/services/session-service';
 import { sessionWithExerciseEdited } from '@/models/session-models/carry-over';
+import { carriedFrom, plannedLineageFor, todaysTarget } from '@/models/session-models/todays-target';
 import { repeatBlueprint } from '@/models/workout-detail';
 
 /**
@@ -498,6 +499,23 @@ describe('Do again (PM-42)', () => {
   });
 });
 
+/**
+ * What the live workout's Previous line and today's target read for exercise `index`: the latest
+ * performance per lineage before the workout, as `PreviousPerformancesProvider` loads it, through what
+ * `usePreviousPerformance` calls. A freeform workout has no routine.
+ */
+async function previousOf(app: App, sessionId: string, index: number) {
+  const session = app.getState().storedSessions.sessions[sessionId]!;
+  const latest = await app.workoutRepository.latestPerLineage({
+    progressionKeys: [...new Set(session.recordedExercises.map((x) => x.progressionKey()))],
+    excludeWorkoutId: sessionId,
+  });
+  const byLineage = Object.fromEntries(Object.entries(latest).map(([key, x]) => [key, x.exercise]));
+  const exercise = session.recordedExercises[index] as RecordedWeightedExercise;
+  const previous = carriedFrom(exercise, plannedLineageFor(exercise, session.recordedExercises, []), byLineage);
+  return { exercise, previous };
+}
+
 describe('every entry path opens what the routine path opens', () => {
   const heavy = makeWeightedBlueprint({
     name: 'Bench Press',
@@ -563,5 +581,24 @@ describe('every entry path opens what the routine path opens', () => {
     added.recordedExercises.forEach((exercise, index) =>
       expect(exercise.equals(routine.recordedExercises[index])).toBe(true),
     );
+  });
+
+  it('shows as Previous the performance each added exercise opened from', async () => {
+    const app = await startApp(history());
+    const sessionId = await startFreeform(app);
+    const picks = [
+      { id: 'Bench Press', name: 'Bench Press' },
+      { id: 'Row', name: 'Row' },
+    ];
+    await addThroughPicker(app, sessionId, picks);
+    await addThroughPicker(app, sessionId, [picks[0]!]);
+
+    const first = await previousOf(app, sessionId, 0);
+    const second = await previousOf(app, sessionId, 2);
+
+    expect(first.previous?.bestSet?.weight).toEqual(new Weight(82.5, 'kilograms'));
+    expect(todaysTarget(first.exercise, first.previous, true)?.reason.kind).toBe('repsUp');
+    expect(second.previous?.bestSet?.weight).toEqual(new Weight(62.5, 'kilograms'));
+    expect(todaysTarget(second.exercise, second.previous, true)?.reason.kind).toBe('repeatAfterSuccess');
   });
 });
