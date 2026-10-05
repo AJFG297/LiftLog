@@ -6,6 +6,7 @@ import { Loader } from '@/components/presentation/foundation/loader';
 import { GeneralMessage } from '@/components/presentation/ai-planner/general-message';
 import { PlanMessage } from '@/components/presentation/ai-planner/plan-message';
 import { SharedProgramMessage } from '@/components/presentation/ai-planner/shared-program-message';
+import { SharedSpreadsheetMessage } from '@/components/presentation/ai-planner/shared-spreadsheet-message';
 import { ProPrompt } from '@/components/presentation/ai-planner/pro-prompt';
 import { UpdatePrompt } from '@/components/presentation/ai-planner/update-prompt';
 
@@ -46,6 +47,9 @@ export function ChatBubble(props: {
           .with({ type: 'messageResponse' }, (message) => <GeneralMessage isUser={isUser} message={message} />)
           .with({ type: 'chatPlan' }, (message) => <PlanMessage isUser={isUser} message={message} />)
           .with({ type: 'sharedProgram' }, (message) => <SharedProgramMessage isUser={isUser} message={message} />)
+          .with({ type: 'sharedSpreadsheet' }, (message) => (
+            <SharedSpreadsheetMessage isUser={isUser} message={message} />
+          ))
           .with({ type: 'purchasePro' }, () => <ProPrompt />)
           .with({ type: 'updateRequired' }, () => <UpdatePrompt />)
           .exhaustive()}
