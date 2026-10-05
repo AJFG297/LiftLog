@@ -2,7 +2,7 @@ import { spacing, useAppTheme } from '@/hooks/useAppTheme';
 
 import { useTranslate } from '@tolgee/react';
 import { Stack } from 'expo-router';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Dimensions, FlatList, I18nManager, Platform, View } from 'react-native';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import { useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller';
@@ -20,7 +20,6 @@ import {
 } from '@/store/ai-planner';
 import { uuid } from '@/utils/uuid';
 import { useScroll } from '@/hooks/useScrollListener';
-import { useMountEffect } from '@/hooks/useMountEffect';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChatBubble } from '@/components/presentation/ai-planner/chat-bubble';
 import { ShareProgramButton } from '@/components/presentation/ai-planner/share-program-button';
@@ -67,9 +66,11 @@ export default function AiPlanner() {
     [restGap],
   );
 
-  useMountEffect(() => {
+  // Also re-runs when a spreadsheet is sent to the planner while this screen is already open.
+  const hasPendingSpreadsheet = useAppSelector((x) => !!x.aiPlanner.pendingSpreadsheet);
+  useEffect(() => {
     dispatch(initChat());
-  });
+  }, [dispatch, hasPendingSpreadsheet]);
 
   const [messageText, setMessageText] = useState('');
   const sendMessage = (message: string) => {
