@@ -28,7 +28,7 @@ export function useAddExercise(sessionId: string | undefined, options?: { onAdde
       }
       const picked = pick.exercises.map((exercise) => ({ id: exercise.id, name: exercise.descriptor.name }));
       const keys = blueprintsForPick(picked, false).map((blueprint) => blueprint.progressionKey());
-      void withCarryOver(state, workoutRepository, sessionId, keys, (carryOver) => {
+      void withCarryOver(store.getState, workoutRepository, sessionId, keys, (carryOver) => {
         // Read again: with a lookup in between, the workout may have changed or closed meanwhile.
         const current = store.getState().storedSessions.sessions[sessionId];
         if (!current) {

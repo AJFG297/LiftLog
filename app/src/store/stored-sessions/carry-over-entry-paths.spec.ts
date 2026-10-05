@@ -120,7 +120,7 @@ async function startFreeform(app: App): Promise<string> {
  */
 function startAdding(app: App, sessionId: string, picked: PickedExerciseRef[]): Promise<void> {
   const keys = blueprintsForPick(picked, false).map((blueprint) => blueprint.progressionKey());
-  return withCarryOver(app.getState(), app.workoutRepository, sessionId, keys, (carryOver) =>
+  return withCarryOver(app.getState, app.workoutRepository, sessionId, keys, (carryOver) =>
     app.store.dispatch(
       updateStoredSession({
         sessionId,
@@ -288,7 +288,7 @@ async function swapThroughPicker(app: App, sessionId: string, index: number, pic
   const state = app.getState();
   const swappedOut = state.storedSessions.sessions[sessionId]!.recordedExercises[index]!.blueprint;
   const key = blueprintSwappedTo(swappedOut, picked).progressionKey();
-  await withCarryOver(state, app.workoutRepository, sessionId, [key], (carryOver) =>
+  await withCarryOver(app.getState, app.workoutRepository, sessionId, [key], (carryOver) =>
     app.store.dispatch(
       updateStoredSession({
         sessionId,
@@ -364,7 +364,7 @@ describe('swapping an exercise (PM-41)', () => {
       const edited = state.storedSessions.sessions[sessionId]!.recordedExercises[0]!.blueprint;
       const updated = edit(edited as WeightedExerciseBlueprint);
       const keys = edited.movementKey() === updated.movementKey() ? [] : [updated.progressionKey()];
-      await withCarryOver(state, app.workoutRepository, sessionId, keys, (carryOver) =>
+      await withCarryOver(app.getState, app.workoutRepository, sessionId, keys, (carryOver) =>
         app.store.dispatch(
           updateStoredSession({ sessionId, update: (s) => sessionWithExerciseEdited(s, 0, updated, carryOver) }),
         ),

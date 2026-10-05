@@ -51,7 +51,7 @@ export function SessionExerciseEditor(props: { sessionId: string; index: number 
     }
     // Only another movement opens on carried numbers, so only that can need the tables read.
     const keys = edited.movementKey() === updated.movementKey() ? [] : [updated.progressionKey()];
-    void withCarryOver(state, workoutRepository, props.sessionId, keys, (carryOver) =>
+    void withCarryOver(store.getState, workoutRepository, props.sessionId, keys, (carryOver) =>
       dispatch(
         updateStoredSession({
           sessionId: props.sessionId,
