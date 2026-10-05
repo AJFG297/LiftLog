@@ -55,16 +55,14 @@ interface WheelPickerProps {
 export function WheelPicker({ columns, testID }: WheelPickerProps) {
   const { tokens } = useAppTheme();
   return (
-    <View
-      testID={testID}
-      style={{ height: WHEEL_PICKER_HEIGHT, flexDirection: 'row', justifyContent: 'center', gap: spacing[6] }}
-    >
+    <View testID={testID} style={{ height: WHEEL_PICKER_HEIGHT, flexDirection: 'row' }}>
       <View
         pointerEvents="none"
         style={{
           position: 'absolute',
-          left: 0,
-          right: 0,
+          // The picker may run to the sheet's edges; the band keeps the page margin.
+          left: spacing.pageHorizontalMargin,
+          right: spacing.pageHorizontalMargin,
           top: EDGE_ROWS * ROW_HEIGHT,
           height: ROW_HEIGHT,
           borderRadius: 12,
@@ -74,8 +72,14 @@ export function WheelPicker({ columns, testID }: WheelPickerProps) {
           borderColor: tokens.line,
         }}
       />
-      {columns.map((column) => (
-        <WheelColumn key={column.key} column={column} testID={testID && `${testID}-${column.key}`} />
+      {columns.map((column, i) => (
+        <WheelColumn
+          key={column.key}
+          column={column}
+          // Packed towards the middle, so the wheels sit together while each owns its share of the width.
+          justify={i === 0 ? 'flex-end' : i === columns.length - 1 ? 'flex-start' : 'center'}
+          testID={testID && `${testID}-${column.key}`}
+        />
       ))}
     </View>
   );
@@ -85,8 +89,18 @@ export function WheelPicker({ columns, testID }: WheelPickerProps) {
  * A column is a pan gesture over a moving list, not a scroll view. On Android a sheet takes over a scroll
  * view's drag once it reaches its end, and only defers to the first scroll view it finds. The pan claims
  * the touch for the gesture handler root as soon as it moves vertically, which cancels the sheet's drag.
+ * It covers the column's whole share of the picker, unit and margins too, so a thumb a little off the
+ * numbers still turns the wheel instead of dragging the sheet.
  */
-function WheelColumn({ column, testID }: { column: WheelPickerColumn; testID: string | undefined }) {
+function WheelColumn({
+  column,
+  justify,
+  testID,
+}: {
+  column: WheelPickerColumn;
+  justify: 'flex-start' | 'center' | 'flex-end';
+  testID: string | undefined;
+}) {
   const { tokens } = useAppTheme();
   const { options, value, onChange, unit } = column;
   const index = Math.max(
@@ -169,17 +183,25 @@ function WheelColumn({ column, testID }: { column: WheelPickerColumn; testID: st
   };
 
   return (
-    <View
-      testID={testID}
-      accessible
-      accessibilityRole="adjustable"
-      accessibilityLabel={column.accessibilityLabel}
-      accessibilityValue={{ text: selected ? `${selected.label} ${unit}` : unit }}
-      accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
-      onAccessibilityAction={(event) => step(event.nativeEvent.actionName === 'increment' ? 1 : -1)}
-      style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[2] }}
-    >
-      <GestureDetector gesture={Gesture.Exclusive(pan, tap)}>
+    <GestureDetector gesture={Gesture.Exclusive(pan, tap)}>
+      <View
+        testID={testID}
+        accessible
+        accessibilityRole="adjustable"
+        accessibilityLabel={column.accessibilityLabel}
+        accessibilityValue={{ text: selected ? `${selected.label} ${unit}` : unit }}
+        accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
+        onAccessibilityAction={(event) => step(event.nativeEvent.actionName === 'increment' ? 1 : -1)}
+        style={{
+          flex: 1,
+          height: WHEEL_PICKER_HEIGHT,
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: justify,
+          gap: spacing[2],
+          paddingHorizontal: spacing[3],
+        }}
+      >
         <View style={{ width: COLUMN_WIDTH, height: WHEEL_PICKER_HEIGHT, overflow: 'hidden' }}>
           <Animated.View style={[{ paddingTop: EDGE_ROWS * ROW_HEIGHT }, listStyle]}>
             {options.map((option, i) => {
@@ -203,10 +225,10 @@ function WheelColumn({ column, testID }: { column: WheelPickerColumn; testID: st
             })}
           </Animated.View>
         </View>
-      </GestureDetector>
-      <SurfaceText font="text-base" weight="600" style={{ color: tokens.muted, minWidth: 32 }}>
-        {unit}
-      </SurfaceText>
-    </View>
+        <SurfaceText font="text-base" weight="600" style={{ color: tokens.muted, minWidth: 32 }}>
+          {unit}
+        </SurfaceText>
+      </View>
+    </GestureDetector>
   );
 }

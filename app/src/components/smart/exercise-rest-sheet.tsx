@@ -93,8 +93,11 @@ function SheetContent(props: { session: Session; exerciseIndex: number; exercise
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: tokens.card, paddingHorizontal: spacing.pageHorizontalMargin }}>
-      <SheetHeader title={t('live_workout.exercise_rest.title')} subtitle={exercise.blueprint.name} onClose={back} />
+    // The wheels run edge to edge, so a thumb near the side of the sheet turns one rather than dragging it.
+    <View style={{ flex: 1, backgroundColor: tokens.card }}>
+      <View style={{ paddingHorizontal: spacing.pageHorizontalMargin }}>
+        <SheetHeader title={t('live_workout.exercise_rest.title')} subtitle={exercise.blueprint.name} onClose={back} />
+      </View>
       <WheelPicker
         testID="exercise-rest-wheel"
         columns={[
@@ -116,7 +119,7 @@ function SheetContent(props: { session: Session; exerciseIndex: number; exercise
           },
         ]}
       />
-      <View style={{ marginTop: spacing[4] }}>
+      <View style={{ marginTop: spacing[4], paddingHorizontal: spacing.pageHorizontalMargin }}>
         <ActionButton
           testID="exercise-rest-save"
           label={t('live_workout.exercise_rest.save.button', { time: formatTimeSpan(rest) })}
