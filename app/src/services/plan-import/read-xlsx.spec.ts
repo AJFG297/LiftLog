@@ -211,4 +211,48 @@ describe('readXlsx', () => {
     expect(() => readXlsx(rawWorkbook(sheetXml, ['x'.repeat(100_000)], 1))).toThrow(SpreadsheetTooLargeError);
     expect(performance.now() - start).toBeLessThan(2_000);
   });
+
+  it('charges a stored part its stored size, even listed many times under a size of 0', () => {
+    const zip = zipSync(
+      {
+        'xl/workbook.xml': strToU8('<workbook><sheets/></workbook>'),
+        'xl/sharedStrings.xml': new Uint8Array(12 * 1024 * 1024),
+      },
+      { level: 0 },
+    );
+    const view = new DataView(zip.buffer, zip.byteOffset, zip.byteLength);
+    const endRecord = zip.length - 22;
+    const directoryStart = view.getUint32(endRecord + 16, true);
+    const recordLength = (at: number) =>
+      46 + view.getUint16(at + 28, true) + view.getUint16(at + 30, true) + view.getUint16(at + 32, true);
+    const first = zip.subarray(directoryStart, directoryStart + recordLength(directoryStart));
+    const secondStart = directoryStart + first.length;
+    const second = zip.subarray(secondStart, secondStart + recordLength(secondStart));
+    const shared = new TextDecoder().decode(second.subarray(46, 46 + 20)) === 'xl/sharedStrings.xml' ? second : first;
+    const workbookRecord = shared === second ? first : second;
+    const lying = new Uint8Array(shared);
+    new DataView(lying.buffer).setUint32(24, 0, true);
+
+    const copies = 4;
+    const records = [workbookRecord, ...Array<Uint8Array>(copies).fill(lying)];
+    const directoryLength = records.reduce((total, r) => total + r.length, 0);
+    const bytes = new Uint8Array(directoryStart + directoryLength + 22);
+    bytes.set(zip.subarray(0, directoryStart));
+    let at = directoryStart;
+    for (const record of records) {
+      bytes.set(record, at);
+      at += record.length;
+    }
+    bytes.set(zip.subarray(endRecord), at);
+    const end = new DataView(bytes.buffer, at, 22);
+    end.setUint16(8, records.length, true);
+    end.setUint16(10, records.length, true);
+    end.setUint32(12, directoryLength, true);
+
+    expect(() => readXlsx(bytes)).toThrow(SpreadsheetTooLargeError);
+  });
+
+  it('refuses a file larger than the cap before unzipping it', () => {
+    expect(() => readXlsx(new Uint8Array(21 * 1024 * 1024))).toThrow(SpreadsheetTooLargeError);
+  });
 });

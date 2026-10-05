@@ -229,9 +229,10 @@ function readWorksheet(xml: string, sharedStrings: string[], budget: CellBudget)
 }
 
 /**
- * Inflates only the named parts. fflate inflates each entry into a buffer of the size the zip declares
- * for it and never grows it, so checking the declared sizes before inflating bounds the memory a zip
- * bomb can take.
+ * Inflates only the named parts. fflate inflates a compressed entry into a buffer of its declared size
+ * and never grows it, but copies a stored one by its stored size, whatever it declares. Charging each
+ * entry the larger of the two before it is read bounds the memory a zip bomb can take, including one
+ * that lists the same data under the same name many times.
  */
 function unzipParts(bytes: Uint8Array, wanted: Set<string>, budget: { remaining: number }): Record<string, string> {
   const parts = unzipSync(bytes, {
@@ -239,7 +240,7 @@ function unzipParts(bytes: Uint8Array, wanted: Set<string>, budget: { remaining:
       if (!wanted.has(file.name)) {
         return false;
       }
-      budget.remaining -= file.originalSize;
+      budget.remaining -= Math.max(file.size, file.originalSize);
       if (budget.remaining < 0) {
         throw new SpreadsheetTooLargeError(`Unzipping ${file.name} would pass ${MAX_SPREADSHEET_BYTES} bytes.`);
       }
@@ -255,6 +256,9 @@ function unzipParts(bytes: Uint8Array, wanted: Set<string>, budget: { remaining:
  * not a zip or the zip holds no Excel workbook.
  */
 export function readXlsx(bytes: Uint8Array): Sheet[] {
+  if (bytes.length > MAX_SPREADSHEET_BYTES) {
+    throw new SpreadsheetTooLargeError(`The workbook is ${bytes.length} bytes, past ${MAX_SPREADSHEET_BYTES}.`);
+  }
   const budget = { remaining: MAX_SPREADSHEET_BYTES };
   const index = unzipParts(
     bytes,
