@@ -37,7 +37,10 @@ exercise and opens it the same way, keeping any set already logged (`sessionWith
 from the carry-over cache without the workout's own entries (`withCarryOver`). When the cache's entry for an
 exercise is the workout's own (a set of it logged today), it holds nothing from before, so just those exercises
 are read from the tables without this workout (`latestPerLineage` with `excludeWorkoutId`) before the pick
-lands. It lands in the workout it was picked for, and a swap only if that exercise is still in its place.
+lands. If that read fails, they open on the cache as it is, today's numbers included, and the failure is
+logged. Picks for one workout land in the order they were made, so a pick made during a read waits behind it.
+A pick lands in the workout it was picked for, and a swap only if that place still holds the exercise swapped
+out. An edit of its plan meanwhile, such as Add set, is kept. The screens get this through `useCarryOver`.
 
 ## How the result comes back
 
