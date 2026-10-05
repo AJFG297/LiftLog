@@ -71,7 +71,99 @@ for (const reviewer of ['gates', 'review']) {
     assert.equal(results[0].review.clean, false)
     assert.match(results[0].live.skipped, /review not clean/)
   })
+
+  test(`a missing ${reviewer} result retries to the limit without asking the owner for a fix`, async () => {
+    const { results, calls } = await run({ maxReviewRounds: 3, lanes: [parent] }, (prompt, options) => {
+      if (options.label === 'parent owner') return build('parent')
+      if (options.label.startsWith(`parent ${reviewer} `)) return undefined
+      if (options.schema?.properties.verdict) return pass
+    })
+
+    assert.equal(results[0].review.clean, false)
+    assert.deepEqual(results[0].problems, [])
+    const reviews = calls.filter((call) => call.schema?.properties.verdict)
+    assert.equal(reviews.length, 6)
+    assert.ok(reviews.every((call) => call.prompt.includes('at parent0')))
+    assert.equal(calls.some((call) => call.phase === 'Fix'), false)
+    assert.equal(calls.some((call) => call.schema?.properties.scenarios), false)
+  })
 }
+
+for (const liveDespiteOpenReview of [false, true]) {
+  test(`an exhausted FAIL with no findings blocks its child with live override ${liveDespiteOpenReview}`, async () => {
+    const { results, calls } = await run({ maxReviewRounds: 3, liveDespiteOpenReview, lanes: [parent, child] }, (prompt, options) => {
+      if (options.label === 'parent owner') return build('parent')
+      if (options.label === 'child owner') return build('child')
+      if (options.label.startsWith('parent review ')) return { ...pass, verdict: 'FAIL' }
+      if (options.schema?.properties.verdict) return pass
+      if (options.label === 'parent live') return live('PASS')
+    })
+
+    assert.equal(results[0].review.clean, false)
+    assert.deepEqual(results[0].problems, [])
+    assert.equal(calls.filter((call) => call.schema?.properties.verdict).length, 6)
+    assert.equal(calls.some((call) => call.phase === 'Fix'), false)
+    assert.equal(calls.some((call) => call.label === 'parent live'), liveDespiteOpenReview)
+    assert.equal(calls.some((call) => call.label === 'child owner'), false)
+    assert.match(results[1].error, /not started.*parent/)
+  })
+}
+
+test('a transient FAIL with no findings recovers on the same head without an owner fix', async () => {
+  const { results, calls } = await run({ maxReviewRounds: 3, lanes: [parent] }, (prompt, options) => {
+    if (options.label === 'parent owner') return build('parent')
+    if (options.label === 'parent gates 1') return { ...pass, verdict: 'FAIL' }
+    if (options.schema?.properties.verdict) return pass
+    if (options.label === 'parent live') return live('PASS')
+  })
+
+  assert.equal(results[0].review.clean, true)
+  assert.equal(results[0].head, 'parent0')
+  assert.equal(calls.filter((call) => call.schema?.properties.verdict).length, 4)
+  assert.equal(calls.some((call) => call.phase === 'Fix'), false)
+  assert.equal(calls.filter((call) => call.label === 'parent live').length, 1)
+})
+
+test('serious findings block the parent and child even when both reviewers say PASS', async () => {
+  const { results, calls } = await run({ maxReviewRounds: 1, lanes: [parent, child] }, (prompt, options) => {
+    if (options.label === 'parent owner') return build('parent')
+    if (options.label === 'child owner') return build('child')
+    if (options.label === 'parent review 1') return { ...pass, findings: [defect] }
+    if (options.schema?.properties.verdict) return pass
+  })
+
+  assert.equal(results[0].review.clean, false)
+  assert.deepEqual(results[0].review.open, [defect])
+  assert.equal(results[0].problems.length, 1)
+  assert.equal(calls.some((call) => call.label === 'parent live'), false)
+  assert.equal(calls.some((call) => call.label === 'child owner'), false)
+  assert.match(results[1].error, /not started.*parent/)
+})
+
+test('passing reviews with nits and notes remain clean and let the child start', async () => {
+  const { results, calls } = await run({ lanes: [parent, child] }, (prompt, options) => {
+    if (options.label === 'parent owner') return { ...build('parent'), openDecisions: ['Choose a save icon'] }
+    if (options.label === 'child owner') return build('child')
+    if (options.label === 'parent review 1') return {
+      ...pass,
+      findings: [{ ...defect, severity: 'nit', summary: 'Rename the save helper' }],
+      notes: ['Consider a shorter label'],
+    }
+    if (options.schema?.properties.verdict) return pass
+    if (options.label === 'parent live') return { ...live('PASS'), notes: ['The confirmation is brief'] }
+  })
+
+  assert.equal(results[0].review.clean, true)
+  assert.deepEqual(results[0].problems, [])
+  assert.deepEqual(results[0].notes, [
+    'Choose a save icon',
+    'Consider a shorter label',
+    'nit: Rename the save helper (app/src/example.ts:1)',
+    'The confirmation is brief',
+  ])
+  assert.equal(calls.some((call) => call.phase === 'Fix'), false)
+  assert.equal(calls.filter((call) => call.label === 'child owner').length, 1)
+})
 
 test('a native review fix after a JS live fix rebuilds the APK at the final reviewed head', async () => {
   const { results, calls } = await run({ lanes: [parent] }, (prompt, options) => {

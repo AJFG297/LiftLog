@@ -10,11 +10,13 @@ emulator is the slowest and scarcest step, so it runs once, at the end, on code 
 1. **Build.** Write the change with its unit tests. Push and open the PR ready, not draft.
 2. **Gates and review, in parallel.** Gates: from `app/`, `npx vitest run`, `npm run typecheck`, `npm run lint`,
    `npm run format:check`. Review: a read-only code review of the diff against the spec and `AGENTS.md`.
+   Both gates and review must return `PASS`, with no unresolved real defects, before the review is clean.
 3. **Fix until the review is clean.** The owner fixes what gates and review found, then both run again on the new
    head. Stop after 3 rounds and report what is still open.
 4. **The emulator, once.** One live proof of every scenario at the reviewed head.
 5. **Only an emulator failure goes back.** Fix it, review that fix (gates and review of the new commits only), then
-   re-run only the scenarios that failed. Stop after 2 rounds.
+   re-run only the scenarios that failed. If either the live fix or its review fixes changed native code,
+   rebuild the APK at the final reviewed head before the re-test. Stop after 2 rounds.
 
 Never run a code review after the emulator. Review findings that arrive after a live run cost another emulator
 trip each, which is what this order exists to avoid. A fix for an emulator failure gets its own review before the
@@ -75,5 +77,13 @@ the PR and adds only new after shots for the scenarios it re-ran.
 - A lane that moves or adds routes stacks on the lane that changes the tab structure (it branches from that
   lane's branch and starts when it finishes) rather than running beside it. In phase 3, PM-24 changed the tabs
   while PM-26 moved routes beside it, and that seam cost four extra rounds.
+- A stacked lane starts only after its parent clears review and has no unresolved live failures or problems.
+  Notes, nits and `NOT RUN` remain nonblocking.
 - Lanes share the two emulator slots, so at most two are live at a time. The rest wait for a slot, not for each
   other's reviews.
+
+## Check the workflow
+
+Run `node --test .claude/workflows/liftlog-lanes.test.cjs` from the repository root. It executes the saved
+workflow with scripted agent responses to check review gates, APK rebuilds and stacked dependencies. It
+does not launch agents or an emulator.

@@ -282,11 +282,11 @@ async function reviewLoop(l, b, from, startHead, focus, maxRounds, tag) {
       nits.push(...v.findings.filter((f) => f.severity === 'nit'))
     }
     const serious = seriousOf(got)
-    const clean = got.length === 2 && serious.length === 0
+    const clean = got.length === 2 && got.every((v) => v.verdict === 'PASS') && serious.length === 0
     rounds.push({ round, head, clean, serious, missing: 2 - got.length })
-    log(`${l.id} ${tag}review round ${round} at ${head}: ${clean ? 'clean' : got.length < 2 ? 'a reviewer returned nothing' : serious.length + ' to fix'}`)
+    log(`${l.id} ${tag}review round ${round} at ${head}: ${clean ? 'clean' : got.length < 2 ? 'a reviewer returned nothing' : serious.length ? serious.length + ' to fix' : 'a reviewer did not pass'}`)
     if (clean || round === maxRounds) break
-    // A reviewer that returned nothing gives the owner nothing to fix; just run the round again.
+    // Without concrete findings, the owner has nothing to fix; just run the round again.
     if (!serious.length) continue
     const fix = await agent(
       fixPrompt(l, b, head, 'Gates and code review found these:', JSON.stringify(serious, null, 1)),
@@ -363,7 +363,7 @@ async function runLane(l) {
         log(`${l.id} the fix for the live failures did not clear review; not re-running live.`)
         break
       }
-      if (fix.nativeChanges) {
+      if (b.nativeChanges) {
         try {
           apkPath = await prepareApk(l, b, head)
         } catch (e) {
@@ -411,7 +411,9 @@ function start(l) {
       const parent = byBranch[l.base]
       if (parent) {
         const p = await start(parent)
-        if (!p || p.error) return { id: l.id, error: `not started: ${parent.id}, which it stacks on, failed` }
+        if (!p || p.error || !p.review?.clean || p.problems.length) {
+          return { id: l.id, error: `not started: ${parent.id}, which it stacks on, did not finish with a clean review and no unresolved problems` }
+        }
         log(`${parent.id} finished at ${p.head}; starting ${l.id} on ${l.base}.`)
       }
       return runLane(l).catch((e) => ({ id: l.id, error: String(e) }))
