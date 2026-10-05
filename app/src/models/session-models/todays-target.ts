@@ -1,10 +1,4 @@
-import {
-  ExerciseBlueprint,
-  latestInLineage,
-  lineageKeys,
-  ProgressionKey,
-  RepsTarget,
-} from '@/models/blueprint-models';
+import { ExerciseBlueprint, latestInLineage, lineageKeys, ProgressionKey, RepsTarget } from '@/models/blueprint-models';
 import type { RecordedExercise } from '@/models/session-models/recorded-exercise';
 import { RecordedWeightedExercise } from '@/models/session-models/recorded-weighted-exercise';
 import { setLabels } from '@/models/session-models/set-kind';
