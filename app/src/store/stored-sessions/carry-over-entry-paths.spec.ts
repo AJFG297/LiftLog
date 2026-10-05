@@ -114,10 +114,13 @@ async function startFreeform(app: App): Promise<string> {
   return session.id;
 }
 
-/** What `useAddExercise` dispatches when the picker hands back a pick. */
-async function addThroughPicker(app: App, sessionId: string, picked: PickedExerciseRef[]) {
+/**
+ * What `useAddExercise` dispatches when the picker hands back a pick. The app does not wait for it before
+ * the next tap; the promise is for a test to wait on.
+ */
+function startAdding(app: App, sessionId: string, picked: PickedExerciseRef[]): Promise<void> {
   const keys = blueprintsForPick(picked, false).map((blueprint) => blueprint.progressionKey());
-  await withCarryOver(app.getState(), app.workoutRepository, sessionId, keys, (carryOver) =>
+  return withCarryOver(app.getState(), app.workoutRepository, sessionId, keys, (carryOver) =>
     app.store.dispatch(
       updateStoredSession({
         sessionId,
@@ -125,6 +128,10 @@ async function addThroughPicker(app: App, sessionId: string, picked: PickedExerc
       }),
     ),
   );
+}
+
+async function addThroughPicker(app: App, sessionId: string, picked: PickedExerciseRef[]) {
+  await startAdding(app, sessionId, picked);
   await app.settle();
 }
 
@@ -247,6 +254,21 @@ describe('adding an exercise through the picker (PM-41)', () => {
       await adding;
 
       expect(app.getState().storedSessions.sessions[next.id]!.recordedExercises).toHaveLength(0);
+      expect(setsOf(app, sessionId, 1)).toEqual(opened(45, 10));
+    });
+
+    it('adds in tap order when the first add waits on the read and the next does not', async () => {
+      const { app, sessionId } = await lungeLoggedToday();
+
+      const adding = [
+        startAdding(app, sessionId, [{ id: 'Lunge', name: 'Lunge' }]),
+        startAdding(app, sessionId, [{ id: 'Row', name: 'Row' }]),
+      ];
+      await Promise.all(adding);
+      await app.settle();
+
+      const session = app.getState().storedSessions.sessions[sessionId]!;
+      expect(session.recordedExercises.map((x) => x.blueprint.name)).toEqual(['Lunge', 'Lunge', 'Row']);
       expect(setsOf(app, sessionId, 1)).toEqual(opened(45, 10));
     });
 
