@@ -272,6 +272,29 @@ describe('adding an exercise through the picker (PM-41)', () => {
       expect(setsOf(app, sessionId, 1)).toEqual(opened(45, 10));
     });
 
+    it("opens on today's numbers, and logs why, when the read fails", async () => {
+      const { app, sessionId } = await lungeLoggedToday();
+      const failure = new Error('database is locked');
+      const failingRepository = { latestPerLineage: () => Promise.reject(failure) };
+      logger.error.mockClear();
+
+      await withCarryOver(app.getState, failingRepository, sessionId, [lunge.progressionKey()], (carryOver) =>
+        app.store.dispatch(
+          updateStoredSession({
+            sessionId,
+            update: (s) => sessionWithPickAdded(s, [{ id: 'Lunge', name: 'Lunge' }], false, carryOver),
+          }),
+        ),
+      );
+      await app.settle();
+
+      expect(setsOf(app, sessionId, 1)).toEqual(opened(60, 10));
+      expect(logger.error).toHaveBeenCalledWith(
+        `Couldn't read last time for ${lunge.progressionKey()}; opening on the cache`,
+        failure,
+      );
+    });
+
     it('swaps in an exercise it already logged on the last workout', async () => {
       const { app, sessionId } = await lungeLoggedToday();
       await addThroughPicker(app, sessionId, [{ id: 'Bench Press', name: 'Bench Press' }]);
