@@ -2,9 +2,38 @@
 
 LiftLog plans can be exported to, and imported from, `.liftlogplan` files. A plan file is plain JSON, so you can write one yourself, share one with a friend, keep one in version control - or have an AI write one for you.
 
-To import a plan, either tap a `.liftlogplan` file on your device (LiftLog is registered to open them), or open the app and go to `Routines -> Import a plan`.
+To import a plan, either tap a `.liftlogplan` file on your device (LiftLog is registered to open them), or open the app and go to `Routines -> Import a plan`. That screen also takes a spreadsheet you already keep your program in; see [Importing a spreadsheet](#importing-a-spreadsheet).
 
 To export one, open `Plans`, tap the `⋮` next to the plan and choose `Export to file`. LiftLog writes the `.liftlogplan` and hands it to the system share sheet, so you can save it to Files or Drive, AirDrop it, or mail it to yourself - whatever gets it somewhere you can reach it again.
+
+## Importing a spreadsheet
+
+`Routines -> Import a plan` also takes a spreadsheet: an Excel workbook (`.xlsx`) or a `.csv`. Google Sheets exports both (`File -> Download`), and so do Numbers and LibreOffice (`Export to -> Excel`). Older `.xls`, `.numbers` and `.ods` files can't be read directly; save them as `.xlsx` or `.csv` first.
+
+LiftLog reads the routine table and shows you the plan before anything is added, so you can fix what it got wrong in the same screen as any other import. The plan is named after the file.
+
+The table needs a header row with an **Exercise** column and at least one of **Sets**, **Reps** or **Sets x Reps**. Everything else is optional:
+
+| Day  | Exercise       | Sets | Reps | Rest  | Weight (kg) | Notes         |
+| ---- | -------------- | ---- | ---- | ----- | ----------- | ------------- |
+| Push | Bench Press    | 4    | 6-8  | 3 min | 80          | Pause rep one |
+|      | Overhead Press | 3    | 8-12 | 90    |             |               |
+| Pull | Deadlift       | 1    | 5    | 5 min | 140         |               |
+|      | Barbell Row    | 4    | 8    |       |             |               |
+
+That imports as two routines, Push and Pull.
+
+- **Headers** can be spelled a few ways, in any case: Day, Routine, Workout or Session; Exercise, Movement, Lift or Name; Sets; Reps, Rep range or Repetitions; Sets x Reps, Scheme or Prescription; Weight, Load, kg or lbs; Rest or Rest time; Notes or Comments. Columns can be in any order, and columns LiftLog doesn't know are ignored.
+- **The header** doesn't have to be the first row. A title or a blank line or two above it is fine, as long as the header is within the first ten rows.
+- **Routines.** With a Day (or Routine) column, its value names the routine and a blank cell means "same as above". Without one, each sheet is a routine named after its tab, and a sheet holding several tables, one per day, makes a routine per table, named by the line just above its header (`Day 2 - Pull`). A single routine from a CSV, or from a tab still called `Sheet1`, takes the plan's name.
+- **Sets** is a number. **Reps** is `8`, a range `8-12`, or a list per set, `12, 10, 8`. **Sets x Reps** is `3x8`, `3 x 8-12`, `5X5` or `4 sets of 10`, and can go in the Sets or Reps column too.
+- **Reps LiftLog can't hold exactly**, such as `AMRAP`, `8+` or `10 each side`, are imported as the number they start with (or the default of 10), and the original text is kept in the exercise's notes so nothing is lost.
+- **Rest** is `90` or `90s` (seconds), `2 min`, `1:30`, or a range like `2-3 min` (its lower end). A bare number under 10 is read as minutes; put the unit in the header, `Rest (sec)` or `Rest (min)`, to say otherwise.
+- **Weight** goes into the exercise's notes (`Weight (kg): 80`), since a routine has no starting weight. Log it on the first workout and progression carries it from there.
+- **Missing or unreadable cells** get the defaults of a new exercise: 3 sets of 10, 90 seconds' rest, and "Add weight" progression. A row with an exercise is always imported, whatever else it holds.
+- **Exercises** are matched to yours and the built-in ones by name, exactly as for a plan file (see [Exercises](#exercises)).
+
+If no sheet has a header LiftLog recognises, it says so and nothing is imported. Only the first 5,000 rows and 100 columns of a sheet are read, and a spreadsheet that unpacks to more than 20 MB is refused; copy just the routine into a new file if yours is bigger.
 
 The authoritative definition of the format is the JSON Schema at [`docs/schemas/program-blueprint/ProgramBlueprint.json`](./schemas/program-blueprint/ProgramBlueprint.json). It is generated from the app's own models, so it is always in step with what the app will accept.
 
