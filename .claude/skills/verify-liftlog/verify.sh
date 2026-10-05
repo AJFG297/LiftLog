@@ -1,11 +1,14 @@
 #!/usr/bin/env bash
-# Drive LiftLog on a dedicated Android emulator for verification.
-# Usage: verify.sh <setup|build|up|doctor|flow|shot|ui|db|logs|down> [args]
+# Drive LiftLog on a dedicated Android emulator slot for verification.
+# Usage: verify.sh <setup|build|up|doctor|slots|flow|flows|shot|ui|db|clear|seed|snapshot|fixture|fixtures|logs|down> [args]
 # See SKILL.md next to this file for what each command does and when to use it.
 set -euo pipefail
 
-SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "$SKILL_DIR/../../.." && pwd)"
+# Physical paths (pwd -P): slot owners and doctor's Metro cwd check compare against what lsof reports, and
+# /tmp is a symlink to /private/tmp on macOS.
+SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
+SELF="$SKILL_DIR/$(basename "${BASH_SOURCE[0]}")"
+REPO_ROOT="$(cd "$SKILL_DIR/../../.." && pwd -P)"
 APP_DIR="$REPO_ROOT/app"
 
 export ANDROID_HOME="${ANDROID_HOME:-$HOME/Library/Android/sdk}"
@@ -14,13 +17,8 @@ export ANDROID_HOME="${ANDROID_HOME:-$HOME/Library/Android/sdk}"
 export JAVA_HOME="${VERIFY_JAVA_HOME:-/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home}"
 export EXPO_NO_TELEMETRY=1 MAESTRO_CLI_NO_ANALYTICS=1 MAESTRO_CLI_ANALYSIS_NOTIFICATION_DISABLED=true
 
-AVD="${VERIFY_AVD:-liftlog-verify}"
-EMU_PORT="${VERIFY_EMU_PORT:-5584}"
-SERIAL="emulator-$EMU_PORT"
-METRO_PORT="${VERIFY_METRO_PORT:-8091}"
 APP_ID="com.ajfg297.liftlog"
 APK="$APP_DIR/android/app/build/outputs/apk/debugOptimized/app-debugOptimized.apk"
-DEV_URL="exp+liftlog://expo-development-client/?url=http%3A%2F%2F127.0.0.1%3A$METRO_PORT"
 
 # Evidence survives `down`; only STATE_DIR (pids, logs and Metro cache of the live instance) is removed.
 RUNS_DIR="$REPO_ROOT/.verify-runs"
@@ -32,15 +30,234 @@ STATE_DIR="$RUNS_DIR/.state"
 # `up` also starts from a cold cache.
 METRO_TMPDIR="$STATE_DIR/tmp"
 
+# Slots are machine-wide: every checkout on this machine claims from the same directory, so two sessions
+# never drive the same emulator. slot-N/ exists while a checkout holds slot N, and its info file names the
+# owner checkout, the pid that claimed it, and the emulator and Metro it runs.
+SLOTS_DIR="${VERIFY_SLOTS_DIR:-$HOME/.cache/liftlog-verify}"
+MAX_SLOTS="${VERIFY_SLOTS:-2}"
+CLAIM_LOCK="$SLOTS_DIR/claim.lock"
+
 ADB="$ANDROID_HOME/platform-tools/adb"
 EMULATOR="$ANDROID_HOME/emulator/emulator"
 
 die() { echo "verify: $*" >&2; exit 1; }
+
+# --- slots -------------------------------------------------------------------------------------------
+
+slot_avd() { if [[ "$1" == 1 ]]; then echo liftlog-verify; else echo "liftlog-verify-$1"; fi; }
+slot_dir() { echo "$SLOTS_DIR/slot-$1"; }
+slot_get() {
+  local f; f="$(slot_dir "$1")/info"
+  if [[ -f "$f" ]]; then sed -n "s/^$2=//p" "$f" | tail -1; fi
+}
+
+slot_set() { # slot_set <n> key=value...
+  local f tmp kv
+  f="$(slot_dir "$1")/info"
+  tmp="$f.$$"
+  shift
+  if [[ -f "$f" ]]; then cp "$f" "$tmp"; else : > "$tmp"; fi
+  for kv in "$@"; do
+    grep -v "^${kv%%=*}=" "$tmp" > "$tmp.x" || true
+    echo "$kv" >> "$tmp.x"
+    mv "$tmp.x" "$tmp"
+  done
+  mv "$tmp" "$f"
+}
+
+valid_slot() { [[ "$1" =~ ^[1-9]$ ]]; }
+
+set_target() { # set_target <avd> <emu port> <metro port>
+  AVD="$1"
+  EMU_PORT="$2"
+  METRO_PORT="$3"
+  SERIAL="emulator-$EMU_PORT"
+  DEV_URL="exp+liftlog://expo-development-client/?url=http%3A%2F%2F127.0.0.1%3A$METRO_PORT"
+}
+
+# Sets SLOT, AVD, EMU_PORT, METRO_PORT, SERIAL and DEV_URL for slot <n>: what the slot recorded at `up`, or
+# the slot's defaults. VERIFY_AVD, VERIFY_EMU_PORT and VERIFY_METRO_PORT never apply here, because this is
+# also how one checkout judges whether another's slot is alive: with the caller's overrides it would look
+# at the wrong AVD and ports, find nothing, and reclaim a live slot.
+load_slot() {
+  local n="$1" avd emu metro
+  SLOT="$n"
+  avd="$(slot_get "$n" avd)"
+  emu="$(slot_get "$n" emu_port)"
+  metro="$(slot_get "$n" metro_port)"
+  set_target "${avd:-$(slot_avd "$n")}" "${emu:-$((5582 + 2 * n))}" "${metro:-$((8089 + 2 * n))}"
+}
+
+# The VERIFY_* overrides apply only to the slot this checkout is setting up or starting. `up` records them in
+# the slot, so every later command, and every other checkout, reads them back through load_slot.
+apply_overrides() {
+  set_target "${VERIFY_AVD:-$AVD}" "${VERIFY_EMU_PORT:-$EMU_PORT}" "${VERIFY_METRO_PORT:-$METRO_PORT}"
+}
+has_overrides() { [[ -n "${VERIFY_AVD:-}${VERIFY_EMU_PORT:-}${VERIFY_METRO_PORT:-}" ]]; }
+
+held_slot() { # the slot this checkout holds, if any
+  local d
+  for d in "$SLOTS_DIR"/slot-*; do
+    [[ -f "$d/info" ]] || continue
+    if [[ "$(sed -n 's/^owner=//p' "$d/info" | tail -1)" == "$REPO_ROOT" ]]; then
+      echo "${d##*/slot-}"
+      return 0
+    fi
+  done
+  return 0
+}
+
+require_slot() {
+  local n; n="$(held_slot)"
+  [[ -n "$n" ]] || die "this checkout holds no slot; start one with: verify.sh up (verify.sh slots lists them)"
+  load_slot "$n"
+}
+
+pid_cmd() { [[ -n "$1" ]] && ps -o command= -p "$1" 2>/dev/null; }
+avd_pid() { ps -axo pid=,command= | awk -v avd="$1" '{ for (i = 2; i < NF; i++) if ($i == "-avd" && $(i + 1) == avd) { print $1; exit } }'; }
+serial_online() { [[ "$("$ADB" -s "emulator-$1" get-state 2>/dev/null || true)" == "device" ]]; }
+port_pid() { lsof -nP -tiTCP:"$1" -sTCP:LISTEN 2>/dev/null | head -1; }
+pid_cwd() { lsof -a -p "$1" -d cwd -Fn 2>/dev/null | sed -n 's/^n//p'; }
+
+# What is running on slot <n>'s emulator and Metro right now, whoever started it. Empty means nothing.
+slot_activity() { load_slot "$1"; target_activity; }
+
+target_activity() { # the same for the AVD and ports currently loaded
+  local bits=() p
+  p="$(avd_pid "$AVD")"
+  [[ -n "$p" ]] && bits+=("AVD $AVD running (pid $p)")
+  serial_online "$EMU_PORT" && bits+=("$SERIAL online")
+  p="$(port_pid "$METRO_PORT")"
+  [[ -n "$p" ]] && bits+=("port $METRO_PORT served by pid $p from $(pid_cwd "$p")")
+  (( ${#bits[@]} )) && { local IFS=';'; echo "${bits[*]}" | sed 's/;/, /g'; }
+  return 0
+}
+
+# A lock is live while the pid that claimed it is still verify.sh, or while anything runs on the slot.
+claimer_alive() { pid_cmd "$1" | grep -q verify.sh; }
+
+slot_state() { # prints: free | ours | held | stale | busy
+  local n="$1" d
+  d="$(slot_dir "$n")"
+  if [[ -d "$d" ]]; then
+    if [[ "$(slot_get "$n" owner)" == "$REPO_ROOT" ]]; then echo ours
+    elif claimer_alive "$(slot_get "$n" pid)" || [[ -n "$(slot_activity "$n")" ]]; then echo held
+    else echo stale
+    fi
+  elif [[ -n "$(slot_activity "$n")" ]]; then echo busy
+  else echo free
+  fi
+}
+
+# run_locked <lock file> <timeout secs> <verify.sh command> [args]: runs the command in a new verify.sh while
+# holding the lock, and exits 75 (EX_TEMPFAIL) without a word if the lock stays taken. lockf (macOS) and
+# flock (Linux) hold a kernel lock that is dropped if the holder dies. -k keeps the lock file: removing it
+# on exit would let a later process lock a fresh file while a waiter still holds the old one.
+run_locked() {
+  local lock="$1" secs="$2"; shift 2
+  mkdir -p "$(dirname "$lock")"
+  if command -v lockf > /dev/null; then lockf -s -k -t "$secs" "$lock" bash "$SELF" "$@"
+  elif command -v flock > /dev/null; then flock -E 75 -w "$secs" "$lock" bash "$SELF" "$@"
+  else die "need lockf or flock"
+  fi
+}
+
+# Claiming and releasing run under one machine-wide lock, so checking a slot and taking it is atomic.
+with_claim_lock() {
+  local rc=0
+  run_locked "$CLAIM_LOCK" 60 "$@" || rc=$?
+  (( rc != 75 )) || die "gave up after 60s waiting for $CLAIM_LOCK"
+  return "$rc"
+}
+
+cmd__claim() { # internal: prints the slot claimed for this checkout, or explains why none is free
+  local held; held="$(held_slot)"
+  if [[ -n "$held" ]]; then
+    [[ -z "${VERIFY_SLOT:-}" || "$VERIFY_SLOT" == "$held" ]] \
+      || die "this checkout already holds slot $held; run verify.sh down before asking for slot $VERIFY_SLOT"
+    slot_set "$held" "pid=$VERIFY_CLAIMER_PID"
+    echo "$held"
+    return 0
+  fi
+  local candidates=() reasons=() n state
+  if [[ -n "${VERIFY_SLOT:-}" ]]; then candidates=("$VERIFY_SLOT"); else
+    for ((n = 1; n <= MAX_SLOTS; n++)); do candidates+=("$n"); done
+  fi
+  for n in "${candidates[@]}"; do
+    state="$(slot_state "$n")"
+    case "$state" in
+      held) reasons+=("slot $n is held by $(slot_get "$n" owner) (claimed $(slot_get "$n" claimed))"); continue ;;
+      busy) reasons+=("slot $n is in use outside verify.sh slots: $(slot_activity "$n")"); continue ;;
+      stale)
+        echo "verify: reclaiming slot $n: its owner $(slot_get "$n" owner) left nothing running" >&2
+        rm -rf "$(slot_dir "$n")"
+        ;;
+    esac
+    load_slot "$n"
+    apply_overrides
+    if [[ ! -d "$HOME/.android/avd/$AVD.avd" ]]; then
+      reasons+=("slot $n has no AVD $AVD; create it with: VERIFY_SLOT=$n verify.sh setup")
+      continue
+    fi
+    # The slot's own AVD and ports are idle (slot_state said so), but overrides point elsewhere.
+    if has_overrides; then
+      local busy; busy="$(target_activity)"
+      if [[ -n "$busy" ]]; then
+        reasons+=("slot $n: the VERIFY_AVD/VERIFY_EMU_PORT/VERIFY_METRO_PORT target is in use: $busy")
+        continue
+      fi
+    fi
+    mkdir "$(slot_dir "$n")"
+    slot_set "$n" "owner=$REPO_ROOT" "pid=$VERIFY_CLAIMER_PID" "claimed=$(date +%Y-%m-%dT%H:%M:%S)"
+    echo "$n"
+    return 0
+  done
+  {
+    if [[ -n "${VERIFY_SLOT:-}" ]]; then echo "verify: slot $VERIFY_SLOT is not free for $REPO_ROOT:"
+    else echo "verify: no free slot for $REPO_ROOT (VERIFY_SLOTS=$MAX_SLOTS):"
+    fi
+    printf '  %s\n' "${reasons[@]}"
+    echo "  Wait for one, or ask the user. Never stop another checkout's emulator."
+  } >&2
+  exit 1
+}
+
+cmd__release() { # internal: drops this checkout's slot lock, and nobody else's
+  local n; n="$(held_slot)"
+  [[ -n "$n" ]] && rm -rf "$(slot_dir "$n")" && echo "released slot $n"
+  return 0
+}
+
+cmd_slots() {
+  local n top="$MAX_SLOTS" d state
+  for d in "$SLOTS_DIR"/slot-*; do
+    [[ -d "$d" ]] && (( ${d##*/slot-} > top )) && top="${d##*/slot-}"
+  done
+  printf '%-5s %-17s %-15s %-6s %-6s %s\n' slot avd serial metro state owner
+  for ((n = 1; n <= top; n++)); do
+    state="$(slot_state "$n")"
+    load_slot "$n"
+    local owner="-" up="down"
+    [[ -n "$(slot_activity "$n")" ]] && up="up"
+    case "$state" in
+      ours) owner="$(slot_get "$n" owner) (this checkout)" ;;
+      held) owner="$(slot_get "$n" owner)" ;;
+      stale) owner="$(slot_get "$n" owner) (stale: nothing running, reclaimable)" ;;
+      busy) owner="unclaimed, in use: $(slot_activity "$n")" ;;
+      free) owner="free" ;;
+    esac
+    [[ -d "$(slot_dir "$n")" && ! -d "$(slot_get "$n" owner)" ]] && owner="$owner [checkout missing]"
+    printf '%-5s %-17s %-15s %-6s %-6s %s\n' "$n" "$AVD" "$SERIAL" "$METRO_PORT" "$up" "$owner"
+  done
+}
+
+# --- device helpers ----------------------------------------------------------------------------------
+
 adb_s() { "$ADB" -s "$SERIAL" "$@"; }
 
 run_dir() {
   [[ -f "$STATE_DIR/run-id" ]] || die "no active run; start one with: verify.sh up"
-  local dir="$RUNS_DIR/$(cat "$STATE_DIR/run-id")"
+  local dir; dir="$RUNS_DIR/$(cat "$STATE_DIR/run-id")"
   mkdir -p "$dir"
   echo "$dir"
 }
@@ -48,14 +265,42 @@ run_dir() {
 emu_online() { [[ "$("$ADB" -s "$SERIAL" get-state 2>/dev/null || true)" == "device" ]]; }
 emu_avd_name() { adb_s emu avd name 2>/dev/null | head -1 | tr -d '\r'; }
 
+# The emulator on this slot is ours only if this checkout started it and it is still that process.
+our_emulator_pid() {
+  local epid; epid="$(cat "$STATE_DIR/emulator.pid" 2>/dev/null || true)"
+  [[ -n "$epid" ]] && pid_cmd "$epid" | grep -qE -- "-avd $AVD( |$)" && echo "$epid"
+  return 0
+}
+
+# What STATE_DIR says this checkout still runs, whether or not it holds a slot. Empty means nothing.
+started_live() {
+  local bits=() p
+  p="$(cat "$STATE_DIR/emulator.pid" 2>/dev/null || true)"
+  if [[ -n "$p" ]] && pid_cmd "$p" | grep -q -- '-avd '; then bits+=("an emulator (pid $p)"); fi
+  p="$(cat "$STATE_DIR/metro.pid" 2>/dev/null || true)"
+  if [[ -n "$p" ]] && kill -0 -- "-$p" 2>/dev/null; then bits+=("Metro (pgid $p)"); fi
+  (( ${#bits[@]} )) && { local IFS=';'; echo "${bits[*]}" | sed 's/;/ and /'; }
+  return 0
+}
+
+require_our_emulator() {
+  emu_online || die "$SERIAL is not online; run: verify.sh up"
+  [[ -n "$(our_emulator_pid)" ]] || die "$SERIAL was not started from this checkout; refusing to drive it"
+  [[ "$(emu_avd_name)" == "$AVD" ]] || die "$SERIAL is AVD '$(emu_avd_name)', not $AVD; refusing to drive it"
+}
+
 cmd_setup() {
-  command -v maestro >/dev/null || die "maestro missing: brew install mobile-dev-inc/tap/maestro"
+  command -v maestro > /dev/null || die "maestro missing: brew install mobile-dev-inc/tap/maestro"
   [[ -x "$JAVA_HOME/bin/java" ]] || die "JDK 17 missing at $JAVA_HOME: brew install openjdk@17 (or set VERIFY_JAVA_HOME)"
   [[ -x "$EMULATOR" ]] || die "Android emulator missing under $ANDROID_HOME"
+  local n="${VERIFY_SLOT:-1}"
+  valid_slot "$n" || die "VERIFY_SLOT must be 1-9"
+  load_slot "$n"
+  apply_overrides
 
   local avd_dir="$HOME/.android/avd/$AVD.avd"
   if [[ -d "$avd_dir" ]]; then
-    echo "AVD $AVD already exists"
+    echo "AVD $AVD (slot $n) already exists"
   else
     # No cmdline-tools/avdmanager here, so write the AVD by hand from whichever system image is installed.
     local sysdir
@@ -67,7 +312,7 @@ cmd_setup() {
     mkdir -p "$avd_dir"
     cat > "$avd_dir/config.ini" <<EOF
 AvdId=$AVD
-avd.ini.displayname=LiftLog Verify
+avd.ini.displayname=LiftLog Verify $n
 avd.ini.encoding=UTF-8
 abi.type=arm64-v8a
 hw.cpu.arch=arm64
@@ -94,7 +339,7 @@ path=$avd_dir
 path.rel=avd/$AVD.avd
 target=$target
 EOF
-    echo "created AVD $AVD from $sysdir"
+    echo "created AVD $AVD for slot $n from $sysdir"
   fi
 }
 
@@ -109,7 +354,7 @@ cmd_build() {
 wait_for() { # wait_for <seconds> <description> <command...>
   local secs="$1" what="$2"; shift 2
   for ((i = 0; i < secs; i++)); do
-    if "$@" >/dev/null 2>&1; then return 0; fi
+    if "$@" > /dev/null 2>&1; then return 0; fi
     sleep 1
   done
   die "timed out after ${secs}s waiting for $what"
@@ -117,6 +362,8 @@ wait_for() { # wait_for <seconds> <description> <command...>
 
 booted() { [[ "$(adb_s shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" == "1" ]]; }
 metro_up() { curl -fsS "http://127.0.0.1:$METRO_PORT/status" 2>/dev/null | grep -q packager-status:running; }
+foreground() { adb_s shell dumpsys activity activities 2>/dev/null | grep -m1 -E 'topResumedActivity|mResumedActivity' | tr -d '\r' || true; }
+bundles_served() { local c; c="$(grep -c 'Bundled' "$STATE_DIR/metro.log" 2>/dev/null || true)"; echo "${c:-0}"; }
 
 # The dev client's floating Tools gear sits over header actions such as the live workout's Finish, and a
 # tap by id lands on the element's centre, which opens the dev menu instead. The dev menu reads the gear's
@@ -131,28 +378,79 @@ hide_dev_menu_gear() {
   fi
   sed -i '' -e '/name="showFab"/d' -e 's#</map>#    <boolean name="showFab" value="false" />\
 </map>#' "$tmp"
-  adb_s push "$tmp" /data/local/tmp/verify-devmenu-prefs.xml > /dev/null
+  adb_s push "$tmp" /data/local/tmp/verify-devmenu-prefs.xml > /dev/null 2>&1
   adb_s shell chmod 644 /data/local/tmp/verify-devmenu-prefs.xml
   adb_s shell run-as "$APP_ID" sh -c "'mkdir -p shared_prefs && cp /data/local/tmp/verify-devmenu-prefs.xml $prefs'"
   adb_s shell rm -f /data/local/tmp/verify-devmenu-prefs.xml
 }
 
+# Opens the app on this slot's Metro and waits until Metro has served it a bundle. A fresh install has no
+# remembered Metro URL, so the plain launcher intent (and Maestro's launchApp) opens the dev launcher; the
+# app can also come up on a published update. Either way no bundle reaches Metro, so re-send the URL.
+# The intent names the package because other installed apps (upstream LiftLog) claim the same scheme, and
+# an unpinned VIEW intent (as Maestro's openLink sends) stops on an "Open with" chooser.
+open_on_metro() {
+  local attempt before i fg
+  for attempt in 1 2 3; do
+    before="$(bundles_served)"
+    adb_s shell am start -a android.intent.action.VIEW -d "$DEV_URL" "$APP_ID" > /dev/null
+    for ((i = 0; i < 240; i++)); do
+      sleep 1
+      fg="$(foreground)"
+      if (( $(bundles_served) > before )) && [[ "$fg" == *"$APP_ID/.MainActivity"* ]]; then
+        echo "app loaded from metro :$METRO_PORT"
+        return 0
+      fi
+      # A cold first bundle can take minutes, but sitting on the launcher this long means the URL was lost.
+      if (( i >= 30 )) && [[ "$fg" == *DevLauncher* || "$fg" != *"$APP_ID"* ]]; then break; fi
+    done
+    echo "app not on metro :$METRO_PORT (attempt $attempt, foreground: ${fg:-unknown}); re-opening $DEV_URL"
+  done
+  die "app did not load from metro :$METRO_PORT; check verify.sh logs metro"
+}
+
 cmd_up() {
-  [[ -d "$HOME/.android/avd/$AVD.avd" ]] || die "AVD $AVD missing; run: verify.sh setup"
   [[ -f "$APK" ]] || die "APK missing at $APK; run: verify.sh build"
+  if [[ -n "${VERIFY_SLOT:-}" ]]; then valid_slot "$VERIFY_SLOT" || die "VERIFY_SLOT must be 1-9"; fi
+  # An instance from a pre-slot verify.sh (or one whose claim was lost) holds no slot but keeps that slot's
+  # AVD and ports busy. Starting over it would overwrite its pids, and nothing could stop it any more.
+  if [[ -z "$(held_slot)" ]]; then
+    local live; live="$(started_live)"
+    [[ -z "$live" ]] || die "this checkout still runs $live from an earlier up that holds no slot; run verify.sh down, then up"
+  fi
+  local n
+  export VERIFY_CLAIMER_PID=$$
+  n="$(with_claim_lock _claim)" || exit 1
+  load_slot "$n"
+  local recorded="$AVD $EMU_PORT $METRO_PORT"
+  apply_overrides
+  # A slot this checkout already runs keeps its AVD and ports until down, or a second emulator would boot.
+  if [[ -n "$(slot_get "$n" avd)" && "$AVD $EMU_PORT $METRO_PORT" != "$recorded" ]]; then
+    die "slot $n already runs $recorded (AVD, emulator port, metro port); run verify.sh down before changing VERIFY_*"
+  fi
+  if [[ ! -d "$HOME/.android/avd/$AVD.avd" ]]; then
+    with_claim_lock _release > /dev/null
+    die "AVD $AVD missing; run: VERIFY_SLOT=$n verify.sh setup"
+  fi
+  slot_set "$n" "avd=$AVD" "emu_port=$EMU_PORT" "metro_port=$METRO_PORT"
   mkdir -p "$STATE_DIR"
+  # down reads what this checkout started from here, not from the slot, which it may no longer hold.
+  printf 'slot=%s\navd=%s\nemu_port=%s\nmetro_port=%s\n' "$n" "$AVD" "$EMU_PORT" "$METRO_PORT" > "$STATE_DIR/slot"
+  echo "slot $n: AVD $AVD on $SERIAL, metro :$METRO_PORT"
 
   if emu_online; then
-    [[ -f "$STATE_DIR/emulator.pid" ]] || die "$SERIAL is running but was not started from this checkout; refusing to drive it"
+    [[ -n "$(our_emulator_pid)" ]] || die "$SERIAL is running but was not started from this checkout; refusing to drive it"
     [[ "$(emu_avd_name)" == "$AVD" ]] || die "$SERIAL is AVD '$(emu_avd_name)', not $AVD; refusing to drive it"
     echo "emulator $SERIAL already up (ours)"
   else
     local window_flag="-no-window"
     [[ "${VERIFY_WINDOW:-0}" == "1" ]] && window_flag=""
     # -no-snapshot keeps every boot cold and identical, so no state leaks between runs through quick-boot.
+    # shellcheck disable=SC2086
     nohup "$EMULATOR" -avd "$AVD" -port "$EMU_PORT" -no-snapshot -no-boot-anim -no-audio $window_flag \
       > "$STATE_DIR/emulator.log" 2>&1 &
     echo $! > "$STATE_DIR/emulator.pid"
+    slot_set "$n" "emulator_pid=$!"
     echo "booting $AVD on $SERIAL (pid $(cat "$STATE_DIR/emulator.pid"))..."
     wait_for 60 "$SERIAL to attach" emu_online
     wait_for 240 "$SERIAL to finish booting" booted
@@ -168,7 +466,7 @@ cmd_up() {
   adb_s reverse "tcp:$METRO_PORT" "tcp:$METRO_PORT" > /dev/null
 
   if metro_up; then
-    [[ -f "$STATE_DIR/metro.pid" ]] || die "port $METRO_PORT already serves a Metro this checkout did not start; set VERIFY_METRO_PORT"
+    [[ -f "$STATE_DIR/metro.pid" ]] || die "port $METRO_PORT already serves a Metro this checkout did not start ($(pid_cwd "$(port_pid "$METRO_PORT")"))"
     echo "metro already up on $METRO_PORT (ours)"
   else
     # Job control gives Metro its own process group, so `down` can stop npx and its node children together.
@@ -177,65 +475,79 @@ cmd_up() {
     (cd "$APP_DIR" && CI=1 TMPDIR="$METRO_TMPDIR" nohup npx expo start --dev-client --port "$METRO_PORT" > "$STATE_DIR/metro.log" 2>&1) &
     echo $! > "$STATE_DIR/metro.pid"
     set +m
+    slot_set "$n" "metro_pid=$(cat "$STATE_DIR/metro.pid")"
     echo "starting metro on $METRO_PORT..."
     wait_for 120 "metro on $METRO_PORT" metro_up
   fi
 
   hide_dev_menu_gear
-  adb_s shell am start -a android.intent.action.VIEW -d "$DEV_URL" "$APP_ID" > /dev/null
-  echo "launched dev client against metro :$METRO_PORT"
+  open_on_metro
   echo "run id: $(cat "$STATE_DIR/run-id")  evidence: $dir"
   echo "next: verify.sh flow $SKILL_DIR/flows/ready.yaml"
 }
 
 cmd_doctor() {
   local ok=1
-  check() { if "${@:2}" >/dev/null 2>&1; then echo "ok   $1"; else echo "FAIL $1"; ok=0; fi; }
+  check() { if "${@:2}" > /dev/null 2>&1; then echo "ok   $1"; else echo "FAIL $1"; ok=0; fi; }
   check "maestro on PATH" command -v maestro
   check "JDK at $JAVA_HOME" test -x "$JAVA_HOME/bin/java"
   check "APK built ($APK)" test -f "$APK"
-  check "$SERIAL online" emu_online
-  if emu_online; then
-    local name; name="$(emu_avd_name)"
-    if [[ "$name" == "$AVD" ]]; then echo "ok   $SERIAL is AVD $AVD"; else echo "FAIL $SERIAL is AVD '$name', not $AVD"; ok=0; fi
-    check "$SERIAL was started from this checkout" test -f "$STATE_DIR/emulator.pid"
-    check "$SERIAL boot completed" booted
-    local ver; ver="$(adb_s shell dumpsys package "$APP_ID" 2>/dev/null | grep -m1 versionName | tr -d ' \r' || true)"
-    if [[ -n "$ver" ]]; then echo "ok   $APP_ID installed ($ver)"; else echo "FAIL $APP_ID not installed"; ok=0; fi
-    check "adb reverse tcp:$METRO_PORT" sh -c "'$ADB' -s $SERIAL reverse --list | grep -q tcp:$METRO_PORT"
-    local focus; focus="$(adb_s shell dumpsys activity activities 2>/dev/null | grep -m1 -E 'topResumedActivity|mResumedActivity' | tr -d '\r' || true)"
-    if [[ "$focus" == *"$APP_ID"* ]]; then echo "ok   $APP_ID in foreground"; else echo "warn foreground: ${focus:-unknown}"; fi
-  fi
-  check "metro answering on :$METRO_PORT" metro_up
-  if metro_up; then
-    # The listener must be the Metro this checkout started, serving this checkout's app/ - otherwise the
-    # app is running someone else's code.
-    local lpid cwd
-    lpid="$(lsof -nP -tiTCP:"$METRO_PORT" -sTCP:LISTEN | head -1)"
-    cwd="$(lsof -a -p "$lpid" -d cwd -Fn 2>/dev/null | sed -n 's/^n//p')"
-    if [[ "$cwd" == "$APP_DIR" ]]; then echo "ok   metro serves $APP_DIR"; else echo "FAIL metro (pid $lpid) serves ${cwd:-?}, not $APP_DIR"; ok=0; fi
-    # A shared cache can serve another checkout's code even when the cwd is right, so read the TMPDIR
-    # the listener actually runs with (ps can show the environment of our own processes).
-    local tmp
-    tmp="$(ps eww -o command= -p "$lpid" 2>/dev/null | tr ' ' '\n' | sed -n 's/^TMPDIR=//p' | head -1)"
-    tmp="${tmp%/}"
-    if [[ "$tmp" == "$METRO_TMPDIR" ]]; then
-      echo "ok   metro cache in $METRO_TMPDIR/metro-cache"
-    else
-      echo "FAIL metro cache in ${tmp:-${TMPDIR:-/tmp}}/metro-cache (shared), not $METRO_TMPDIR/metro-cache; run down then up"
-      ok=0
+  local n; n="$(held_slot)"
+  if [[ -z "$n" ]]; then
+    local live; live="$(started_live)"
+    if [[ -n "$live" ]]; then echo "FAIL this checkout holds no slot but still runs $live; run verify.sh down, then up"
+    else echo "FAIL this checkout holds no slot; run verify.sh up"
+    fi
+    ok=0
+  else
+    load_slot "$n"
+    echo "ok   slot $n held by this checkout ($AVD, $SERIAL, metro :$METRO_PORT)"
+    check "$SERIAL online" emu_online
+    if emu_online; then
+      local name; name="$(emu_avd_name)"
+      if [[ "$name" == "$AVD" ]]; then echo "ok   $SERIAL is AVD $AVD"; else echo "FAIL $SERIAL is AVD '$name', not $AVD"; ok=0; fi
+      if [[ -n "$(our_emulator_pid)" ]]; then echo "ok   $SERIAL was started from this checkout"; else echo "FAIL $SERIAL was not started from this checkout"; ok=0; fi
+      check "$SERIAL boot completed" booted
+      local ver; ver="$(adb_s shell dumpsys package "$APP_ID" 2>/dev/null | grep -m1 versionName | tr -d ' \r' || true)"
+      if [[ -n "$ver" ]]; then echo "ok   $APP_ID installed ($ver)"; else echo "FAIL $APP_ID not installed"; ok=0; fi
+      check "adb reverse tcp:$METRO_PORT" sh -c "'$ADB' -s $SERIAL reverse --list | grep -q tcp:$METRO_PORT"
+      local focus; focus="$(foreground)"
+      if [[ "$focus" == *"$APP_ID/.MainActivity"* ]]; then echo "ok   $APP_ID in foreground"; else echo "warn foreground: ${focus:-unknown}"; fi
+    fi
+    check "metro answering on :$METRO_PORT" metro_up
+    if metro_up; then
+      # The listener must be the Metro this checkout started, serving this checkout's app/ - otherwise the
+      # app is running someone else's code.
+      local lpid cwd
+      lpid="$(port_pid "$METRO_PORT")"
+      cwd="$(pid_cwd "$lpid")"
+      if [[ "$cwd" == "$APP_DIR" ]]; then echo "ok   metro serves $APP_DIR"; else echo "FAIL metro (pid $lpid) serves ${cwd:-?}, not $APP_DIR"; ok=0; fi
+      # A shared cache can serve another checkout's code even when the cwd is right, so read the TMPDIR
+      # the listener actually runs with (ps can show the environment of our own processes).
+      local tmp
+      tmp="$(ps eww -o command= -p "$lpid" 2>/dev/null | tr ' ' '\n' | sed -n 's/^TMPDIR=//p' | head -1)"
+      tmp="${tmp%/}"
+      if [[ "$tmp" == "$METRO_TMPDIR" ]]; then
+        echo "ok   metro cache in $METRO_TMPDIR/metro-cache"
+      else
+        echo "FAIL metro cache in ${tmp:-${TMPDIR:-/tmp}}/metro-cache (shared), not $METRO_TMPDIR/metro-cache; run down then up"
+        ok=0
+      fi
     fi
   fi
   if [[ -f "$STATE_DIR/run-id" ]]; then echo "info run $(cat "$STATE_DIR/run-id") -> $RUNS_DIR/$(cat "$STATE_DIR/run-id")"; fi
-  [[ $ok == 1 ]] && echo "doctor: healthy" || { echo "doctor: NOT healthy"; return 1; }
+  echo "info slots:"
+  cmd_slots | sed 's/^/     /'
+  if [[ $ok == 1 ]]; then echo "doctor: healthy"; else echo "doctor: NOT healthy"; return 1; fi
 }
 
 cmd_flow() { # flow <flow.yaml> [label]
   local flow="${1:?usage: verify.sh flow <flow.yaml> [label]}"
   [[ -f "$flow" ]] || die "no such flow: $flow"
+  require_slot
   flow="$(cd "$(dirname "$flow")" && pwd)/$(basename "$flow")"
   local label="${2:-$(basename "$flow" .yaml)}"
-  local out; out="$(run_dir)/$(date +%H%M%S)-$label"
+  local out; out="$(run_dir)"; out="$out/$(date +%H%M%S)-$label"
   mkdir -p "$out"
   # Run from the output dir so `takeScreenshot` files land next to the maestro report.
   local rc=0
@@ -246,14 +558,16 @@ cmd_flow() { # flow <flow.yaml> [label]
 }
 
 cmd_shot() {
+  require_slot
   local name="${1:-shot}"
-  local f; f="$(run_dir)/$(date +%H%M%S)-$name.png"
+  local f; f="$(run_dir)"; f="$f/$(date +%H%M%S)-$name.png"
   adb_s exec-out screencap -p > "$f"
   echo "$f"
 }
 
 cmd_ui() { # dump the current screen's view hierarchy (resource-id = RN testID)
-  local f; f="$(run_dir)/$(date +%H%M%S)-${1:-ui}"
+  require_slot
+  local f; f="$(run_dir)"; f="$f/$(date +%H%M%S)-${1:-ui}"
   # uiautomator dump fails on a screen that never goes idle (a ticking rest timer) or while Maestro's
   # driver holds the accessibility connection, and it leaves the last dump behind, so a failed dump
   # used to print an earlier screen. Clear it first and fall back to Maestro's own hierarchy.
@@ -272,7 +586,8 @@ cmd_ui() { # dump the current screen's view hierarchy (resource-id = RN testID)
 
 cmd_db() { # db "<sql>" - query a snapshot of the app's SQLite database (debug builds allow run-as)
   local sql="${1:?usage: verify.sh db \"<sql>\"}"
-  local snap; snap="$(run_dir)/db-$(date +%H%M%S)"
+  require_slot
+  local snap; snap="$(run_dir)"; snap="$snap/db-$(date +%H%M%S)"
   mkdir -p "$snap"
   for f in db.db db.db-wal db.db-shm; do
     adb_s exec-out run-as "$APP_ID" cat "files/SQLite/$f" > "$snap/$f" 2>/dev/null || rm -f "$snap/$f"
@@ -282,41 +597,346 @@ cmd_db() { # db "<sql>" - query a snapshot of the app's SQLite database (debug b
   sqlite3 -header "$snap/db.db" "$sql" | tee -a "$snap/query.txt"
 }
 
+cmd_clear() { # wipe the app's data on this slot's emulator, then reopen it on Metro
+  require_slot
+  require_our_emulator
+  adb_s shell pm clear "$APP_ID" > /dev/null
+  echo "cleared $APP_ID data on $SERIAL (slot $SLOT)"
+  # pm clear also drops the dev menu's preferences and the remembered Metro URL.
+  hide_dev_menu_gear
+  open_on_metro
+  echo "next: verify.sh flow $SKILL_DIR/flows/ready.yaml"
+}
+
+# --- fixtures ----------------------------------------------------------------------------------------
+#
+# A fixture is the app's user data: files/SQLite/db.db plus the preference files at the top of files/
+# (KeyValueStore keeps one file per key). It leaves out shared_prefs, where the dev client keeps its
+# remembered Metro URL and the gear setting, and the dev client's own files in files/ (a 23 MB bundle,
+# logs). A fixture made from a seed flow (flows/seed-<name>.yaml) is shared machine-wide, keyed by a
+# fingerprint of what decides its contents, so every checkout with the same storage code reuses it.
+# `snapshot` captures whatever the app holds now, for this checkout only.
+
+FIXTURE_CACHE="${VERIFY_FIXTURES_DIR:-$SLOTS_DIR/fixtures}"
+SNAPSHOTS_DIR="$RUNS_DIR/fixtures"
+FLOWS_DIR="$SKILL_DIR/flows"
+
+valid_fixture_name() { [[ "$1" =~ ^[a-z0-9][a-z0-9-]*$ ]]; }
+seed_flow() { echo "$FLOWS_DIR/seed-$1.yaml"; }
+
+# The schema, the persisted model versions and the What's New id decide whether this checkout's app can
+# open a fixture as its seed flow left it. The seed flow and its helpers decide what is in it.
+fixture_fingerprint() { # <name>
+  {
+    (cd "$APP_DIR/src" && find drizzle models/storage/versions models/whats-new.ts -type f | LC_ALL=C sort | xargs shasum)
+    (cd "$FLOWS_DIR" && { echo ready.yaml; echo "seed-$1.yaml"; find seed -type f 2>/dev/null; } | LC_ALL=C sort | xargs shasum)
+  } | shasum | cut -c1-12
+}
+
+fixture_dir() { # <name>: where this checkout reads and writes fixture <name>
+  if [[ -f "$(seed_flow "$1")" ]]; then echo "$FIXTURE_CACHE/$1-$(fixture_fingerprint "$1")"
+  else echo "$SNAPSHOTS_DIR/$1"
+  fi
+}
+
+app_migrations() { grep -c '"idx"' "$APP_DIR/src/drizzle/meta/_journal.json"; }
+
+# Copies this slot's app data into <dir>/fixture.tar and writes <dir>/info. The app is stopped first so no
+# write lands mid-copy.
+capture_fixture() { # <name> <dir>
+  local name="$1" dest="$2" work keys
+  work="$(mktemp -d "${TMPDIR:-/tmp}/verify-fixture.XXXXXX")"
+  adb_s shell am force-stop "$APP_ID"
+  keys="$(adb_s shell run-as "$APP_ID" ls -p files | tr -d '\r' | grep -v '/$' \
+    | grep -vE '^(DevLauncherApp-.*\.js|app\.log|profileInstalled|dev\.expo\..*|.*-tmp.*)$' || true)"
+  # shellcheck disable=SC2086
+  adb_s exec-out run-as "$APP_ID" tar -cf - -C files SQLite $keys > "$work/raw.tar"
+  mkdir -p "$work/data"
+  tar -xf "$work/raw.tar" -C "$work/data"
+  [[ -s "$work/data/SQLite/db.db" ]] || { rm -rf "$work"; die "could not read files/SQLite/db.db from $APP_ID"; }
+  local db="$work/data/SQLite/db.db" t
+  # Fold the WAL into db.db so the fixture is one file. The feed identity is a key pair and password in
+  # plain text: two slots seeded with it would be one feed account, so no feed rows travel.
+  sqlite3 "$db" 'PRAGMA wal_checkpoint(TRUNCATE);' > /dev/null
+  for t in $(sqlite3 "$db" "select name from sqlite_master where type = 'table' and name like 'feed\_%' escape '\\';"); do
+    sqlite3 "$db" "delete from \"$t\";"
+  done
+  rm -f "$db-wal" "$db-shm"
+  sqlite3 "$db" 'PRAGMA journal_mode=DELETE; VACUUM;' > /dev/null
+  if [[ "$(sqlite3 "$db" 'select count(*) from workout where active = 1;')" != 0 ]]; then
+    echo "verify: warning: $name holds a workout in progress; seed stops the app, which ends its rest timer and notification" >&2
+  else
+    # Left behind by the last workout; with none in progress they only describe a page that is gone.
+    keys="$(echo "$keys" | grep -vxE 'ActiveRestTimer|LiveWorkoutFocus' || true)"
+  fi
+  local tmp="$dest.tmp.$$"
+  rm -rf "$tmp"
+  mkdir -p "$tmp"
+  # COPYFILE_DISABLE keeps macOS tar from adding ._ AppleDouble files, which would land in files/.
+  # shellcheck disable=SC2086
+  (cd "$work/data" && COPYFILE_DISABLE=1 tar -cf "$tmp/fixture.tar" SQLite $keys)
+  {
+    echo "name=$name"
+    echo "made=$(date +%Y-%m-%dT%H:%M:%S)"
+    echo "checkout=$REPO_ROOT"
+    echo "commit=$(git -C "$REPO_ROOT" rev-parse --short HEAD 2>/dev/null || echo unknown)"
+    echo "migrations=$(sqlite3 "$db" 'select count(*) from __drizzle_migrations;')"
+    echo "workouts=$(sqlite3 "$db" 'select count(*) from workout;')"
+    echo "programs=$(sqlite3 "$db" 'select count(*) from program;')"
+    if [[ -f "$(seed_flow "$name")" ]]; then echo "fingerprint=$(fixture_fingerprint "$name")"; fi
+  } > "$tmp/info"
+  rm -rf "$work" "$dest"
+  mkdir -p "$(dirname "$dest")"
+  mv "$tmp" "$dest"
+  echo "fixture $name: $dest ($(wc -c < "$dest/fixture.tar" | tr -d ' ') bytes; $(sed -n 's/^workouts=//p' "$dest/info") workouts, $(sed -n 's/^programs=//p' "$dest/info") programs)"
+}
+
+# Replaces the app's user data on this slot with <dir>/fixture.tar, keeping the dev client's own state.
+restore_fixture() { # <dir>
+  local tar="$1/fixture.tar" apply
+  apply="$(mktemp "${TMPDIR:-/tmp}/verify-apply.XXXXXX")"
+  # Runs as the app user, in its data dir: drops every preference file and the database, keeping the dev
+  # client's files, then unpacks the fixture. Stale preference files (a rest timer, the focused page)
+  # would otherwise outlive the swap.
+  cat > "$apply" <<'EOF'
+mkdir -p files && cd files || exit 1
+for f in *; do
+  [ -f "$f" ] || continue
+  case "$f" in DevLauncherApp-*.js|app.log|profileInstalled|dev.expo.*) continue ;; esac
+  rm -f "$f"
+done
+rm -rf SQLite
+tar -xf /data/local/tmp/verify-fixture.tar
+EOF
+  adb_s shell am force-stop "$APP_ID"
+  adb_s push "$tar" /data/local/tmp/verify-fixture.tar > /dev/null 2>&1
+  adb_s push "$apply" /data/local/tmp/verify-fixture-apply.sh > /dev/null 2>&1
+  rm -f "$apply"
+  adb_s shell chmod 644 /data/local/tmp/verify-fixture.tar /data/local/tmp/verify-fixture-apply.sh
+  adb_s shell run-as "$APP_ID" sh /data/local/tmp/verify-fixture-apply.sh
+  adb_s shell rm -f /data/local/tmp/verify-fixture.tar /data/local/tmp/verify-fixture-apply.sh
+}
+
+# Notification permission is system state, outside the data dir: `pm clear` revokes it, and the dialog
+# asking for it again would stall a flow.
+grant_notifications() { adb_s shell pm grant "$APP_ID" android.permission.POST_NOTIFICATIONS > /dev/null 2>&1 || true; }
+
+cmd_snapshot() { # snapshot <name>: capture this slot's app data as a fixture for this checkout
+  local name="${1:?usage: verify.sh snapshot <name>}"
+  valid_fixture_name "$name" || die "fixture names are lowercase letters, digits and dashes"
+  [[ ! -f "$(seed_flow "$name")" ]] || die "$name is made by flows/seed-$name.yaml; run verify.sh fixture $name, or snapshot under another name"
+  require_slot
+  require_our_emulator
+  capture_fixture "$name" "$SNAPSHOTS_DIR/$name"
+  open_on_metro
+}
+
+# A seed flow's fixture is shared by every checkout, so making, replacing and reading <dir> all happen under
+# <dir>.lock. Without it two checkouts that both find the fixture missing each spend the full seed flow making
+# it, and one can push a fixture.tar to its emulator while the other is replacing that directory.
+FIXTURE_LOCK_WAIT="${VERIFY_FIXTURE_LOCK_WAIT:-3600}"
+
+with_fixture_lock() { # <dir> <verify.sh command> [args]
+  local dir="$1" rc=0; shift
+  run_locked "$dir.lock" 0 "$@" || rc=$?
+  if (( rc == 75 )); then
+    echo "verify: another checkout is making or reading ${dir##*/}; waiting for it (up to ${FIXTURE_LOCK_WAIT}s)" >&2
+    rc=0
+    run_locked "$dir.lock" "$FIXTURE_LOCK_WAIT" "$@" || rc=$?
+    (( rc != 75 )) || die "gave up after ${FIXTURE_LOCK_WAIT}s waiting for $dir.lock"
+  fi
+  return "$rc"
+}
+
+make_fixture() { # <name> <dir>: clear the app, run its seed flow, and save the result in <dir>
+  local name="$1" dir="$2" flow; flow="$(seed_flow "$1")"
+  echo "making fixture $name from $flow (a few minutes; it drives the real UI)"
+  cmd_clear > /dev/null
+  grant_notifications
+  cmd_flow "$flow" "fixture-$name" || die "seed flow for $name failed; nothing saved"
+  capture_fixture "$name" "$dir"
+}
+
+cmd_fixture() { # fixture <name>: clear the app, run flows/seed-<name>.yaml, and save the result
+  local name="${1:?usage: verify.sh fixture <name>}"
+  local flow; flow="$(seed_flow "$name")"
+  [[ -f "$flow" ]] || die "no seed flow $flow; verify.sh fixtures lists the fixtures"
+  require_slot
+  require_our_emulator
+  with_fixture_lock "$(fixture_dir "$name")" _fixture "$name" "$(date +%s)"
+  open_on_metro
+}
+
+cmd__fixture() { # internal, under the fixture lock: _fixture <name> <epoch the caller asked at>
+  require_slot
+  local dir; dir="$(fixture_dir "$1")"
+  # Another checkout made it while this one waited for the lock, so it is as fresh as a remake would be.
+  if [[ -f "$dir/fixture.tar" && -f "$dir/info" ]] && (( $(stat -f %m "$dir/info") >= $2 )); then
+    echo "fixture $1 was just made by $(sed -n 's/^checkout=//p' "$dir/info"); using it"
+    return 0
+  fi
+  make_fixture "$1" "$dir"
+}
+
+cmd_seed() { # seed <name>: replace this slot's app data with fixture <name>, then reopen it on Metro
+  local name="${1:?usage: verify.sh seed <name>}"
+  valid_fixture_name "$name" || die "fixture names are lowercase letters, digits and dashes"
+  require_slot
+  require_our_emulator
+  local dir; dir="$(fixture_dir "$name")"
+  if [[ -f "$(seed_flow "$name")" ]]; then with_fixture_lock "$dir" _restore "$name"
+  else cmd__restore "$name"
+  fi
+  grant_notifications
+  open_on_metro
+  cmd_flow "$FLOWS_DIR/ready.yaml" "seed-$name-ready"
+}
+
+cmd__restore() { # internal, under the fixture lock for a seed flow's fixture: _restore <name>
+  local name="$1" dir
+  require_slot
+  dir="$(fixture_dir "$name")"
+  # Checked again under the lock: a checkout that waited here finds the fixture the holder just made.
+  if [[ ! -f "$dir/fixture.tar" ]]; then
+    [[ -f "$(seed_flow "$name")" ]] || die "no fixture $name; verify.sh fixtures lists them"
+    echo "no $name fixture for this checkout's storage code yet; making it"
+    make_fixture "$name" "$dir"
+  fi
+  local fm am made today age
+  fm="$(sed -n 's/^migrations=//p' "$dir/info")"
+  am="$(app_migrations)"
+  (( ${fm:-0} <= am )) || die "fixture $name has $fm migrations and this app only $am: it was made by newer code; snapshot it again from this checkout"
+  restore_fixture "$dir"
+  echo "seeded $name from $dir"
+  made="$(sed -n 's/^made=//p' "$dir/info" | cut -dT -f1)"
+  today="$(date +%Y-%m-%d)"
+  if [[ -n "$made" && "$made" != "$today" ]]; then
+    age=$(( ($(date -j -f %Y-%m-%d "$today" +%s) - $(date -j -f %Y-%m-%d "$made" +%s)) / 86400 ))
+    echo "verify: note: $name was made $age day(s) ago, so its dates sit $age day(s) further back from today than they did then" >&2
+    if [[ -f "$(seed_flow "$name")" ]]; then echo "verify: if the check depends on recent dates, remake it: verify.sh fixture $name" >&2; fi
+  fi
+}
+
+cmd_fixtures() { # list the fixtures this checkout can seed
+  local f name dir state
+  printf '%-16s %-9s %-11s %-20s %s\n' fixture kind state made where
+  for f in "$FLOWS_DIR"/seed-*.yaml; do
+    [[ -f "$f" ]] || continue
+    name="$(basename "$f" .yaml)"; name="${name#seed-}"
+    dir="$(fixture_dir "$name")"
+    if [[ -f "$dir/fixture.tar" ]]; then state=ready; else state="not made"; fi
+    printf '%-16s %-9s %-11s %-20s %s\n' "$name" flow "$state" "$(sed -n 's/^made=//p' "$dir/info" 2>/dev/null)" "$dir"
+  done
+  for dir in "$SNAPSHOTS_DIR"/*/; do
+    [[ -f "$dir/fixture.tar" ]] || continue
+    dir="${dir%/}"
+    printf '%-16s %-9s %-11s %-20s %s\n' "${dir##*/}" snapshot ready "$(sed -n 's/^made=//p' "$dir/info")" "$dir"
+  done
+}
+
+cmd_flows() { # flows <dir|flow.yaml>...: run flows in order, stopping at the first failure
+  (( $# )) || die "usage: verify.sh flows <dir|flow.yaml>..."
+  require_slot
+  local list=() arg f
+  for arg in "$@"; do
+    if [[ -d "$arg" ]]; then
+      # Only the top level runs, so subflows can live in a subdirectory. config.yaml is Maestro's workspace file.
+      while IFS= read -r f; do list+=("$f"); done < <(find "$arg" -maxdepth 1 -name '*.yaml' ! -name config.yaml | LC_ALL=C sort)
+    elif [[ -f "$arg" ]]; then list+=("$arg")
+    else die "no such flow or directory: $arg"
+    fi
+  done
+  (( ${#list[@]} )) || die "no flows in $*"
+  local i rc
+  for ((i = 0; i < ${#list[@]}; i++)); do
+    echo "== flow $((i + 1))/${#list[@]}: ${list[$i]}"
+    rc=0
+    cmd_flow "${list[$i]}" || rc=$?
+    if (( rc != 0 )); then
+      echo "flows: ${list[$i]} failed (exit $rc)"
+      if (( i + 1 < ${#list[@]} )); then echo "flows: not run:"; printf '  %s\n' "${list[@]:$((i + 1))}"; fi
+      return "$rc"
+    fi
+  done
+  echo "flows: all ${#list[@]} passed"
+}
+
 cmd_logs() { # logs [metro|emulator|app]
   case "${1:-metro}" in
     metro) tail -n 80 "$STATE_DIR/metro.log" ;;
     emulator) tail -n 80 "$STATE_DIR/emulator.log" ;;
-    app) adb_s logcat -d -t 300 ReactNativeJS:V ReactNative:V '*:S' ;;
+    app) require_slot; adb_s logcat -d -t 300 ReactNativeJS:V ReactNative:V '*:S' ;;
     *) die "logs: metro|emulator|app" ;;
   esac
 }
 
+# Loads the AVD and ports this checkout's `up` started, as STATE_DIR/slot recorded them. The slot's own info
+# names whoever holds the slot now, which is not this checkout once its claim was lost. With no held slot, an
+# older STATE_DIR/slot (only a slot number) or none at all (pre-slot state, slot 1) picks the slot to load.
+load_started() { # load_started [held slot]
+  local f="$STATE_DIR/slot" first="" avd="" emu="" metro="" cmd
+  if [[ -f "$f" ]]; then
+    first="$(head -1 "$f")"
+    [[ "$first" =~ ^[0-9]+$ ]] || first="$(sed -n 's/^slot=//p' "$f" | tail -1)"
+    avd="$(sed -n 's/^avd=//p' "$f" | tail -1)"
+    emu="$(sed -n 's/^emu_port=//p' "$f" | tail -1)"
+    metro="$(sed -n 's/^metro_port=//p' "$f" | tail -1)"
+  fi
+  load_slot "${1:-${first:-1}}"
+  # A pre-slot verify.sh recorded no AVD or port, and may have run on VERIFY_AVD and VERIFY_EMU_PORT, so read
+  # them off the emulator it started. Only a verify AVD counts, in case its pid now belongs to another emulator.
+  if [[ -z "$avd" ]]; then
+    cmd="$(pid_cmd "$(cat "$STATE_DIR/emulator.pid" 2>/dev/null || true)" || true)"
+    avd="$(cmd_arg -avd "$cmd")"
+    emu="$(cmd_arg -port "$cmd")"
+    [[ "$avd" =~ ^liftlog-verify(-[0-9]+)?$ ]] || { avd=""; emu=""; }
+  fi
+  set_target "${avd:-$AVD}" "${emu:-$EMU_PORT}" "${metro:-$METRO_PORT}"
+}
+
+cmd_arg() { awk -v k="$1" '{ for (i = 1; i < NF; i++) if ($i == k) { print $(i + 1); exit } }' <<< "$2"; }
+
 cmd_down() {
+  local n; n="$(held_slot)"
+  if [[ -n "${VERIFY_SLOT:-}" && "$VERIFY_SLOT" != "$n" ]]; then
+    local owner; owner="$(slot_get "$VERIFY_SLOT" owner)"
+    die "slot $VERIFY_SLOT is ${owner:+held by $owner, }not this checkout's; down only stops what this checkout started"
+  fi
+  if [[ -z "$n" && ! -d "$STATE_DIR" ]]; then
+    echo "this checkout holds no slot and started nothing"
+    return 0
+  fi
+  load_started "$n"
   if [[ -f "$STATE_DIR/metro.pid" ]]; then
     local mpid; mpid="$(cat "$STATE_DIR/metro.pid")"
-    kill -TERM -- "-$mpid" 2>/dev/null || kill -TERM "$mpid" 2>/dev/null || true
-    # Metro's cache is inside STATE_DIR, so let it exit before that dir is removed below.
-    for _ in $(seq 1 10); do kill -0 -- "-$mpid" 2>/dev/null || break; sleep 1; done
-    echo "stopped metro (pgid $mpid)"
+    if kill -0 -- "-$mpid" 2>/dev/null; then
+      kill -TERM -- "-$mpid" 2>/dev/null || true
+      # Metro's cache is inside STATE_DIR, so let it exit before that dir is removed below.
+      for _ in $(seq 1 10); do kill -0 -- "-$mpid" 2>/dev/null || break; sleep 1; done
+      echo "stopped metro (pgid $mpid)"
+    fi
   fi
-  if [[ -f "$STATE_DIR/emulator.pid" ]]; then
-    local epid; epid="$(cat "$STATE_DIR/emulator.pid")"
+  local epid; epid="$(our_emulator_pid)"
+  if [[ -n "$epid" ]]; then
     if emu_online && [[ "$(emu_avd_name)" == "$AVD" ]]; then
-      adb_s reverse --remove-all >/dev/null 2>&1 || true
-      adb_s emu kill >/dev/null 2>&1 || true
+      adb_s reverse --remove-all > /dev/null 2>&1 || true
+      adb_s emu kill > /dev/null 2>&1 || true
     fi
     for _ in $(seq 1 30); do kill -0 "$epid" 2>/dev/null || break; sleep 1; done
-    kill -0 "$epid" 2>/dev/null && kill -TERM "$epid" 2>/dev/null || true
-    echo "stopped emulator (pid $epid)"
+    if kill -0 "$epid" 2>/dev/null; then kill -TERM "$epid" 2>/dev/null || true; fi
+    echo "stopped emulator $SERIAL (pid $epid)"
   fi
   local run=""
   [[ -f "$STATE_DIR/run-id" ]] && run="$RUNS_DIR/$(cat "$STATE_DIR/run-id")"
   rm -rf "$STATE_DIR"
+  [[ -n "$n" ]] && with_claim_lock _release
   [[ -n "$run" ]] && echo "evidence kept at $run"
   return 0
 }
 
 case "${1:-}" in
-  setup | build | up | doctor | flow | shot | ui | db | logs | down) c="$1"; shift; "cmd_$c" "$@" ;;
+  setup | build | up | doctor | slots | flow | flows | shot | ui | db | clear | seed | snapshot | fixture | fixtures | logs \
+    | down | _claim | _release | _fixture | _restore)
+    c="$1"; shift; "cmd_$c" "$@" ;;
   *) sed -n '2,4p' "$0"; exit 2 ;;
 esac

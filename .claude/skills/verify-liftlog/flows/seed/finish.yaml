@@ -1,0 +1,30 @@
+appId: com.ajfg297.liftlog
+---
+# Finishes the live workout, rates it Good on the summary, then moves it DAYS_AGO days into the past
+# (redate.yaml), so the seeded history spreads over the last two weeks.
+- tapOn:
+    id: 'finish-session-button'
+    waitToSettleTimeoutMs: 500
+- runFlow:
+    when:
+      visible:
+        id: 'action-ok'
+    commands:
+      - tapOn:
+          id: 'action-ok'
+- extendedWaitUntil:
+    visible: 'WORKOUT COMPLETE'
+    timeout: 15000
+# A personal record pushes the feel picker down behind the pinned Done button, where a tap lands on Done.
+# scrollUntilVisible counts it as visible there, so scroll to the end of the summary first.
+- repeat:
+    times: 3
+    commands:
+      - scroll
+- tapOn:
+    id: 'summary-feel-good'
+- tapOn: 'Done'
+- runFlow:
+    file: redate.yaml
+    env:
+      DAYS_AGO: ${DAYS_AGO}

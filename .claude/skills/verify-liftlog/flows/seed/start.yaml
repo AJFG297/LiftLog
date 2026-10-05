@@ -1,0 +1,11 @@
+appId: com.ajfg297.liftlog
+---
+# From Home: starts ROUTINE from the Up next card, failing if the plan offers a different one next.
+- tapOn: 'Home'
+- scrollUntilVisible:
+    element:
+      id: 'up-next-start'
+    direction: UP
+- assertVisible: 'Start ${ROUTINE}'
+- tapOn:
+    id: 'up-next-start'

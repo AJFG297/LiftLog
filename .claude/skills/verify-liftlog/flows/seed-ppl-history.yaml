@@ -1,0 +1,53 @@
+appId: com.ajfg297.liftlog
+---
+# Seed flow for the ppl-history fixture (see ../fixtures/README.md, and keep it in sync with this
+# flow). Builds the data through the real UI on a cleared app: `verify.sh fixture ppl-history` runs
+# `clear`, then this flow, then `snapshot`. Dates count back from the day it runs.
+- runFlow: ready.yaml
+- runFlow: seed/enable-rpe.yaml
+- runFlow: seed/programs.yaml
+# Two rounds of Push, Pull, Legs over the last two weeks. The second round carries the first round's
+# weights, plus 2.5 kg on each routine's first exercise, which makes a personal record.
+- runFlow:
+    file: seed/push.yaml
+    env:
+      FIRST: 'true'
+      RPE: '8'
+      DAYS_AGO: 13
+- runFlow:
+    file: seed/pull.yaml
+    env:
+      FIRST: 'true'
+      RPE: '-'
+      DAYS_AGO: 11
+- runFlow:
+    file: seed/legs.yaml
+    env:
+      FIRST: 'true'
+      RPE: '-'
+      DAYS_AGO: 9
+- runFlow:
+    file: seed/push.yaml
+    env:
+      FIRST: 'false'
+      RPE: '8'
+      DAYS_AGO: 6
+- runFlow:
+    file: seed/pull.yaml
+    env:
+      FIRST: 'false'
+      RPE: '9'
+      DAYS_AGO: 4
+- runFlow:
+    file: seed/legs.yaml
+    env:
+      FIRST: 'false'
+      RPE: '-'
+      DAYS_AGO: 2
+- tapOn: 'Home'
+- scrollUntilVisible:
+    element:
+      id: 'up-next-start'
+    direction: UP
+- assertVisible: 'Start Push'
+- takeScreenshot: seeded-home

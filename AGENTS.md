@@ -89,6 +89,8 @@ Every PR that changes what users see embeds screenshots in its description.
   for the issue (`pm-18/`). Never commit them to the PR branch.
 - Embed them with `<img src="https://raw.githubusercontent.com/AJFG297/LiftLog/<pr-assets commit>/<folder>/<file>.png" width="200">`
   in tables. Pin the URL to the commit SHA so the images don't change later.
+- The order a change is verified in (review before the emulator, slots, fixtures, replayable flows) is in
+  [`.claude/skills/verify-liftlog/PROCESS.md`](.claude/skills/verify-liftlog/PROCESS.md).
 
 ## Announcing features ("What's New")
 
