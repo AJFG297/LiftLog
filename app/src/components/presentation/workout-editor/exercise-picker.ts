@@ -81,6 +81,8 @@ export type PickerRow =
 
 export interface PickerList {
   rows: PickerRow[];
+  /** The number of exercises the list shows. */
+  count: number;
   /** Nothing matches the query and the chips: the screen says so instead of listing rows. */
   noMatch: boolean;
   /** Some exercise the chips hide matches the query, so clearing them would show it. */
@@ -118,7 +120,7 @@ export function pickerListOf(
       rows.push({ kind: 'header', key: 'header-all', section: filters.muscle ?? 'all' });
       rows.push(...rest);
     }
-    return { rows, noMatch: false, hiddenByFilters: false, canCreate: false };
+    return { rows, count: recent.length + rest.length, noMatch: false, hiddenByFilters: false, canCreate: false };
   }
 
   // Scored across the whole catalog: an exact name the chips hide must not be offered as a new exercise.
@@ -132,7 +134,7 @@ export function pickerListOf(
   const canCreate = !matches.some(isExact);
   const hiddenByFilters = hidden.length > 0;
   if (!shown.length) {
-    return { rows, noMatch: true, hiddenByFilters, canCreate };
+    return { rows, count: 0, noMatch: true, hiddenByFilters, canCreate };
   }
   shown.sort((a, b) => b.score - a.score || a.name.localeCompare(b.name));
   rows.push({ kind: 'header', key: 'header-matches', section: 'matches' });
@@ -143,7 +145,7 @@ export function pickerListOf(
   } else if (hiddenExact) {
     rows.push({ kind: 'filtered', key: 'filtered', name: hiddenExact.name });
   }
-  return { rows, noMatch: false, hiddenByFilters, canCreate };
+  return { rows, count: shown.length, noMatch: false, hiddenByFilters, canCreate };
 }
 
 /** Tapping a row adds it to the end of the selection, or takes it out and closes the gap. */

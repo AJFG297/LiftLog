@@ -13,8 +13,8 @@ screen isn't linked from the app. Its theme controls change the real theme setti
 | Component | File | Use it for |
 | --- | --- | --- |
 | `Card` | `card.tsx` | A white (dark: raised) surface with a hairline border. `onPress` makes the whole card a button. |
-| `Chip` | `chip.tsx` | A toggle: filters, rest presets, RPE. `numeric` sets a number-only label in Geist Mono; `style={{ flexGrow: 1 }}` shares a row; `contentStyle` styles the drawn chip. |
-| `ChipRow` | `chip-row.tsx` | One row of `Chip`s that scrolls sideways past the page's edge, exactly one on, the first being All: a list's filter (the picker's muscle and equipment, All exercises' muscle). |
+| `Chip` | `chip.tsx` | A toggle: filters, rest presets, RPE. `numeric` sets a number-only label in Geist Mono; `style={{ flexGrow: 1 }}` shares a row; `contentStyle` styles the drawn chip. `dropdown` draws an arrow after the label for a chip that opens a menu (the picker's equipment), read out as a plain button. |
+| `ChipRow` | `chip-row.tsx` | One row of `Chip`s that scrolls sideways past the page's edge, exactly one on, the first being All: a list's filter (the picker's muscle, All exercises' muscle). |
 | `SearchField` | `search-field.tsx` | A list's search input with its icon and a clear button. `testID` names the input (`-input`) and the clear button (`-clear`). |
 | `SegmentedControl` | `segmented-control.tsx` | Two to four mutually exclusive options in one row ("Last 7 days / Last 30 days"). Each segment is its label's width plus an equal share of the rest, and a label that still doesn't fit wraps to two lines instead of being cut off. |
 | `ActionButton` | `action-button.tsx` | The full-width button that ends a sheet or a page: `primary` is the accent fill ("Update routine", "Done"), `secondary` an outlined card ("Keep the routine as it was"), `ink` the ink fill for an empty state's way out (the picker's Create "X"). Side by side in a row, the pair share one height. Disabled, it greys out. |
@@ -35,7 +35,8 @@ screen isn't linked from the app. Its theme controls change the real theme setti
 ADR-0002 makes us responsible for these, so every interactive primitive:
 
 - has a role and a label. `Chip` is a toggle button that is on or off (`togglebutton` with `checked`, what
-  ARIA calls `aria-pressed`). `SegmentedControl` is a radio group. Icon-only controls require a label.
+  ARIA calls `aria-pressed`); a `dropdown` chip is a plain button. `SegmentedControl` is a radio group.
+  Icon-only controls require a label.
 - has a touch target of at least 44pt (`MIN_TOUCH_TARGET` in `touch-target.ts`). A control that is drawn
   smaller (a 36pt chip, a compact icon button) makes its `Pressable` 44pt and draws the smaller shape inside
   it. Don't use `hitSlop` for this: React Native drops a tap outside the parent's bounds, so the slop is lost

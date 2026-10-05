@@ -9,11 +9,17 @@ export interface MenuItem {
   systemImage?: SFSymbol;
   destructive?: boolean;
   disabled?: boolean;
+  /** Shows a checkmark, for a menu that chooses one value. */
+  selected?: boolean;
 }
 
 export interface MenuProps {
   trigger: (open: () => void) => ReactNode;
   items: MenuItem[];
   testID?: string;
-  size?: number;
+  /**
+   * The square the trigger sits in, 40 by default. `'content'` lets the trigger size the menu, for a trigger
+   * that isn't a square icon button.
+   */
+  size?: number | 'content';
 }
