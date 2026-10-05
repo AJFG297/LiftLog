@@ -4,6 +4,7 @@ import { AnyVersionAiPlanJSON } from '@/models/storage/versions/any';
 import { aiPlanMigrations } from '@/models/storage/versions/migrations';
 import { CardioExerciseBlueprint, ProgramBlueprint, WeightedExerciseBlueprint } from '@/models/blueprint-models';
 import { DeepPartial } from '@/utils/types';
+import type { Sheet } from '@/services/plan-import/sheet';
 import {
   BigNumberJSON,
   CardioExerciseBlueprintJSON,
@@ -57,6 +58,16 @@ export interface AiChatSharedProgramMessage {
   type: 'sharedProgram';
   programName: string;
   blueprint: ProgramBlueprint;
+}
+
+/**
+ * Client-only chat message: a spreadsheet the plan import couldn't read as a routine table, handed to
+ * the AI to turn into a plan. Never received from the hub.
+ */
+export interface AiChatSharedSpreadsheetMessage {
+  type: 'sharedSpreadsheet';
+  fileName: string;
+  sheets: Sheet[];
 }
 
 /**

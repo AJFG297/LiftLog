@@ -138,6 +138,7 @@ import { msKeep } from '@material-symbols-react-native/outlined-400/msKeep';
 import { msKeepFill } from '@material-symbols-react-native/outlined-400/msKeepFill';
 import { msCampaign } from '@material-symbols-react-native/outlined-400/msCampaign';
 import { msVisibilityOff } from '@material-symbols-react-native/outlined-400/msVisibilityOff';
+import { msTable } from '@material-symbols-react-native/outlined-400/msTable';
 
 // Importing these icons using the below methods causes android app to crash
 // import { msAdd, msArrowDownward } from '@material-symbols-react-native/outlined-400';
@@ -246,6 +247,7 @@ const MaterialSymbols = {
   'chevron-right': msChevronRight,
   backup: msBackup,
   description: msDescription,
+  table: msTable,
   descriptionFill: msDescriptionFill,
   calendar: msCalendarMonth,
   'calendar-blank': msCalendarToday,
