@@ -73,9 +73,8 @@ opens the exercise rest sheet (`session/exercise-rest`, `components/smart/exerci
 and seconds wheels (`restPickOf` rounds the rest to the nearest 5 seconds, 0:00 to 10:55) and a "Rest 1:45"
 button, disabled at 0:00, that writes the min rest with `withMinRest` and `sessionWithExerciseRest`. The
 sheet is one detent, sized to its content (`useExerciseRestSheetDetent`, which clears the Android tab bar),
-and undimmed, so the sets stay in view and touchable behind it. If the exercise at its index changes
-underneath, it closes. Nothing is written to the routine: the finish sheet lists the change as a rest row,
-so keeping it is asked there.
+short enough that the sets stay in view above it; a tap there closes it. Nothing is written to the routine:
+the finish sheet lists the change as a rest row, so keeping it is asked there.
 
 The timer isn't part of a stored workout, so it is also kept in its own key (`ActiveRestTimer`, see
 [Storage.md](./Storage.md#direct-keyvaluestore-use)) and put back once workouts are loaded, so a relaunch

@@ -50,10 +50,7 @@ export function ExerciseRestSheet() {
   const { back } = useRouter();
   const exerciseIndex = Number(params.exerciseIndex);
   const exercise = session?.recordedExercises[exerciseIndex];
-  // The workout stays touchable behind this sheet, so removing or moving an exercise there can leave the
-  // index pointing at a different one. The sheet closes rather than change that one's rest.
-  const [openedFor] = useState(exercise?.blueprint.name);
-  const found = exercise instanceof RecordedWeightedExercise && exercise.blueprint.name === openedFor;
+  const found = exercise instanceof RecordedWeightedExercise;
 
   useEffect(() => {
     if (!found) {
