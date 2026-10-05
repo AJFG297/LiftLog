@@ -42,7 +42,7 @@ import {
 import { setIsHydrated as setSettingsIsHydrated } from '@/store/settings';
 import { SessionService } from '@/services/session-service';
 import { sessionWithExerciseEdited } from '@/models/session-models/carry-over';
-import { carriedFrom, plannedLineageFor, todaysTarget } from '@/models/session-models/todays-target';
+import { carriedFrom, todaysTarget } from '@/models/session-models/todays-target';
 import { repeatBlueprint } from '@/models/workout-detail';
 
 /**
@@ -512,7 +512,7 @@ async function previousOf(app: App, sessionId: string, index: number) {
   });
   const byLineage = Object.fromEntries(Object.entries(latest).map(([key, x]) => [key, x.exercise]));
   const exercise = session.recordedExercises[index] as RecordedWeightedExercise;
-  const previous = carriedFrom(exercise, plannedLineageFor(exercise, session.recordedExercises, []), byLineage);
+  const previous = carriedFrom(exercise, session.recordedExercises, [], byLineage);
   return { exercise, previous };
 }
 
