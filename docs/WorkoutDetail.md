@@ -25,11 +25,16 @@ card's summary (the summary is the button, so the card's own buttons stay reacha
 
 ## What it does
 
-- **Do again** starts a new workout with the same exercises and sets, nothing logged, through the usual start path
-  (`useStartWorkoutWithConfirmation`), which asks first when another workout is in progress. `repeatSession` makes
-  it: the logged weights become the new workout's placeholders.
+- **Do again** starts a new workout with the same exercises, sets and rep targets, nothing logged, through the
+  usual start path (`useStartWorkoutWithConfirmation`), which asks first when another workout is in progress.
+  `SessionService.repeatSession` makes it: the workout's structure as Save as routine takes it, with each set's
+  rep target and kind as they were that day, a target changed for that workout only included (`repeatBlueprint`),
+  opened as starting that routine would, so weights carry over from the latest performance and earned progression
+  applies (see [Progression.md](./Progression.md)). That day's weights are not reused: repeating a deliberately
+  light day opens at the latest weights. History's Start this workout does the same.
 - **Save as routine** adds the workout's structure (`routineFromSession`, built from `session.blueprint`: the
-  exercises as they ended up that day) to the **active plan**, named after the workout, or "Push 2" and so on when
+  exercises as they ended up that day, with the plan's rep targets, since a target changed during a workout is
+  not a change to the routine) to the **active plan**, named after the workout, or "Push 2" and so on when
   the name is taken (`uniqueRoutineName`). A toast offers Undo. Editing a warm-up's weight during a workout leaves
   the session's plan alone, so a warm-up logged at a weight of its own is planned at that weight (a percentage
   warm-up stays a percentage). Do again and Save as routine then agree on every warm-up's load.

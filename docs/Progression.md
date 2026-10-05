@@ -10,13 +10,16 @@ When an exercise is completed, the next time it is loaded into a workout, two th
 ## Carry over
 
 When you start a workout, LiftLog looks for the last time you did the same exercise and loads those
-numbers in.
+numbers in. Every way an exercise gets into a workout does the same: starting a routine, adding an
+exercise mid-workout, swapping one in (from the workout or the exercise editor), and Do again on a past
+workout, which repeats that workout's exercises and sets but opens them on your latest numbers, not that
+day's. The workout you are in never counts as its own last time.
 
 - It matches on the **exercise itself**, and nothing else: not how many sets it had, and not its rep
   scheme. The exercise is the one in your exercise list, not its name, so renaming it there keeps your
   numbers, and so does spelling it differently in a plan ("Squat", "squat" and "Squats" are the same
   exercise). Adding or removing a set, mid-workout or in the routine, keeps your progress. Swapping in a
-  different exercise starts over from the plan.
+  different exercise opens on that exercise's own last time; sets you already logged stay.
 - **Your routine decides how many sets you get.** Last time's numbers are fitted onto today's sets, so a
   set you added once and did not keep in the routine is not carried as an extra set.
 - **Weight always carries over, from your best set.** The best set is your heaviest working or failure
@@ -122,8 +125,14 @@ session), `applyProgression`, `applyEarnedProgression` and `ProgressionRule.isEa
 [Storage.md](./Storage.md)); the best set
 (`bestSetIndex`, `bestSetMetTarget`) and fitting last time onto today's sets
 (`RecordedWeightedExercise.carriedInto`) in `app/src/models/session-models/recorded-weighted-exercise.ts`;
-what each set kind carries in `app/src/models/session-models/set-kind.ts`; session start in
-`app/src/services/session-service.ts`; the editor in
+what each set kind carries in `app/src/models/session-models/set-kind.ts`; one exercise opened on last
+time (`nextRecordedExercise`, which routine start, add, swap and Do again all go through) and a swap
+(`sessionWithExerciseReplaced`) in `app/src/models/session-models/carry-over.ts`; the cache minus the
+workout's own entries for an add or swap, read from the tables when an entry is the workout's own, in pick
+order (`withCarryOver`), in `app/src/store/stored-sessions/index.ts`, and the hook the screens call it
+through (`useCarryOver`) in `app/src/hooks/useCarryOver.ts`; Do again's structure (`repeatBlueprint`) in
+`app/src/models/workout-detail.ts`; session start and Do again (`repeatSession`, which reads the cache from
+the store when tapped) in `app/src/services/session-service.ts`; the editor in
 `app/src/components/presentation/workout-editor/progressive-overload.tsx`. The stored
 `workout_exercise.progression_key` column was rewritten to the new key by the
 `REKEY_PROGRESSION_BY_EXERCISE` data migration (`app/src/services/data-migrations/rekey-progression.ts`).

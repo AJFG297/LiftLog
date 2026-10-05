@@ -20,7 +20,7 @@ import { Session } from '@/models/session-models';
 import { useAppSelector } from '@/store';
 import { addUnpublishedSessionId, encryptAndShare, removeReactionsForEvents } from '@/store/feed';
 import { deleteStoredSession, putStoredSession, selectActiveSession } from '@/store/stored-sessions';
-import { uuid } from '@/utils/uuid';
+import { useServices } from '@/components/smart/services-provider';
 import { LocalDate, YearMonth } from '@js-joda/core';
 import { T, useTranslate } from '@tolgee/react';
 import { Stack, useRouter } from 'expo-router';
@@ -65,6 +65,7 @@ export default function History() {
   const { push } = useRouter();
   const currentWorkoutSession = useAppSelector(selectActiveSession);
   const startWorkoutSession = useStartWorkout();
+  const { sessionService } = useServices();
   const onSelectSession = (session: Session) => {
     push(`/history/edit?sessionId=${encodeURIComponent(session.id)}`);
   };
@@ -94,7 +95,7 @@ export default function History() {
       setSelectedWorkout(session);
       setReplaceCurrentSessionConfirmOpen(true);
     } else {
-      startWorkoutSession(session.withNothingCompleted().with({ date: LocalDate.now(), id: uuid() }));
+      startWorkoutSession(sessionService.repeatSession(session));
       setReplaceCurrentSessionConfirmOpen(false);
       setSelectedWorkout(undefined);
 

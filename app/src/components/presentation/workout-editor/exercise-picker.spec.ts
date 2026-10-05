@@ -14,6 +14,9 @@ import {
   toggledPick,
   withPickAppended,
 } from './exercise-picker';
+import { CarryOver } from '@/models/session-models/carry-over';
+
+const noHistory: CarryOver = { latest: {}, unit: 'kilograms' };
 
 function exercise(
   name: string,
@@ -265,7 +268,7 @@ describe('sessionWithPickAdded', () => {
     const session = makeSession([
       makeWeightedBlueprint({ name: 'Squat', exerciseId: 'squat', supersetWithNext: true }),
     ]);
-    const next = sessionWithPickAdded(session, pick, true, false);
+    const next = sessionWithPickAdded(session, pick, true, noHistory);
     expect(next.recordedExercises.map((e) => e.blueprint.name)).toEqual([
       'Squat',
       'Lateral Raise',
@@ -283,6 +286,6 @@ describe('sessionWithPickAdded', () => {
 
   it('returns the same workout for an empty pick', () => {
     const session = makeSession([makeWeightedBlueprint()]);
-    expect(sessionWithPickAdded(session, [], false, false)).toBe(session);
+    expect(sessionWithPickAdded(session, [], false, noHistory)).toBe(session);
   });
 });

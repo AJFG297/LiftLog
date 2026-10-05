@@ -18,13 +18,7 @@ import { RecordedWeightedExercise } from '@/models/session-models';
 import { formatRpe } from '@/models/session-models/rpe';
 import { shortFormatWeightUnit, Weight, WeightUnit } from '@/models/weight';
 import { BestSetChange, bestSetComparisons, minutesOf, setCounts } from '@/models/workout-summary';
-import {
-  DetailSetRow,
-  repeatSession,
-  routineFromSession,
-  sessionSetRows,
-  uniqueRoutineName,
-} from '@/models/workout-detail';
+import { DetailSetRow, routineFromSession, sessionSetRows, uniqueRoutineName } from '@/models/workout-detail';
 import { useAppSelector } from '@/store';
 import { useWorkoutQuery } from '@/hooks/useWorkoutQuery';
 import {
@@ -43,10 +37,10 @@ import {
   selectActiveProgram,
 } from '@/store/program';
 import { deleteStoredSession, putStoredSession, sessionFinished } from '@/store/stored-sessions';
+import { useServices } from '@/components/smart/services-provider';
 import { formatTimeRange } from '@/utils/format-time-range';
 import { localeFormatBigNumber } from '@/utils/locale-bignumber';
-import { uuid } from '@/utils/uuid';
-import { LocalDate, OffsetDateTime } from '@js-joda/core';
+import { OffsetDateTime } from '@js-joda/core';
 import { UseTranslateResult, useTranslate } from '@tolgee/react';
 import { Stack, useRouter } from 'expo-router';
 import { useState } from 'react';
@@ -79,6 +73,7 @@ export function WorkoutDetail({ sessionId }: { sessionId: string }) {
   const receivedReactions = useAppSelector(selectReceivedReactionsByEvent);
   const sentReactions = useAppSelector(selectSentReactionsByEvent);
   const { start, confirmationDialog } = useStartWorkoutWithConfirmation();
+  const { sessionService } = useServices();
   const [deleting, setDeleting] = useState(false);
 
   if (!session) {
@@ -100,7 +95,7 @@ export function WorkoutDetail({ sessionId }: { sessionId: string }) {
     bestSetComparisons(session, comparison?.previous).map((x) => [x.key, x.change]),
   );
 
-  const doAgain = () => start(repeatSession(session, LocalDate.now(), uuid()));
+  const doAgain = () => start(sessionService.repeatSession(session));
 
   const saveAsRoutine = () => {
     const name = uniqueRoutineName(

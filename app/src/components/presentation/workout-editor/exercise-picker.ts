@@ -1,8 +1,15 @@
 import { fuzzyMatchScore } from '@/models/exercise-fuzzy-match';
-import { ExerciseBlueprint, Rest, WeightedExerciseBlueprint } from '@/models/blueprint-models';
+import {
+  ExerciseBlueprint,
+  lineageKeys,
+  MovementKey,
+  Rest,
+  WeightedExerciseBlueprint,
+} from '@/models/blueprint-models';
 import { ExerciseDescriptor } from '@/models/exercise-models';
 import { MuscleGroup, muscleGroupOf } from '@/models/muscle-groups';
 import { RecordedWeightedExercise, Session } from '@/models/session-models';
+import { CarryOver, nextRecordedExercise, sessionWithExerciseReplaced } from '@/models/session-models/carry-over';
 import type { OffsetDateTime } from '@js-joda/core';
 
 /**
@@ -218,12 +225,15 @@ export function withPickAppended(
   return [...kept, ...blueprintsForPick(picked, asSuperset)];
 }
 
-/** The workout with a pick added to the end, clearing a stranded superset flag as {@link withPickAppended} does. */
+/**
+ * The workout with a pick added to the end, clearing a stranded superset flag as {@link withPickAppended} does.
+ * Each exercise opens on what its place would carry over in a routine (see {@link nextRecordedExercise}).
+ */
 export function sessionWithPickAdded(
   session: Session,
   picked: readonly PickedExerciseRef[],
   asSuperset: boolean,
-  useImperialUnits: boolean,
+  { latest, unit }: CarryOver,
 ): Session {
   if (!picked.length) {
     return session;
@@ -241,10 +251,38 @@ export function sessionWithPickAdded(
       blueprint: session.blueprint.with({ exercises: recordedExercises.map((exercise) => exercise.blueprint) }),
     });
   }
-  return blueprintsForPick(picked, asSuperset).reduce(
-    (next, blueprint) => next.withAddedExercise(blueprint, useImperialUnits),
+  const added = blueprintsForPick(picked, asSuperset);
+  const lineages = lineageKeys([...result.blueprint.exercises, ...added]).slice(result.blueprint.exercises.length);
+  return added.reduce(
+    (next, blueprint, index) => next.withAddedExercise(nextRecordedExercise(blueprint, lineages[index]!, latest, unit)),
     result,
   );
+}
+
+/**
+ * The workout with the exercise at `index`, `swappedOut`, swapped for `picked`: its plan as it is now, under
+ * the picked exercise's name and id, so its history follows it (see {@link sessionWithExerciseReplaced}).
+ * Unchanged if that place no longer holds `swappedOut`, which a swap waiting on a read can find; an edit of
+ * its plan meanwhile is kept.
+ */
+export function sessionWithExerciseSwapped(
+  session: Session,
+  index: number,
+  swappedOut: MovementKey,
+  picked: PickedExerciseRef,
+  carryOver: CarryOver,
+): Session {
+  const current = session.recordedExercises[index];
+  if (current?.movementKey() !== swappedOut) {
+    return session;
+  }
+  return sessionWithExerciseReplaced(session, index, blueprintSwappedTo(current.blueprint, picked), carryOver);
+}
+
+/** The same plan for the picked exercise: its name and id, so its history follows it. */
+export function blueprintSwappedTo(blueprint: ExerciseBlueprint, picked: PickedExerciseRef): ExerciseBlueprint {
+  const exercise = { name: picked.name, exerciseId: picked.id };
+  return blueprint instanceof WeightedExerciseBlueprint ? blueprint.with(exercise) : blueprint.with(exercise);
 }
 
 /** A to Z, with unnamed exercises (one left blank in Settings > Exercises) last rather than first. */

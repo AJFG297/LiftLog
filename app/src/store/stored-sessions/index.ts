@@ -1,11 +1,14 @@
 import { RecordedExercise, Session } from '@/models/session-models';
-import { lineageKeys, ProgressionKey } from '@/models/blueprint-models';
+import { lineageKeys, ProgressionKey, progressionKeyOf } from '@/models/blueprint-models';
 import { OffsetDateTime, ZoneId } from '@js-joda/core';
 import { createAction, createSelector, createSlice, PayloadAction, WritableDraft } from '@reduxjs/toolkit';
 import Enumerable from 'linq';
 import { ExerciseDescriptor, musclesOf } from '@/models/exercise-models';
-import type { LatestPerformance } from '@/services/workout-repository';
+import type { LatestPerformance, WorkoutRepository } from '@/services/workout-repository';
+import type { Logger } from '@/services/logger';
 import type { ExerciseMerge } from '@/models/exercise-merge';
+import type { CarryOver } from '@/models/session-models/carry-over';
+import type { RootState } from '@/store/store';
 
 interface StoredSessionState {
   isHydrated: boolean;
@@ -397,6 +400,104 @@ export const {
 
 export const { selectSession, selectActiveSession, selectActiveSessionId, selectExercises, selectLatestExercises } =
   storedSessionsSlice.selectors;
+
+/**
+ * The carry-over cache as workout `sessionId` sees it: without the entries that came from that workout,
+ * since a workout is not its own last time. Use {@link withCarryOver} for an exercise entering it.
+ */
+export function selectCarryOver(state: RootState, sessionId: string): CarryOver {
+  const { latestExercises, latestExerciseWorkoutIds } = state.storedSessions;
+  const latest = Object.fromEntries(
+    Object.entries(latestExercises).filter(([key]) => latestExerciseWorkoutIds[key as ProgressionKey] !== sessionId),
+  );
+  return { latest, unit: state.settings.useImperialUnits ? 'pounds' : 'kilograms' };
+}
+
+// The carry-over each workout still has to apply. Exercises enter a workout in the order they were picked,
+// so one waiting on a read holds back those picked after it.
+const pendingCarryOver = new Map<string, Promise<void>>();
+
+/** What {@link withCarryOver} reads the tables with, and reports a failed read to. */
+export interface CarryOverServices {
+  workoutRepository: Pick<WorkoutRepository, 'latestPerLineage'>;
+  logger: Pick<Logger, 'error'>;
+}
+
+/**
+ * Hands `apply` what exercises of `progressionKeys` added to or swapped into workout `sessionId` open on.
+ * From the cache, synchronously, unless it holds that workout's own performance of one of them (a set
+ * logged today): the cache keeps nothing from before it, so those keys are read from the tables without
+ * the workout first. If that read fails they open on the cache as it is, today's numbers included, rather
+ * than at nothing. Calls for one workout apply in the order they were made, so one made while another
+ * waits on its read waits behind it. `apply` must address the workout by id, as it can run after the
+ * workout has changed.
+ */
+export function withCarryOver(
+  getState: () => RootState,
+  services: CarryOverServices,
+  sessionId: string,
+  progressionKeys: readonly ProgressionKey[],
+  apply: (carryOver: CarryOver) => void,
+): Promise<void> {
+  const pending = pendingCarryOver.get(sessionId);
+  if (!pending && !ownKeys(getState(), sessionId, progressionKeys).length) {
+    apply(selectCarryOver(getState(), sessionId));
+    return Promise.resolve();
+  }
+  const run = (async () => {
+    await pending;
+    apply(await carryOverFor(getState, services, sessionId, progressionKeys));
+  })();
+  const settled: Promise<void> = run
+    .catch(() => {})
+    .then(() => {
+      if (pendingCarryOver.get(sessionId) === settled) {
+        pendingCarryOver.delete(sessionId);
+      }
+    });
+  pendingCarryOver.set(sessionId, settled);
+  return run;
+}
+
+async function carryOverFor(
+  getState: () => RootState,
+  { workoutRepository, logger }: CarryOverServices,
+  sessionId: string,
+  progressionKeys: readonly ProgressionKey[],
+): Promise<CarryOver> {
+  const own = ownKeys(getState(), sessionId, progressionKeys);
+  if (!own.length) {
+    return selectCarryOver(getState(), sessionId);
+  }
+  let before: Record<ProgressionKey, RecordedExercise | undefined>;
+  try {
+    const read = await workoutRepository.latestPerLineage({ progressionKeys: own, excludeWorkoutId: sessionId });
+    before = Object.fromEntries(Object.entries(read).map(([key, performance]) => [key, performance.exercise]));
+  } catch (error) {
+    logger.error(`Couldn't read last time for ${own.join(', ')}; opening on the cache`, error);
+    const { latestExercises } = getState().storedSessions;
+    before = Object.fromEntries(
+      (Object.keys(latestExercises) as ProgressionKey[])
+        .filter((key) => own.includes(progressionKeyOf(key)))
+        .map((key) => [key, latestExercises[key]]),
+    );
+  }
+  const cached = selectCarryOver(getState(), sessionId);
+  return { ...cached, latest: { ...cached.latest, ...before } };
+}
+
+/** The keys of `progressionKeys` whose cached latest came from workout `sessionId` itself. */
+function ownKeys(state: RootState, sessionId: string, progressionKeys: readonly ProgressionKey[]): ProgressionKey[] {
+  const { latestExerciseWorkoutIds } = state.storedSessions;
+  return [
+    ...new Set(
+      (Object.keys(latestExerciseWorkoutIds) as ProgressionKey[])
+        .filter((key) => latestExerciseWorkoutIds[key] === sessionId)
+        .map(progressionKeyOf)
+        .filter((key) => progressionKeys.includes(key)),
+    ),
+  ];
+}
 
 /** Fired when a session is done being edited: publish it, export it, and re-derive what depends on it. */
 export const sessionFinished = createAction<string>('sessionFinished');

@@ -1,6 +1,6 @@
 import { usePreviousPerformances } from '@/components/smart/previous-performances';
 import { RecordedExercise, RecordedWeightedExercise, Session } from '@/models/session-models';
-import { carriedFrom, plannedLineageFor, TodaysTarget, todaysTarget } from '@/models/session-models/todays-target';
+import { carriedFrom, TodaysTarget, todaysTarget } from '@/models/session-models/todays-target';
 import { useAppSelector } from '@/store';
 import { selectActiveProgram } from '@/store/program';
 
@@ -27,8 +27,8 @@ export function usePreviousPerformance(
   }
   return (exercise: RecordedWeightedExercise) => {
     const candidates = ofMovement(exercise.movementKey()) as RecordedWeightedExercise[];
-    const planned = plannedLineageFor(exercise, session.recordedExercises, routine?.exercises ?? []);
-    return { previous: carriedFrom(exercise, planned, byLineage), candidates };
+    const previous = carriedFrom(exercise, session.recordedExercises, routine?.exercises ?? [], byLineage);
+    return { previous, candidates };
   };
 }
 
