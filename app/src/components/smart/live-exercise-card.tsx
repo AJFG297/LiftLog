@@ -49,6 +49,7 @@ export function LiveExerciseCard(props: LiveExerciseCardProps) {
   const store = useStore<RootState>();
   const withCarryOver = useCarryOver();
   const exercises = useAppSelector(selectExercises);
+  const restTimersEnabled = useAppSelector((x) => x.settings.restTimersEnabled);
   const targetFor = useTodaysTarget(session);
   const [notesOpen, setNotesOpen] = useState(false);
   const [removeOpen, setRemoveOpen] = useState(false);
@@ -83,20 +84,34 @@ export function LiveExerciseCard(props: LiveExerciseCardProps) {
   const equipment = exercises[blueprint.exerciseId]?.equipment;
   const groups = exerciseGroupsOf(session.recordedExercises);
   const inSuperset = groups.some((group) => group.supersetLetter && group.indices.includes(exerciseIndex));
-  // A superset rests after each round rather than after this exercise, so its place in the round says more.
   const meta = capitalise(
     [
       equipment ? translateExerciseMeta(t, 'equipment', equipment) : undefined,
-      inSuperset
-        ? t('live_workout.meta.superset.label', { label: exerciseLabelOf(groups, exerciseIndex) })
-        : exercise instanceof RecordedWeightedExercise
-          ? t('live_workout.meta.rest.label', { rest: formatTimeSpan(exercise.blueprint.restBetweenSets.minRest) })
-          : undefined,
+      inSuperset ? t('live_workout.meta.superset.label', { label: exerciseLabelOf(groups, exerciseIndex) }) : undefined,
       exercise instanceof RecordedWeightedExercise ? workingSetsText(t, exercise.potentialSets.length) : undefined,
     ]
       .filter((part) => part !== undefined)
       .join(' · '),
   );
+
+  // A superset rests after each round rather than after this exercise, so it gets no Rest shortcut.
+  const restShortcut: ExerciseShortcut[] =
+    exercise instanceof RecordedWeightedExercise && restTimersEnabled && !inSuperset
+      ? [
+          {
+            key: 'rest',
+            label: t('live_workout.chip.rest.button', {
+              time: formatTimeSpan(exercise.blueprint.restBetweenSets.minRest),
+            }),
+            icon: 'timer',
+            onPress: () => {
+              // The sheet sits where the number pad docks.
+              props.entry.close();
+              push({ pathname: '/session/exercise-rest', params: { exerciseIndex: String(exerciseIndex) } });
+            },
+          },
+        ]
+      : [];
 
   const shortcuts: ExerciseShortcut[] = [
     {
@@ -105,6 +120,7 @@ export function LiveExerciseCard(props: LiveExerciseCardProps) {
       icon: 'history',
       onPress: () => push(getExerciseHistoryHref(blueprint), { withAnchor: true }),
     },
+    ...restShortcut,
     ...(isWeighted
       ? [
           {

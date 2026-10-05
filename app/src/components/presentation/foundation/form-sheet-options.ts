@@ -14,12 +14,22 @@ export type SheetDetents = [number] | [number, number] | [number, number, number
  *
  * Open it with `router.push('/rest')`, close it with `router.back()` (or a swipe down).
  */
-export function formSheetOptions(detents: SheetDetents): NativeStackNavigationOptions {
+export function formSheetOptions(
+  detents: SheetDetents,
+  options: {
+    /**
+     * Leave the screen behind undimmed and touchable at every detent, for a sheet that edits something on
+     * that screen. Both platforms pass touches through where there is no dimming.
+     */
+    undimmed?: boolean;
+  } = {},
+): NativeStackNavigationOptions {
   return {
     presentation: 'formSheet',
     sheetAllowedDetents: detents,
     sheetGrabberVisible: true,
     sheetCornerRadius: 28,
     headerShown: false,
+    ...(options.undimmed ? { sheetLargestUndimmedDetentIndex: 'last' } : {}),
   };
 }

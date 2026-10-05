@@ -24,6 +24,7 @@ screen isn't linked from the app. Its theme controls change the real theme setti
 | `SwipeToDelete` | `swipe-to-delete.tsx` | A row that swipes left to delete: a short swipe shows a Delete button, a long swipe or a hard fling deletes on release. Give the row a screen-reader delete action too, since nobody can swipe with one. `resetKey` snaps it shut when the row below moves into its place. |
 | `ProgressBar` | `progress-bar.tsx` | Accent on a track, from 0 to 1. `tone="inverse"` draws it on an `inverse` slab. |
 | `ToastProvider`, `useToast` | `toast/` | One short message at a time over the app, with an optional action such as Undo. |
+| `WheelPicker` | `wheel-picker.tsx` | Side-by-side scrolling wheels, one per column, each with a unit beside it (the exercise rest sheet's minutes and seconds). Five 44pt rows, the middle one picked; a column commits when it settles. Our own on both platforms, since Material 3 has no wheel. Screen readers hear each column as adjustable. |
 | `SheetHeader`, `formSheetOptions` | `sheet-header.tsx`, `form-sheet-options.ts` | Native sheets. See below. |
 | `haptics` | `haptics.ts` | `setLogged()`, `restOver()`, `selection()`. |
 
@@ -96,7 +97,9 @@ library.
    ```
 
    Detents are ascending fractions of the screen height. Android honours at most three, and the type allows
-   no more. The options hide the native header and show the grabber (iOS).
+   no more. The options hide the native header and show the grabber (iOS). `{ undimmed: true }` leaves the
+   screen behind undimmed and touchable at every detent, for a short sheet that edits what is on it (the
+   exercise rest sheet).
 2. Start the screen with `<SheetHeader title subtitle onClose={() => router.back()} />`, and give its root
    view the `card` background. A short count that has to stay readable, like "7 exercises", goes in
    `titleDetail`: it follows the title after a dot, and a long title truncates before it does.
