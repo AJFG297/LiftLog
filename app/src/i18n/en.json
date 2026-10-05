@@ -864,7 +864,6 @@
   "progress.exercises.empty.body": "Only exercises you've logged show here.",
   "stats.no_data.message": "There is no data within the selected period.",
   "stats.select_period.label": "Select period",
-  "stats.weighted_exercise_list.title": "Weighted Exercises",
   "stats.stats.title": "Stats",
   "stats.exercise.overview.title": "Overview",
   "stats.exercise.max_weight.title": "Max Weight",
