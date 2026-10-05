@@ -177,4 +177,38 @@ describe('readXlsx', () => {
     expect(result[0]!.rows[4_999]).toEqual(['5000']);
     expect(ms).toBeLessThan(1_000);
   });
+
+  const rawWorkbook = (sheetXml: string, sharedStrings: string[], sheetEntries: number) =>
+    zipSync({
+      'xl/workbook.xml': strToU8(
+        `<workbook><sheets>${'<sheet name="Day" r:id="rId1"/>'.repeat(sheetEntries)}</sheets></workbook>`,
+      ),
+      'xl/_rels/workbook.xml.rels': strToU8(
+        '<Relationships><Relationship Id="rId1" Target="worksheets/sheet1.xml"/></Relationships>',
+      ),
+      'xl/sharedStrings.xml': strToU8(`<sst>${sharedStrings.map((text) => `<si><t>${text}</t></si>`).join('')}</sst>`),
+      'xl/worksheets/sheet1.xml': strToU8(`<worksheet><sheetData>${sheetXml}</sheetData></worksheet>`),
+    });
+
+  it('reads a sheet part once, however many times the workbook lists it', () => {
+    const result = readXlsx(rawWorkbook('<row r="1"><c r="A1" t="s"><v>0</v></c></row>', ['Squat'], 300));
+
+    expect(result).toEqual([{ name: 'Day', rows: [['Squat']] }]);
+  });
+
+  it('cuts a long cell short', () => {
+    const [sheet] = readXlsx(rawWorkbook('<row r="1"><c r="A1" t="s"><v>0</v></c></row>', ['a'.repeat(5_000)], 1));
+
+    expect(sheet!.rows[0]![0]).toBe('a'.repeat(1_000));
+  });
+
+  it('refuses a workbook whose cells all point at one long shared string', () => {
+    const row = (r: number) =>
+      `<row r="${r}">${Array.from({ length: 100 }, () => '<c t="s"><v>0</v></c>').join('')}</row>`;
+    const sheetXml = Array.from({ length: 2_500 }, (_, i) => row(i + 1)).join('');
+
+    const start = performance.now();
+    expect(() => readXlsx(rawWorkbook(sheetXml, ['x'.repeat(100_000)], 1))).toThrow(SpreadsheetTooLargeError);
+    expect(performance.now() - start).toBeLessThan(2_000);
+  });
 });

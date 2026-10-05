@@ -1,8 +1,12 @@
 import { strFromU8, unzipSync, type UnzipFileInfo } from 'fflate';
 import {
+  MAX_CELL_CHARS,
   MAX_SHEET_COLUMNS,
   MAX_SHEET_ROWS,
+  MAX_SHEETS,
   MAX_SPREADSHEET_BYTES,
+  MAX_TOTAL_CELL_CHARS,
+  MAX_TOTAL_CELLS,
   type Sheet,
   SpreadsheetTooLargeError,
   trimSheetRows,
@@ -182,7 +186,13 @@ function cellText(attrs: Record<string, string>, inner: string, sharedStrings: s
   }
 }
 
-function readWorksheet(xml: string, sharedStrings: string[]): string[][] {
+/** What the cells read so far may still take, shared across every sheet of the workbook. */
+interface CellBudget {
+  cells: number;
+  chars: number;
+}
+
+function readWorksheet(xml: string, sharedStrings: string[], budget: CellBudget): string[][] {
   const sheetData = elements(xml, 'sheetData')[0]?.inner ?? '';
   const rows = new Map<number, string[]>();
   let nextRow = 0;
@@ -200,7 +210,13 @@ function readWorksheet(xml: string, sharedStrings: string[]): string[][] {
       const column = columnIndexOf(attrs['r']) ?? nextColumn;
       nextColumn = column + 1;
       if (column < MAX_SHEET_COLUMNS) {
-        cells[column] = cellText(attrs, cell.inner, sharedStrings);
+        const text = cellText(attrs, cell.inner, sharedStrings).slice(0, MAX_CELL_CHARS);
+        budget.cells -= 1;
+        budget.chars -= text.length;
+        if (budget.cells < 0 || budget.chars < 0) {
+          throw new SpreadsheetTooLargeError('The workbook holds more cells or text than a routine import reads.');
+        }
+        cells[column] = text;
       }
     }
     rows.set(rowIndex, cells);
@@ -257,9 +273,11 @@ export function readXlsx(bytes: Uint8Array): Sheet[] {
       targets.set(attrs['Id'], resolveTarget(attrs['Target']));
     }
   }
-  const sharedStrings = elements(index['xl/sharedStrings.xml'] ?? '', 'si').map((si) => textOf(si.inner));
+  const sharedStrings = elements(index['xl/sharedStrings.xml'] ?? '', 'si').map((si) =>
+    textOf(si.inner).slice(0, MAX_CELL_CHARS),
+  );
 
-  const sheets = elements(workbook, 'sheet').flatMap((sheet, position) => {
+  const listedSheets = elements(workbook, 'sheet').flatMap((sheet, position) => {
     const attrs = attributes(sheet.attrs);
     if (attrs['state'] === 'hidden' || attrs['state'] === 'veryHidden') {
       return [];
@@ -268,10 +286,14 @@ export function readXlsx(bytes: Uint8Array): Sheet[] {
     const path = (relationId && targets.get(relationId)) ?? `xl/worksheets/sheet${position + 1}.xml`;
     return [{ name: attrs['name'] ?? `Sheet${position + 1}`, path }];
   });
+  // A real workbook gives each sheet its own part; one part listed again would be read again for nothing.
+  const seenPaths = new Set<string>();
+  const sheets = listedSheets.filter(({ path }) => !seenPaths.has(path) && seenPaths.add(path)).slice(0, MAX_SHEETS);
 
   const worksheets = unzipParts(bytes, new Set(sheets.map((s) => s.path)), budget);
+  const cellBudget: CellBudget = { cells: MAX_TOTAL_CELLS, chars: MAX_TOTAL_CELL_CHARS };
   return sheets.map(({ name, path }) => {
     const xml = worksheets[path];
-    return { name, rows: xml === undefined ? [] : readWorksheet(xml, sharedStrings) };
+    return { name, rows: xml === undefined ? [] : readWorksheet(xml, sharedStrings, cellBudget) };
   });
 }

@@ -15,6 +15,16 @@ export interface Sheet {
 export const MAX_SPREADSHEET_BYTES = 20 * 1024 * 1024;
 export const MAX_SHEET_ROWS = 5_000;
 export const MAX_SHEET_COLUMNS = 100;
+/** Sheets past this many are dropped. */
+export const MAX_SHEETS = 50;
+/** A longer cell is cut short: no routine cell is this long, and it keeps one huge shared string cheap. */
+export const MAX_CELL_CHARS = 1_000;
+/**
+ * Every cell of an .xlsx may point at the same shared string, so the unpacked text can outgrow the file.
+ * Past these totals across all sheets the import is refused.
+ */
+export const MAX_TOTAL_CELLS = 200_000;
+export const MAX_TOTAL_CELL_CHARS = MAX_SPREADSHEET_BYTES;
 
 /** The spreadsheet would unpack past {@link MAX_SPREADSHEET_BYTES}. */
 export class SpreadsheetTooLargeError extends Error {

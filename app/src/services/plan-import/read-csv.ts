@@ -1,5 +1,5 @@
 import Papa from 'papaparse';
-import { MAX_SHEET_COLUMNS, MAX_SHEET_ROWS, type Sheet, trimSheetRows } from './sheet';
+import { MAX_CELL_CHARS, MAX_SHEET_COLUMNS, MAX_SHEET_ROWS, type Sheet, trimSheetRows } from './sheet';
 
 /**
  * Reads CSV text as a single unnamed sheet. Papa handles quoted fields, commas and line breaks inside
@@ -10,6 +10,6 @@ export function readCsv(text: string): Sheet[] {
   const rows = parsed.data
     .slice(0, MAX_SHEET_ROWS)
     .filter((row): row is string[] => Array.isArray(row))
-    .map((row) => row.slice(0, MAX_SHEET_COLUMNS));
+    .map((row) => row.slice(0, MAX_SHEET_COLUMNS).map((cell) => cell.slice(0, MAX_CELL_CHARS)));
   return [{ name: '', rows: trimSheetRows(rows) }];
 }
