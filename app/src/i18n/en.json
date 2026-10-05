@@ -1255,7 +1255,6 @@
   "live_workout.exercise_rest.minutes_wheel.label": "Minutes",
   "live_workout.exercise_rest.seconds_wheel.label": "Seconds",
   "live_workout.exercise_rest.save.button": "Rest {time}",
-  "live_workout.exercise_rest.scope.body": "For this workout. When you finish, you can keep it for your routine.",
   "live_workout.exercise_more.button": "More for {name}",
   "live_workout.target.title": "Today: {target}",
   "live_workout.target.reps_only.label": "{reps} reps",

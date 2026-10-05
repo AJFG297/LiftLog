@@ -6,12 +6,12 @@ import { NativeScrollEvent, NativeSyntheticEvent, Pressable, StyleSheet, View } 
 import { ScrollView } from 'react-native-gesture-handler';
 
 const ROW_HEIGHT = 44;
-const VISIBLE_ROWS = 5;
+const VISIBLE_ROWS = 3;
 /** Rows above and below the selection band. */
 const EDGE_ROWS = Math.floor(VISIBLE_ROWS / 2);
 const COLUMN_WIDTH = 56;
 
-/** Height of the picker: five 44pt rows, the middle one picked. */
+/** Height of the picker: three 44pt rows, the middle one picked. */
 export const WHEEL_PICKER_HEIGHT = ROW_HEIGHT * VISIBLE_ROWS;
 
 export interface WheelPickerOption {

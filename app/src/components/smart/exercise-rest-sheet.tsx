@@ -1,7 +1,6 @@
 import { ActionButton } from '@/components/presentation/foundation/action-button';
 import { haptics } from '@/components/presentation/foundation/haptics';
 import { SheetHeader } from '@/components/presentation/foundation/sheet-header';
-import { SurfaceText } from '@/components/presentation/foundation/surface-text';
 import { MIN_TOUCH_TARGET } from '@/components/presentation/foundation/touch-target';
 import { WHEEL_PICKER_HEIGHT, WheelPicker } from '@/components/presentation/foundation/wheel-picker';
 import { spacing, useAppTheme } from '@/hooks/useAppTheme';
@@ -26,8 +25,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDispatch } from 'react-redux';
 
 const SAVE_BUTTON_HEIGHT = 54;
-/** Two lines of `text-sm`: the note under the button wraps on a phone. */
-const NOTE_HEIGHT = 40;
 /** The Android tab bar draws over the session stack's sheets, so the sheet must clear it. */
 const ANDROID_TAB_BAR_HEIGHT = 80;
 
@@ -41,14 +38,7 @@ export function useExerciseRestSheetDetent(): number {
   const { height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const content =
-    MIN_TOUCH_TARGET +
-    2 * spacing[3] +
-    WHEEL_PICKER_HEIGHT +
-    spacing[4] +
-    SAVE_BUTTON_HEIGHT +
-    spacing[2] +
-    NOTE_HEIGHT +
-    spacing[4];
+    MIN_TOUCH_TARGET + 2 * spacing[3] + WHEEL_PICKER_HEIGHT + spacing[4] + SAVE_BUTTON_HEIGHT + spacing[4];
   const below = insets.bottom + (Platform.OS === 'android' ? ANDROID_TAB_BAR_HEIGHT : 0);
   return Math.min(0.9, (content + below) / height);
 }
@@ -129,7 +119,7 @@ function SheetContent(props: { session: Session; exerciseIndex: number; exercise
           },
         ]}
       />
-      <View style={{ marginTop: spacing[4], gap: spacing[2] }}>
+      <View style={{ marginTop: spacing[4] }}>
         <ActionButton
           testID="exercise-rest-save"
           label={t('live_workout.exercise_rest.save.button', { time: formatTimeSpan(rest) })}
@@ -137,9 +127,6 @@ function SheetContent(props: { session: Session; exerciseIndex: number; exercise
           disabled={rest.isZero()}
           onPress={save}
         />
-        <SurfaceText font="text-sm" style={{ color: tokens.muted, textAlign: 'center' }}>
-          {t('live_workout.exercise_rest.scope.body')}
-        </SurfaceText>
       </View>
     </View>
   );
