@@ -80,3 +80,44 @@ export function sessionWithExerciseRest(session: Session, exerciseIndex: number,
   // The units flag only matters when an edit changes the exercise's type, which a rest never does.
   return session.withEditedExercise(exerciseIndex, exercise.blueprint.with({ restBetweenSets: rest }), false);
 }
+
+/** A rest as the exercise rest sheet's two wheels show it: whole minutes, and seconds in steps of 5. */
+export interface RestPick {
+  minutes: number;
+  seconds: number;
+}
+
+const REST_PICK_STEP_SECONDS = 5;
+const REST_PICK_MAX_MINUTES = 10;
+
+export const REST_PICK_MINUTES: readonly number[] = Array.from({ length: REST_PICK_MAX_MINUTES + 1 }, (_, i) => i);
+export const REST_PICK_SECONDS: readonly number[] = Array.from(
+  { length: 60 / REST_PICK_STEP_SECONDS },
+  (_, i) => i * REST_PICK_STEP_SECONDS,
+);
+
+/** The wheels' nearest position to `duration`, held to 0:00 to 10:55. */
+export function restPickOf(duration: Duration): RestPick {
+  const step = REST_PICK_STEP_SECONDS;
+  const total = Math.max(0, Math.round(duration.toMillis() / 1000 / step) * step);
+  const minutes = Math.floor(total / 60);
+  if (minutes > REST_PICK_MAX_MINUTES) {
+    return { minutes: REST_PICK_MAX_MINUTES, seconds: 60 - step };
+  }
+  return { minutes, seconds: total % 60 };
+}
+
+export function durationOfRestPick(pick: RestPick): Duration {
+  return Duration.ofSeconds(pick.minutes * 60 + pick.seconds);
+}
+
+/**
+ * `rest` with the picked min rest. A pick still at the wheels' starting position keeps `rest` as it was, so
+ * saving without turning a wheel doesn't round a rest like 2:22 to 2:20.
+ */
+export function restWithPick(rest: Rest, pick: RestPick): Rest {
+  const opened = restPickOf(rest.minRest);
+  return opened.minutes === pick.minutes && opened.seconds === pick.seconds
+    ? rest
+    : withMinRest(rest, durationOfRestPick(pick));
+}

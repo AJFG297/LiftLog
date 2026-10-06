@@ -24,6 +24,7 @@ screen isn't linked from the app. Its theme controls change the real theme setti
 | `SwipeToDelete` | `swipe-to-delete.tsx` | A row that swipes left to delete: a short swipe shows a Delete button, a long swipe or a hard fling deletes on release. Give the row a screen-reader delete action too, since nobody can swipe with one. `resetKey` snaps it shut when the row below moves into its place. |
 | `ProgressBar` | `progress-bar.tsx` | Accent on a track, from 0 to 1. `tone="inverse"` draws it on an `inverse` slab. |
 | `ToastProvider`, `useToast` | `toast/` | One short message at a time over the app, with an optional action such as Undo. |
+| `WheelPicker` | `wheel-picker.tsx` | Side-by-side wheels, one per column, each with a unit beside it (the exercise rest sheet's minutes and seconds). Three 44pt rows, the middle one picked; a column commits when the finger lifts. Each column takes its share of the full width, unit and margins included. Each column is a pan gesture rather than a scroll view, so an Android sheet can't take over its drag. Our own on both platforms, since Material 3 has no wheel. Screen readers hear each column as adjustable. |
 | `SheetHeader`, `formSheetOptions` | `sheet-header.tsx`, `form-sheet-options.ts` | Native sheets. See below. |
 | `haptics` | `haptics.ts` | `setLogged()`, `restOver()`, `selection()`. |
 

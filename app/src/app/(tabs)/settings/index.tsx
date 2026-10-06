@@ -10,6 +10,8 @@ import { Platform, View } from 'react-native';
 import { Text, Badge, Dialog, Icon, Portal } from 'react-native-paper';
 import Button from '@/components/presentation/foundation/button';
 import * as Application from 'expo-application';
+import * as Updates from 'expo-updates';
+import { SurfaceText } from '@/components/presentation/foundation/surface-text';
 import { useDispatch } from 'react-redux';
 import { openUrl } from '@/utils/open-url';
 import { copyLogs } from '@/store/app';
@@ -33,6 +35,15 @@ export default function SettingsPageIndex() {
   };
 
   const appVersion = Application.nativeApplicationVersion ?? Application.nativeBuildVersion ?? 'Unknown';
+  // Shows whether an over-the-air update reached this phone, and which one: the first block of its id matches
+  // the update id that `eas update` prints.
+  const updateText =
+    Updates.isEmbeddedLaunch || !Updates.updateId
+      ? t('settings.app_info.no_update.label')
+      : t('settings.app_info.update.label', {
+          id: Updates.updateId.slice(0, 8),
+          date: Updates.createdAt?.toLocaleString() ?? '',
+        });
 
   const bugReportUrl = `https://github.com/LiamMorrow/LiftLog/issues/new?assignees=&labels=bug&projects=&template=bug_report.yaml&app-version=${encodeURIComponent(appVersion)}&platform=${Platform.OS}&os-version=${Platform.Version}`;
 
@@ -155,6 +166,9 @@ export default function SettingsPageIndex() {
               .
             </Text>
             <Text>LiftLog is currently version {appVersion}</Text>
+            <SurfaceText testID="app-info-update" font="text-sm" selectable style={{ color: colors.onSurfaceVariant }}>
+              {updateText}
+            </SurfaceText>
           </Dialog.Content>
           <Dialog.Actions>
             <Button onPress={() => setAppInfoOpen(false)}>
