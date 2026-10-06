@@ -1,19 +1,11 @@
+import { blueprintsForPick, sessionWithPickAdded, withPickAppended } from '@/models/exercise-pick';
 import { describe, expect, it } from 'vitest';
 import { OffsetDateTime } from '@js-joda/core';
 import { WeightedExerciseBlueprint } from '@/models/blueprint-models';
 import { ExerciseDescriptor } from '@/models/exercise-models';
 import { exerciseGroupsOf } from '@/models/session-models/exercise-groups';
 import { makeSession, makeWeightedBlueprint } from '@/models/session-models/__test__/helpers';
-import {
-  blueprintsForPick,
-  customExerciseOf,
-  equipmentChoiceOf,
-  pickerListOf,
-  recentExerciseIds,
-  sessionWithPickAdded,
-  toggledPick,
-  withPickAppended,
-} from './exercise-picker';
+import { customExerciseOf, equipmentChoiceOf, pickerListOf, recentExerciseIds, toggledPick } from './exercise-picker';
 import { CarryOver } from '@/models/session-models/carry-over';
 
 const noHistory: CarryOver = { latest: {}, unit: 'kilograms' };

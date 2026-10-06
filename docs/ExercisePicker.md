@@ -2,7 +2,8 @@
 
 The screen for choosing exercises (PM-32, step 13 of the [redesign plan](./plans/redesign.md)). It is one
 route, `app/exercise-search.tsx`, drawn by `components/smart/exercise-search.tsx` (`ExerciseSearch`), with
-its pure logic in `components/presentation/workout-editor/exercise-picker.ts`. The parts All exercises
+its list logic in `components/presentation/workout-editor/exercise-picker.ts`. Picked exercises and their
+blueprint and workout mutations live in `models/exercise-pick.ts`. The parts All exercises
 shares live outside the picker: the fuzzy match (`models/exercise-fuzzy-match.ts`), the muscle groups
 (`models/muscle-groups.ts`: `MUSCLE_GROUPS`, `muscleGroupOf`, `musclesForGroup`), and the search field and
 chip row (`foundation/search-field.tsx`, `foundation/chip-row.tsx`).
@@ -34,13 +35,18 @@ In a workout, each exercise added opens on the numbers a routine would give it a
 weight carried over, and the second of an exercise already in the workout on that exercise's second place
 last time (see [Progression.md](./Progression.md)). A swap keeps the plan (sets, reps, rest) under the picked
 exercise and opens it the same way, keeping any set already logged (`sessionWithExerciseSwapped`). Both carry
-from the carry-over cache without the workout's own entries (`withCarryOver`). When the cache's entry for an
-exercise is the workout's own (a set of it logged today), it holds nothing from before, so just those exercises
+from the carry-over cache without the workout's own entries inside `createWorkoutExerciseChanges`.
+When the cache's entry for an exercise is the workout's own (a set of it logged today), it holds nothing from before, so just those exercises
 are read from the tables without this workout (`latestPerLineage` with `excludeWorkoutId`) before the pick
 lands. If that read fails, they open on the cache as it is, today's numbers included, and the failure is
 logged. Picks for one workout land in the order they were made, so a pick made during a read waits behind it.
 A pick lands in the workout it was picked for, and a swap only if that place still holds the exercise swapped
-out. An edit of its plan meanwhile, such as Add set, is kept. The screens get this through `useCarryOver`.
+out. An edit of its plan meanwhile, such as Add set, is kept. The screens call
+`useWorkoutExerciseChanges` to add, swap, or save an editor draft.
+The module owns history selection, target checks, and the update. Swap checks the outgoing movement;
+editor save checks the exact blueprint captured at dismissal. An intervening blueprint edit cancels the
+editor save, while logged sets with the same blueprint remain. Tests call these same commands over real
+SQLite rather than reproduce the screens' orchestration.
 
 ## How the result comes back
 

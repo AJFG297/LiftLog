@@ -1,9 +1,7 @@
-import { blueprintsForPick, sessionWithPickAdded } from '@/components/presentation/workout-editor/exercise-picker';
-import { useCarryOver } from '@/hooks/useCarryOver';
+import { useWorkoutExerciseChanges } from '@/hooks/useWorkoutExerciseChanges';
 import { useExercisePicker } from '@/hooks/useExerciseSearch';
-import { RootState, useAppSelectorWithArg } from '@/store';
-import { selectSession, updateStoredSession } from '@/store/stored-sessions';
-import { useDispatch, useStore } from 'react-redux';
+import { useAppSelectorWithArg } from '@/store';
+import { selectSession } from '@/store/stored-sessions';
 
 /**
  * Opens the exercise picker and adds what was picked to the end of the session, in tap order, as one
@@ -15,32 +13,19 @@ import { useDispatch, useStore } from 'react-redux';
  */
 export function useAddExercise(sessionId: string | undefined, options?: { onAdded?: (firstIndex: number) => void }) {
   const session = useAppSelectorWithArg(selectSession, sessionId ?? '');
-  const dispatch = useDispatch();
-  const store = useStore<RootState>();
-  const withCarryOver = useCarryOver();
+  const { add } = useWorkoutExerciseChanges();
   const onAdded = options?.onAdded;
 
   const open = useExercisePicker(
     (pick) => {
-      const state = store.getState();
-      if (!sessionId || !state.storedSessions.sessions[sessionId] || !pick.exercises.length) {
+      if (!sessionId) {
         return;
       }
-      const picked = pick.exercises.map((exercise) => ({ id: exercise.id, name: exercise.descriptor.name }));
-      const keys = blueprintsForPick(picked, false).map((blueprint) => blueprint.progressionKey());
-      withCarryOver(sessionId, keys, (carryOver) => {
-        // Read again: with a lookup in between, the workout may have changed or closed meanwhile.
-        const current = store.getState().storedSessions.sessions[sessionId];
-        if (!current) {
-          return;
-        }
-        dispatch(
-          updateStoredSession({
-            sessionId,
-            update: (s) => sessionWithPickAdded(s, picked, pick.asSuperset, carryOver),
-          }),
-        );
-        onAdded?.(current.recordedExercises.length);
+      void add({
+        sessionId,
+        picked: pick.exercises.map((exercise) => ({ id: exercise.id, name: exercise.descriptor.name })),
+        asSuperset: pick.asSuperset,
+        onAdded,
       });
     },
     { requestId: `add-exercise:${sessionId ?? ''}` },
