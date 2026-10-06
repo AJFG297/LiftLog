@@ -77,6 +77,9 @@ work to find the docs relevant to your area, and update it whenever you add, rem
 
 ## Running it yourself
 
+- [BrowserVerification.md](./BrowserVerification.md) - the emulator-free shared workout prototype for
+  Codex cloud agents: Regular and Large viewport checks, commands, evidence, adapters, coverage, and native exclusions.
+
 - [PhoneBuilds.md](./PhoneBuilds.md) - getting a change onto the two Android phones: when a change needs a
   new build and when an EAS Update is enough (the fingerprint runtime version), the commands for each,
   rollback, and keeping both phones on the same version.
@@ -91,7 +94,7 @@ work to find the docs relevant to your area, and update it whenever you add, rem
 
 - [adr/0001-own-backend-no-upstream-compatibility.md](./adr/0001-own-backend-no-upstream-compatibility.md)
   - the fork talks only to its own backend and keeps no compatibility with upstream LiftLog (wire
-  formats, backups, hosted service); what that frees up and what still must stay compatible.
+    formats, backups, hosted service); what that frees up and what still must stay compatible.
 - [adr/0002-own-visual-language.md](./adr/0002-own-visual-language.md) - content surfaces are
   our own components on the theme tokens; system chrome (tabs, sheets, menus, switches, pickers) stays
   native via expo-ui; react-native-paper is phased out screen by screen.

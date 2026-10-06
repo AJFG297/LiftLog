@@ -1,0 +1,690 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$ref": "#/definitions/SessionJSON",
+  "definitions": {
+    "SessionJSON": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "number",
+          "const": 10
+        },
+        "id": {
+          "type": "string"
+        },
+        "blueprint": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "notes": {
+              "type": "string"
+            }
+          },
+          "required": ["name", "notes"]
+        },
+        "recordedExercises": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/RecordedExerciseJSON"
+          }
+        },
+        "date": {
+          "$ref": "#/definitions/LocalDateJSON"
+        },
+        "bodyweight": {
+          "$ref": "#/definitions/WeightJSON"
+        }
+      },
+      "required": ["version", "id", "blueprint", "recordedExercises", "date"]
+    },
+    "RecordedExerciseJSON": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "enum": ["RecordedCardioExercise", "RecordedWeightedExercise"]
+        }
+      },
+      "required": ["type"],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "RecordedCardioExercise"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/definitions/RecordedCardioExerciseJSON"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "RecordedWeightedExercise"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/definitions/RecordedWeightedExerciseJSON"
+          }
+        }
+      ]
+    },
+    "RecordedCardioExerciseJSON": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "RecordedCardioExercise"
+        },
+        "blueprint": {
+          "$ref": "#/definitions/CardioExerciseBlueprintJSON"
+        },
+        "sets": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/RecordedCardioExerciseSetJSON"
+          }
+        },
+        "notes": {
+          "type": "string"
+        }
+      },
+      "required": ["type", "blueprint", "sets"]
+    },
+    "CardioExerciseBlueprintJSON": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "CardioExerciseBlueprint"
+        },
+        "name": {
+          "type": "string"
+        },
+        "exerciseId": {
+          "type": "string",
+          "description": "The exercise this is: an id in the exercise list - a built-in's English catalog name, or a user exercise's uuid. Everything the app writes has one. Leave it out when authoring a plan by hand: the app links the exercise by `name` on import, to one of the user's own exercises or a built-in, and only makes a new exercise when nothing matches. An id the importing device doesn't know is treated the same way."
+        },
+        "sets": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/CardioExerciseSetBlueprintJSON"
+          }
+        },
+        "notes": {
+          "type": "string"
+        },
+        "link": {
+          "type": "string"
+        }
+      },
+      "required": ["type", "name", "sets", "notes", "link"]
+    },
+    "CardioExerciseSetBlueprintJSON": {
+      "type": "object",
+      "properties": {
+        "target": {
+          "$ref": "#/definitions/CardioTargetJSON"
+        },
+        "trackDuration": {
+          "type": "boolean"
+        },
+        "trackDistance": {
+          "type": "boolean"
+        },
+        "trackResistance": {
+          "type": "boolean"
+        },
+        "trackIncline": {
+          "type": "boolean"
+        },
+        "trackWeight": {
+          "type": "boolean"
+        },
+        "trackSteps": {
+          "type": "boolean"
+        },
+        "restBetweenSets": {
+          "$ref": "#/definitions/RestJSON",
+          "description": "Absent when the set has no rest - steady-state cardio does not need one."
+        }
+      },
+      "required": [
+        "target",
+        "trackDuration",
+        "trackDistance",
+        "trackResistance",
+        "trackIncline",
+        "trackWeight",
+        "trackSteps"
+      ]
+    },
+    "CardioTargetJSON": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "enum": ["time", "distance"]
+        }
+      },
+      "required": ["type"],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "time"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/definitions/TimeCardioTargetJSON"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "distance"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/definitions/DistanceCardioTargetJSON"
+          }
+        }
+      ]
+    },
+    "TimeCardioTargetJSON": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "time"
+        },
+        "value": {
+          "$ref": "#/definitions/DurationJSON"
+        }
+      },
+      "required": ["type", "value"]
+    },
+    "DurationJSON": {
+      "type": "string",
+      "format": "duration"
+    },
+    "DistanceCardioTargetJSON": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "distance"
+        },
+        "value": {
+          "$ref": "#/definitions/DistanceJSON"
+        }
+      },
+      "required": ["type", "value"]
+    },
+    "DistanceJSON": {
+      "type": "object",
+      "properties": {
+        "value": {
+          "$ref": "#/definitions/BigNumberJSON"
+        },
+        "unit": {
+          "$ref": "#/definitions/DistanceUnitJSON"
+        }
+      },
+      "required": ["value", "unit"]
+    },
+    "BigNumberJSON": {
+      "type": "string",
+      "examples": ["1.23"],
+      "format": "decimal"
+    },
+    "DistanceUnitJSON": {
+      "type": "string",
+      "enum": ["metre", "yard", "mile", "kilometre"]
+    },
+    "RestJSON": {
+      "type": "object",
+      "properties": {
+        "minRest": {
+          "$ref": "#/definitions/DurationJSON"
+        },
+        "maxRest": {
+          "$ref": "#/definitions/DurationJSON"
+        },
+        "failureRest": {
+          "$ref": "#/definitions/DurationJSON",
+          "description": "Rest taken after a set where the user failed to hit their target reps."
+        }
+      },
+      "required": ["minRest", "maxRest", "failureRest"]
+    },
+    "RecordedCardioExerciseSetJSON": {
+      "type": "object",
+      "properties": {
+        "blueprint": {
+          "$ref": "#/definitions/CardioExerciseSetBlueprintJSON"
+        },
+        "completionDateTime": {
+          "$ref": "#/definitions/OffsetDateTimeJSON"
+        },
+        "duration": {
+          "$ref": "#/definitions/DurationJSON"
+        },
+        "distance": {
+          "$ref": "#/definitions/DistanceJSON"
+        },
+        "resistance": {
+          "$ref": "#/definitions/BigNumberJSON"
+        },
+        "incline": {
+          "$ref": "#/definitions/BigNumberJSON"
+        },
+        "weight": {
+          "$ref": "#/definitions/WeightJSON"
+        },
+        "steps": {
+          "type": "integer"
+        }
+      },
+      "required": ["blueprint"]
+    },
+    "OffsetDateTimeJSON": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "WeightJSON": {
+      "type": "object",
+      "properties": {
+        "unit": {
+          "$ref": "#/definitions/WeightUnitJSON"
+        },
+        "value": {
+          "$ref": "#/definitions/BigNumberJSON"
+        }
+      },
+      "required": ["unit", "value"]
+    },
+    "WeightUnitJSON": {
+      "type": "string",
+      "enum": ["kilograms", "pounds", "nil"]
+    },
+    "RecordedWeightedExerciseJSON": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "RecordedWeightedExercise"
+        },
+        "blueprint": {
+          "$ref": "#/definitions/WeightedExerciseBlueprintJSON"
+        },
+        "potentialSets": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/PotentialSetJSON"
+          },
+          "description": "Working sets only; warm-ups live in `warmupSets`."
+        },
+        "warmupSets": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/PotentialSetJSON"
+          },
+          "description": "One slot per planned warm-up, rebuilt from the plan every session. Never carries an RPE."
+        },
+        "notes": {
+          "type": "string"
+        }
+      },
+      "required": ["type", "blueprint", "potentialSets", "warmupSets"]
+    },
+    "WeightedExerciseBlueprintJSON": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "WeightedExerciseBlueprint"
+        },
+        "name": {
+          "type": "string"
+        },
+        "exerciseId": {
+          "type": "string",
+          "description": "The exercise this is: an id in the exercise list - a built-in's English catalog name, or a user exercise's uuid. Everything the app writes has one. Leave it out when authoring a plan by hand: the app links the exercise by `name` on import, to one of the user's own exercises or a built-in, and only makes a new exercise when nothing matches. An id the importing device doesn't know is treated the same way."
+        },
+        "plannedSets": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/PlannedSetJSON"
+          },
+          "description": "What the plan asks for, one entry per set."
+        },
+        "restBetweenSets": {
+          "$ref": "#/definitions/RestJSON"
+        },
+        "supersetWithNext": {
+          "type": "boolean",
+          "description": "When true, this exercise is performed back-to-back with the following one (a superset), with no rest in between."
+        },
+        "notes": {
+          "type": "string"
+        },
+        "link": {
+          "type": "string",
+          "description": "A url to some explanation of how to do this. We should not fill this unless the user has explicitly given us a link to fill"
+        },
+        "progression": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ProgressionRuleJSON"
+          },
+          "description": "Ordered; the first rule that can still move, moves. Empty means no automatic progression."
+        },
+        "resistance": {
+          "$ref": "#/definitions/ResistanceJSON",
+          "description": "Where this movement's load comes from: the whole stored weight (`external`), what is added on top of the lifter (`bodyweight`), or nothing at all (`none`, e.g. crunches)."
+        },
+        "warmupSets": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/PlannedWarmupSetJSON"
+          },
+          "description": "Sets done before the working sets that never count toward progression, records or stats. Kept apart from `plannedSets` so everything reading working sets leaves them out without a filter."
+        }
+      },
+      "required": [
+        "type",
+        "name",
+        "plannedSets",
+        "restBetweenSets",
+        "supersetWithNext",
+        "notes",
+        "link",
+        "progression",
+        "resistance",
+        "warmupSets"
+      ]
+    },
+    "PlannedSetJSON": {
+      "type": "object",
+      "properties": {
+        "reps": {
+          "$ref": "#/definitions/RepsTargetJSON"
+        },
+        "kind": {
+          "$ref": "#/definitions/PlannedSetKindJSON"
+        }
+      },
+      "required": ["reps", "kind"],
+      "description": "What the plan asks for on one set."
+    },
+    "RepsTargetJSON": {
+      "type": "object",
+      "properties": {
+        "min": {
+          "type": "integer"
+        },
+        "max": {
+          "type": "integer"
+        }
+      },
+      "required": ["min", "max"],
+      "description": "Always a band; `min === max` is a point target."
+    },
+    "PlannedSetKindJSON": {
+      "type": "string",
+      "enum": ["working", "drop", "myo", "failure"],
+      "description": "What a planned set is for. `working` is a plain set; `failure` is taken to failure and counts like a working set; `drop` and `myo` add volume but never set a record, gate progression or carry their numbers into the next session. Warm-ups are planned in `warmupSets`, not here."
+    },
+    "ProgressionRuleJSON": {
+      "type": "object",
+      "properties": {
+        "axis": {
+          "$ref": "#/definitions/ProgressionAxisJSON"
+        },
+        "step": {
+          "$ref": "#/definitions/BigNumberJSON"
+        },
+        "scope": {
+          "$ref": "#/definitions/SetScopeJSON"
+        },
+        "ceiling": {
+          "$ref": "#/definitions/BigNumberJSON",
+          "description": "Where the axis stops climbing. Above this the rule can no longer move, so the next one is tried."
+        },
+        "onCeiling": {
+          "type": "string",
+          "const": "reset",
+          "description": "Drop the axis back to what the plan asks for once a later rule fires."
+        },
+        "trigger": {
+          "$ref": "#/definitions/SuccessRuleJSON"
+        }
+      },
+      "required": ["axis", "step", "scope", "trigger"],
+      "description": "One step of automatic progression. An exercise carries an ordered list of these, and the first rule that can still move is the one that moves.\n\n`step` and `ceiling` are in the axis's own unit - whole reps, or plate increments in whatever unit the lifter works in. Deliberately not a weight: 2.5 in a kilogram gym and 5 in a pound gym are the same step, not conversions of one another, and a blueprint has no unit to be expressed in."
+    },
+    "ProgressionAxisJSON": {
+      "type": "string",
+      "enum": ["reps", "load"],
+      "description": "Which number a rule moves."
+    },
+    "SetScopeJSON": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "enum": ["allSets", "lowestSets"]
+        }
+      },
+      "required": ["type"],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "allSets"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/definitions/AllSetsScopeJSON"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "lowestSets"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/definitions/LowestSetsScopeJSON"
+          }
+        }
+      ],
+      "description": "Which sets a rule moves."
+    },
+    "AllSetsScopeJSON": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "allSets"
+        }
+      },
+      "required": ["type"]
+    },
+    "LowestSetsScopeJSON": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "lowestSets"
+        },
+        "pick": {
+          "type": "string",
+          "enum": ["first", "middle", "last", "all"]
+        }
+      },
+      "required": ["type", "pick"],
+      "description": "Ranks by the rule's own axis, so a reps rule picks the smallest target rather than the smallest weight."
+    },
+    "SuccessRuleJSON": {
+      "type": "string",
+      "const": "allSetsMetTarget",
+      "description": "What has to happen for a rule to fire."
+    },
+    "ResistanceJSON": {
+      "type": "string",
+      "enum": ["none", "external", "bodyweight"]
+    },
+    "PlannedWarmupSetJSON": {
+      "type": "object",
+      "properties": {
+        "load": {
+          "$ref": "#/definitions/WarmupLoadJSON",
+          "description": "Absent for an exercise with no resistance, where a warm-up is reps only. A bodyweight exercise only takes an absolute (added) weight."
+        },
+        "reps": {
+          "type": "integer"
+        }
+      },
+      "required": ["reps"],
+      "description": "What the plan asks for on one warm-up set."
+    },
+    "WarmupLoadJSON": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "enum": ["percent", "absolute"]
+        }
+      },
+      "required": ["type"],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "percent"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/definitions/PercentWarmupLoadJSON"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "absolute"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/definitions/AbsoluteWarmupLoadJSON"
+          }
+        }
+      ]
+    },
+    "PercentWarmupLoadJSON": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "percent"
+        },
+        "percent": {
+          "type": "number",
+          "description": "Out of 100, so `50` is half the working weight."
+        }
+      },
+      "required": ["type", "percent"],
+      "description": "A share of the session's heaviest working set, rounded to the exercise's weight increment."
+    },
+    "AbsoluteWarmupLoadJSON": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "absolute"
+        },
+        "weight": {
+          "$ref": "#/definitions/WeightJSON"
+        }
+      },
+      "required": ["type", "weight"],
+      "description": "A fixed weight, such as an empty bar. The one place a blueprint carries a unit: it is a real load, not a plate increment, so it is converted into whatever unit the session is in."
+    },
+    "PotentialSetJSON": {
+      "type": "object",
+      "properties": {
+        "target": {
+          "$ref": "#/definitions/SetTargetJSON",
+          "description": "The target this session is chasing for the set, seeded from the blueprint and then its own."
+        },
+        "kind": {
+          "$ref": "#/definitions/SetKindJSON",
+          "description": "Always `warmup` in `warmupSets`."
+        },
+        "set": {
+          "$ref": "#/definitions/RecordedSetJSON"
+        },
+        "weight": {
+          "$ref": "#/definitions/WeightJSON"
+        },
+        "rpe": {
+          "type": "number",
+          "description": "How hard the set felt, 6-10 in half steps. Lives on the slot rather than the recorded set so it can be picked before the set is logged."
+        }
+      },
+      "required": ["target", "kind", "weight"]
+    },
+    "SetTargetJSON": {
+      "type": "object",
+      "properties": {
+        "reps": {
+          "$ref": "#/definitions/RepsTargetJSON"
+        }
+      },
+      "required": ["reps"]
+    },
+    "SetKindJSON": {
+      "type": "string",
+      "enum": ["working", "warmup", "drop", "myo", "failure"]
+    },
+    "RecordedSetJSON": {
+      "type": "object",
+      "properties": {
+        "repsCompleted": {
+          "type": "integer"
+        },
+        "completionDateTime": {
+          "$ref": "#/definitions/OffsetDateTimeJSON"
+        }
+      },
+      "required": ["repsCompleted", "completionDateTime"]
+    },
+    "LocalDateJSON": {
+      "type": "string",
+      "format": "date"
+    }
+  }
+}
