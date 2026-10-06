@@ -779,6 +779,8 @@
   "settings.app_configuration.title": "App configuration",
   "settings.app_info.subtitle": "Display app information",
   "settings.app_info.title": "App info",
+  "settings.app_info.update.label": "Update {id}, published {date}",
+  "settings.app_info.no_update.label": "No update installed: running the version the app was built with",
   "settings.bug_report.subtitle": "Let us know when you encounter a bug",
   "settings.bug_report.title": "Bug report",
   "settings.copy_logs.subtitle": "Copy your logs for a bug report",
