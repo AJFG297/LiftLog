@@ -10,8 +10,8 @@ import {
   REST_PICK_SECONDS,
   RestPick,
   restPickOf,
+  restWithPick,
   sessionWithExerciseRest,
-  withMinRest,
 } from '@/models/rest-default';
 import { RecordedWeightedExercise, Session } from '@/models/session-models';
 import { useAppSelector } from '@/store';
@@ -83,7 +83,7 @@ function SheetContent(props: { session: Session; exerciseIndex: number; exercise
         update: (s) => {
           const current = s.recordedExercises[exerciseIndex];
           return current instanceof RecordedWeightedExercise
-            ? sessionWithExerciseRest(s, exerciseIndex, withMinRest(current.blueprint.restBetweenSets, rest))
+            ? sessionWithExerciseRest(s, exerciseIndex, restWithPick(current.blueprint.restBetweenSets, pick))
             : s;
         },
       }),

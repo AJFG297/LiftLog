@@ -71,7 +71,7 @@ The **Rest shortcut** ("Rest 2:30") on a weighted exercise's card changes that e
 workout only. It is hidden with rest timers off, and in a superset, which rests after each round instead. It
 opens the exercise rest sheet (`session/exercise-rest`, `components/smart/exercise-rest-sheet.tsx`): minutes
 and seconds wheels (`restPickOf` rounds the rest to the nearest 5 seconds, 0:00 to 10:55) and a "Rest 1:45"
-button, disabled at 0:00, that writes the min rest with `withMinRest` and `sessionWithExerciseRest`. The
+button, disabled at 0:00, that writes the min rest with `restWithPick` and `sessionWithExerciseRest` (left as it was if no wheel moved, so an unrounded rest like 2:22 survives a save). The
 sheet is one detent, sized to its content (`useExerciseRestSheetDetent`, which clears the Android tab bar),
 short enough that the sets stay in view above it; a tap there closes it. Nothing is written to the routine:
 the finish sheet lists the change as a rest row, so keeping it is asked there.

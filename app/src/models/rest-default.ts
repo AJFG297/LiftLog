@@ -110,3 +110,14 @@ export function restPickOf(duration: Duration): RestPick {
 export function durationOfRestPick(pick: RestPick): Duration {
   return Duration.ofSeconds(pick.minutes * 60 + pick.seconds);
 }
+
+/**
+ * `rest` with the picked min rest. A pick still at the wheels' starting position keeps `rest` as it was, so
+ * saving without turning a wheel doesn't round a rest like 2:22 to 2:20.
+ */
+export function restWithPick(rest: Rest, pick: RestPick): Rest {
+  const opened = restPickOf(rest.minRest);
+  return opened.minutes === pick.minutes && opened.seconds === pick.seconds
+    ? rest
+    : withMinRest(rest, durationOfRestPick(pick));
+}

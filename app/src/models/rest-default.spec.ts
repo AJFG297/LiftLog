@@ -8,6 +8,7 @@ import {
   REST_PICK_MINUTES,
   REST_PICK_SECONDS,
   restPickOf,
+  restWithPick,
   routineExerciseLocation,
   routineExerciseRest,
   sessionWithExerciseRest,
@@ -192,5 +193,18 @@ describe('a rest picked for this workout only', () => {
     expect(rows).toEqual([expect.objectContaining({ kind: 'rest', exerciseName: 'Bench Press' })]);
     const row = rows[0] as Extract<(typeof rows)[number], { kind: 'rest' }>;
     expect([seconds(row.from), seconds(row.to)]).toEqual([150, 105]);
+  });
+});
+
+describe('restWithPick', () => {
+  const unround: Rest = { ...rest, minRest: Duration.ofSeconds(142) };
+
+  it('keeps a rest the wheels round when no wheel was turned', () => {
+    expect(seconds(restWithPick(unround, { minutes: 2, seconds: 20 }).minRest)).toBe(142);
+  });
+
+  it('takes the picked rest once a wheel moves', () => {
+    expect(seconds(restWithPick(unround, { minutes: 2, seconds: 25 }).minRest)).toBe(145);
+    expect(seconds(restWithPick(rest, { minutes: 1, seconds: 45 }).minRest)).toBe(105);
   });
 });
