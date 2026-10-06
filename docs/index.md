@@ -65,8 +65,9 @@ work to find the docs relevant to your area, and update it whenever you add, rem
   behaves (placeholder, typing, ± steps), the step per equipment and unit, the accessory row (plate
   maths, per dumbbell, on the stack, RPE chips), and the bar and plate preferences behind plate maths.
 - [PlanFileFormat.md](./PlanFileFormat.md) - the `.liftlogplan` file format, how plans are imported and
-  exported (exercises linked by name, `exerciseId` optional), and the Claude skill that authors plan files
-  against the schema.
+  exported (exercises linked by name, `exerciseId` optional), importing a routine from an `.xlsx` or `.csv`
+  spreadsheet (the header aliases and cell grammar the parser reads), and the Claude skill that authors plan
+  files against the schema.
 - [PlaintextExport.md](./PlaintextExport.md) — CSV/JSON export of workout data, including which fields
   are included, their order and how it is read in batches. Explicitly _not_ a backup mechanism; LiftLog
   cannot read these files back.
