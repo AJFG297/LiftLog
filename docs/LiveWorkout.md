@@ -14,8 +14,8 @@ and the number pad, and PM-30 moved rest into the header.
   planned and a progress bar. The tiles of the page on screen are drawn inverted, and the strip scrolls to
   keep them in view. The last tile adds exercises from the [exercise picker](./ExercisePicker.md), and the
   screen moves to the first one added.
-- **Focus page**: a card per exercise (`LiveExerciseCard`) with a meta line (equipment, rest or its place
-  in a superset, and how many working sets), the History, Warm-up, Note and Swap shortcuts, the Today
+- **Focus page**: a card per exercise (`LiveExerciseCard`) with a meta line (equipment, its place in a
+  superset, and how many working sets), the History, Rest, Warm-up, Note and Swap shortcuts, the Today
   target card, and the set table (see below). A superset page starts with a banner. Cardio exercises still
   use the older set tiles.
 - **Up next bar** (`UpNextBar`): the next unfinished page. It fills with the accent once the page on
@@ -66,6 +66,15 @@ running workout's exercise. The finish sheet compares the two, so it doesn't lis
 again. The row turns into "Bench Press now rests 2:00" with Undo, which puts both rests back. It is only
 offered for a weighted exercise that is in the workout's routine; a freeform workout or an exercise added
 today has no routine exercise to save into.
+
+The **Rest shortcut** ("Rest 2:30") on a weighted exercise's card changes that exercise's rest for this
+workout only. It is hidden with rest timers off, and in a superset, which rests after each round instead. It
+opens the exercise rest sheet (`session/exercise-rest`, `components/smart/exercise-rest-sheet.tsx`): minutes
+and seconds wheels (`restPickOf` rounds the rest to the nearest 5 seconds, 0:00 to 10:55) and a "Rest 1:45"
+button, disabled at 0:00, that writes the min rest with `restWithPick` and `sessionWithExerciseRest` (left as it was if no wheel moved, so an unrounded rest like 2:22 survives a save). The
+sheet is one detent, sized to its content (`useExerciseRestSheetDetent`, which clears the Android tab bar),
+short enough that the sets stay in view above it; a tap there closes it. Nothing is written to the routine:
+the finish sheet lists the change as a rest row, so keeping it is asked there.
 
 The timer isn't part of a stored workout, so it is also kept in its own key (`ActiveRestTimer`, see
 [Storage.md](./Storage.md#direct-keyvaluestore-use)) and put back once workouts are loaded, so a relaunch

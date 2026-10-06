@@ -1,9 +1,11 @@
 import StackWithHeader from '@/components/layout/stack-with-header';
 import { formSheetOptions } from '@/components/presentation/foundation/form-sheet-options';
+import { useExerciseRestSheetDetent } from '@/components/smart/exercise-rest-sheet';
 import { WithWorkoutInProgressBar } from '@/components/smart/workout-in-progress';
 import { Stack } from 'expo-router';
 
 export default function Layout() {
+  const exerciseRestDetent = useExerciseRestSheetDetent();
   return (
     <WithWorkoutInProgressBar>
       <StackWithHeader>
@@ -14,6 +16,8 @@ export default function Layout() {
         {/* Tall enough that all five set types show above the Android tab bar, which draws over this stack's sheets. */}
         <Stack.Screen name="session/set-type" options={formSheetOptions([0.8, 0.95])} />
         <Stack.Screen name="session/rest" options={formSheetOptions([0.75, 0.95])} />
+        {/* Short, so the sets it changes the rest between stay in view above it. */}
+        <Stack.Screen name="session/exercise-rest" options={formSheetOptions([exerciseRestDetent])} />
         <Stack.Screen name="other-workout" options={formSheetOptions([0.6, 0.95])} />
       </StackWithHeader>
     </WithWorkoutInProgressBar>

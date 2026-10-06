@@ -17,7 +17,7 @@ export interface ExerciseShortcut {
 
 interface FocusExerciseCardProps {
   name: string;
-  /** "Barbell · Rest 2:30". */
+  /** "Barbell · 3 working sets". */
   meta: string;
   /** A superset page holds several cards, so their titles step down a size. */
   compact: boolean;
