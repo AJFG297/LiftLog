@@ -15,7 +15,7 @@ import { useToast } from '@/components/presentation/foundation/toast';
 import { MIN_TOUCH_TARGET } from '@/components/presentation/foundation/touch-target';
 import { ASK_AI_BAR_ENABLED, AskAiBar } from '@/components/presentation/workout-editor/ask-ai-bar';
 import { formatCardioTarget } from '@/utils/format-cardio-target';
-import { withPickAppended } from '@/components/presentation/workout-editor/exercise-picker';
+import { withPickAppended } from '@/models/exercise-pick';
 import { RoutineColorSwatches } from '@/components/presentation/workout-editor/routine-color-swatches';
 import { RoutineExerciseActions } from '@/components/presentation/workout-editor/routine-exercise-actions';
 import {

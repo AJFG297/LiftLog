@@ -129,9 +129,10 @@ what each set kind carries in `app/src/models/session-models/set-kind.ts`; one e
 time (`nextRecordedExercise`, which routine start, add, swap and Do again all go through) and a swap
 (`sessionWithExerciseReplaced`) in `app/src/models/session-models/carry-over.ts`; the cache minus the
 workout's own entries for an add or swap, read from the tables when an entry is the workout's own, in pick
-order (`withCarryOver`), in `app/src/store/stored-sessions/index.ts`, and the hook the screens call it
-through (`useCarryOver`) in `app/src/hooks/useCarryOver.ts`; Do again's structure (`repeatBlueprint`) in
-`app/src/models/workout-detail.ts`; session start and Do again (`repeatSession`, which reads the cache from
+order inside `createWorkoutExerciseChanges`, in
+`app/src/store/stored-sessions/workout-exercise-changes.ts`, and the hook the screens call it
+through (`useWorkoutExerciseChanges`) in `app/src/hooks/useWorkoutExerciseChanges.ts`;
+Do again's structure (`repeatBlueprint`) in `app/src/models/workout-detail.ts`; session start and Do again (`repeatSession`, which reads the cache from
 the store when tapped) in `app/src/services/session-service.ts`; the editor in
 `app/src/components/presentation/workout-editor/progressive-overload.tsx`. The stored
 `workout_exercise.progression_key` column was rewritten to the new key by the

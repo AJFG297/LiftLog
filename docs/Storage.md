@@ -246,7 +246,7 @@ one in progress included:
   were first stored), `batchSize` at a time: the plaintext export, which serialises batch by batch.
 - `latestPerLineage({ progressionKeys?, excludeWorkoutId? })` - the latest performance of every lineage:
   the carry-over cache below. With `excludeWorkoutId` it is what that workout's exercises carried on from:
-  Today's target reads it, and so do add, swap and the exercise editor (`withCarryOver`) for an exercise
+  Today's target reads it, and so do add, swap and the exercise editor (`createWorkoutExerciseChanges`) for an exercise
   the workout has already logged. Unfiltered, it walks the `lineage` index from one lineage to the next and seeks each
   one's latest time, so it reads no whole table: startup's cost doesn't grow with the history.
 - `loadAll()` - every workout, for the jobs that must touch each one once (a data migration, reading a
@@ -475,7 +475,7 @@ editing different workouts cannot collide. Use `selectSession(state, id)` for an
   offscreen. The workout-in-progress bar uses it, so the tabs under the workout don't re-render on every
   set; `useWorkoutQuery` applies the same rule to repository reads.
 - **The carry-over cache** (`latestExercises`, the latest performance per lineage, which
-  `SessionService`, the routine editor, and add, swap and the exercise editor (`useCarryOver`) read) is loaded at startup by one query, `latestPerLineage()`,
+  `SessionService`, the routine editor, and add, swap and the exercise editor (`useWorkoutExerciseChanges`) read) is loaded at startup by one query, `latestPerLineage()`,
   and kept current in two steps. The reducer moves it forward synchronously: a set logged in the workout
   in progress, or an edit at the same time or later, swaps the entry in without reading anything, so
   finishing a workout can build the next one at once. An entry the write may have moved _back_ - the
