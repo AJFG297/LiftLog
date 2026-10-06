@@ -8,6 +8,7 @@ import { WorkoutRepository } from '@/services/workout-repository';
 import {
   CardioExerciseBlueprint,
   CardioExerciseSetBlueprint,
+  ExerciseBlueprint,
   ProgressionRule,
   SessionBlueprint,
   WeightedExerciseBlueprint,
@@ -119,16 +120,30 @@ async function startFreeform(app: App): Promise<string> {
  * What `useAddExercise` dispatches when the picker hands back a pick. The app does not wait for it before
  * the next tap; the promise is for a test to wait on.
  */
-function startAdding(app: App, sessionId: string, picked: PickedExerciseRef[]): Promise<void> {
+function startAdding(
+  app: App,
+  sessionId: string,
+  picked: PickedExerciseRef[],
+  onAdded?: (firstIndex: number) => void,
+): Promise<void> {
+  const state = app.getState();
+  if (!state.storedSessions.sessions[sessionId] || !picked.length) {
+    return Promise.resolve();
+  }
   const keys = blueprintsForPick(picked, false).map((blueprint) => blueprint.progressionKey());
-  return withCarryOver(app.getState, app, sessionId, keys, (carryOver) =>
+  return withCarryOver(app.getState, app, sessionId, keys, (carryOver) => {
+    const current = app.getState().storedSessions.sessions[sessionId];
+    if (!current) {
+      return;
+    }
     app.store.dispatch(
       updateStoredSession({
         sessionId,
         update: (s) => sessionWithPickAdded(s, picked, false, carryOver),
       }),
-    ),
-  );
+    );
+    onAdded?.(current.recordedExercises.length);
+  });
 }
 
 async function addThroughPicker(app: App, sessionId: string, picked: PickedExerciseRef[]) {
@@ -152,7 +167,40 @@ function setsOf(app: App, sessionId: string, index: number) {
 const opened = (kg: number, reps: number, count = 3) =>
   Array.from({ length: count }, () => ({ kg, unit: 'kilograms', reps, logged: false }));
 
+function delayNextLatestRead(app: App) {
+  let release = () => {};
+  let markStarted = () => {};
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const started = new Promise<void>((resolve) => {
+    markStarted = resolve;
+  });
+  const latestPerLineage = app.workoutRepository.latestPerLineage.bind(app.workoutRepository);
+  vi.spyOn(app.workoutRepository, 'latestPerLineage').mockImplementationOnce(async (options) => {
+    const result = await latestPerLineage(options);
+    markStarted();
+    await gate;
+    return result;
+  });
+  return { started, release };
+}
+
 describe('adding an exercise through the picker (PM-41)', () => {
+  it('calls onAdded synchronously after a cached add has mutated the workout', async () => {
+    const app = await startApp([]);
+    const sessionId = await startFreeform(app);
+    const observed: [number, number][] = [];
+
+    const adding = startAdding(app, sessionId, [{ id: 'Lunge', name: 'Lunge' }], (firstIndex) => {
+      observed.push([firstIndex, app.getState().storedSessions.sessions[sessionId]!.recordedExercises.length]);
+    });
+
+    expect(app.getState().storedSessions.sessions[sessionId]!.recordedExercises).toHaveLength(1);
+    expect(observed).toEqual([[0, 1]]);
+    await adding;
+  });
+
   it('opens on the weight and reps last time carried, as a routine would', async () => {
     const app = await startApp([
       pastWorkout('sep-28', LocalDate.of(2026, 9, 28), [{ blueprint: lunge, kg: 45, reps: [10, 10, 10] }]),
@@ -357,7 +405,54 @@ async function swapThroughPicker(app: App, sessionId: string, index: number, pic
   await app.settle();
 }
 
+/** What the exercise editor dispatches when it is dismissed with its draft applied. */
+function startEditing(app: App, sessionId: string, index: number, updated: ExerciseBlueprint): Promise<void> {
+  const edited = app.getState().storedSessions.sessions[sessionId]?.recordedExercises[index]?.blueprint;
+  if (!edited) {
+    return Promise.resolve();
+  }
+  const keys = edited.movementKey() === updated.movementKey() ? [] : [updated.progressionKey()];
+  return withCarryOver(app.getState, app, sessionId, keys, (carryOver) =>
+    app.store.dispatch(
+      updateStoredSession({
+        sessionId,
+        update: (s) =>
+          s.recordedExercises[index]?.blueprint === edited
+            ? sessionWithExerciseEdited(s, index, updated, carryOver)
+            : s,
+      }),
+    ),
+  );
+}
+
+async function editThroughEditor(app: App, sessionId: string, index: number, updated: ExerciseBlueprint) {
+  await startEditing(app, sessionId, index, updated);
+  await app.settle();
+}
+
 const bench = makeWeightedBlueprint({ name: 'Bench Press', exerciseId: 'Bench Press', sets: 3, progression: [] });
+
+async function delayedEditorMovementEdit() {
+  const app = await startApp([
+    pastWorkout('sep-28', LocalDate.of(2026, 9, 28), [{ blueprint: lunge, kg: 45, reps: [10, 10, 10] }]),
+  ]);
+  const sessionId = await startFreeform(app);
+  await addThroughPicker(app, sessionId, [{ id: 'Lunge', name: 'Lunge' }]);
+  app.store.dispatch(
+    updateStoredSession({
+      sessionId,
+      update: (s) => s.withCycledExerciseReps(0, 0, OffsetDateTime.of(2026, 10, 4, 9, 0, 0, 0, ZoneOffset.UTC)),
+    }),
+  );
+  await app.settle();
+  await addThroughPicker(app, sessionId, [{ id: 'Bench Press', name: 'Bench Press' }]);
+  const edited = app.getState().storedSessions.sessions[sessionId]!.recordedExercises[1]!
+    .blueprint as WeightedExerciseBlueprint;
+  const delayed = delayNextLatestRead(app);
+  const editing = startEditing(app, sessionId, 1, edited.with({ name: 'Lunge', exerciseId: 'Lunge' }));
+  await delayed.started;
+  return { app, sessionId, delayed, editing };
+}
 
 describe('swapping an exercise (PM-41)', () => {
   it('opens the exercise swapped in on its own carried weight, as an add would', async () => {
@@ -413,25 +508,73 @@ describe('swapping an exercise (PM-41)', () => {
     ]);
     const sessionId = await startFreeform(app);
     await addThroughPicker(app, sessionId, [{ id: 'Bench Press', name: 'Bench Press' }]);
-    /** What the exercise editor dispatches when it is dismissed with `edit` applied to the draft. */
-    const editInEditor = async (edit: (blueprint: WeightedExerciseBlueprint) => WeightedExerciseBlueprint) => {
-      const state = app.getState();
-      const edited = state.storedSessions.sessions[sessionId]!.recordedExercises[0]!.blueprint;
-      const updated = edit(edited as WeightedExerciseBlueprint);
-      const keys = edited.movementKey() === updated.movementKey() ? [] : [updated.progressionKey()];
-      await withCarryOver(app.getState, app, sessionId, keys, (carryOver) =>
-        app.store.dispatch(
-          updateStoredSession({ sessionId, update: (s) => sessionWithExerciseEdited(s, 0, updated, carryOver) }),
-        ),
-      );
-      await app.settle();
-    };
-
-    await editInEditor((blueprint) => blueprint.with({ sets: 4 }));
+    const beforeSetEdit = app.getState().storedSessions.sessions[sessionId]!.recordedExercises[0]!
+      .blueprint as WeightedExerciseBlueprint;
+    await editThroughEditor(app, sessionId, 0, beforeSetEdit.with({ sets: 4 }));
     expect(setsOf(app, sessionId, 0)).toEqual(opened(80, 10, 4));
 
-    await editInEditor((blueprint) => blueprint.with({ name: 'Lunge', exerciseId: 'Lunge' }));
+    const beforeMovementEdit = app.getState().storedSessions.sessions[sessionId]!.recordedExercises[0]!
+      .blueprint as WeightedExerciseBlueprint;
+    await editThroughEditor(app, sessionId, 0, beforeMovementEdit.with({ name: 'Lunge', exerciseId: 'Lunge' }));
     expect(setsOf(app, sessionId, 0)).toEqual(opened(45, 10, 4));
+  });
+
+  it('does not apply a delayed editor draft after that exercise blueprint changes', async () => {
+    const { app, sessionId, delayed, editing } = await delayedEditorMovementEdit();
+    app.store.dispatch(
+      updateStoredSession({
+        sessionId,
+        update: (s) => s.withEditedExercise(1, bench.with({ sets: 4 }), false),
+      }),
+    );
+    await app.settle();
+
+    delayed.release();
+    await editing;
+    await app.settle();
+
+    expect(app.getState().storedSessions.sessions[sessionId]!.recordedExercises[1]!.blueprint.exerciseId).toBe(
+      'Bench Press',
+    );
+    expect(setsOf(app, sessionId, 1)).toEqual(opened(0, 10, 4));
+  });
+
+  it('does not apply a delayed editor draft after the exercise is removed', async () => {
+    const { app, sessionId, delayed, editing } = await delayedEditorMovementEdit();
+    app.store.dispatch(updateStoredSession({ sessionId, update: (s) => s.withRemovedExercise(1) }));
+    await app.settle();
+
+    delayed.release();
+    await editing;
+    await app.settle();
+
+    expect(
+      app.getState().storedSessions.sessions[sessionId]!.recordedExercises.map((x) => x.blueprint.exerciseId),
+    ).toEqual(['Lunge']);
+  });
+
+  it('edits the same movement without a read and retains its logged sets', async () => {
+    const app = await startApp([]);
+    const sessionId = await startFreeform(app);
+    await addThroughPicker(app, sessionId, [{ id: 'Bench Press', name: 'Bench Press' }]);
+    app.store.dispatch(
+      updateStoredSession({
+        sessionId,
+        update: (s) => s.withCycledExerciseReps(0, 0, OffsetDateTime.of(2026, 10, 4, 9, 0, 0, 0, ZoneOffset.UTC)),
+      }),
+    );
+    await app.settle();
+    const latestPerLineage = vi.spyOn(app.workoutRepository, 'latestPerLineage');
+    const current = app.getState().storedSessions.sessions[sessionId]!.recordedExercises[0]!
+      .blueprint as WeightedExerciseBlueprint;
+
+    await editThroughEditor(app, sessionId, 0, current.with({ sets: 4 }));
+
+    expect(latestPerLineage).not.toHaveBeenCalled();
+    expect(setsOf(app, sessionId, 0)).toEqual([
+      { kg: 0, unit: 'kilograms', reps: 10, logged: true },
+      ...opened(0, 10, 3),
+    ]);
   });
 
   it('carries incline and resistance into a cardio exercise swapped in', async () => {
