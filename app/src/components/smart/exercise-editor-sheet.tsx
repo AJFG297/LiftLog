@@ -29,7 +29,6 @@ import { useRouter } from 'expo-router';
 import { ReactNode, useState } from 'react';
 import { View } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
-import { Portal } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface ExerciseEditorSheetProps {
@@ -83,72 +82,68 @@ export function ExerciseEditorSheet(props: ExerciseEditorSheetProps) {
   };
 
   return (
-    // The routine's Copy to another routine dialog is a Paper portal, which would otherwise open on the
-    // root view behind this native sheet.
-    <Portal.Host>
-      <View style={{ flex: 1, backgroundColor: tokens.bg }}>
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: spacing[3],
-            paddingTop: spacing[5],
-            paddingBottom: spacing[2],
-            paddingLeft: spacing[5],
-            paddingRight: spacing[4],
-          }}
+    <View style={{ flex: 1, backgroundColor: tokens.bg }}>
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: spacing[3],
+          paddingTop: spacing[5],
+          paddingBottom: spacing[2],
+          paddingLeft: spacing[5],
+          paddingRight: spacing[4],
+        }}
+      >
+        <SurfaceText
+          font="text-lg"
+          weight="600"
+          accessibilityRole="header"
+          numberOfLines={1}
+          style={{ flexShrink: 1, color: tokens.ink }}
         >
-          <SurfaceText
-            font="text-lg"
-            weight="600"
-            accessibilityRole="header"
-            numberOfLines={1}
-            style={{ flexShrink: 1, color: tokens.ink }}
-          >
-            {t('exercise.edit.title')}
-          </SurfaceText>
-          <HeaderPillButton testID="exercise-editor-save" label={copy.saveLabel} onPress={save} maxWidth="60%" />
-        </View>
-        <KeyboardAwareScrollView
-          bottomOffset={spacing[4]}
-          keyboardShouldPersistTaps="handled"
-          contentContainerStyle={{
-            gap: spacing[5],
-            paddingHorizontal: spacing.pageHorizontalMargin,
-            paddingTop: spacing[2],
-            paddingBottom: insets.bottom + spacing[8],
-          }}
-        >
-          <ExerciseEditor
-            exercise={exercise}
-            update={update}
-            scopeSentence={copy.sentence}
-            meta={exerciseMetaOf(t, catalog[exercise.exerciseId])}
-            nextExerciseName={props.nextExerciseName}
-            restTimersEnabled={restTimersEnabled}
-            formatStep={formatStep}
-            onSwap={() => openSearch(exercise.name)}
-            onOpenLoad={() => router.push(getExerciseLoadHref(editId))}
-            onOpenRest={() => router.push(getExerciseEditRestHref(editId))}
-            onOpenWarmups={() => router.push(getEditorWarmupsHref(editId, props.scope, props.workingWeight))}
-            onOpenProgression={() => router.push(getExerciseProgressionHref(editId))}
-            targets={targets}
-            cardioTargets={cardioTargets}
-          />
-          {props.footer}
-        </KeyboardAwareScrollView>
-        {exercise instanceof WeightedExerciseBlueprint ? (
-          <WeightedTargetsPad exercise={exercise} targets={targets} />
-        ) : null}
-        {exercise instanceof CardioExerciseBlueprint ? (
-          <CardioTargetsPad
-            exercise={exercise}
-            targets={cardioTargets}
-            restBetweenRounds={showsRestBetweenRounds(exercise, restTimersEnabled)}
-          />
-        ) : null}
+          {t('exercise.edit.title')}
+        </SurfaceText>
+        <HeaderPillButton testID="exercise-editor-save" label={copy.saveLabel} onPress={save} maxWidth="60%" />
       </View>
-    </Portal.Host>
+      <KeyboardAwareScrollView
+        bottomOffset={spacing[4]}
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={{
+          gap: spacing[5],
+          paddingHorizontal: spacing.pageHorizontalMargin,
+          paddingTop: spacing[2],
+          paddingBottom: insets.bottom + spacing[8],
+        }}
+      >
+        <ExerciseEditor
+          exercise={exercise}
+          update={update}
+          scopeSentence={copy.sentence}
+          meta={exerciseMetaOf(t, catalog[exercise.exerciseId])}
+          nextExerciseName={props.nextExerciseName}
+          restTimersEnabled={restTimersEnabled}
+          formatStep={formatStep}
+          onSwap={() => openSearch(exercise.name)}
+          onOpenLoad={() => router.push(getExerciseLoadHref(editId))}
+          onOpenRest={() => router.push(getExerciseEditRestHref(editId))}
+          onOpenWarmups={() => router.push(getEditorWarmupsHref(editId, props.scope, props.workingWeight))}
+          onOpenProgression={() => router.push(getExerciseProgressionHref(editId))}
+          targets={targets}
+          cardioTargets={cardioTargets}
+        />
+        {props.footer}
+      </KeyboardAwareScrollView>
+      {exercise instanceof WeightedExerciseBlueprint ? (
+        <WeightedTargetsPad exercise={exercise} targets={targets} />
+      ) : null}
+      {exercise instanceof CardioExerciseBlueprint ? (
+        <CardioTargetsPad
+          exercise={exercise}
+          targets={cardioTargets}
+          restBetweenRounds={showsRestBetweenRounds(exercise, restTimersEnabled)}
+        />
+      ) : null}
+    </View>
   );
 }

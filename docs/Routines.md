@@ -72,7 +72,8 @@ editor opens edit the same draft:
 
 - **More options** opens the edit exercise sheet (`app/routine-exercise-editor.tsx`, a root form sheet, the
   same editor the live workout opens): swap the exercise, weighted or cardio, the targets, warm-ups, rest,
-  progression, load, superset, notes, link, and Copy to another routine. Its first line says the change goes
+  progression, load, superset, notes, link, and Copy to another routine (a native menu of the program's other
+  routines; picking one appends the exercise to it). Its first line says the change goes
   into the routine when the routine is saved, and its button is Done. Opened on its own, with no editor
   behind it, it edits the saved routine directly, says so, and its button is "Save to <routine>". The
   editor holds the exercise in `exercise-edit-draft.ts` so the sheets it opens over itself (Load, Warm-ups,

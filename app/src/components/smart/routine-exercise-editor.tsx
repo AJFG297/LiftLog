@@ -1,14 +1,14 @@
 import { ActionButton } from '@/components/presentation/foundation/action-button';
+import Menu from '@/components/presentation/foundation/menu';
 import { ExerciseEditorSheet } from '@/components/smart/exercise-editor-sheet';
-import CopyExerciseDialog from '@/components/smart/copy-exercise-dialog';
 import { updateRoutineDraft, useRoutineDraft } from '@/components/smart/routine-draft';
 import { useBackWhenGone } from '@/hooks/useBackWhenGone';
 import { ExerciseBlueprint } from '@/models/blueprint-models';
 import { useAppSelector } from '@/store';
-import { updateProgram } from '@/store/program';
+import { showSnackbar } from '@/store/app';
+import { setProgramSession, updateProgram } from '@/store/program';
 import { useTranslate } from '@tolgee/react';
 import { Href } from 'expo-router';
-import { useState } from 'react';
 import { useDispatch } from 'react-redux';
 
 export interface RoutineExerciseLocation {
@@ -42,7 +42,7 @@ export function RoutineExerciseEditor(location: RoutineExerciseLocation) {
   );
   const routine = draft ? draft.routine : savedRoutine;
   const exercise = routine?.exercises[location.exerciseIndex];
-  const [copyOpen, setCopyOpen] = useState(false);
+  const program = useAppSelector((x) => x.program.savedPrograms[location.programId]);
 
   const saveExercise = (exerciseToSave: ExerciseBlueprint) => {
     if (draft) {
@@ -60,11 +60,37 @@ export function RoutineExerciseEditor(location: RoutineExerciseLocation) {
     );
   };
 
+  const copyTo = (exerciseToCopy: ExerciseBlueprint, sessionIndex: number) => {
+    const target = program?.sessions[sessionIndex];
+    if (!target) {
+      return;
+    }
+    dispatch(
+      setProgramSession({
+        programId: location.programId,
+        sessionIndex,
+        sessionBlueprint: target.with({ exercises: [...target.exercises, exerciseToCopy] }),
+      }),
+    );
+    dispatch(
+      showSnackbar({
+        text: t('exercise.copied_to_session.message', {
+          exerciseName: exerciseToCopy.name,
+          targetSessionName: target.name,
+        }),
+      }),
+    );
+  };
+
   useBackWhenGone(!exercise);
 
   if (!routine || !exercise) {
     return null;
   }
+
+  const copyTargets = (program?.sessions ?? [])
+    .map((session, index) => ({ session, index }))
+    .filter(({ index }) => index !== location.sessionIndex);
 
   return (
     <ExerciseEditorSheet
@@ -73,20 +99,21 @@ export function RoutineExerciseEditor(location: RoutineExerciseLocation) {
       nextExerciseName={routine.exercises[location.exerciseIndex + 1]?.name}
       onChange={saveExercise}
       footer={
-        <>
-          <ActionButton
-            variant="secondary"
-            label={t('exercise.copy_to_session.button')}
-            onPress={() => setCopyOpen(true)}
-          />
-          <CopyExerciseDialog
-            visible={copyOpen}
-            onDismiss={() => setCopyOpen(false)}
-            exerciseBlueprint={exercise}
-            currentSessionIndex={location.sessionIndex}
-            programId={location.programId}
-          />
-        </>
+        <Menu
+          size="content"
+          testID="exercise-copy-to-routine"
+          items={
+            copyTargets.length === 0
+              ? [{ label: t('plan.no_other_sessions_available.message'), onPress: () => {}, disabled: true }]
+              : copyTargets.map(({ session, index }) => ({
+                  label: session.name,
+                  onPress: () => copyTo(exercise, index),
+                }))
+          }
+          trigger={(open) => (
+            <ActionButton variant="secondary" label={t('exercise.copy_to_session.button')} onPress={open} />
+          )}
+        />
       }
     />
   );
