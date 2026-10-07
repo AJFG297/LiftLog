@@ -13,7 +13,8 @@ namespace LiftLog.Api.Service;
 /// <see cref="IAnthropicMessageStreamer"/> seam) for fine-grained streaming: text
 /// deltas are forwarded to the client token-by-token, and tool-input deltas are
 /// accumulated into the generated plan. The plan's blueprint is produced against
-/// the embedded <c>AiPlan.json</c> schema and forwarded verbatim to the client.
+/// the embedded <c>AiPlan.json</c> schema and forwarded to the client verbatim,
+/// apart from its rests, which <see cref="AiPlanRest"/> turns into the app's wire shape.
 /// </summary>
 public partial class AnthropicChatPlannerV2(
     IAnthropicMessageStreamer _streamer,
@@ -34,6 +35,8 @@ public partial class AnthropicChatPlannerV2(
 
         If a user shares their plan with you to iterate on, it is EXTREMELY important that you use the exact same naming as them (casing, and pluralization included)
         when generating a new plan off of it. LiftLog matches history via string matching on exercise name.
+        A shared plan writes each rest as minRest, maxRest and failureRest. Read minRest as the rest and failureRest as the rest after a failed set
+        (the same rest when it equals minRest), and ignore maxRest. Your plans always write rest and, only when it differs, failedSetRest.
         """;
 
     private const int MaxOutputTokens = 16_000;
@@ -273,6 +276,7 @@ public partial class AnthropicChatPlannerV2(
             var version = obj["version"]?.GetValue<int>() ?? 2;
             var description = obj["description"]?.GetValue<string>() ?? "";
             var blueprint = obj["blueprint"]?.DeepClone();
+            AiPlanRest.ToWireShape(blueprint);
             return new AiChatPlanResponseV2(name, description, blueprint, version);
         }
         catch (JsonException e)
