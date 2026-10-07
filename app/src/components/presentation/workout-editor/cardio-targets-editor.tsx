@@ -22,7 +22,8 @@ import {
   nextCardioField,
 } from '@/components/presentation/workout-editor/cardio-targets';
 import { TargetsNumberPad, TargetsPadChip } from '@/components/presentation/workout-editor/targets-number-pad';
-import { ModePill, Tile, TileValue } from '@/components/presentation/workout-editor/weighted-targets-editor';
+import { ModePill } from '@/components/presentation/foundation/mode-pill';
+import { Tile, TileValue } from '@/components/presentation/foundation/tile';
 import { spacing, useAppTheme } from '@/hooks/useAppTheme';
 import { CardioExerciseBlueprint, ExerciseBlueprint } from '@/models/blueprint-models';
 import { useTranslate } from '@tolgee/react';

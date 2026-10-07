@@ -12,6 +12,8 @@ import {
   TargetsPadAction,
   targetsPadReducer,
 } from '@/components/presentation/workout-editor/exercise-targets';
+import { ModePill } from '@/components/presentation/foundation/mode-pill';
+import { Tile, TileValue } from '@/components/presentation/foundation/tile';
 import { TargetsNumberPad, TargetsPadDisplayPart } from '@/components/presentation/workout-editor/targets-number-pad';
 import { spacing, useAppTheme } from '@/hooks/useAppTheme';
 import { ExerciseBlueprint, RepsTarget, WeightedExerciseBlueprint } from '@/models/blueprint-models';
@@ -288,87 +290,6 @@ function PerSetList(props: {
         </SurfaceText>
       </Pressable>
     </View>
-  );
-}
-
-export function ModePill(props: { label: string; selected: boolean; onPress: () => void; testID: string }) {
-  const { tokens } = useAppTheme();
-  return (
-    <Pressable
-      testID={props.testID}
-      onPress={props.onPress}
-      accessibilityRole="radio"
-      accessibilityLabel={props.label}
-      accessibilityState={{ checked: props.selected }}
-      style={{ minHeight: MIN_TOUCH_TARGET, justifyContent: 'center' }}
-    >
-      {({ pressed }) => (
-        <View
-          style={{
-            height: 34,
-            paddingHorizontal: 14,
-            borderRadius: 17,
-            borderWidth: 1,
-            justifyContent: 'center',
-            borderColor: props.selected ? tokens.ink : tokens.line,
-            backgroundColor: props.selected ? tokens.ink : pressed ? tokens.track : 'transparent',
-          }}
-        >
-          <SurfaceText font="text-sm" weight="500" style={{ color: props.selected ? tokens.bg : tokens.ink }}>
-            {props.label}
-          </SurfaceText>
-        </View>
-      )}
-    </Pressable>
-  );
-}
-
-export function Tile(props: {
-  label: string;
-  accessibilityLabel: string;
-  active: boolean;
-  onPress: () => void;
-  testID: string;
-  children: React.ReactNode;
-}) {
-  const { tokens } = useAppTheme();
-  return (
-    <Pressable
-      testID={props.testID}
-      onPress={props.onPress}
-      accessibilityRole="button"
-      accessibilityLabel={props.accessibilityLabel}
-      accessibilityState={{ selected: props.active }}
-      style={{
-        flex: 1,
-        height: 76,
-        borderRadius: 12,
-        justifyContent: 'center',
-        gap: 2,
-        borderWidth: props.active ? 2 : 1,
-        paddingHorizontal: props.active ? 13 : 14,
-        borderColor: props.active ? tokens.accent : tokens.line,
-        backgroundColor: props.active ? tokens.card : tokens.bg,
-      }}
-    >
-      <SurfaceText
-        font="text-xs"
-        weight={props.active ? '500' : undefined}
-        style={{ color: props.active ? tokens.accentInk : tokens.muted }}
-      >
-        {props.label}
-      </SurfaceText>
-      {props.children}
-    </Pressable>
-  );
-}
-
-export function TileValue({ text, style }: { text: string; style?: object }) {
-  const { tokens } = useAppTheme();
-  return (
-    <SurfaceText numeric font="text-3xl" weight="500" style={[{ color: tokens.ink }, style]}>
-      {text}
-    </SurfaceText>
   );
 }
 
