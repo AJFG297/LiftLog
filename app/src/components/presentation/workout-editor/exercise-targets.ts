@@ -1,3 +1,4 @@
+import { clamp } from '@/utils/clamp';
 import { RepsTarget, RepsType, uniformTarget, WeightedExerciseBlueprint } from '@/models/blueprint-models';
 
 /** How the Targets card lays the working sets out: one rep count, a range, or reps set by set. */
@@ -216,8 +217,4 @@ function applyField(opened: WeightedExerciseBlueprint, field: TargetsField, valu
       });
     }
   }
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(Math.max(value, min), max);
 }

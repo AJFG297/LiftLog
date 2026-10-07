@@ -1,3 +1,4 @@
+import { clamp } from '@/utils/clamp';
 import type { TranslateFn } from '@/i18n/translate-fn';
 import {
   CardioExerciseBlueprint,
@@ -331,8 +332,4 @@ function numberOf(text: string): number {
 
 function capOf(measure: CardioPadMeasure): number {
   return measure === 'count' ? MAX_ROUNDS : MAX_MINUTES;
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(Math.max(value, min), max);
 }
