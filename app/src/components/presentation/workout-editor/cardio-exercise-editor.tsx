@@ -8,7 +8,6 @@ import SegmentedPicker from '@/components/presentation/foundation/segmented-pick
 import { SegmentedList, SegmentListFormElement } from '@/components/presentation/foundation/segmented-list';
 import { SegmentedListSwitch } from '@/components/presentation/foundation/segmented-list-switch';
 import { RestEditorDialog } from '@/components/presentation/workout-editor/rest-editor-dialog';
-import { SharedFieldsEditor } from '@/components/presentation/workout-editor/shared-fields-editor';
 import StraightenIcon from '@expo/material-symbols/straighten.xml';
 import TimerIcon from '@expo/material-symbols/timer.xml';
 import { useAppTheme } from '@/hooks/useAppTheme';
@@ -48,7 +47,6 @@ export function CardioExerciseEditor({
   const { colors } = useAppTheme();
   return (
     <>
-      <SharedFieldsEditor exercise={exercise} updateExercise={updateExercise} />
       {exercise.sets.map((set, setIndex) => (
         <CardioSetEditor
           set={set}

@@ -1,59 +1,25 @@
 import FixedIncrementer from '@/components/presentation/foundation/editors/fixed-incrementer';
-import { FormRow } from '@/components/presentation/foundation/form-row';
-import RestFormat from '@/components/presentation/foundation/rest-format';
 import SegmentedPicker from '@/components/presentation/foundation/segmented-picker';
-import { SegmentedList, SegmentListFormElement } from '@/components/presentation/foundation/segmented-list';
-import { SegmentedListSelect } from '@/components/presentation/foundation/segmented-list-select';
-import { SegmentedListSwitch } from '@/components/presentation/foundation/segmented-list-switch';
-import { RestEditorDialog } from '@/components/presentation/workout-editor/rest-editor-dialog';
-import { ProgressionRulesEditor } from '@/components/presentation/workout-editor/progressive-overload';
-import { SharedFieldsEditor } from '@/components/presentation/workout-editor/shared-fields-editor';
-import { WarmupSetsEditor } from '@/components/presentation/workout-editor/warmup-sets-editor';
-import { spacing, useAppTheme } from '@/hooks/useAppTheme';
-import {
-  ExerciseBlueprint,
-  Resistance,
-  RepsConfig,
-  RepsType,
-  uniformTarget,
-  WeightedExerciseBlueprint,
-} from '@/models/blueprint-models';
+import { spacing } from '@/hooks/useAppTheme';
+import { RepsConfig, RepsType, uniformTarget, WeightedExerciseBlueprint } from '@/models/blueprint-models';
 import { setLabels, type WorkingListKind } from '@/models/session-models/set-kind';
-import { useAppSelector } from '@/store';
 import { ExtractType } from '@/utils/extract-type';
-import { TranslationKey, useTranslate } from '@tolgee/react';
+import { useTranslate } from '@tolgee/react';
 import { useState } from 'react';
 import { View } from 'react-native';
 
 /**
- * What each choice actually changes, since "resistance" names the field without saying what picking one
- * does to the set counter or to the stats built off it.
+ * The working sets' targets: Fixed, Range or Per set, then sets and reps on steppers. The edit exercise
+ * sheet's Targets card holds it until the number pad takes over (PM-45).
  */
-const resistanceOptions = [
-  {
-    value: 'external',
-    label: 'exercise.resistance.external.label',
-    body: 'exercise.resistance.external.body',
-  },
-  {
-    value: 'bodyweight',
-    label: 'exercise.resistance.bodyweight.label',
-    body: 'exercise.resistance.bodyweight.body',
-  },
-  { value: 'none', label: 'exercise.resistance.none.label', body: 'exercise.resistance.none.body' },
-] as const satisfies { value: Resistance; label: TranslationKey; body: TranslationKey }[];
-
-export function WeightedExerciseEditor({
+export function WeightedTargetsEditor({
   exercise,
   updateExercise,
 }: {
   exercise: WeightedExerciseBlueprint;
-  updateExercise: (ex: Partial<ExerciseBlueprint>) => void;
+  updateExercise: (exercise: WeightedExerciseBlueprint) => void;
 }) {
   const { t } = useTranslate();
-  const { colors } = useAppTheme();
-  const restTimersEnabled = useAppSelector((x) => x.settings.restTimersEnabled);
-  const [restDialogOpen, setRestDialogOpen] = useState(false);
 
   // Only the targets persist, so a uniform list cannot say whether it was authored as fixed or as a
   // range; the chosen mode lives here for as long as the editor is open.
@@ -74,8 +40,6 @@ export function WeightedExerciseEditor({
 
   return (
     <View style={{ gap: spacing[2] }}>
-      <WarmupSetsEditor exercise={exercise} updateWarmupSets={(warmupSets) => updateExercise({ warmupSets })} />
-
       <SegmentedPicker
         value={mode}
         options={[
@@ -92,7 +56,6 @@ export function WeightedExerciseEditor({
           alignItems: 'flex-start',
           width: '100%',
           gap: spacing[4],
-          marginBlockEnd: spacing[2],
         }}
       >
         <View style={{ flex: 1 }}>
@@ -115,63 +78,6 @@ export function WeightedExerciseEditor({
           <FixedRepsEditor repsConfig={repsConfig} setRepsConfig={setRepsConfig} />
         )}
       </View>
-
-      <SharedFieldsEditor exercise={exercise} updateExercise={updateExercise} />
-
-      {restTimersEnabled && (
-        <RestEditorDialog
-          onRestUpdated={(restBetweenSets) => updateExercise({ restBetweenSets })}
-          rest={exercise.restBetweenSets}
-          dialogOpen={restDialogOpen}
-          setDialogOpen={setRestDialogOpen}
-        />
-      )}
-      <FormRow>
-        <SegmentedList
-          items={[
-            ...(restTimersEnabled
-              ? [
-                  <SegmentListFormElement
-                    key={1}
-                    label={t('rest.rest.label')}
-                    icon={'airlineSeatReclineExtraFill'}
-                    onPress={() => setRestDialogOpen(true)}
-                    right={<RestFormat style={{ color: colors.onSurface }} rest={exercise.restBetweenSets} />}
-                  />,
-                ]
-              : []),
-            <SegmentedListSwitch
-              key={2}
-              label={t('workout.superset_next_exercise.button')}
-              icon={'link'}
-              value={exercise.supersetWithNext}
-              testID="exercise-superset"
-              onValueChange={(supersetWithNext) => updateExercise({ supersetWithNext })}
-            />,
-            <SegmentedListSelect
-              key={4}
-              label={t('exercise.resistance.label')}
-              icon={'directionsRun'}
-              testID="load-basis"
-              value={exercise.resistance}
-              options={resistanceOptions.map(({ value, label }) => ({ value, label: t(label) }))}
-              onChange={(resistance: Resistance) => updateExercise({ resistance })}
-              supportingText={t(resistanceOptions.find((option) => option.value === exercise.resistance)!.body)}
-            />,
-            <SegmentListFormElement
-              key={3}
-              label={t('exercise.progressive_overload.label')}
-              icon={'trendingUp'}
-              line2={
-                <ProgressionRulesEditor
-                  exercise={exercise}
-                  onChange={(progression) => updateExercise({ progression })}
-                />
-              }
-            />,
-          ]}
-        />
-      </FormRow>
     </View>
   );
 }

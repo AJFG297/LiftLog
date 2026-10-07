@@ -27,6 +27,7 @@ import {
   setWelcomeWizardCompleted,
 } from '@/store/settings';
 import { whatsNewEntries } from '@/models/whats-new';
+import { getRoutineExerciseEditorHref } from '@/components/smart/routine-exercise-editor';
 
 export default function ScreenshotCollectionPage() {
   const { type } = useLocalSearchParams<{ type: string }>();
@@ -99,12 +100,7 @@ function PrepareExerciseEditorPage() {
   });
 
   return (
-    <Redirect
-      href={{
-        pathname: '/routines/manage-workouts/[programId]/manage-session/[sessionIndex]/exercise',
-        params: { programId: activePlanId, sessionIndex: 0, exerciseIndex: 0 },
-      }}
-    />
+    <Redirect href={getRoutineExerciseEditorHref({ programId: activePlanId, sessionIndex: 0, exerciseIndex: 0 })} />
   );
 }
 

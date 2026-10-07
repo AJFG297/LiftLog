@@ -66,7 +66,10 @@ function Layout() {
       {/* The feed opens from You rather than being a tab, so it sits over the tabs with a stack of its own. */}
       <Stack.Screen name="feed" options={{ headerShown: false }} />
       <Stack.Screen name="exercise-search" options={{ presentation: 'modal', headerShown: false }} />
-      <Stack.Screen name="exercise-editor" />
+      {/* One edit exercise sheet, opened from a workout or from a routine, with Load as a sheet over it. */}
+      <Stack.Screen name="exercise-editor" options={formSheetOptions([0.95])} />
+      <Stack.Screen name="routine-exercise-editor" options={formSheetOptions([0.95])} />
+      <Stack.Screen name="exercise-load" options={formSheetOptions([0.55, 0.9])} />
       <Stack.Screen name="exercise-history" options={formSheetOptions([0.6, 0.95])} />
       <Stack.Screen name="workout-editor" />
       <Stack.Screen name="workout-detail/index" />

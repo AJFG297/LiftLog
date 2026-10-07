@@ -70,10 +70,13 @@ throws it away, asking first when anything changed. For a new routine, Save need
 The draft lives in a small module-level store keyed by program and routine index, so the other routes the
 editor opens edit the same draft:
 
-- **More options** opens the full exercise editor (`manage-session/[sessionIndex]/exercise`): swap the
-  exercise, weighted or cardio, fixed, range or per-set reps, warm-up loads, resistance, notes, link, and Copy
-  to another routine. Opened on its own, with no editor behind it, that screen edits the saved routine
-  directly, as it always has.
+- **More options** opens the edit exercise sheet (`app/routine-exercise-editor.tsx`, a root form sheet, the
+  same editor the live workout opens): swap the exercise, weighted or cardio, the targets, warm-ups, rest,
+  progression, load, superset, notes, link, and Copy to another routine. Its first line says the change goes
+  into the routine when the routine is saved, and its button is Done. Opened on its own, with no editor
+  behind it, it edits the saved routine directly, says so, and its button is "Save to <routine>". The
+  editor holds the exercise in `exercise-edit-draft.ts` so the sheets it opens over itself (Load) edit it
+  too.
 - The **set-type sheet** (`app/routine-set-type.tsx`, a root form sheet) changes one set's type.
 
 Two editors can be open on one routine, one from Routines and one from the Workout tab's upcoming card. They

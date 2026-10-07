@@ -16,6 +16,7 @@ import { MIN_TOUCH_TARGET } from '@/components/presentation/foundation/touch-tar
 import { ASK_AI_BAR_ENABLED, AskAiBar } from '@/components/presentation/workout-editor/ask-ai-bar';
 import { formatCardioTarget } from '@/utils/format-cardio-target';
 import { withPickAppended } from '@/components/presentation/workout-editor/exercise-picker';
+import { getRoutineExerciseEditorHref } from '@/components/smart/routine-exercise-editor';
 import { RoutineColorSwatches } from '@/components/presentation/workout-editor/routine-color-swatches';
 import { RoutineExerciseActions } from '@/components/presentation/workout-editor/routine-exercise-actions';
 import {
@@ -430,10 +431,7 @@ export function RoutineEditor({ programId, sessionIndex, isNew }: RoutineEditorP
 
   const openDetails = (index: number) => {
     closePad();
-    router.push({
-      pathname: '/routines/manage-workouts/[programId]/manage-session/[sessionIndex]/exercise',
-      params: { programId, sessionIndex, exerciseIndex: index },
-    });
+    router.push(getRoutineExerciseEditorHref({ programId, sessionIndex, exerciseIndex: index }));
   };
 
   const openSetType = (index: number, position: RoutineSetPosition) => {

@@ -7,7 +7,8 @@ import { Pressable, View } from 'react-native';
 const RADIO_SIZE = 22;
 
 interface SetTypeOptionProps {
-  badge: SetBadgeProps;
+  /** Left out for a choice that is not a set type, such as the Load sheet's. */
+  badge?: SetBadgeProps;
   name: string;
   description: string;
   selected: boolean;
@@ -16,7 +17,7 @@ interface SetTypeOptionProps {
   testID?: string;
 }
 
-/** One choice on the set-type sheet: the badge the set would get, what the type is for, and a radio. */
+/** One choice on a pick-one sheet (set type, load): an optional set badge, the choice and what it is for, and a radio. */
 export function SetTypeOption(props: SetTypeOptionProps) {
   const { tokens } = useAppTheme();
   return (
@@ -41,7 +42,7 @@ export function SetTypeOption(props: SetTypeOptionProps) {
         opacity: props.disabled ? 0.5 : 1,
       })}
     >
-      <SetBadge {...props.badge} />
+      {props.badge ? <SetBadge {...props.badge} /> : null}
       <View style={{ flex: 1, gap: spacing[0.5] }}>
         <SurfaceText font="text-base" weight="600" style={{ color: tokens.ink }}>
           {props.name}

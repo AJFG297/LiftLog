@@ -33,8 +33,9 @@ appId: com.ajfg297.liftlog
     id: 'more-exercise-btn'
 - tapOn: 'Edit'
 - tapOn:
-    id: 'cardio-button'
-- back
+    id: 'exercise-tracking-cardio'
+- tapOn:
+    id: 'exercise-editor-save'
 
 # The plan says which metrics the set tracks, so its tiles are there before anything is entered.
 - assertVisible:
