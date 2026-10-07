@@ -71,19 +71,8 @@ describe('session timing with warm-ups (what Health records)', () => {
 });
 
 describe('rest after a warm-up', () => {
-  it('is only the minimum rest', () => {
-    const rest = exercise('Squat', tickAt(10, 0), undefined).restAfterLastSet;
-    expect(rest.minRest).toEqual(Rest.short.minRest);
-    expect(rest.maxRest).toEqual(Rest.short.minRest);
-  });
-
-  it('is the full window after a working set', () => {
-    expect(exercise('Squat', tickAt(10, 0), tickAt(10, 2)).restAfterLastSet).toEqual(Rest.short);
-  });
-
-  it('never earns the failure rest, however short the warm-up', () => {
+  it('never earns the failed-set rest, however short the warm-up', () => {
     const short = exercise('Squat', undefined, undefined).withWarmupRepCount(0, 1, tickAt(10, 0));
     expect(short.lastSetMissedTarget).toBe(false);
-    expect(short.restAfterLastSet.maxRest).toEqual(Rest.short.minRest);
   });
 });

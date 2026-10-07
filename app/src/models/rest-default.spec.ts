@@ -12,21 +12,17 @@ import {
   routineExerciseLocation,
   routineExerciseRest,
   sessionWithExerciseRest,
-  withMinRest,
+  withRest,
 } from '@/models/rest-default';
 import { routineChanges } from '@/models/routine-update';
 import { RecordedWeightedExercise } from '@/models/session-models';
 import { makeSession, makeWeightedBlueprint } from '@/models/session-models/__test__/helpers';
 import { getPlanDiff } from '@/store/program/helpers';
 
-const rest: Rest = {
-  minRest: Duration.ofSeconds(150),
-  maxRest: Duration.ofSeconds(180),
-  failureRest: Duration.ofSeconds(300),
-};
+const rest: Rest = { rest: Duration.ofSeconds(150), failedSetRest: Duration.ofSeconds(300) };
 const seconds = (d: Duration) => d.toMillis() / 1000;
 const restSeconds = (r: Rest | undefined) =>
-  r && { minRest: seconds(r.minRest), maxRest: seconds(r.maxRest), failureRest: seconds(r.failureRest) };
+  r && { rest: seconds(r.rest), failedSetRest: r.failedSetRest && seconds(r.failedSetRest) };
 
 function program(...sessions: SessionBlueprint[]) {
   return new ProgramBlueprint('Plan', sessions, LocalDate.of(2026, 9, 29));
@@ -36,20 +32,15 @@ const bench = makeWeightedBlueprint({ name: 'Bench Press', restBetweenSets: rest
 const press = makeWeightedBlueprint({ name: 'Overhead Press', restBetweenSets: rest });
 const pushWorkout = () => makeSession([bench, press]).withName('Push');
 
-describe('withMinRest', () => {
-  it('writes the min rest and leaves the max and failure rest alone', () => {
-    expect(restSeconds(withMinRest(rest, Duration.ofSeconds(120)))).toEqual({
-      minRest: 120,
-      maxRest: 180,
-      failureRest: 300,
-    });
+describe('withRest', () => {
+  it('writes the rest and leaves a failed-set rest of its own alone', () => {
+    expect(restSeconds(withRest(rest, Duration.ofSeconds(120)))).toEqual({ rest: 120, failedSetRest: 300 });
   });
 
-  it('raises the max rest to the new min when it would fall below it', () => {
-    expect(restSeconds(withMinRest(rest, Duration.ofSeconds(240)))).toEqual({
-      minRest: 240,
-      maxRest: 240,
-      failureRest: 300,
+  it('moves a failed-set rest that is the same as the rest along with it', () => {
+    expect(restSeconds(withRest({ rest: Duration.ofSeconds(90) }, Duration.ofSeconds(120)))).toEqual({
+      rest: 120,
+      failedSetRest: undefined,
     });
   });
 });
@@ -85,29 +76,23 @@ describe('saving a rest as the default', () => {
     const workout = pushWorkout();
     const plan = program(workout.blueprint);
     const location = routineExerciseLocation(plan, workout.blueprint, 0)!;
-    const saved = withMinRest(rest, Duration.ofSeconds(120));
+    const saved = withRest(rest, Duration.ofSeconds(120));
 
     const savedPlan = programWithExerciseRest(plan, location, saved);
     const savedWorkout = sessionWithExerciseRest(workout, 0, saved);
 
-    expect(restSeconds(routineExerciseRest(savedPlan, location))).toEqual({
-      minRest: 120,
-      maxRest: 180,
-      failureRest: 300,
-    });
+    expect(restSeconds(routineExerciseRest(savedPlan, location))).toEqual({ rest: 120, failedSetRest: 300 });
     const recorded = savedWorkout.recordedExercises[0] as RecordedWeightedExercise;
-    expect(seconds(recorded.blueprint.restBetweenSets.minRest)).toBe(120);
-    expect(seconds((savedWorkout.blueprint.exercises[0] as WeightedExerciseBlueprint).restBetweenSets.minRest)).toBe(
-      120,
-    );
+    expect(seconds(recorded.blueprint.restBetweenSets.rest)).toBe(120);
+    expect(seconds((savedWorkout.blueprint.exercises[0] as WeightedExerciseBlueprint).restBetweenSets.rest)).toBe(120);
     // The other exercise keeps its rest.
-    expect(restSeconds(routineExerciseRest(savedPlan, { sessionIndex: 0, exerciseIndex: 1 }))!.minRest).toBe(150);
+    expect(restSeconds(routineExerciseRest(savedPlan, { sessionIndex: 0, exerciseIndex: 1 }))!.rest).toBe(150);
   });
 
   it('leaves nothing for the finish sheet to ask about', () => {
     const workout = pushWorkout();
     const plan = program(workout.blueprint);
-    const saved = withMinRest(rest, Duration.ofSeconds(120));
+    const saved = withRest(rest, Duration.ofSeconds(120));
     const location = routineExerciseLocation(plan, workout.blueprint, 0)!;
 
     const savedPlan = programWithExerciseRest(plan, location, saved);
@@ -122,7 +107,7 @@ describe('saving a rest as the default', () => {
   it('keeps a set count change made today for the finish sheet', () => {
     const workout = pushWorkout();
     const plan = program(workout.blueprint);
-    const saved = withMinRest(rest, Duration.ofSeconds(120));
+    const saved = withRest(rest, Duration.ofSeconds(120));
     const location = routineExerciseLocation(plan, workout.blueprint, 0)!;
     const withExtraSet = workout.withEditedExercise(0, bench.with({ sets: 4 }), false);
 
@@ -187,7 +172,7 @@ describe('a rest picked for this workout only', () => {
     const plan = program(workout.blueprint);
     const picked = durationOfRestPick({ minutes: 1, seconds: 45 });
 
-    const changed = sessionWithExerciseRest(workout, 0, withMinRest(rest, picked));
+    const changed = sessionWithExerciseRest(workout, 0, withRest(rest, picked));
 
     const rows = routineChanges(getPlanDiff(plan, changed, 'plan')!.diff);
     expect(rows).toEqual([expect.objectContaining({ kind: 'rest', exerciseName: 'Bench Press' })]);
@@ -197,14 +182,14 @@ describe('a rest picked for this workout only', () => {
 });
 
 describe('restWithPick', () => {
-  const unround: Rest = { ...rest, minRest: Duration.ofSeconds(142) };
+  const unround: Rest = { ...rest, rest: Duration.ofSeconds(142) };
 
   it('keeps a rest the wheels round when no wheel was turned', () => {
-    expect(seconds(restWithPick(unround, { minutes: 2, seconds: 20 }).minRest)).toBe(142);
+    expect(seconds(restWithPick(unround, { minutes: 2, seconds: 20 }).rest)).toBe(142);
   });
 
   it('takes the picked rest once a wheel moves', () => {
-    expect(seconds(restWithPick(unround, { minutes: 2, seconds: 25 }).minRest)).toBe(145);
-    expect(seconds(restWithPick(rest, { minutes: 1, seconds: 45 }).minRest)).toBe(105);
+    expect(seconds(restWithPick(unround, { minutes: 2, seconds: 25 }).rest)).toBe(145);
+    expect(seconds(restWithPick(rest, { minutes: 1, seconds: 45 }).rest)).toBe(105);
   });
 });

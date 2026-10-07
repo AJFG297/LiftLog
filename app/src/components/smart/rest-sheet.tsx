@@ -14,7 +14,7 @@ import {
   routineExerciseLocation,
   routineExerciseRest,
   sessionWithExerciseRest,
-  withMinRest,
+  withRest,
 } from '@/models/rest-default';
 import { RecordedWeightedExercise, Session } from '@/models/session-models';
 import {
@@ -108,7 +108,7 @@ function RestSheetContent({ session }: { session: Session }) {
     location &&
     picked &&
     isRestPreset(picked) &&
-    !picked.equals(owner.blueprint.restBetweenSets.minRest);
+    !picked.equals(owner.blueprint.restBetweenSets.rest);
 
   const pickPreset = (length: Duration) => {
     setSaved(undefined);
@@ -128,10 +128,10 @@ function RestSheetContent({ session }: { session: Session }) {
     dispatch(
       updateProgram({
         programId,
-        update: (p) => programWithExerciseRest(p, location, withMinRest(routineBefore, picked)),
+        update: (p) => programWithExerciseRest(p, location, withRest(routineBefore, picked)),
       }),
     );
-    updateSession((s) => sessionWithExerciseRest(s, ownerIndex, withMinRest(sessionBefore, picked)));
+    updateSession((s) => sessionWithExerciseRest(s, ownerIndex, withRest(sessionBefore, picked)));
     haptics.selection();
     setSaved({ ownerIndex, programId, location, minRest: picked, routineBefore, sessionBefore });
   };
@@ -269,7 +269,7 @@ function RestSheetContent({ session }: { session: Session }) {
             testID="rest-sheet-save"
             title={t('rest_sheet.remember.title', { time: formatTimeSpan(picked), name: owner.blueprint.name })}
             subtitle={t('rest_sheet.remember.subtitle', {
-              time: formatTimeSpan(owner.blueprint.restBetweenSets.minRest),
+              time: formatTimeSpan(owner.blueprint.restBetweenSets.rest),
             })}
             action={t('rest_sheet.remember.button')}
             onPress={save}

@@ -105,13 +105,10 @@ const emptyCardioSet = emptyCardioExercise.sets[0]!;
 const defaultIncreaseAmount = '2.5' as BigNumberJSON;
 const defaultRepsTarget = emptyWeightedExercise.plannedSets[0]?.reps ?? { min: 10, max: 10 };
 
+/** A missing max or failure rest is the rest itself: the planner gave no different rest after a failed set. */
 function fillRest(partial: DeepPartial<RestJSON> = {}): RestJSON {
-  const { restBetweenSets } = emptyWeightedExercise;
-  return {
-    minRest: partial.minRest ?? restBetweenSets.minRest,
-    maxRest: partial.maxRest ?? restBetweenSets.maxRest,
-    failureRest: partial.failureRest ?? restBetweenSets.failureRest,
-  };
+  const minRest = partial.minRest ?? emptyWeightedExercise.restBetweenSets.minRest;
+  return { minRest, maxRest: partial.maxRest ?? minRest, failureRest: partial.failureRest ?? minRest };
 }
 
 /**

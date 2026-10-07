@@ -102,7 +102,7 @@ export function LiveExerciseCard(props: LiveExerciseCardProps) {
           {
             key: 'rest',
             label: t('live_workout.chip.rest.button', {
-              time: formatTimeSpan(exercise.blueprint.restBetweenSets.minRest),
+              time: formatTimeSpan(exercise.blueprint.restBetweenSets.rest),
             }),
             icon: 'timer',
             onPress: () => {

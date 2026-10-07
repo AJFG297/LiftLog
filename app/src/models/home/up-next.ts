@@ -74,13 +74,13 @@ function plannedSecondsOf(blueprint: SessionBlueprint): number {
   let seconds = 0;
   for (const exercise of blueprint.exercises) {
     if (exercise instanceof WeightedExerciseBlueprint) {
-      const rest = exercise.restBetweenSets.minRest.seconds();
+      const rest = exercise.restBetweenSets.rest.seconds();
       seconds += exercise.plannedSets.length * (SECONDS_PER_SET + rest);
       seconds += exercise.warmupSets.length * SECONDS_PER_SET * 2;
     } else if (exercise instanceof CardioExerciseBlueprint) {
       for (const set of exercise.sets) {
         seconds += set.target.type === 'time' ? set.target.value.seconds() : SECONDS_PER_DISTANCE_CARDIO_SET;
-        seconds += set.restBetweenSets?.minRest.seconds() ?? 0;
+        seconds += set.restBetweenSets?.rest.seconds() ?? 0;
       }
     }
   }

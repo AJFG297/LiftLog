@@ -16,7 +16,7 @@ import {
   warmupsSummaryOf,
   withTrackingType,
 } from '@/components/presentation/workout-editor/exercise-edit-copy';
-import { RestEditorDialog } from '@/components/presentation/workout-editor/rest-editor-dialog';
+import { restRowOf } from '@/components/presentation/workout-editor/rest-edit';
 import {
   targetsModeOf,
   targetsSummaryOf,
@@ -30,7 +30,6 @@ import {
 } from '@/components/presentation/workout-editor/weighted-targets-editor';
 import { fontFamily, spacing, useAppTheme } from '@/hooks/useAppTheme';
 import { CardioExerciseBlueprint, ExerciseBlueprint, WeightedExerciseBlueprint } from '@/models/blueprint-models';
-import { formatTimeSpan } from '@/utils/format-time-span';
 import { useTranslate } from '@tolgee/react';
 import BigNumber from 'bignumber.js';
 import { ReactNode, useState } from 'react';
@@ -51,6 +50,7 @@ export interface ExerciseEditorProps {
   formatStep: (step: BigNumber) => string;
   onSwap: () => void;
   onOpenLoad: () => void;
+  onOpenRest: () => void;
   /** The Targets card's number pad, which the sheet mounts under the cards. */
   targets: TargetsPadControl;
   onOpenWarmups: () => void;
@@ -185,8 +185,7 @@ function WeightedSections(
 ) {
   const { t } = useTranslate();
   const { exercise, updateWeighted } = props;
-  const [restOpen, setRestOpen] = useState(false);
-  const rest = exercise.restBetweenSets;
+  const restRow = restRowOf(t, exercise.restBetweenSets);
   // Only the targets persist, so a uniform list cannot say whether it was authored as fixed or as a
   // range; the chosen layout lives here for as long as the editor is open.
   const [targetsMode, setTargetsMode] = useState(() => targetsModeOf(exercise));
@@ -237,9 +236,12 @@ function WeightedSections(
               <EditorRow
                 testID="exercise-editor-rest"
                 title={t('exercise_editor.rest.title')}
-                subtitle={t('exercise_editor.rest.failure.label', { rest: formatTimeSpan(rest.failureRest) })}
-                value={formatTimeSpan(rest.minRest)}
-                onPress={() => setRestOpen(true)}
+                subtitle={restRow.subtitle}
+                value={restRow.value}
+                onPress={() => {
+                  closePad();
+                  props.onOpenRest();
+                }}
               />
               <RowDivider />
             </>
@@ -259,7 +261,10 @@ function WeightedSections(
             testID="exercise-editor-load"
             title={t('exercise_editor.load.title')}
             subtitle={loadSummaryOf(t, exercise.resistance)}
-            onPress={props.onOpenLoad}
+            onPress={() => {
+              closePad();
+              props.onOpenLoad();
+            }}
           />
           <RowDivider />
           <SupersetRow
@@ -269,15 +274,6 @@ function WeightedSections(
           />
         </Card>
       </Section>
-
-      {props.restTimersEnabled ? (
-        <RestEditorDialog
-          rest={rest}
-          onRestUpdated={(restBetweenSets) => updateWeighted((current) => current.with({ restBetweenSets }))}
-          dialogOpen={restOpen}
-          setDialogOpen={setRestOpen}
-        />
-      ) : null}
     </>
   );
 }

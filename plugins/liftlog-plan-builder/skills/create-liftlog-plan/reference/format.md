@@ -61,7 +61,7 @@ Read these first. They are the reason most generated plans fail to import.
     { "reps": { "min": 5, "max": 5 }, "kind": "working" },
     { "reps": { "min": 5, "max": 5 }, "kind": "working" }
   ],
-  "restBetweenSets": { "minRest": "PT3M", "maxRest": "PT5M", "failureRest": "PT5M" },
+  "restBetweenSets": { "minRest": "PT3M", "maxRest": "PT3M", "failureRest": "PT5M" },
   "supersetWithNext": false,
   "notes": "",
   "link": "",
@@ -175,13 +175,13 @@ weight of zero, which pollutes the stats with a zero-weight line.
 
 ### Rest
 
-All three are required ISO-8601 durations.
+All three are required ISO-8601 durations. LiftLog has one rest and an optional different rest after a failed set.
 
-| Field         | Meaning                                                                                 |
-| ------------- | --------------------------------------------------------------------------------------- |
-| `minRest`     | The shortest acceptable rest.                                                           |
-| `maxRest`     | The longest.                                                                            |
-| `failureRest` | Rest after a set where they missed the target reps - normally the longest of the three. |
+| Field         | Meaning                                                                                       |
+| ------------- | --------------------------------------------------------------------------------------------- |
+| `minRest`     | The rest between sets.                                                                        |
+| `maxRest`     | No longer used. Write it equal to `minRest`.                                                  |
+| `failureRest` | Rest after a set where they missed the target reps. Equal to `minRest` for the same rest. |
 
 Pick rests from the effort of the lift: heavy compounds 3–5 minutes, accessories 60–90 seconds.
 

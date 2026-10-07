@@ -107,11 +107,7 @@ function PrepareExerciseEditorPage() {
 function PrepareAiPlannerPage() {
   const dispatch = useDispatch();
   useMountEffect(() => {
-    const rest = {
-      minRest: Duration.ofSeconds(90),
-      maxRest: Duration.ofSeconds(180),
-      failureRest: Duration.ofSeconds(300),
-    };
+    const rest = { rest: Duration.ofSeconds(90), failedSetRest: Duration.ofSeconds(300) };
     const ex = (name: string, sets: number, repsPerSet: number) =>
       WeightedExerciseBlueprint.of({
         name,

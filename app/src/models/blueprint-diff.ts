@@ -16,6 +16,7 @@ import {
   plannedSetsEqual,
   plannedWarmupSetsEqual,
   Rest,
+  restEquals,
   SessionBlueprint,
   WeightedExerciseBlueprint,
 } from './blueprint-models';
@@ -430,10 +431,6 @@ function matchExercisesByName(
   });
 
   return { matched, added, removed };
-}
-
-function restEquals(a: Rest, b: Rest): boolean {
-  return a.minRest.equals(b.minRest) && a.maxRest.equals(b.maxRest) && a.failureRest.equals(b.failureRest);
 }
 
 function diffWeightedExercises(

@@ -26,11 +26,7 @@ function makeBlueprint(name: string, sets = 3, reps = 8, usesBodyweight = false)
     sets,
     repsConfig: { type: 'fixed', reps },
     progression: [],
-    restBetweenSets: {
-      maxRest: Duration.ofSeconds(0),
-      minRest: Duration.ofSeconds(90),
-      failureRest: Duration.ofSeconds(180),
-    },
+    restBetweenSets: { rest: Duration.ofSeconds(90), failedSetRest: Duration.ofSeconds(180) },
     resistance: usesBodyweight ? 'bodyweight' : 'external',
   });
 }

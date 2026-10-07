@@ -128,9 +128,9 @@ With no history it says the first workout sets them.
 
 ### Rest (D5)
 
-One rest time, the minimum, from presets (1:00 to 3:00). **Advanced** holds all three times the timer uses:
-the shortest rest, the longest, and the rest after a missed set, in 15-second steps. A preset keeps the
-longest rest at least as long as the shortest (`withMinRest`). Rest is hidden when rest timers are off.
+One rest time from presets (1:00 to 3:00). **Advanced** holds the rest and the rest after a failed set, in
+15-second steps; a failed-set rest stepped back to the rest becomes "the same" again and follows it. Rest is
+hidden when rest timers are off. (PM-49 moves this to the same wheels as the edit exercise sheet.)
 
 ### Progression presets
 

@@ -9,6 +9,7 @@ import { ExerciseEditor } from '@/components/presentation/workout-editor/exercis
 import { blueprintSwappedTo } from '@/components/presentation/workout-editor/exercise-picker';
 import { useTargetsPad, WeightedTargetsPad } from '@/components/presentation/workout-editor/weighted-targets-editor';
 import { getExerciseLoadHref } from '@/components/smart/exercise-load-sheet';
+import { getExerciseEditRestHref } from '@/components/smart/exercise-edit-rest-sheet';
 import { getExerciseProgressionHref } from '@/components/smart/exercise-progression-sheet';
 import { getEditorWarmupsHref } from '@/components/smart/exercise-warmups-sheet';
 import { useOwnedExerciseEdit } from '@/components/smart/exercise-edit-draft';
@@ -125,6 +126,7 @@ export function ExerciseEditorSheet(props: ExerciseEditorSheetProps) {
             formatStep={formatStep}
             onSwap={() => openSearch(exercise.name)}
             onOpenLoad={() => router.push(getExerciseLoadHref(editId))}
+            onOpenRest={() => router.push(getExerciseEditRestHref(editId))}
             onOpenWarmups={() => router.push(getEditorWarmupsHref(editId, props.scope, props.workingWeight))}
             onOpenProgression={() => router.push(getExerciseProgressionHref(editId))}
             targets={targets}
