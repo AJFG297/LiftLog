@@ -72,6 +72,7 @@ import { fontFamily, spacing, useAppTheme } from '@/hooks/useAppTheme';
 import { useBackWhenGone } from '@/hooks/useBackWhenGone';
 import { type ExercisePick, useExercisePicker } from '@/hooks/useExerciseSearch';
 import { useGoToRoutines } from '@/hooks/useGoToRoutines';
+import { usePreferredWeightFormat } from '@/hooks/usePreferredWeightUnit';
 import {
   CardioExerciseBlueprint,
   ExerciseBlueprint,
@@ -86,7 +87,7 @@ import { setLabels } from '@/models/session-models/set-kind';
 import { type LoadUnit, Weight } from '@/models/weight';
 import { useAppSelector } from '@/store';
 import { updateProgram } from '@/store/program';
-import { selectPreferredWeightUnit } from '@/store/settings';
+
 import { selectExercises, selectLatestExercises } from '@/store/stored-sessions';
 import { formatTimeSpan } from '@/utils/format-time-span';
 import { localeFormatBigNumber } from '@/utils/locale-bignumber';
@@ -139,7 +140,7 @@ export function RoutineEditor({ programId, sessionIndex, isNew }: RoutineEditorP
   const program = useAppSelector((state) => state.program.savedPrograms[programId]);
   const latestExercises = useAppSelector(selectLatestExercises);
   const catalog = useAppSelector(selectExercises);
-  const preferredUnit = useAppSelector(selectPreferredWeightUnit);
+  const { unit: preferredUnit, unitLabel, formatWeight: formatStep } = usePreferredWeightFormat();
   const restTimersEnabled = useAppSelector((x) => x.settings.restTimersEnabled);
   const barWeight = useAppSelector((x) => x.settings.barWeight);
   const availablePlates = useAppSelector((x) => x.settings.availablePlates);
@@ -188,10 +189,6 @@ export function RoutineEditor({ programId, sessionIndex, isNew }: RoutineEditorP
 
   const equipmentOf = (exercise: ExerciseBlueprint) =>
     equipmentClassOf(catalog[exercise.exerciseId]?.equipment ?? null);
-  const unitLabel = t(
-    preferredUnit === 'pounds' ? 'routine_editor.unit.pounds.label' : 'routine_editor.unit.kilograms.label',
-  );
-  const formatStep = (step: BigNumber) => `${localeFormatBigNumber(step)} ${unitLabel}`;
 
   const updateExerciseAt = (index: number, update: (exercise: WeightedExerciseBlueprint) => ExerciseBlueprint) =>
     updateRoutineDraft(location, (r) => {

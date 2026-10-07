@@ -4,16 +4,14 @@ import { ProgressionSheetContent } from '@/components/presentation/workout-edito
 import { plannedTargetsOf } from '@/components/presentation/workout-editor/progression-sheet-copy';
 import { updateExerciseEdit, useExerciseEdit } from '@/components/smart/exercise-edit-draft';
 import { useBackWhenGone } from '@/hooks/useBackWhenGone';
+import { usePreferredWeightFormat } from '@/hooks/usePreferredWeightUnit';
 import { spacing, useAppTheme } from '@/hooks/useAppTheme';
 import { WeightedExerciseBlueprint } from '@/models/blueprint-models';
 import { equipmentClassOf, weightStepFor } from '@/models/equipment';
 import { RecordedWeightedExercise } from '@/models/session-models';
 import { useAppSelector } from '@/store';
-import { selectPreferredWeightUnit } from '@/store/settings';
 import { selectExercises, selectLatestExercises } from '@/store/stored-sessions';
-import { localeFormatBigNumber } from '@/utils/locale-bignumber';
 import { useTranslate } from '@tolgee/react';
-import BigNumber from 'bignumber.js';
 import { Href, useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { View } from 'react-native';
@@ -35,7 +33,7 @@ export function ExerciseProgressionSheet() {
   const { tokens } = useAppTheme();
   const { back } = useRouter();
   const insets = useSafeAreaInsets();
-  const unit = useAppSelector(selectPreferredWeightUnit);
+  const { unit, formatWeight } = usePreferredWeightFormat();
   const catalog = useAppSelector(selectExercises);
   const latest = useAppSelector(selectLatestExercises);
   const exercise = useExerciseEdit(editId ?? '');
@@ -48,8 +46,6 @@ export function ExerciseProgressionSheet() {
     return null;
   }
 
-  const unitLabel = t(unit === 'pounds' ? 'routine_editor.unit.pounds.label' : 'routine_editor.unit.kilograms.label');
-  const formatWeight = (weight: BigNumber) => `${localeFormatBigNumber(weight)} ${unitLabel}`;
   // The preview opens on the weight the next workout would: the best set last time this exercise was done.
   const last = latest[weighted.progressionKey()];
   const startWeight =

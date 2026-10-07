@@ -17,14 +17,12 @@ import { getEditorWarmupsHref } from '@/components/smart/exercise-warmups-sheet'
 import { useOwnedExerciseEdit } from '@/components/smart/exercise-edit-draft';
 import { spacing, useAppTheme } from '@/hooks/useAppTheme';
 import { useExerciseSearch } from '@/hooks/useExerciseSearch';
-import { usePreferredWeightUnit } from '@/hooks/usePreferredWeightUnit';
+import { usePreferredWeightFormat } from '@/hooks/usePreferredWeightUnit';
 import { CardioExerciseBlueprint, ExerciseBlueprint, WeightedExerciseBlueprint } from '@/models/blueprint-models';
 import { Weight } from '@/models/weight';
 import { useAppSelector } from '@/store';
 import { selectExercises } from '@/store/stored-sessions';
-import { localeFormatBigNumber } from '@/utils/locale-bignumber';
 import { useTranslate } from '@tolgee/react';
-import BigNumber from 'bignumber.js';
 import { useRouter } from 'expo-router';
 import { ReactNode, useState } from 'react';
 import { View } from 'react-native';
@@ -58,7 +56,7 @@ export function ExerciseEditorSheet(props: ExerciseEditorSheetProps) {
   const catalog = useAppSelector(selectExercises);
   const restTimersEnabled = useAppSelector((x) => x.settings.restTimersEnabled);
   const useImperialUnits = useAppSelector((x) => x.settings.useImperialUnits);
-  const unit = usePreferredWeightUnit();
+  const { formatWeight: formatStep } = usePreferredWeightFormat();
   const { editId, exercise, update } = useOwnedExerciseEdit(props.exercise, props.onChange);
   // A second tap while the sheet animates away would go back past what opened it.
   const [closing, setClosing] = useState(false);
@@ -69,8 +67,6 @@ export function ExerciseEditorSheet(props: ExerciseEditorSheetProps) {
     update((current) => blueprintSwappedTo(current, { id: picked.id, name: picked.descriptor.name })),
   );
 
-  const unitLabel = t(unit === 'pounds' ? 'routine_editor.unit.pounds.label' : 'routine_editor.unit.kilograms.label');
-  const formatStep = (step: BigNumber) => `${localeFormatBigNumber(step)} ${unitLabel}`;
   const copy = exerciseEditScopeCopy(t, props.scope, exercise.name);
 
   const save = () => {
