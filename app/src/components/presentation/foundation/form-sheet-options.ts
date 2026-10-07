@@ -1,7 +1,10 @@
 import type { NativeStackNavigationOptions } from 'expo-router';
 
-/** Heights a sheet can rest at, as ascending fractions of the screen. Android honours at most three. */
-export type SheetDetents = [number] | [number, number] | [number, number, number];
+/**
+ * Heights a sheet can rest at, as ascending fractions of the screen. Android honours at most three.
+ * `fitToContents` sizes the sheet to its content and follows it as it grows: the content must not use `flex: 1`.
+ */
+export type SheetDetents = [number] | [number, number] | [number, number, number] | 'fitToContents';
 
 /**
  * Screen options for a native sheet (docs/plans/redesign.md, D7). Sheets are expo-router routes, not a

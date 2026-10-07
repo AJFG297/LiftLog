@@ -26,7 +26,7 @@ import { REST_PICK_MINUTES, REST_PICK_SECONDS, RestPick } from '@/models/rest-de
 import { useTranslate } from '@tolgee/react';
 import { Href, useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { View } from 'react-native';
+import { Platform, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 /** The Rest sheet over the edit exercise sheet, editing the exercise open there. */
@@ -96,7 +96,13 @@ function SheetContent({
 
   return (
     // The wheels run edge to edge, so a thumb near the side of the sheet turns one rather than dragging it.
-    <View style={{ flex: 1, backgroundColor: tokens.card, paddingBottom: insets.bottom + spacing[4] }}>
+    // The sheet fits its content, so no flex: 1. iOS already adds the bottom inset to a sheet that fits.
+    <View
+      style={{
+        backgroundColor: tokens.card,
+        paddingBottom: (Platform.OS === 'ios' ? 0 : insets.bottom) + spacing[4],
+      }}
+    >
       <View style={{ paddingHorizontal: spacing.pageHorizontalMargin }}>
         <SheetHeader title={t('exercise_editor.rest.title')} subtitle={exercise.name} onClose={back} />
       </View>
