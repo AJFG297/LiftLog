@@ -59,7 +59,8 @@ public class AiPlanToolProvider
     /// <summary>
     /// Reads the embedded schema into an <see cref="InputSchema"/>, carrying
     /// <c>type</c>/<c>properties</c>/<c>required</c>/<c>definitions</c> through
-    /// verbatim (the <c>$schema</c> meta key is dropped).
+    /// verbatim (the <c>$schema</c> meta key is dropped), except the <c>Rest</c>
+    /// definition, which the model fills in the new shape (see <see cref="AiPlanRest"/>).
     /// </summary>
     public static InputSchema LoadInputSchema()
     {
@@ -81,6 +82,7 @@ public class AiPlanToolProvider
             }
             raw[prop.Name] = prop.Value.Clone();
         }
+        raw["definitions"] = AiPlanRest.WithRestDefinition(raw["definitions"]);
 
         return InputSchema.FromRawUnchecked(raw);
     }
