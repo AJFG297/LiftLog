@@ -17,7 +17,9 @@ import {
   withWarmupPreset,
   withWarmupRemoved,
   withWarmupRepsAt,
+  workingWeightNote,
   workingWeightOf,
+  resolvedWeightNote,
 } from '@/components/presentation/workout-editor/warmup-edit';
 
 vi.mock('expo-localization', () => ({ getLocales: () => [{ decimalSeparator: '.' }] }));
@@ -195,5 +197,16 @@ describe('warmupsScopeNote', () => {
     expect(warmupsScopeNote(t, { kind: 'routineDraft', routineName: 'Push A' })).toBe(
       'Goes into Push A when you save the routine.',
     );
+  });
+});
+
+describe('the warm-up sheet weights', () => {
+  it('spaces the working weight from its unit, like the rest of the app', () => {
+    expect(workingWeightNote(t, kg(65))).toBe('Working weight 65 kg · % is of that');
+  });
+
+  it('says what a percentage works out to with a space before the unit', () => {
+    expect(resolvedWeightNote(t, kg(32.5))).toBe('= 32.5 kg');
+    expect(resolvedWeightNote(t, new Weight(95, 'pounds'))).toBe('= 95 lbs');
   });
 });

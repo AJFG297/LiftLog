@@ -16,6 +16,7 @@ import { MIN_TOUCH_TARGET } from '@/components/presentation/foundation/touch-tar
 import {
   isEmptyBar,
   resolvedWarmupWeight,
+  resolvedWeightNote,
   WARMUP_PRESETS,
   WarmupPresetId,
   warmupPresetSets,
@@ -25,6 +26,7 @@ import {
   withWarmupPreset,
   withWarmupRemoved,
   withWarmupRepsAt,
+  workingWeightNote,
 } from '@/components/presentation/workout-editor/warmup-edit';
 import { spacing, useAppTheme } from '@/hooks/useAppTheme';
 import {
@@ -200,9 +202,7 @@ export function WarmupsEditor(props: WarmupsEditorProps) {
           {loadTypes.includes('percent') ? (
             <SurfaceText font="text-sm" style={{ color: tokens.muted }} testID="warmups-working-weight">
               {props.workingWeight
-                ? t('exercise_editor.warmups.working_weight.label', {
-                    weight: props.workingWeight.shortLocaleFormat(),
-                  })
+                ? workingWeightNote(t, props.workingWeight)
                 : t('exercise_editor.warmups.working_weight_unknown.label')}
             </SurfaceText>
           ) : null}
@@ -406,7 +406,7 @@ function WarmupRow(props: {
     props.editingField === 'load'
       ? undefined
       : props.resolved
-        ? t('exercise_editor.warmups.resolved.label', { weight: props.resolved.shortLocaleFormat() })
+        ? resolvedWeightNote(t, props.resolved)
         : props.emptyBar
           ? t('exercise_editor.warmups.empty_bar.label')
           : undefined;

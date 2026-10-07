@@ -11,7 +11,8 @@ import {
   WeightedExerciseBlueprint,
   withWarmupLoadType,
 } from '@/models/blueprint-models';
-import { LoadUnit, Weight } from '@/models/weight';
+import { LoadUnit, shortFormatWeightUnit, Weight } from '@/models/weight';
+import { localeFormatBigNumber } from '@/utils/locale-bignumber';
 import type { TranslationKey } from '@tolgee/react';
 import BigNumber from 'bignumber.js';
 
@@ -156,6 +157,20 @@ export function workingWeightOf(sets: readonly { weight: Weight }[]): Weight | u
     undefined,
   );
   return heaviest && heaviest.value.isGreaterThan(0) ? heaviest : undefined;
+}
+
+/** `Working weight 65 kg · % is of that`: the warm-up sheet's line under its title. */
+export function workingWeightNote(t: TranslateFn, working: Weight): string {
+  return t('exercise_editor.warmups.working_weight.label', { weight: spacedWeight(working) });
+}
+
+/** `= 32.5 kg`: what a percentage warm-up works out to. */
+export function resolvedWeightNote(t: TranslateFn, resolved: Weight): string {
+  return t('exercise_editor.warmups.resolved.label', { weight: spacedWeight(resolved) });
+}
+
+function spacedWeight(weight: Weight): string {
+  return `${localeFormatBigNumber(weight.value)} ${shortFormatWeightUnit(weight.unit)}`;
 }
 
 export function isEmptyBar(warmup: PlannedWarmupSet, bar: Weight): boolean {
