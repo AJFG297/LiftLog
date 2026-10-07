@@ -16,7 +16,6 @@ import {
   warmupsSummaryOf,
   withTrackingType,
 } from '@/components/presentation/workout-editor/exercise-edit-copy';
-import { ProgressionRulesEditor } from '@/components/presentation/workout-editor/progressive-overload';
 import { RestEditorDialog } from '@/components/presentation/workout-editor/rest-editor-dialog';
 import {
   targetsModeOf,
@@ -55,13 +54,8 @@ export interface ExerciseEditorProps {
   /** The Targets card's number pad, which the sheet mounts under the cards. */
   targets: TargetsPadControl;
   onOpenWarmups: () => void;
+  onOpenProgression: () => void;
 }
-
-/**
- * Today's controls for the rows that will get sheets of their own (PM-46 rest, PM-48 progression). Until
- * then a row opens its control in place.
- */
-type InlinePanel = 'progression';
 
 /**
  * The edit exercise screen's content (PM-43): the scope, then the Exercise, Targets, How it runs and Notes
@@ -191,9 +185,7 @@ function WeightedSections(
 ) {
   const { t } = useTranslate();
   const { exercise, updateWeighted } = props;
-  const [panel, setPanel] = useState<InlinePanel | undefined>();
   const [restOpen, setRestOpen] = useState(false);
-  const toggle = (next: InlinePanel) => setPanel((open) => (open === next ? undefined : next));
   const rest = exercise.restBetweenSets;
   // Only the targets persist, so a uniform list cannot say whether it was authored as fixed or as a
   // range; the chosen layout lives here for as long as the editor is open.
@@ -256,17 +248,12 @@ function WeightedSections(
             testID="exercise-editor-progression"
             title={t('exercise_editor.progression.title')}
             subtitle={progressionSummaryOf(t, exercise, props.formatStep)}
-            expanded={panel === 'progression'}
-            onPress={() => toggle('progression')}
+            onPress={() => {
+              // The progression sheet covers the editor; leave no targets cell selected behind it.
+              closePad();
+              props.onOpenProgression();
+            }}
           />
-          {panel === 'progression' ? (
-            <View style={{ paddingHorizontal: spacing[4], paddingBottom: spacing[3] }}>
-              <ProgressionRulesEditor
-                exercise={exercise}
-                onChange={(progression) => updateWeighted((current) => current.with({ progression }))}
-              />
-            </View>
-          ) : null}
           <RowDivider />
           <EditorRow
             testID="exercise-editor-load"
@@ -423,15 +410,7 @@ function Section({ title, aside, children }: { title: string; aside?: string; ch
  * A setting summarised on one row that opens its control: a title, what it is set to, and an optional
  * value on the right, such as the rest time.
  */
-function EditorRow(props: {
-  title: string;
-  subtitle: string;
-  value?: string;
-  /** For a row that opens its control in place rather than in a sheet. */
-  expanded?: boolean;
-  onPress: () => void;
-  testID: string;
-}) {
+function EditorRow(props: { title: string; subtitle: string; value?: string; onPress: () => void; testID: string }) {
   const { tokens } = useAppTheme();
   return (
     <Pressable
@@ -439,7 +418,6 @@ function EditorRow(props: {
       onPress={props.onPress}
       accessibilityRole="button"
       accessibilityLabel={[props.title, props.value, props.subtitle].filter(Boolean).join(', ')}
-      accessibilityState={props.expanded === undefined ? undefined : { expanded: props.expanded }}
       style={({ pressed }) => ({
         minHeight: spacing[16],
         flexDirection: 'row',
@@ -463,9 +441,7 @@ function EditorRow(props: {
           {props.value}
         </SurfaceText>
       ) : null}
-      <View style={{ transform: [{ rotate: props.expanded ? '90deg' : '0deg' }] }}>
-        <MsIconSrc name="chevronRight" size={18} color={tokens.muted} />
-      </View>
+      <MsIconSrc name="chevronRight" size={18} color={tokens.muted} />
     </Pressable>
   );
 }

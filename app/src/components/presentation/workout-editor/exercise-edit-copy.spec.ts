@@ -160,7 +160,7 @@ describe('row summaries', () => {
       bench.with({ progression: rulesForPreset(preset, bench, step) });
 
     expect(progressionSummaryOf(t, withPreset('weight'), formatStep)).toBe(
-      'Add weight · +2.5 kg when every set hits 12',
+      'Add weight · +2.5 kg once your best set hits 12',
     );
     expect(progressionSummaryOf(t, withPreset('double'), formatStep)).toMatch(
       /^Reps, then weight · up to \d+ reps, then \+2\.5 kg$/,

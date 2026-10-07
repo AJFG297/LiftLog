@@ -71,6 +71,7 @@ function Layout() {
       <Stack.Screen name="routine-exercise-editor" options={formSheetOptions([0.95])} />
       <Stack.Screen name="exercise-load" options={formSheetOptions([0.55, 0.9])} />
       <Stack.Screen name="exercise-warmups" options={formSheetOptions([0.75, 0.95])} />
+      <Stack.Screen name="exercise-progression" options={formSheetOptions([0.9])} />
       <Stack.Screen name="exercise-history" options={formSheetOptions([0.6, 0.95])} />
       <Stack.Screen name="workout-editor" />
       <Stack.Screen name="workout-detail/index" />

@@ -9,6 +9,7 @@ import { ExerciseEditor } from '@/components/presentation/workout-editor/exercis
 import { blueprintSwappedTo } from '@/components/presentation/workout-editor/exercise-picker';
 import { useTargetsPad, WeightedTargetsPad } from '@/components/presentation/workout-editor/weighted-targets-editor';
 import { getExerciseLoadHref } from '@/components/smart/exercise-load-sheet';
+import { getExerciseProgressionHref } from '@/components/smart/exercise-progression-sheet';
 import { getEditorWarmupsHref } from '@/components/smart/exercise-warmups-sheet';
 import { useOwnedExerciseEdit } from '@/components/smart/exercise-edit-draft';
 import { spacing, useAppTheme } from '@/hooks/useAppTheme';
@@ -77,8 +78,8 @@ export function ExerciseEditorSheet(props: ExerciseEditorSheetProps) {
   };
 
   return (
-    // The Rest dialog and the progression example are Paper portals, which would otherwise open on the
-    // root view behind this native sheet. Goes once those become sheets of their own (PM-46, PM-48).
+    // The Rest dialog is a Paper portal, which would otherwise open on the root view behind this native
+    // sheet. Goes once it becomes a sheet of its own (PM-46).
     <Portal.Host>
       <View style={{ flex: 1, backgroundColor: tokens.bg }}>
         <View
@@ -125,6 +126,7 @@ export function ExerciseEditorSheet(props: ExerciseEditorSheetProps) {
             onSwap={() => openSearch(exercise.name)}
             onOpenLoad={() => router.push(getExerciseLoadHref(editId))}
             onOpenWarmups={() => router.push(getEditorWarmupsHref(editId, props.scope, props.workingWeight))}
+            onOpenProgression={() => router.push(getExerciseProgressionHref(editId))}
             targets={targets}
           />
           {props.footer}

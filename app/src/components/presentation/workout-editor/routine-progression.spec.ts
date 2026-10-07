@@ -5,7 +5,11 @@ import {
   progressionChoiceOf,
   rulesForPreset,
   sharedWorkingTopReps,
+  withLadderCeiling,
   withLadderKeptClimbable,
+  withProgressionStep,
+  ladderCeilingChoices,
+  stepChoices,
 } from '@/components/presentation/workout-editor/routine-progression';
 import { makeWeightedBlueprint } from '@/models/session-models/__test__/helpers';
 
@@ -122,5 +126,66 @@ describe('sharedWorkingTopReps', () => {
       ],
     });
     expect(sharedWorkingTopReps(withDrop)).toBe(10);
+  });
+});
+
+describe('withProgressionStep', () => {
+  it('changes how much Add weight adds, and it still reads as Add weight', () => {
+    const exercise = bench(rulesForPreset('weight', bench(), new BigNumber(2.5)));
+    const stepped = withProgressionStep(exercise, new BigNumber(5));
+    expect(json(stepped.progression)).toEqual([
+      { axis: 'load', step: '5', scope: { type: 'allSets' }, trigger: 'allSetsMetTarget' },
+    ]);
+    expect(progressionChoiceOf(stepped.progression)).toBe('weight');
+  });
+
+  it('changes the weight rung of Reps, then weight and leaves the reps rung alone', () => {
+    const exercise = bench(rulesForPreset('double', bench(), new BigNumber(2.5)));
+    const stepped = withProgressionStep(exercise, new BigNumber(1.25));
+    expect(stepped.progression[0]).toBe(exercise.progression[0]);
+    expect(stepped.progression[1]!.step.toNumber()).toBe(1.25);
+    expect(progressionChoiceOf(stepped.progression)).toBe('double');
+  });
+
+  it('leaves custom rules alone', () => {
+    const custom = bench([ProgressionRule.load(new BigNumber(2.5), { type: 'lowestSets', pick: 'all' })]);
+    expect(withProgressionStep(custom, new BigNumber(5))).toBe(custom);
+  });
+});
+
+describe('withLadderCeiling', () => {
+  it('moves where Reps, then weight stops climbing', () => {
+    const exercise = bench(rulesForPreset('double', bench(), new BigNumber(2.5)));
+    const raised = withLadderCeiling(exercise, new BigNumber(20));
+    expect(raised.progression[0]!.ceiling?.toNumber()).toBe(20);
+    expect(raised.progression[1]).toBe(exercise.progression[1]);
+    expect(progressionChoiceOf(raised.progression)).toBe('double');
+  });
+
+  it('does nothing to any other choice', () => {
+    const exercise = bench(rulesForPreset('weight', bench(), new BigNumber(2.5)));
+    expect(withLadderCeiling(exercise, new BigNumber(20))).toBe(exercise);
+  });
+});
+
+describe('stepChoices', () => {
+  it('offers 1.25, 2.5 and 5', () => {
+    expect(stepChoices(new BigNumber(2.5)).map((step) => step.toNumber())).toEqual([1.25, 2.5, 5]);
+  });
+
+  it('keeps a step of the exercise’s own among them, in order', () => {
+    expect(stepChoices(new BigNumber(2)).map((step) => step.toNumber())).toEqual([1.25, 2, 2.5, 5]);
+  });
+});
+
+describe('ladderCeilingChoices', () => {
+  it('offers 14, 15, 16 and 20 above a plan of 8-12', () => {
+    const range = makeWeightedBlueprint({ name: 'Bench', sets: 3, repsConfig: { type: 'range', min: 8, max: 12 } });
+    expect(ladderCeilingChoices(range, new BigNumber(16)).map((c) => c.toNumber())).toEqual([14, 15, 16, 20]);
+  });
+
+  it('drops limits the plan has already reached and keeps the current one', () => {
+    const fifteen = makeWeightedBlueprint({ name: 'Curl', sets: 3, repsConfig: { type: 'fixed', reps: 15 } });
+    expect(ladderCeilingChoices(fifteen, new BigNumber(19)).map((c) => c.toNumber())).toEqual([16, 19, 20]);
   });
 });
