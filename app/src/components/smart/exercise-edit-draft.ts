@@ -3,9 +3,9 @@ import { uuid } from '@/utils/uuid';
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 
 /**
- * The exercise open in the edit exercise sheet. The sheets the editor opens over itself (Load, and later
- * Rest, Progression and Warm-ups) are routes of their own, so they edit it here by its id rather than
- * through props.
+ * The exercise open in the edit exercise sheet. The sheets the editor opens over itself (Load, Rest,
+ * Progression and Warm-ups) are routes of their own, so they edit it here by its id rather than through
+ * props.
  *
  * The editor that opened it owns it and decides where each change lands through `onChange`: the routine
  * editor writes it straight into the routine, the workout keeps it until the editor is dismissed.
