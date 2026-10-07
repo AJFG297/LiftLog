@@ -9,6 +9,7 @@ import { getExerciseStatsHref } from '@/components/smart/exercise-stats-href';
 import { LiveSetTable } from '@/components/smart/live-set-table';
 import { RecordedExerciseView } from '@/components/smart/recorded-exercise-view';
 import { getSessionExerciseEditorHref } from '@/components/smart/session-exercise-editor';
+import { getSessionWarmupsHref } from '@/components/smart/exercise-warmups-sheet';
 import { useCarryOver } from '@/hooks/useCarryOver';
 import { useExerciseSearch } from '@/hooks/useExerciseSearch';
 import { LiveSetEntry } from '@/hooks/useLiveSetEntry';
@@ -127,7 +128,11 @@ export function LiveExerciseCard(props: LiveExerciseCardProps) {
             key: 'warmup',
             label: t('live_workout.chip.warmup.button'),
             icon: 'localFireDepartment' as const,
-            onPress: openEditor,
+            onPress: () => {
+              // The sheet sits where the number pad docks.
+              props.entry.close();
+              push(getSessionWarmupsHref(session.id, exerciseIndex));
+            },
           },
         ]
       : []),

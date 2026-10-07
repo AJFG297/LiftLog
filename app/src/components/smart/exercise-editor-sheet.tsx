@@ -8,11 +8,13 @@ import {
 import { ExerciseEditor } from '@/components/presentation/workout-editor/exercise-editor';
 import { blueprintSwappedTo } from '@/components/presentation/workout-editor/exercise-picker';
 import { getExerciseLoadHref } from '@/components/smart/exercise-load-sheet';
+import { getEditorWarmupsHref } from '@/components/smart/exercise-warmups-sheet';
 import { useOwnedExerciseEdit } from '@/components/smart/exercise-edit-draft';
 import { spacing, useAppTheme } from '@/hooks/useAppTheme';
 import { useExerciseSearch } from '@/hooks/useExerciseSearch';
 import { usePreferredWeightUnit } from '@/hooks/usePreferredWeightUnit';
 import { ExerciseBlueprint } from '@/models/blueprint-models';
+import { Weight } from '@/models/weight';
 import { useAppSelector } from '@/store';
 import { selectExercises } from '@/store/stored-sessions';
 import { localeFormatBigNumber } from '@/utils/locale-bignumber';
@@ -33,6 +35,8 @@ interface ExerciseEditorSheetProps {
   nextExerciseName: string | undefined;
   /** Each change, as it is made. The caller decides when it lands: at once, or when the sheet closes. */
   onChange: (exercise: ExerciseBlueprint) => void;
+  /** Today's heaviest working set, which the Warm-ups sheet resolves percentages against. None in a routine. */
+  workingWeight?: Weight;
   /** Anything the entry point adds under the cards, such as the routine's "Copy to another routine". */
   footer?: ReactNode;
 }
@@ -118,6 +122,7 @@ export function ExerciseEditorSheet(props: ExerciseEditorSheetProps) {
             formatStep={formatStep}
             onSwap={() => openSearch(exercise.name)}
             onOpenLoad={() => router.push(getExerciseLoadHref(editId))}
+            onOpenWarmups={() => router.push(getEditorWarmupsHref(editId, props.scope, props.workingWeight))}
           />
           {props.footer}
         </KeyboardAwareScrollView>

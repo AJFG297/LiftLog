@@ -75,8 +75,10 @@ editor opens edit the same draft:
   progression, load, superset, notes, link, and Copy to another routine. Its first line says the change goes
   into the routine when the routine is saved, and its button is Done. Opened on its own, with no editor
   behind it, it edits the saved routine directly, says so, and its button is "Save to <routine>". The
-  editor holds the exercise in `exercise-edit-draft.ts` so the sheets it opens over itself (Load) edit it
-  too.
+  editor holds the exercise in `exercise-edit-draft.ts` so the sheets it opens over itself (Load, Warm-ups) edit it
+  too. The Warm-ups row opens the warm-up sheet (`app/exercise-warmups.tsx`): W1, W2… with load and reps
+  on the number pad, a percentage shown with what it works out to, and one-tap ramps (Standard, Quick, Heavy
+  day) when there are none.
 - The **set-type sheet** (`app/routine-set-type.tsx`, a root form sheet) changes one set's type.
 
 Two editors can be open on one routine, one from Routines and one from the Workout tab's upcoming card. They
