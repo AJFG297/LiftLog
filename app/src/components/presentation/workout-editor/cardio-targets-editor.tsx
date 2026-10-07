@@ -27,7 +27,7 @@ import { Tile, TileValue } from '@/components/presentation/foundation/tile';
 import { spacing, useAppTheme } from '@/hooks/useAppTheme';
 import { CardioExerciseBlueprint, ExerciseBlueprint } from '@/models/blueprint-models';
 import { useTranslate } from '@tolgee/react';
-import { useState } from 'react';
+import { RefObject, useRef, useState } from 'react';
 import { Keyboard, Pressable, StyleSheet, View } from 'react-native';
 
 /** The cardio Targets card's number pad, held by the sheet so the pad can sit under the scrolling cards. */
@@ -35,6 +35,8 @@ export interface CardioPadControl {
   pad: CardioPad | undefined;
   distanceUnit: CardioDistanceUnit;
   dispatch: (action: CardioPadAction) => void;
+  /** On the field the pad is typing into, so the sheet can keep it in view above the pad. */
+  fieldRef: RefObject<View | null>;
 }
 
 export function useCardioTargetsPad(
@@ -43,10 +45,12 @@ export function useCardioTargetsPad(
   distanceUnit: CardioDistanceUnit,
 ): CardioPadControl {
   const [pad, setPad] = useState<CardioPad>();
+  const fieldRef = useRef<View>(null);
   const cardio = exercise instanceof CardioExerciseBlueprint ? exercise : undefined;
   return {
     pad: cardio && pad,
     distanceUnit,
+    fieldRef,
     dispatch: (action) => {
       if (!cardio) {
         setPad(undefined);
@@ -162,6 +166,7 @@ function SameTiles(props: {
         label={t('exercise_editor.cardio.rounds.label')}
         accessibilityLabel={t('exercise_editor.cardio.rounds.accessibility_label', { rounds })}
         active={pad?.field.kind === 'rounds'}
+        ref={pad?.field.kind === 'rounds' ? targets.fieldRef : undefined}
         onPress={() => props.open({ kind: 'rounds' })}
       >
         <TileValue text={rounds} />
@@ -171,6 +176,7 @@ function SameTiles(props: {
         label={goalLabel}
         accessibilityLabel={t('exercise_editor.cardio.goal_tile.accessibility_label', { goal: goalLabel, value, unit })}
         active={pad?.field.kind === 'goal'}
+        ref={pad?.field.kind === 'goal' ? targets.fieldRef : undefined}
         onPress={() => props.open({ kind: 'goal' })}
       >
         <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: spacing[1] }}>
@@ -216,6 +222,7 @@ function RoundList(props: {
             }}
           >
             <Pressable
+              ref={active ? targets.fieldRef : undefined}
               testID={`cardio-round-${index}`}
               onPress={() => props.openRound(index)}
               accessibilityRole="button"

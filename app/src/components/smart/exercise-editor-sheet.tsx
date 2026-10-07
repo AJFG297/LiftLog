@@ -24,10 +24,12 @@ import { useAppSelector } from '@/store';
 import { selectExercises } from '@/store/stored-sessions';
 import { useTranslate } from '@tolgee/react';
 import { useRouter } from 'expo-router';
-import { ReactNode, useState } from 'react';
+import { ReactNode, useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
-import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
+import { KeyboardAwareScrollView, KeyboardAwareScrollViewRef } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+const EDITED_FIELD_MARGIN = spacing[4];
 
 interface ExerciseEditorSheetProps {
   /** The exercise as it was when the sheet opened. */
@@ -62,12 +64,41 @@ export function ExerciseEditorSheet(props: ExerciseEditorSheetProps) {
   const [closing, setClosing] = useState(false);
   const targets = useTargetsPad(exercise, update);
   const cardioTargets = useCardioTargetsPad(exercise, update, useImperialUnits ? 'mile' : 'kilometre');
+  const scrollRef = useRef<KeyboardAwareScrollViewRef>(null);
+  const scrollY = useRef(0);
 
   const openSearch = useExerciseSearch((picked) =>
     update((current) => blueprintSwappedTo(current, { id: picked.id, name: picked.descriptor.name })),
   );
 
   const copy = exerciseEditScopeCopy(t, props.scope, exercise.name);
+
+  // The cards shrink above the number pad, which can leave the field being typed into underneath it.
+  const keepEditedFieldInView = () => {
+    const scroll = scrollRef.current;
+    const viewport = scroll?.getNativeScrollRef();
+    const field = (targets.pad ? targets.fieldRef : cardioTargets.fieldRef).current;
+    if (!scroll || !viewport || !field) {
+      return;
+    }
+    viewport.measureInWindow((_viewX, viewTop, _viewWidth, viewHeight) =>
+      field.measureInWindow((_fieldX, fieldTop, _fieldWidth, fieldHeight) => {
+        const below = fieldTop + fieldHeight + EDITED_FIELD_MARGIN - (viewTop + viewHeight);
+        const above = viewTop + EDITED_FIELD_MARGIN - fieldTop;
+        if (below > 0) {
+          scroll.scrollTo({ y: scrollY.current + below, animated: true });
+        } else if (above > 0) {
+          scroll.scrollTo({ y: Math.max(0, scrollY.current - above), animated: true });
+        }
+      }),
+    );
+  };
+
+  useEffect(() => {
+    if (targets.pad || cardioTargets.pad) {
+      keepEditedFieldInView();
+    }
+  });
 
   const save = () => {
     if (closing) {
@@ -103,6 +134,10 @@ export function ExerciseEditorSheet(props: ExerciseEditorSheetProps) {
         <HeaderPillButton testID="exercise-editor-save" label={copy.saveLabel} onPress={save} maxWidth="60%" />
       </View>
       <KeyboardAwareScrollView
+        ref={scrollRef}
+        onScroll={(event) => {
+          scrollY.current = event.nativeEvent.contentOffset.y;
+        }}
         bottomOffset={spacing[4]}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{

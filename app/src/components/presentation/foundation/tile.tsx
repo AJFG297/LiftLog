@@ -1,7 +1,7 @@
 import { SurfaceText } from '@/components/presentation/foundation/surface-text';
 import { useAppTheme } from '@/hooks/useAppTheme';
-import { ReactNode } from 'react';
-import { Pressable } from 'react-native';
+import { ReactNode, Ref } from 'react';
+import { Pressable, View } from 'react-native';
 
 /** A labelled number that opens the number pad, like a Targets card's Sets and Reps; `active` while it is on the pad. */
 export function Tile(props: {
@@ -11,10 +11,12 @@ export function Tile(props: {
   onPress: () => void;
   testID: string;
   children: ReactNode;
+  ref?: Ref<View>;
 }) {
   const { tokens } = useAppTheme();
   return (
     <Pressable
+      ref={props.ref}
       testID={props.testID}
       onPress={props.onPress}
       accessibilityRole="button"

@@ -19,13 +19,15 @@ import { spacing, useAppTheme } from '@/hooks/useAppTheme';
 import { ExerciseBlueprint, RepsTarget, WeightedExerciseBlueprint } from '@/models/blueprint-models';
 import { setLabels } from '@/models/session-models/set-kind';
 import { useTranslate } from '@tolgee/react';
-import { useState } from 'react';
+import { RefObject, useRef, useState } from 'react';
 import { Keyboard, Pressable, View } from 'react-native';
 
 /** The Targets card's number pad, held by the sheet so the pad can sit under the scrolling cards. */
 export interface TargetsPadControl {
   pad: TargetsPad | undefined;
   dispatch: (action: TargetsPadAction) => void;
+  /** On the field the pad is typing into, so the sheet can keep it in view above the pad. */
+  fieldRef: RefObject<View | null>;
 }
 
 export function useTargetsPad(
@@ -33,10 +35,12 @@ export function useTargetsPad(
   update: (update: (exercise: ExerciseBlueprint) => ExerciseBlueprint) => void,
 ): TargetsPadControl {
   const [pad, setPad] = useState<TargetsPad>();
+  const fieldRef = useRef<View>(null);
   const weighted = exercise instanceof WeightedExerciseBlueprint ? exercise : undefined;
   return {
     // Cardio has no pad of its own yet (PM-51), so switching tracking type hides it.
     pad: weighted && pad,
+    fieldRef,
     dispatch: (action) => {
       if (!weighted) {
         setPad(undefined);
@@ -107,11 +111,18 @@ export function WeightedTargetsEditor(props: {
               sets: field?.kind === 'sets' ? pad!.value : exercise.plannedSets.length,
             })}
             active={field?.kind === 'sets'}
+            ref={field?.kind === 'sets' ? targets.fieldRef : undefined}
             onPress={() => open({ kind: 'sets' })}
           >
             <TileValue text={String(field?.kind === 'sets' ? pad!.value : exercise.plannedSets.length)} />
           </Tile>
-          <RepsTile exercise={exercise} mode={mode} pad={pad} onPress={() => open({ kind: 'reps' })} />
+          <RepsTile
+            exercise={exercise}
+            mode={mode}
+            pad={pad}
+            fieldRef={targets.fieldRef}
+            onPress={() => open({ kind: 'reps' })}
+          />
         </View>
       )}
     </View>
@@ -122,6 +133,7 @@ function RepsTile(props: {
   exercise: WeightedExerciseBlueprint;
   mode: TargetsMode;
   pad: TargetsPad | undefined;
+  fieldRef: RefObject<View | null>;
   onPress: () => void;
 }) {
   const { t } = useTranslate();
@@ -139,6 +151,7 @@ function RepsTile(props: {
         reps: repsTextOf(target, props.mode),
       })}
       active={active}
+      ref={active ? props.fieldRef : undefined}
       onPress={props.onPress}
     >
       {props.mode === 'range' ? (
@@ -201,6 +214,7 @@ function PerSetList(props: {
             }}
           >
             <Pressable
+              ref={active ? props.targets.fieldRef : undefined}
               testID={`exercise-set-reps-${index}`}
               onPress={() => props.openSet(index)}
               accessibilityRole="button"
