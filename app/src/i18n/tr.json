@@ -37,8 +37,6 @@
   "exercise.all_sets.label": "Setler",
   "exercise.bodyweight.label": "Vücut Ağırlığı",
   "exercise.cardio_target.label": "Kardiyo hedefi",
-  "exercise.cardio_set.add.button": "Set ekle",
-  "exercise.cardio_set.remove.button": "Set sil",
   "exercise.copied_to_session.message": "{exerciseName} egzersizi {targetSessionName}'e kopyalandı",
   "exercise.copy_to.button": "Kopyala",
   "exercise.copy_to_session.button": "Egzersizi oturuma kopyala",

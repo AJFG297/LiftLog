@@ -64,6 +64,7 @@ work to find the docs relevant to your area, and update it whenever you add, rem
 - [NumberPad.md](./NumberPad.md) - the in-screen number pad for weight and reps: how a field's buffer
   behaves (placeholder, typing, ± steps), the step per equipment and unit, the accessory row (plate
   maths, per dumbbell, on the stack, RPE chips), and the bar and plate preferences behind plate maths.
+  Also the edit exercise sheet's targets pad, for sets and reps and for cardio rounds, minutes and distance.
 - [PlanFileFormat.md](./PlanFileFormat.md) - the `.liftlogplan` file format, how plans are imported and
   exported (exercises linked by name, `exerciseId` optional), and the Claude skill that authors plan files
   against the schema.

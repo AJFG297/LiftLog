@@ -21,7 +21,14 @@ export type CardioDistanceUnit = 'kilometre' | 'mile';
 
 export type AlsoLogField = 'time' | 'distance' | 'resistance' | 'incline' | 'weight' | 'steps';
 
-export const ALSO_LOG_FIELDS: readonly AlsoLogField[] = ['time', 'distance', 'resistance', 'incline', 'weight', 'steps'];
+export const ALSO_LOG_FIELDS: readonly AlsoLogField[] = [
+  'time',
+  'distance',
+  'resistance',
+  'incline',
+  'weight',
+  'steps',
+];
 
 const TRACK_FLAG = {
   time: 'trackDuration',
@@ -131,6 +138,11 @@ export function withAlsoLog(exercise: CardioExerciseBlueprint, field: AlsoLogFie
 /** The rest between rounds: the first round's that has one. Cardio never fails a set, so only the rest counts. */
 export function cardioRestOf(exercise: CardioExerciseBlueprint): Duration | undefined {
   return exercise.sets.find((s) => s.restBetweenSets)?.restBetweenSets?.rest;
+}
+
+/** Rest between rounds only exists with more than one round: steady cardio isn't cluttered with it. */
+export function showsRestBetweenRounds(exercise: CardioExerciseBlueprint, restTimersEnabled: boolean): boolean {
+  return restTimersEnabled && exercise.sets.length > 1;
 }
 
 /** `rest` after every round; none at 0:00. */

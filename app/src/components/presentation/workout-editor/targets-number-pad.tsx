@@ -43,9 +43,10 @@ export interface TargetsNumberPadProps {
   onDigit: (digit: number) => void;
   onBackspace: () => void;
   onStep: (by: 1 | -1) => void;
-  /** "Next: Reps", "Next: Set 3", "Next: Rest". */
-  nextLabel: string;
-  onNext: () => void;
+  /** Read out for − and +, when a step is not one, such as a distance's 0.5. */
+  stepLabels?: { minus: string; plus: string };
+  /** "Next: Reps", "Next: Set 3", "Next: Rest". Without one, Done takes the whole row. */
+  next?: { label: string; onPress: () => void };
   onDone: () => void;
 }
 
@@ -57,7 +58,7 @@ const DIGIT_ROWS = [
 
 /**
  * The edit exercise sheet's number pad (D8, PM-45): what is being edited with its value, − / +, common
- * values, the digits, then Next and Done. Presentational, so the cardio targets (PM-51) can drive it too.
+ * values, the digits, then Next and Done. Presentational: the weighted and the cardio targets drive it.
  */
 export function TargetsNumberPad(props: TargetsNumberPadProps) {
   const { tokens } = useAppTheme();
@@ -104,10 +105,14 @@ export function TargetsNumberPad(props: TargetsNumberPadProps) {
         <View style={{ flexDirection: 'row', gap: spacing[2] }}>
           <StepKey
             text="−"
-            label={t('exercise_editor.pad.minus.accessibility_label')}
+            label={props.stepLabels?.minus ?? t('exercise_editor.pad.minus.accessibility_label')}
             onPress={() => props.onStep(-1)}
           />
-          <StepKey text="+" label={t('exercise_editor.pad.plus.accessibility_label')} onPress={() => props.onStep(1)} />
+          <StepKey
+            text="+"
+            label={props.stepLabels?.plus ?? t('exercise_editor.pad.plus.accessibility_label')}
+            onPress={() => props.onStep(1)}
+          />
         </View>
       </View>
 
@@ -144,7 +149,9 @@ export function TargetsNumberPad(props: TargetsNumberPadProps) {
       </View>
 
       <View style={{ flexDirection: 'row', gap: spacing[2] }}>
-        <ActionKey testID="targets-pad-next" label={props.nextLabel} onPress={props.onNext} />
+        {props.next ? (
+          <ActionKey testID="targets-pad-next" label={props.next.label} onPress={props.next.onPress} />
+        ) : null}
         <ActionKey
           testID="targets-pad-done"
           label={t('exercise_editor.pad.done.button')}

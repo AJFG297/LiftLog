@@ -6,7 +6,18 @@ import { SegmentedControl } from '@/components/presentation/foundation/segmented
 import { SurfaceText } from '@/components/presentation/foundation/surface-text';
 import { Switch } from '@/components/presentation/foundation/switch';
 import { MIN_TOUCH_TARGET } from '@/components/presentation/foundation/touch-target';
-import { CardioExerciseEditor } from '@/components/presentation/workout-editor/cardio-exercise-editor';
+import {
+  cardioRestOf,
+  cardioRoundsModeOf,
+  cardioTargetsSummaryOf,
+  showsRestBetweenRounds,
+  withAddedRound,
+  withAlsoLog,
+  withCardioGoal,
+  withCardioRoundsMode,
+  withoutRound,
+} from '@/components/presentation/workout-editor/cardio-targets';
+import { CardioPadControl, CardioTargetsEditor } from '@/components/presentation/workout-editor/cardio-targets-editor';
 import {
   loadSummaryOf,
   progressionSummaryOf,
@@ -30,6 +41,7 @@ import {
 } from '@/components/presentation/workout-editor/weighted-targets-editor';
 import { fontFamily, spacing, useAppTheme } from '@/hooks/useAppTheme';
 import { CardioExerciseBlueprint, ExerciseBlueprint, WeightedExerciseBlueprint } from '@/models/blueprint-models';
+import { formatTimeSpan } from '@/utils/format-time-span';
 import { useTranslate } from '@tolgee/react';
 import BigNumber from 'bignumber.js';
 import { ReactNode, useState } from 'react';
@@ -53,6 +65,8 @@ export interface ExerciseEditorProps {
   onOpenRest: () => void;
   /** The Targets card's number pad, which the sheet mounts under the cards. */
   targets: TargetsPadControl;
+  /** The same for Time & distance. */
+  cardioTargets: CardioPadControl;
   onOpenWarmups: () => void;
   onOpenProgression: () => void;
 }
@@ -62,12 +76,11 @@ export interface ExerciseEditorProps {
  * cards. The sheet around it supplies the header with the save button.
  */
 export function ExerciseEditor(props: ExerciseEditorProps) {
-  const { t } = useTranslate();
   const { exercise, update } = props;
   const updateWeighted = (fn: (exercise: WeightedExerciseBlueprint) => WeightedExerciseBlueprint) =>
     update((current) => (current instanceof WeightedExerciseBlueprint ? fn(current) : current));
-  const updateCardio = (partial: Partial<CardioExerciseBlueprint>) =>
-    update((current) => (current instanceof CardioExerciseBlueprint ? current.with(partial) : current));
+  const updateCardio = (fn: (exercise: CardioExerciseBlueprint) => CardioExerciseBlueprint) =>
+    update((current) => (current instanceof CardioExerciseBlueprint ? fn(current) : current));
 
   return (
     <View style={{ gap: spacing[5] }}>
@@ -78,20 +91,14 @@ export function ExerciseEditor(props: ExerciseEditorProps) {
         onSwap={props.onSwap}
         onTrackingChange={(type) => {
           props.targets.dispatch({ type: 'close' });
+          props.cardioTargets.dispatch({ type: 'close' });
           update((current) => withTrackingType(current, type));
         }}
       />
       {exercise instanceof WeightedExerciseBlueprint ? (
         <WeightedSections {...props} exercise={exercise} updateWeighted={updateWeighted} />
       ) : (
-        <Section title={t('exercise_editor.targets.title')}>
-          <Card style={{ paddingHorizontal: spacing[2] }}>
-            <CardioExerciseEditor
-              exercise={exercise}
-              updateExercise={(partial) => updateCardio(partial as Partial<CardioExerciseBlueprint>)}
-            />
-          </Card>
-        </Section>
+        <CardioSections {...props} exercise={exercise} updateCardio={updateCardio} />
       )}
       <NotesCard
         notes={exercise.notes}
@@ -274,6 +281,79 @@ function WeightedSections(
           />
         </Card>
       </Section>
+    </>
+  );
+}
+
+/**
+ * Time & distance (PM-51): the cardio Targets card, and Rest between rounds once there is more than one round.
+ * Progression, Load and Warm-ups only apply to weights, and cardio has no superset.
+ */
+function CardioSections(
+  props: ExerciseEditorProps & {
+    exercise: CardioExerciseBlueprint;
+    updateCardio: (fn: (exercise: CardioExerciseBlueprint) => CardioExerciseBlueprint) => void;
+  },
+) {
+  const { t } = useTranslate();
+  const { exercise, updateCardio } = props;
+  const { distanceUnit } = props.cardioTargets;
+  // Like the weighted layout, Same each round is only what the targets look like, so the choice lives here.
+  const [mode, setMode] = useState(() => cardioRoundsModeOf(exercise));
+  const closePad = () => props.cardioTargets.dispatch({ type: 'close' });
+  const rest = cardioRestOf(exercise);
+
+  return (
+    <>
+      <Section
+        title={t('exercise_editor.targets.title')}
+        aside={cardioTargetsSummaryOf(t, exercise, mode, distanceUnit)}
+      >
+        <Card style={{ padding: 0, overflow: 'hidden' }}>
+          <CardioTargetsEditor
+            exercise={exercise}
+            mode={mode}
+            onModeChange={(next) => {
+              closePad();
+              if (next !== mode) {
+                setMode(next);
+                updateCardio((current) => withCardioRoundsMode(current, next));
+              }
+            }}
+            onGoalChange={(goal) => {
+              closePad();
+              updateCardio((current) => withCardioGoal(current, goal, distanceUnit));
+            }}
+            onAddRound={() => {
+              closePad();
+              updateCardio(withAddedRound);
+            }}
+            onRemoveRound={(index) => {
+              closePad();
+              updateCardio((current) => withoutRound(current, index));
+            }}
+            onAlsoLogChange={(field, on) => updateCardio((current) => withAlsoLog(current, field, on))}
+            targets={props.cardioTargets}
+          />
+        </Card>
+      </Section>
+
+      {showsRestBetweenRounds(exercise, props.restTimersEnabled) ? (
+        <Section title={t('exercise_editor.how_it_runs.title')}>
+          <Card style={{ padding: 0, overflow: 'hidden' }}>
+            <EditorRow
+              testID="exercise-editor-rest"
+              title={t('exercise_editor.rest.title')}
+              subtitle={t('exercise_editor.cardio.rest.subtitle')}
+              value={rest ? formatTimeSpan(rest) : t('exercise_editor.cardio.rest.none.label')}
+              onPress={() => {
+                closePad();
+                props.onOpenRest();
+              }}
+            />
+          </Card>
+        </Section>
+      ) : null}
     </>
   );
 }

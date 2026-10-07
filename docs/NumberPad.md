@@ -81,6 +81,14 @@ always in bounds (at least 1, a range's top at least its bottom) while the pad s
 walks Sets → Reps (in Range, the bottom, then the top) and Per set set by set, then closes. In Range, "–"
 moves to the top, and both ends in the pad's display can be tapped to edit that end.
 
+Time & distance drives the same pad from `cardioPadReducer` in `cardio-targets.ts` (view:
+`cardio-targets-editor.tsx`). Same each round has Rounds and the goal tiles, and the goal is written to every
+round; Different each round edits one round at a time, Next stepping round by round. Minutes are whole
+numbers (an untouched round of 1:30 keeps its seconds). A distance is typed in the user's unit (km, or miles
+when imperial) with the key left of 0 as a decimal point, at most two decimals, and − / + step by 0.5. Next
+after the last field reads "Next: Rest" only when there is a Rest between rounds row; otherwise Done fills the
+row.
+
 ## Trying it
 
 In a dev build, open `liftlog://dev/number-pad`. Query parameters pick the starting state:

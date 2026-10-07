@@ -3,12 +3,7 @@ import { UseTranslateResult } from '@tolgee/react';
 import { Duration } from '@js-joda/core';
 import BigNumber from 'bignumber.js';
 import en from '@/i18n/en.json';
-import {
-  CardioExerciseBlueprint,
-  CardioExerciseSetBlueprint,
-  CardioTarget,
-  Rest,
-} from '@/models/blueprint-models';
+import { CardioExerciseBlueprint, CardioExerciseSetBlueprint, CardioTarget, Rest } from '@/models/blueprint-models';
 import {
   alsoLogOf,
   CardioPadAction,
@@ -18,6 +13,7 @@ import {
   cardioRestOf,
   cardioRoundsModeOf,
   cardioTargetsSummaryOf,
+  showsRestBetweenRounds,
   withAddedRound,
   withAlsoLog,
   withCardioGoal,
@@ -32,14 +28,15 @@ const t = ((key: string, params?: Record<string, string | number>) =>
   )) as UseTranslateResult['t'];
 
 const min = (minutes: number): CardioTarget => ({ type: 'time', value: Duration.ofMinutes(minutes) });
-const km = (value: number): CardioTarget => ({ type: 'distance', value: { unit: 'kilometre', value: BigNumber(value) } });
+const km = (value: number): CardioTarget => ({
+  type: 'distance',
+  value: { unit: 'kilometre', value: BigNumber(value) },
+});
 
 function cardio(targets: CardioTarget[], rest?: Rest): CardioExerciseBlueprint {
   return new CardioExerciseBlueprint(
     'Treadmill Run',
-    targets.map(
-      (target) => new CardioExerciseSetBlueprint(target, false, false, false, true, false, false, rest),
-    ),
+    targets.map((target) => new CardioExerciseSetBlueprint(target, false, false, false, true, false, false, rest)),
     '',
     '',
   );
@@ -61,7 +58,9 @@ function run(exercise: CardioExerciseBlueprint, ...actions: CardioPadAction[]): 
 }
 
 const digits = (typed: string): CardioPadAction[] =>
-  typed.split('').map((d) => (d === '.' ? { type: 'decimal' } : { type: 'digit', digit: Number(d) }) as CardioPadAction);
+  typed
+    .split('')
+    .map((d) => (d === '.' ? { type: 'decimal' } : { type: 'digit', digit: Number(d) }) as CardioPadAction);
 
 const open = (field: CardioPadField, distanceUnit: 'kilometre' | 'mile' = 'kilometre') =>
   ({ type: 'open', field, distanceUnit }) as const;
@@ -82,7 +81,13 @@ describe('Same each round', () => {
   });
 
   it('keeps at least one round and at least a minute', () => {
-    const state = run(cardio([min(5), min(5)]), open({ kind: 'rounds' }), ...digits('0'), { type: 'next' }, ...digits('0'));
+    const state = run(
+      cardio([min(5), min(5)]),
+      open({ kind: 'rounds' }),
+      ...digits('0'),
+      { type: 'next' },
+      ...digits('0'),
+    );
     expect(rounds(state.exercise)).toEqual(['1 min']);
   });
 
@@ -94,13 +99,7 @@ describe('Same each round', () => {
 
 describe('Different each round', () => {
   it('edits one round at a time, with Next stepping to the next round and closing after the last', () => {
-    const state = run(
-      intervals,
-      open({ kind: 'round', index: 3 }),
-      ...digits('2'),
-      { type: 'next' },
-      ...digits('8'),
-    );
+    const state = run(intervals, open({ kind: 'round', index: 3 }), ...digits('2'), { type: 'next' }, ...digits('8'));
     expect(rounds(state.exercise)).toEqual(['5 min', '1 min', '5 min', '2 min', '8 min']);
     expect(cardioPadReducer(state, { type: 'next' }).pad).toBeUndefined();
   });
@@ -127,7 +126,9 @@ describe('the cardio number pad', () => {
   });
 
   it('starts a distance with the decimal point as "0." and takes only one point and two decimals', () => {
-    const state = run(cardio([km(5)]), open({ kind: 'goal' }), { type: 'decimal' }, ...digits('255'), { type: 'decimal' });
+    const state = run(cardio([km(5)]), open({ kind: 'goal' }), { type: 'decimal' }, ...digits('255'), {
+      type: 'decimal',
+    });
     expect(state.pad?.text).toBe('0.25');
   });
 
@@ -175,12 +176,20 @@ describe('Also log', () => {
 });
 
 describe('rest between rounds', () => {
-  it('is the rounds\' rest, set on every round, and none at 0:00', () => {
+  it("is the rounds' rest, set on every round, and none at 0:00", () => {
     expect(cardioRestOf(intervals)).toBeUndefined();
     const rested = withCardioRest(intervals, Duration.ofSeconds(90));
     expect(rested.sets.every((s) => s.restBetweenSets?.rest.seconds() === 90)).toBe(true);
     expect(cardioRestOf(rested)?.seconds()).toBe(90);
     expect(withCardioRest(rested, Duration.ZERO).sets.every((s) => s.restBetweenSets === undefined)).toBe(true);
+  });
+});
+
+describe('showsRestBetweenRounds', () => {
+  it('shows the rest row only with more than one round and rest timers on', () => {
+    expect(showsRestBetweenRounds(steady, true)).toBe(false);
+    expect(showsRestBetweenRounds(intervals, true)).toBe(true);
+    expect(showsRestBetweenRounds(intervals, false)).toBe(false);
   });
 });
 

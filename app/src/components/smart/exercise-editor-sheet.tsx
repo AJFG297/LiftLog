@@ -5,6 +5,8 @@ import {
   exerciseEditScopeCopy,
   exerciseMetaOf,
 } from '@/components/presentation/workout-editor/exercise-edit-copy';
+import { showsRestBetweenRounds } from '@/components/presentation/workout-editor/cardio-targets';
+import { CardioTargetsPad, useCardioTargetsPad } from '@/components/presentation/workout-editor/cardio-targets-editor';
 import { ExerciseEditor } from '@/components/presentation/workout-editor/exercise-editor';
 import { blueprintSwappedTo } from '@/components/presentation/workout-editor/exercise-picker';
 import { useTargetsPad, WeightedTargetsPad } from '@/components/presentation/workout-editor/weighted-targets-editor';
@@ -16,7 +18,7 @@ import { useOwnedExerciseEdit } from '@/components/smart/exercise-edit-draft';
 import { spacing, useAppTheme } from '@/hooks/useAppTheme';
 import { useExerciseSearch } from '@/hooks/useExerciseSearch';
 import { usePreferredWeightUnit } from '@/hooks/usePreferredWeightUnit';
-import { ExerciseBlueprint, WeightedExerciseBlueprint } from '@/models/blueprint-models';
+import { CardioExerciseBlueprint, ExerciseBlueprint, WeightedExerciseBlueprint } from '@/models/blueprint-models';
 import { Weight } from '@/models/weight';
 import { useAppSelector } from '@/store';
 import { selectExercises } from '@/store/stored-sessions';
@@ -56,11 +58,13 @@ export function ExerciseEditorSheet(props: ExerciseEditorSheetProps) {
   const insets = useSafeAreaInsets();
   const catalog = useAppSelector(selectExercises);
   const restTimersEnabled = useAppSelector((x) => x.settings.restTimersEnabled);
+  const useImperialUnits = useAppSelector((x) => x.settings.useImperialUnits);
   const unit = usePreferredWeightUnit();
   const { editId, exercise, update } = useOwnedExerciseEdit(props.exercise, props.onChange);
   // A second tap while the sheet animates away would go back past what opened it.
   const [closing, setClosing] = useState(false);
   const targets = useTargetsPad(exercise, update);
+  const cardioTargets = useCardioTargetsPad(exercise, update, useImperialUnits ? 'mile' : 'kilometre');
 
   const openSearch = useExerciseSearch((picked) =>
     update((current) => blueprintSwappedTo(current, { id: picked.id, name: picked.descriptor.name })),
@@ -79,8 +83,8 @@ export function ExerciseEditorSheet(props: ExerciseEditorSheetProps) {
   };
 
   return (
-    // The Rest dialog is a Paper portal, which would otherwise open on the root view behind this native
-    // sheet. Goes once it becomes a sheet of its own (PM-46).
+    // The routine's Copy to another routine dialog is a Paper portal, which would otherwise open on the
+    // root view behind this native sheet.
     <Portal.Host>
       <View style={{ flex: 1, backgroundColor: tokens.bg }}>
         <View
@@ -130,11 +134,19 @@ export function ExerciseEditorSheet(props: ExerciseEditorSheetProps) {
             onOpenWarmups={() => router.push(getEditorWarmupsHref(editId, props.scope, props.workingWeight))}
             onOpenProgression={() => router.push(getExerciseProgressionHref(editId))}
             targets={targets}
+            cardioTargets={cardioTargets}
           />
           {props.footer}
         </KeyboardAwareScrollView>
         {exercise instanceof WeightedExerciseBlueprint ? (
           <WeightedTargetsPad exercise={exercise} targets={targets} />
+        ) : null}
+        {exercise instanceof CardioExerciseBlueprint ? (
+          <CardioTargetsPad
+            exercise={exercise}
+            targets={cardioTargets}
+            restBetweenRounds={showsRestBetweenRounds(exercise, restTimersEnabled)}
+          />
         ) : null}
       </View>
     </Portal.Host>

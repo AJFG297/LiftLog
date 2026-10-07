@@ -13,10 +13,11 @@ import {
   restSaveLabelOf,
   withFailedSetRestOn,
 } from '@/components/presentation/workout-editor/rest-edit';
+import { cardioRestOf, withCardioRest } from '@/components/presentation/workout-editor/cardio-targets';
 import { updateExerciseEdit, useExerciseEdit } from '@/components/smart/exercise-edit-draft';
 import { useBackWhenGone } from '@/hooks/useBackWhenGone';
 import { spacing, useAppTheme } from '@/hooks/useAppTheme';
-import { WeightedExerciseBlueprint } from '@/models/blueprint-models';
+import { CardioExerciseBlueprint, Rest, WeightedExerciseBlueprint } from '@/models/blueprint-models';
 import { REST_PICK_MINUTES, REST_PICK_SECONDS, RestPick } from '@/models/rest-default';
 import { useTranslate } from '@tolgee/react';
 import { Href, useLocalSearchParams, useRouter } from 'expo-router';
@@ -32,22 +33,36 @@ export function getExerciseEditRestHref(editId: string): Href {
 /**
  * The exercise's rest on minute and second wheels, like the live workout's rest sheet, and a switch for a
  * different rest after a failed set that brings its own wheels (plan decision D5). Opened from the edit
- * exercise sheet's Rest row; Save applies and closes, closing without it leaves the rest as it was.
+ * exercise sheet's Rest row; Save applies and closes, closing without it leaves the rest as it was. For Time &
+ * distance it is the rest between rounds: no failed sets, and 0:00 for none.
  */
 export function ExerciseEditRestSheet() {
   const { editId } = useLocalSearchParams<{ editId?: string }>();
   const exercise = useExerciseEdit(editId ?? '');
-  const weighted = exercise instanceof WeightedExerciseBlueprint ? exercise : undefined;
-  useBackWhenGone(!weighted);
-  return weighted ? <SheetContent editId={editId ?? ''} exercise={weighted} /> : null;
+  useBackWhenGone(!exercise);
+  return exercise ? <SheetContent editId={editId ?? ''} exercise={exercise} /> : null;
 }
 
-function SheetContent({ editId, exercise }: { editId: string; exercise: WeightedExerciseBlueprint }) {
+/** A cardio exercise without a rest opens the wheels on the short rest. */
+function restBefore(exercise: WeightedExerciseBlueprint | CardioExerciseBlueprint): Rest {
+  return exercise instanceof WeightedExerciseBlueprint
+    ? exercise.restBetweenSets
+    : { rest: cardioRestOf(exercise) ?? Rest.short.rest };
+}
+
+function SheetContent({
+  editId,
+  exercise,
+}: {
+  editId: string;
+  exercise: WeightedExerciseBlueprint | CardioExerciseBlueprint;
+}) {
   const { t } = useTranslate();
   const { tokens } = useAppTheme();
   const { back } = useRouter();
   const insets = useSafeAreaInsets();
-  const before = exercise.restBetweenSets;
+  const cardio = exercise instanceof CardioExerciseBlueprint;
+  const before = restBefore(exercise);
   const [draft, setDraft] = useState<RestDraft>(() => restDraftOf(before));
   // A second tap while the sheet animates away would go back past the editor.
   const [saved, setSaved] = useState(false);
@@ -61,7 +76,7 @@ function SheetContent({ editId, exercise }: { editId: string; exercise: Weighted
     updateExerciseEdit(editId, (current) =>
       current instanceof WeightedExerciseBlueprint
         ? current.with({ restBetweenSets: restOfDraft(draft, current.restBetweenSets) })
-        : current,
+        : withCardioRest(current, restOfDraft(draft, restBefore(current)).rest),
     );
     haptics.selection();
     back();
@@ -84,26 +99,28 @@ function SheetContent({ editId, exercise }: { editId: string; exercise: Weighted
         minutesLabel={t('live_workout.exercise_rest.minutes_wheel.label')}
         secondsLabel={t('live_workout.exercise_rest.seconds_wheel.label')}
       />
-      <View style={{ paddingHorizontal: spacing.pageHorizontalMargin, marginTop: spacing[4] }}>
-        <Card style={{ padding: 0, overflow: 'hidden' }}>
-          <ListRow
-            testID="exercise-edit-rest-failed-set-row"
-            title={failedSetTitle}
-            subtitle={failedSetHint}
-            accessibilityLabel={`${failedSetTitle}, ${failedSetHint}`}
-            onPress={() => toggleFailedSet(!draft.failedSetOn)}
-            style={{ minHeight: spacing[16] }}
-            trailing={
-              <Switch
-                value={draft.failedSetOn}
-                testID="exercise-edit-rest-failed-set"
-                onValueChange={toggleFailedSet}
-              />
-            }
-          />
-        </Card>
-      </View>
-      {draft.failedSetOn ? (
+      {cardio ? null : (
+        <View style={{ paddingHorizontal: spacing.pageHorizontalMargin, marginTop: spacing[4] }}>
+          <Card style={{ padding: 0, overflow: 'hidden' }}>
+            <ListRow
+              testID="exercise-edit-rest-failed-set-row"
+              title={failedSetTitle}
+              subtitle={failedSetHint}
+              accessibilityLabel={`${failedSetTitle}, ${failedSetHint}`}
+              onPress={() => toggleFailedSet(!draft.failedSetOn)}
+              style={{ minHeight: spacing[16] }}
+              trailing={
+                <Switch
+                  value={draft.failedSetOn}
+                  testID="exercise-edit-rest-failed-set"
+                  onValueChange={toggleFailedSet}
+                />
+              }
+            />
+          </Card>
+        </View>
+      )}
+      {!cardio && draft.failedSetOn ? (
         <View style={{ marginTop: spacing[2] }}>
           <RestWheels
             testID="exercise-edit-rest-failed-set-wheel"
@@ -117,9 +134,11 @@ function SheetContent({ editId, exercise }: { editId: string; exercise: Weighted
       <View style={{ marginTop: spacing[4], paddingHorizontal: spacing.pageHorizontalMargin }}>
         <ActionButton
           testID="exercise-edit-rest-save"
-          label={restSaveLabelOf(t, rest)}
-          // No rest at all isn't a rest time; turning rest timers off is the way to have none.
-          disabled={rest.rest.isZero()}
+          label={
+            cardio && rest.rest.isZero() ? t('exercise_editor.rest_sheet.save_none.button') : restSaveLabelOf(t, rest)
+          }
+          // Lifting always rests; turning rest timers off is the way to have none. Steady cardio needn't.
+          disabled={!cardio && rest.rest.isZero()}
           onPress={save}
         />
       </View>

@@ -35,8 +35,6 @@
   "exercise.add_hint.body": "Adj hozzá egy gyakorlatot a jobb felső sarokban található „Tovább” gombra kattintva",
   "exercise.all_sets.label": "Összes sorozat",
   "exercise.bodyweight.label": "Testsúly",
-  "exercise.cardio_set.add.button": "Sorozat hozzáadása",
-  "exercise.cardio_set.remove.button": "Sorozat törlése",
   "exercise.cardio_target.label": "Kardió cél",
   "exercise.copied_to_session.message": "Gyakorlat {excersiseName} másolva {targetSessionName} edzésbe",
   "exercise.copy_to.button": "Másolás",
@@ -70,12 +68,6 @@
   "exercise.this_set.label": "Ez a sorozat",
   "exercise.toggle_negative.button": "Negatív megjelenítés",
   "exercise.track_avg_heart_rate.label": "Átlagos pulzusszám nyomon követése",
-  "exercise.track_distance.label": "Távolság nyomon követése",
-  "exercise.track_incline.label": "Emelkedés nyomon követése",
-  "exercise.track_resistance.label": "Ellenállás nyomon követése",
-  "exercise.track_steps.label": "Lépések nyomon követése",
-  "exercise.track_time.label": "Idő nyomon követése",
-  "exercise.track_weight.label": "Súly nyomon követése",
   "exercise.type.label": "Gyakorlat típusa",
   "exercise.uncompleted_sets.label": "Befejezetlen sorozatok",
   "export.health_connect.subtitle": "Az edzésterveket és a testsúlyadatokat exportálja a Health Connect alkalmazásba",
@@ -130,6 +122,5 @@
   "exercise.progression.scope.all_sets.label": "Összes sorozat",
   "exercise.progression.ceiling.body": "Amint az ismétlések elérik ezt a határt a következő szabály lép érvénybe.",
   "exercise.progression.ceiling.label": "Határ",
-  "exercise.rest_between_sets.label": "Szettek közötti pihenő",
   "exercise.set_number.label": "{number}. szett"
 }

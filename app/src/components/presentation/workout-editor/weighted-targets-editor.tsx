@@ -287,7 +287,7 @@ function PerSetList(props: {
   );
 }
 
-function ModePill(props: { label: string; selected: boolean; onPress: () => void; testID: string }) {
+export function ModePill(props: { label: string; selected: boolean; onPress: () => void; testID: string }) {
   const { tokens } = useAppTheme();
   return (
     <Pressable
@@ -319,7 +319,7 @@ function ModePill(props: { label: string; selected: boolean; onPress: () => void
   );
 }
 
-function Tile(props: {
+export function Tile(props: {
   label: string;
   accessibilityLabel: string;
   active: boolean;
@@ -359,7 +359,7 @@ function Tile(props: {
   );
 }
 
-function TileValue({ text, style }: { text: string; style?: object }) {
+export function TileValue({ text, style }: { text: string; style?: object }) {
   const { tokens } = useAppTheme();
   return (
     <SurfaceText numeric font="text-3xl" weight="500" style={[{ color: tokens.ink }, style]}>
@@ -456,8 +456,7 @@ export function WeightedTargetsPad(props: { exercise: WeightedExerciseBlueprint;
       onDigit={(digit) => dispatch({ type: 'digit', digit })}
       onBackspace={() => dispatch({ type: 'backspace' })}
       onStep={(by) => dispatch({ type: 'step', by })}
-      nextLabel={nextLabel}
-      onNext={() => dispatch({ type: 'next' })}
+      next={{ label: nextLabel, onPress: () => dispatch({ type: 'next' }) }}
       onDone={() => dispatch({ type: 'close' })}
     />
   );
