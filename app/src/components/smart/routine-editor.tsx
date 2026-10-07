@@ -972,7 +972,7 @@ function weightedSummary(
       : sets,
     ...(heaviest && !heaviest.value.isZero() ? [heaviest.shortLocaleFormat()] : []),
     ...(showRest
-      ? [t('routine_editor.exercise.rest.label', { rest: formatTimeSpan(exercise.restBetweenSets.minRest) })]
+      ? [t('routine_editor.exercise.rest.label', { rest: formatTimeSpan(exercise.restBetweenSets.rest) })]
       : []),
   ];
   return parts.join(' · ');

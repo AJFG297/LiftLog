@@ -5,8 +5,8 @@ import { SurfaceText } from '@/components/presentation/foundation/surface-text';
 import { MIN_TOUCH_TARGET } from '@/components/presentation/foundation/touch-target';
 import { RoutineCardSectionLabel } from '@/components/presentation/workout-editor/routine-exercise-card';
 import { spacing, useAppTheme } from '@/hooks/useAppTheme';
-import { Rest } from '@/models/blueprint-models';
-import { withMinRest } from '@/models/rest-default';
+import { failedSetRestOf, Rest } from '@/models/blueprint-models';
+import { withRest } from '@/models/rest-default';
 import { formatTimeSpan } from '@/utils/format-time-span';
 import { Duration } from '@js-joda/core';
 import { useTranslate } from '@tolgee/react';
@@ -25,16 +25,17 @@ interface RoutineRestEditorProps {
 }
 
 /**
- * Rest between sets (plan decision D5): one rest time, the minimum, picked from presets, with the window's
- * maximum and the rest after a failed set under Advanced. All three still drive the timer.
+ * Rest between sets (plan decision D5): one rest time picked from presets, with the rest after a failed set
+ * under Advanced.
  */
 export function RoutineRestEditor({ rest, onChange }: RoutineRestEditorProps) {
   const { t } = useTranslate();
   const { tokens } = useAppTheme();
   const [advancedOpen, setAdvancedOpen] = useState(false);
 
-  const setMax = (maxRest: Duration) =>
-    onChange({ ...rest, maxRest: maxRest.compareTo(rest.minRest) < 0 ? rest.minRest : maxRest });
+  // A failed-set rest stepped back to the rest is the same as the rest again, so it follows it from then on.
+  const setFailedSetRest = (failedSetRest: Duration) =>
+    onChange({ rest: rest.rest, failedSetRest: failedSetRest.equals(rest.rest) ? undefined : failedSetRest });
 
   return (
     <View style={{ gap: spacing[2] }}>
@@ -46,8 +47,8 @@ export function RoutineRestEditor({ rest, onChange }: RoutineRestEditorProps) {
             numeric
             label={formatTimeSpan(preset)}
             accessibilityLabel={t('routine_editor.rest.preset.label', { rest: formatTimeSpan(preset) })}
-            selected={rest.minRest.equals(preset)}
-            onPress={() => onChange(withMinRest(rest, preset))}
+            selected={rest.rest.equals(preset)}
+            onPress={() => onChange(withRest(rest, preset))}
             style={{ flexGrow: 1, flexBasis: 0 }}
             contentStyle={{ paddingHorizontal: 0 }}
           />
@@ -73,14 +74,13 @@ export function RoutineRestEditor({ rest, onChange }: RoutineRestEditorProps) {
           </SurfaceText>
           <RestStepper
             label={t('routine_editor.rest.min.label')}
-            value={rest.minRest}
-            onChange={(minRest) => onChange(withMinRest(rest, minRest))}
+            value={rest.rest}
+            onChange={(duration) => onChange(withRest(rest, duration))}
           />
-          <RestStepper label={t('routine_editor.rest.max.label')} value={rest.maxRest} onChange={setMax} />
           <RestStepper
             label={t('routine_editor.rest.failure.label')}
-            value={rest.failureRest}
-            onChange={(failureRest) => onChange({ ...rest, failureRest })}
+            value={failedSetRestOf(rest)}
+            onChange={setFailedSetRest}
           />
         </View>
       ) : null}

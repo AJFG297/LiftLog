@@ -8,6 +8,7 @@ import {
 import { ExerciseEditor } from '@/components/presentation/workout-editor/exercise-editor';
 import { blueprintSwappedTo } from '@/components/presentation/workout-editor/exercise-picker';
 import { getExerciseLoadHref } from '@/components/smart/exercise-load-sheet';
+import { getExerciseEditRestHref } from '@/components/smart/exercise-edit-rest-sheet';
 import { useOwnedExerciseEdit } from '@/components/smart/exercise-edit-draft';
 import { spacing, useAppTheme } from '@/hooks/useAppTheme';
 import { useExerciseSearch } from '@/hooks/useExerciseSearch';
@@ -118,6 +119,7 @@ export function ExerciseEditorSheet(props: ExerciseEditorSheetProps) {
             formatStep={formatStep}
             onSwap={() => openSearch(exercise.name)}
             onOpenLoad={() => router.push(getExerciseLoadHref(editId))}
+            onOpenRest={() => router.push(getExerciseEditRestHref(editId))}
           />
           {props.footer}
         </KeyboardAwareScrollView>

@@ -89,7 +89,7 @@ A plan file is one JSON object: a name, a date, and a list of sessions. Each ses
             { "reps": { "min": 5, "max": 5 }, "kind": "working" },
             { "reps": { "min": 5, "max": 5 }, "kind": "working" }
           ],
-          "restBetweenSets": { "minRest": "PT3M", "maxRest": "PT5M", "failureRest": "PT5M" },
+          "restBetweenSets": { "minRest": "PT3M", "maxRest": "PT3M", "failureRest": "PT5M" },
           "supersetWithNext": false,
           "notes": "",
           "link": "",
@@ -122,7 +122,7 @@ An exercise is either a `WeightedExerciseBlueprint` or a `CardioExerciseBlueprin
 
 `exerciseId` is optional, and a hand-written plan should leave it out. On import the app links each exercise by its `name`: to one of the user's own exercises with that name, otherwise to a built-in (by its English name, its name in any language, or the name the user renamed it to), and only when nothing matches does it add a new exercise. That is what keeps the plan's history joined to the user's existing history, and lets them rename the exercise later without losing it. A plan exported from the app carries the ids; an id the importing device doesn't know - a friend's own exercise, say - is linked by name the same way.
 
-**Weighted exercises** have a list of planned sets, rest times, a resistance, and a list of progression rules. `plannedSets` holds one entry per set, each with that set's rep target as a `min`/`max` band - `min === max` is a plain "five reps" - and its `kind`, which says what the set is for (see [Set kinds](#set-kinds)). `restBetweenSets` needs all three of `minRest`, `maxRest`, and `failureRest` (the last being the rest taken after missing a rep target). `link` is a URL explaining the movement, and should stay `""` unless you have a real one.
+**Weighted exercises** have a list of planned sets, rest times, a resistance, and a list of progression rules. `plannedSets` holds one entry per set, each with that set's rep target as a `min`/`max` band - `min === max` is a plain "five reps" - and its `kind`, which says what the set is for (see [Set kinds](#set-kinds)). `restBetweenSets` needs all three of `minRest`, `maxRest`, and `failureRest`: `minRest` is the rest, `failureRest` the rest taken after missing a rep target (equal to `minRest` for the same rest), and `maxRest` is no longer used - write it equal to `minRest`. `link` is a URL explaining the movement, and should stay `""` unless you have a real one.
 
 #### Set kinds
 

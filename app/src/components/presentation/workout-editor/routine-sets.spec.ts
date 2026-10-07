@@ -111,8 +111,8 @@ describe('routine summary', () => {
     const routine = new SessionBlueprint(
       'Push',
       [
-        bench().with({ restBetweenSets: { ...Rest.medium, minRest: Duration.ofSeconds(150) } }),
-        makeWeightedBlueprint({ sets: 3, restBetweenSets: { ...Rest.short, minRest: Duration.ofSeconds(60) } }),
+        bench().with({ restBetweenSets: { ...Rest.medium, rest: Duration.ofSeconds(150) } }),
+        makeWeightedBlueprint({ sets: 3, restBetweenSets: { ...Rest.short, rest: Duration.ofSeconds(60) } }),
       ],
       '',
     );

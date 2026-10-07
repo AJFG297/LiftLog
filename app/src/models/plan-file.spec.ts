@@ -29,7 +29,7 @@ const validBlueprint: ProgramBlueprintJSON = {
           ],
           restBetweenSets: {
             minRest: 'PT1M' as DurationJSON,
-            maxRest: 'PT3M' as DurationJSON,
+            maxRest: 'PT1M' as DurationJSON,
             failureRest: 'PT5M' as DurationJSON,
           },
           supersetWithNext: false,

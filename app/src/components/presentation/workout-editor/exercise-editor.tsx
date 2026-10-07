@@ -17,12 +17,11 @@ import {
   withTrackingType,
 } from '@/components/presentation/workout-editor/exercise-edit-copy';
 import { ProgressionRulesEditor } from '@/components/presentation/workout-editor/progressive-overload';
-import { RestEditorDialog } from '@/components/presentation/workout-editor/rest-editor-dialog';
+import { restRowOf } from '@/components/presentation/workout-editor/rest-edit';
 import { WarmupSetsEditor } from '@/components/presentation/workout-editor/warmup-sets-editor';
 import { WeightedTargetsEditor } from '@/components/presentation/workout-editor/weighted-targets-editor';
 import { fontFamily, spacing, useAppTheme } from '@/hooks/useAppTheme';
 import { CardioExerciseBlueprint, ExerciseBlueprint, WeightedExerciseBlueprint } from '@/models/blueprint-models';
-import { formatTimeSpan } from '@/utils/format-time-span';
 import { useTranslate } from '@tolgee/react';
 import BigNumber from 'bignumber.js';
 import { ReactNode, useState } from 'react';
@@ -43,10 +42,11 @@ export interface ExerciseEditorProps {
   formatStep: (step: BigNumber) => string;
   onSwap: () => void;
   onOpenLoad: () => void;
+  onOpenRest: () => void;
 }
 
 /**
- * Today's controls for the rows that will get sheets of their own (PM-46 rest, PM-47 warm-ups, PM-48
+ * Today's controls for the rows that will get sheets of their own (PM-47 warm-ups, PM-48
  * progression). Until then a row opens its control in place.
  */
 type InlinePanel = 'warmups' | 'progression';
@@ -177,9 +177,8 @@ function WeightedSections(
   const { t } = useTranslate();
   const { exercise, updateWeighted } = props;
   const [panel, setPanel] = useState<InlinePanel | undefined>();
-  const [restOpen, setRestOpen] = useState(false);
   const toggle = (next: InlinePanel) => setPanel((open) => (open === next ? undefined : next));
-  const rest = exercise.restBetweenSets;
+  const restRow = restRowOf(t, exercise.restBetweenSets);
 
   return (
     <>
@@ -214,9 +213,9 @@ function WeightedSections(
               <EditorRow
                 testID="exercise-editor-rest"
                 title={t('exercise_editor.rest.title')}
-                subtitle={t('exercise_editor.rest.failure.label', { rest: formatTimeSpan(rest.failureRest) })}
-                value={formatTimeSpan(rest.minRest)}
-                onPress={() => setRestOpen(true)}
+                subtitle={restRow.subtitle}
+                value={restRow.value}
+                onPress={props.onOpenRest}
               />
               <RowDivider />
             </>
@@ -251,15 +250,6 @@ function WeightedSections(
           />
         </Card>
       </Section>
-
-      {props.restTimersEnabled ? (
-        <RestEditorDialog
-          rest={rest}
-          onRestUpdated={(restBetweenSets) => updateWeighted((current) => current.with({ restBetweenSets }))}
-          dialogOpen={restOpen}
-          setDialogOpen={setRestOpen}
-        />
-      ) : null}
     </>
   );
 }

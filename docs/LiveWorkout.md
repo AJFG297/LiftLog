@@ -37,8 +37,8 @@ The rest pill (`RestPill`, wired up in `components/smart/live-rest.tsx`) has thr
 - **Idle**: outlined, with the rest of the exercise whose set is next on the page.
 
 With rest timers turned off in the settings, the pill is hidden. It buzzes (`haptics.restOver`) when the
-countdown runs out and again when the min to max window closes, unless the moment passed while the app was
-in the background, where the notification has it covered.
+countdown runs out, unless the moment passed while the app was in the background, where the notification
+has it covered.
 
 Tapping the pill opens the **rest sheet** (`session/rest`, a `formSheet`, `components/smart/rest-sheet.tsx`):
 the countdown, what is up next and a progress bar; -15, Skip rest and +15 while resting; presets from 0:30
@@ -48,19 +48,18 @@ Skip rest clears the timer and closes the sheet, so the pill goes idle.
 All of it is `models/session-models/rest.ts`:
 
 - `Session.restTimer` is a `RestTimer`: when the rest started and, optionally, a `length` picked in the
-  sheet. Without one it runs for the rest the latest set earned: the min rest, or the failure rest after a
-  missed set, and only the min rest after a warm-up.
-- `restWindowOf(session)` turns that into instants: `readyAt`, where the pill turns to Go, and `fullAt`, the
-  end of the min to max window. A picked length replaces the first phase and the window keeps its width
-  after it. The pill, the sheet, `Session.restTimerEndTime` (the "rest over" notification) and the workout
+  sheet. Without one it runs for the rest the latest set earned: the exercise's rest, or its failed-set rest
+  (the same as the rest unless set) after a missed set, and only the rest after a warm-up.
+- `restWindowOf(session)` turns that into instants: `readyAt`, where the pill turns to Go and the
+  countdown ends. A picked length replaces the earned rest. The pill, the sheet, `Session.restTimerEndTime` (the "rest over" notification) and the workout
   worker all read it, so the app and the notification count down together.
 - `withRestStepped` is -15 and +15. -15 moves the start back but stops one second short of the end, so the
   countdown still runs out on its own. +15 moves the start forward, or in the first 15 seconds lengthens the
   rest instead, so the timer never starts in the future. Both leave anything but a running countdown alone.
 - `withRestStarted` is a preset: a new timer from now at that length, whether or not one was running.
 
-"Use … from now on" writes the new min rest (`withMinRest` in `models/rest-default.ts`; the max rest rises
-to meet it if it has to) to two places at once: the routine's exercise, found the way the finish diff finds
+"Use … from now on" writes the new rest (`withRest` in `models/rest-default.ts`; a failed-set rest of the
+exercise's own is left alone) to two places at once: the routine's exercise, found the way the finish diff finds
 it (`routineExerciseLocation`: the routine with the workout's name, exercises matched by name), and the
 running workout's exercise. The finish sheet compares the two, so it doesn't list the same rest change
 again. The row turns into "Bench Press now rests 2:00" with Undo, which puts both rests back. It is only
@@ -71,7 +70,7 @@ The **Rest shortcut** ("Rest 2:30") on a weighted exercise's card changes that e
 workout only. It is hidden with rest timers off, and in a superset, which rests after each round instead. It
 opens the exercise rest sheet (`session/exercise-rest`, `components/smart/exercise-rest-sheet.tsx`): minutes
 and seconds wheels (`restPickOf` rounds the rest to the nearest 5 seconds, 0:00 to 10:55) and a "Rest 1:45"
-button, disabled at 0:00, that writes the min rest with `restWithPick` and `sessionWithExerciseRest` (left as it was if no wheel moved, so an unrounded rest like 2:22 survives a save). The
+button, disabled at 0:00, that writes the rest with `restWithPick` and `sessionWithExerciseRest` (left as it was if no wheel moved, so an unrounded rest like 2:22 survives a save). The
 sheet is one detent, sized to its content (`useExerciseRestSheetDetent`, which clears the Android tab bar),
 short enough that the sets stay in view above it; a tap there closes it. Nothing is written to the routine:
 the finish sheet lists the change as a rest row, so keeping it is asked there.
