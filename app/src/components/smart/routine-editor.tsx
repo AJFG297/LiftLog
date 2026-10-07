@@ -16,7 +16,9 @@ import { MIN_TOUCH_TARGET } from '@/components/presentation/foundation/touch-tar
 import { ASK_AI_BAR_ENABLED, AskAiBar } from '@/components/presentation/workout-editor/ask-ai-bar';
 import { formatCardioTarget } from '@/utils/format-cardio-target';
 import { withPickAppended } from '@/components/presentation/workout-editor/exercise-picker';
+import { getExerciseEditRestHref } from '@/components/smart/exercise-edit-rest-sheet';
 import { getRoutineExerciseEditorHref } from '@/components/smart/routine-exercise-editor';
+import { openRoutineRestEdit } from '@/components/smart/routine-rest-edit';
 import { RoutineColorSwatches } from '@/components/presentation/workout-editor/routine-color-swatches';
 import { RoutineExerciseActions } from '@/components/presentation/workout-editor/routine-exercise-actions';
 import {
@@ -40,7 +42,7 @@ import {
   RoutineProgressionEditor,
 } from '@/components/presentation/workout-editor/routine-progression-editor';
 import { withLadderKeptClimbable } from '@/components/presentation/workout-editor/routine-progression';
-import { RoutineRestEditor } from '@/components/presentation/workout-editor/routine-rest-editor';
+import { RoutineRestRow } from '@/components/presentation/workout-editor/routine-rest-row';
 import { RoutineSetTable, type RoutineSetTableRow } from '@/components/presentation/workout-editor/routine-set-table';
 import {
   canRemoveRoutineSet,
@@ -154,6 +156,9 @@ export function RoutineEditor({ programId, sessionIndex, isNew }: RoutineEditorP
   const scrollRef = useRef<ScrollView>(null);
   const scrollY = useRef(0);
   const editingRowRef = useRef<View>(null);
+  // The rest sheet edits through an exercise edit this screen opens; the next one, or leaving, ends it.
+  const restEdit = useRef<(() => void) | undefined>(undefined);
+  useEffect(() => () => restEdit.current?.(), []);
 
   // Typing on the pad reaches the draft when the field is left, so a number still on the pad counts too.
   const changed = isRoutineDraftChanged(draft) || (!!editing && buffer.typed !== null);
@@ -434,6 +439,17 @@ export function RoutineEditor({ programId, sessionIndex, isNew }: RoutineEditorP
     router.push(getRoutineExerciseEditorHref({ programId, sessionIndex, exerciseIndex: index }));
   };
 
+  const openRest = (index: number) => {
+    closePad();
+    restEdit.current?.();
+    const edit = openRoutineRestEdit(location, index);
+    if (!edit) {
+      return;
+    }
+    restEdit.current = edit.close;
+    router.push(getExerciseEditRestHref(edit.editId));
+  };
+
   const openSetType = (index: number, position: RoutineSetPosition) => {
     closePad();
     router.push({
@@ -562,10 +578,7 @@ export function RoutineEditor({ programId, sessionIndex, isNew }: RoutineEditorP
               editingRowRef={editingRowRef}
             />
             {restTimersEnabled ? (
-              <RoutineRestEditor
-                rest={weighted.restBetweenSets}
-                onChange={(restBetweenSets) => updateExerciseAt(index, (e) => e.with({ restBetweenSets }))}
-              />
+              <RoutineRestRow rest={weighted.restBetweenSets} onPress={() => openRest(index)} />
             ) : null}
             <RoutineProgressionEditor
               exercise={weighted}

@@ -14,6 +14,19 @@ export function restRowOf(t: TranslateFn, rest: Rest): { value: string; subtitle
   };
 }
 
+/** The routine editor card's Rest row: the rest, and the failed-set rest only when it differs. */
+export function routineRestRowOf(
+  t: TranslateFn,
+  rest: Rest,
+): { value: string; note: string | undefined; accessibilityLabel: string } {
+  const value = formatTimeSpan(rest.rest);
+  const note = rest.failedSetRest
+    ? t('exercise_editor.rest_sheet.failed_set.on.label', { rest: formatTimeSpan(rest.failedSetRest) })
+    : undefined;
+  const label = t('routine_editor.rest.row.label', { rest: value });
+  return { value, note, accessibilityLabel: note ? `${label}, ${note}` : label };
+}
+
 /** What the rest sheet's wheels and switch show while it is open. */
 export interface RestDraft {
   rest: RestPick;
