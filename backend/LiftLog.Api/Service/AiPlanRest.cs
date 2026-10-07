@@ -22,25 +22,26 @@ public static class AiPlanRest
     private const string RestKey = "restBetweenSets";
 
     /// <summary>The <c>Rest</c> definition the model is asked to fill.</summary>
-    public static JsonElement SchemaDefinition { get; } = ParseElement(
-        """
-        {
-          "type": "object",
-          "properties": {
-            "rest": {
-              "$ref": "#/definitions/Duration",
-              "description": "The rest between sets."
-            },
-            "failedSetRest": {
-              "$ref": "#/definitions/Duration",
-              "description": "A different rest after a set where the user failed to hit their target reps. Leave it out to rest the same as after any other set; only set it when the plan calls for a different rest after a failed set."
+    public static JsonElement SchemaDefinition { get; } =
+        ParseElement(
+            """
+            {
+              "type": "object",
+              "properties": {
+                "rest": {
+                  "$ref": "#/definitions/Duration",
+                  "description": "The rest between sets."
+                },
+                "failedSetRest": {
+                  "$ref": "#/definitions/Duration",
+                  "description": "A different rest after a set where the user failed to hit their target reps. Leave it out to rest the same as after any other set; only set it when the plan calls for a different rest after a failed set."
+                }
+              },
+              "required": ["rest"],
+              "description": "The rest between sets: one rest, plus an optional different rest after a failed set."
             }
-          },
-          "required": ["rest"],
-          "description": "The rest between sets: one rest, plus an optional different rest after a failed set."
-        }
-        """
-    );
+            """
+        );
 
     /// <summary>
     /// Returns <paramref name="definitions"/> with its <c>Rest</c> definition replaced
