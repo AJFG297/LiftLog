@@ -43,7 +43,7 @@ interface SavedRest {
   ownerIndex: number;
   programId: string;
   location: RoutineExerciseLocation;
-  minRest: Duration;
+  rest: Duration;
   routineBefore: Rest;
   sessionBefore: Rest;
 }
@@ -133,7 +133,7 @@ function RestSheetContent({ session }: { session: Session }) {
     );
     updateSession((s) => sessionWithExerciseRest(s, ownerIndex, withRest(sessionBefore, picked)));
     haptics.selection();
-    setSaved({ ownerIndex, programId, location, minRest: picked, routineBefore, sessionBefore });
+    setSaved({ ownerIndex, programId, location, rest: picked, routineBefore, sessionBefore });
   };
 
   const undo = () => {
@@ -258,7 +258,7 @@ function RestSheetContent({ session }: { session: Session }) {
             testID="rest-sheet-undo"
             title={t('rest_sheet.saved.title', {
               name: owner.blueprint.name,
-              time: formatTimeSpan(savedHere.minRest),
+              time: formatTimeSpan(savedHere.rest),
             })}
             subtitle={t('rest_sheet.saved.subtitle')}
             action={t('generic.undo.button')}
