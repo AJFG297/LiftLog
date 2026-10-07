@@ -21,6 +21,7 @@ screen isn't linked from the app. Its theme controls change the real theme setti
 | `HeaderPillButton` | `header-pill-button.tsx` | The accent pill at the end of a sheet's header that closes it ("Save for today", the Progression and Warm-ups Done). Like `ActionButton`, its fill stays a container (`collapsable={false}`) so a press that leaves the screen doesn't crash Android. |
 | `ModePill` | `mode-pill.tsx` | One choice in a row of mutually exclusive pills (a radio): the Targets card's Fixed, Range and Per set, and cardio's Time and Distance goal. Selected, it fills with ink. |
 | `Tile`, `TileValue` | `tile.tsx` | A labelled number that opens the number pad, such as Sets and Reps; `active` outlines it in the accent while it is on the pad. `TileValue` is its big number. |
+| `RadioMark` | `radio-mark.tsx` | The ring at the side of a pick-one card (the set type and Load sheets' options, the Progression sheet's choices), with a dot when picked. The caller gives the picked colour. |
 | `RoundIconButton` | `round-icon-button.tsx` | A round, outlined icon button, `regular` (44pt) or `compact` (36pt). The label is required. A visible `label` stretches it into a pill. |
 | `ListRow` | `list-row.tsx` | Leading slot, title, subtitle, trailing slot. `onPress` makes the row a button. |
 | `SetBadge` | `set-badge/` | The circle at the start of a set row: the working set's number, or W, D, M or F. |

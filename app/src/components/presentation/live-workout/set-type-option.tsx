@@ -1,10 +1,9 @@
+import { RadioMark } from '@/components/presentation/foundation/radio-mark';
 import { SetBadge, type SetBadgeProps } from '@/components/presentation/foundation/set-badge';
 import { SurfaceText } from '@/components/presentation/foundation/surface-text';
 import { MIN_TOUCH_TARGET } from '@/components/presentation/foundation/touch-target';
 import { spacing, useAppTheme } from '@/hooks/useAppTheme';
 import { Pressable, View } from 'react-native';
-
-const RADIO_SIZE = 22;
 
 interface SetTypeOptionProps {
   /** Left out for a choice that is not a set type, such as the Load sheet's. */
@@ -51,21 +50,7 @@ export function SetTypeOption(props: SetTypeOptionProps) {
           {props.description}
         </SurfaceText>
       </View>
-      <View
-        style={{
-          width: RADIO_SIZE,
-          height: RADIO_SIZE,
-          borderRadius: RADIO_SIZE / 2,
-          borderWidth: 2,
-          borderColor: props.selected ? tokens.accentInk : tokens.line3,
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        {props.selected ? (
-          <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: tokens.accent }} />
-        ) : null}
-      </View>
+      <RadioMark selected={props.selected} color={tokens.accentInk} dotColor={tokens.accent} />
     </Pressable>
   );
 }

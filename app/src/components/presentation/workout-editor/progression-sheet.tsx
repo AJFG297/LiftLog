@@ -1,4 +1,5 @@
 import { Chip } from '@/components/presentation/foundation/chip';
+import { RadioMark } from '@/components/presentation/foundation/radio-mark';
 import { SurfaceText } from '@/components/presentation/foundation/surface-text';
 import { MIN_TOUCH_TARGET } from '@/components/presentation/foundation/touch-target';
 import { progressionPreview, type PreviewRow } from '@/components/presentation/workout-editor/progression-preview';
@@ -168,8 +169,6 @@ function ChipLine({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-const RADIO_SIZE = 20;
-
 /** One choice: a radio, the name and what it does, and the picked one's settings under them. */
 function ChoiceCard(props: {
   name: string;
@@ -200,22 +199,7 @@ function ChoiceCard(props: {
         onPress={props.onPress}
         style={{ flexDirection: 'row', alignItems: 'flex-start', gap: spacing[3], padding: 14 }}
       >
-        <View
-          style={{
-            width: RADIO_SIZE,
-            height: RADIO_SIZE,
-            marginTop: 1,
-            borderRadius: RADIO_SIZE / 2,
-            borderWidth: 2,
-            borderColor: props.selected ? tokens.ink : tokens.line3,
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          {props.selected ? (
-            <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: tokens.ink }} />
-          ) : null}
-        </View>
+        <RadioMark selected={props.selected} color={tokens.ink} style={{ marginTop: 1 }} />
         <View style={{ flex: 1, gap: 3 }}>
           <SurfaceText font="text-base" weight="600" style={{ color: tokens.ink }}>
             {props.name}
