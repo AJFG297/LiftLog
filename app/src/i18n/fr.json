@@ -30,7 +30,6 @@
   "exercise.bodyweight.label": "Poids corporel",
   "exercise.copied_to_session.message": "Exercice {exerciseName} copié vers {targetSessionName}",
   "exercise.copy_to.button": "Copier vers",
-  "exercise.copy_to_session.button": "Copier l'exercice à la session",
   "exercise.copy_to_session.select_session.label": "Sélectionnez une session pour copier {exerciseName} dans :",
   "exercise.edit.title": "Modifier l'exercice",
   "exercise.exercise.label": "Exercice",

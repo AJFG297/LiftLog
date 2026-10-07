@@ -36,7 +36,6 @@
   "exercise.bodyweight.label": "Вага тіла",
   "exercise.copied_to_session.message": "Вправу {exerciseName} скопійовано до {targetSessionName}",
   "exercise.copy_to.button": "Копіювати до",
-  "exercise.copy_to_session.button": "Копіювати вправу до сесії",
   "exercise.copy_to_session.select_session.label": "Виберіть сесію для копіювання {exerciseName} до:",
   "exercise.edit.title": "Редагувати вправу",
   "exercise.exercise.label": "Вправа",

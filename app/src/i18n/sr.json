@@ -38,7 +38,6 @@
   "exercise.cardio_target.label": "Kardio cilj",
   "exercise.copied_to_session.message": "Vežbanje {exerciseName} kopirano u {targetSessionName}",
   "exercise.copy_to.button": "Kopiraj u",
-  "exercise.copy_to_session.button": "Kopiraj vežbanje u sesiju",
   "exercise.copy_to_session.select_session.label": "Izaberi sesiju za kopiranje {exerciseName}:",
   "exercise.distance.label": "Distanca",
   "exercise.edit.title": "Izmeni Vežbanje",

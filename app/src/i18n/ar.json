@@ -38,7 +38,6 @@
   "exercise.cardio_target.label": "هدف الكارديو",
   "exercise.copied_to_session.message": "تم نسخ تمرين {exerciseName} إلى {targetSessionName}",
   "exercise.copy_to.button": "نسخ إلى",
-  "exercise.copy_to_session.button": "نسخ التمرين إلى الحصة",
   "exercise.copy_to_session.select_session.label": "اختر حصة لنسخ {exerciseName} إليها:",
   "exercise.distance.label": "المسافة",
   "exercise.edit.title": "تعديل التمرين",

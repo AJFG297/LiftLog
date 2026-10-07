@@ -39,7 +39,6 @@
   "exercise.cardio_target.label": "Kardiyo hedefi",
   "exercise.copied_to_session.message": "{exerciseName} egzersizi {targetSessionName}'e kopyalandı",
   "exercise.copy_to.button": "Kopyala",
-  "exercise.copy_to_session.button": "Egzersizi oturuma kopyala",
   "exercise.copy_to_session.select_session.label": "{exerciseName}'in kopyalanacağı oturumu seç:",
   "exercise.distance.label": "Mesafe",
   "exercise.edit.title": "Egzersizi düzenle",

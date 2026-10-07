@@ -117,7 +117,7 @@
   "exercise.cardio_target.label": "Cardio target",
   "exercise.copied_to_session.message": "Exercise {exerciseName} copied to {targetSessionName}",
   "exercise.copy_to.button": "Copy to",
-  "exercise.copy_to_session.button": "Copy exercise to session",
+  "exercise.copy_to_routine.button": "Copy exercise to routine",
   "exercise.copy_to_session.select_session.label": "Select a session to copy {exerciseName} to:",
   "exercise.distance.label": "Distance",
   "exercise.edit.title": "Edit Exercise",

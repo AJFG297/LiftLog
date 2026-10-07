@@ -38,7 +38,6 @@
   "exercise.cardio_target.label": "Cardio-Ziel",
   "exercise.copied_to_session.message": "Übung {exerciseName} in {targetSessionName} kopiert",
   "exercise.copy_to.button": "Kopieren nach",
-  "exercise.copy_to_session.button": "Übung in Sitzung kopieren",
   "exercise.copy_to_session.select_session.label": "Wähle eine Sitzung aus, in die {exerciseName} kopiert werden soll:",
   "exercise.distance.label": "Entfernung",
   "exercise.edit.title": "Übung bearbeiten",

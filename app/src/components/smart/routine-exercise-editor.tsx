@@ -111,7 +111,7 @@ export function RoutineExerciseEditor(location: RoutineExerciseLocation) {
                 }))
           }
           trigger={(open) => (
-            <ActionButton variant="secondary" label={t('exercise.copy_to_session.button')} onPress={open} />
+            <ActionButton variant="secondary" label={t('exercise.copy_to_routine.button')} onPress={open} />
           )}
         />
       }

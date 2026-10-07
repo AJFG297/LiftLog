@@ -38,7 +38,6 @@
   "exercise.cardio_target.label": "Kardió cél",
   "exercise.copied_to_session.message": "Gyakorlat {excersiseName} másolva {targetSessionName} edzésbe",
   "exercise.copy_to.button": "Másolás",
-  "exercise.copy_to_session.button": "Gyakorlat másolása edzésbe",
   "exercise.copy_to_session.select_session.label": "Válassz ki egy edzést, ahová a {exerciseName} gyakorlatot másolni szeretné:",
   "exercise.description.cardio_set.body": "Beállítás <em>{setNumber}</em> - {targetType}:<em>{targetValue}</em>",
   "exercise.distance.label": "Távolság",

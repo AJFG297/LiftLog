@@ -39,7 +39,6 @@
   "exercise.cardio_target.label": "Cardio 목표",
   "exercise.copied_to_session.message": "{exerciseName} 종목을 {targetSessionName}(으)로 복사함",
   "exercise.copy_to.button": "복사 대상",
-  "exercise.copy_to_session.button": "세션으로 종목 복사",
   "exercise.copy_to_session.select_session.label": "{exerciseName} 종목을 복사할 세션 선택:",
   "exercise.distance.label": "거리",
   "exercise.edit.title": "종목 편집",

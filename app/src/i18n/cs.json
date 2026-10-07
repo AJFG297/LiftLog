@@ -33,7 +33,6 @@
   "exercise.bodyweight.label": "Tělesná váha",
   "exercise.copied_to_session.message": "Cvičení {exerciseName} zkopírováno do {targetSessionName}",
   "exercise.copy_to.button": "Kopírovat do",
-  "exercise.copy_to_session.button": "Zkopírovat cvičení do sezení",
   "exercise.copy_to_session.select_session.label": "Vyberte sezení pro kopírování {exerciseName}:",
   "exercise.edit.title": "Přidat cvik",
   "exercise.exercise.label": "Cvik",

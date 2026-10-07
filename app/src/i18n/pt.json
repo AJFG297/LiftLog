@@ -38,7 +38,6 @@
   "exercise.cardio_target.label": "Meta de Cardio",
   "exercise.copied_to_session.message": "Exercício {exerciseName} copiado para {targetSessionName}",
   "exercise.copy_to.button": "Copiar para",
-  "exercise.copy_to_session.button": "Copiar exercício para a sessão",
   "exercise.copy_to_session.select_session.label": "Selecione uma sessão para copiar {exerciseName} para:",
   "exercise.description.cardio_set.body": "Série <em>{setNumber}</em> - {targetType}: <em>{targetValue}</em>",
   "exercise.distance.label": "Distância",

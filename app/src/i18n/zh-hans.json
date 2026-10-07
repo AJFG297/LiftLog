@@ -39,7 +39,6 @@
   "exercise.cardio_target.label": "有氧计划",
   "exercise.copied_to_session.message": "将 {exerciseName} 复制到 {targetSessionName}",
   "exercise.copy_to.button": "复制到",
-  "exercise.copy_to_session.button": "复制训练到单元",
   "exercise.copy_to_session.select_session.label": "拷贝 {exerciseName} 到单元：",
   "exercise.distance.label": "距离",
   "exercise.edit.title": "编辑训练",

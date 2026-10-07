@@ -35,7 +35,6 @@
   "exercise.bodyweight.label": "Paino",
   "exercise.copied_to_session.message": "Harjoitus {exerciseName} kopioitu {targetSessionName}",
   "exercise.copy_to.button": "Kopioi kohteeseen",
-  "exercise.copy_to_session.button": "Kopioi harjoitus istuntoon",
   "exercise.copy_to_session.select_session.label": "Valitse istunto johon kopioida harjoitus {exerciseName}:",
   "exercise.distance.label": "Etäisyys",
   "exercise.edit.title": "Muokkaa liikettä",

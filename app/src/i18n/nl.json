@@ -36,7 +36,6 @@
   "exercise.bodyweight.label": "Lichaamsgewicht",
   "exercise.copied_to_session.message": "Oefening {exerciseName} gekopieerd naar {targetSessionName}",
   "exercise.copy_to.button": "Kopiëren naar",
-  "exercise.copy_to_session.button": "Kopieer oefening naar sessie",
   "exercise.copy_to_session.select_session.label": "Selecteer een sessie om {exerciseName} naar te kopiëren:",
   "exercise.edit.title": "Oefening aanpassen",
   "exercise.exercise.label": "Oefening",

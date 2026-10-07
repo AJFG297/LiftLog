@@ -38,7 +38,6 @@
   "exercise.cardio_target.label": "Цель кардио",
   "exercise.copied_to_session.message": "Упражнение {exerciseName} скопировано в {targetSessionName}",
   "exercise.copy_to.button": "Копировать в",
-  "exercise.copy_to_session.button": "Копировать упражнение в сессию",
   "exercise.copy_to_session.select_session.label": "Выберите сеанс для копирования {exerciseName}:",
   "exercise.distance.label": "Дистанция",
   "exercise.edit.title": "Изменить упражнение",

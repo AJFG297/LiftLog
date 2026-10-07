@@ -38,7 +38,6 @@
   "exercise.cardio_target.label": "Cel kardio",
   "exercise.copied_to_session.message": "Ćwiczenie {exerciseName} skopiowano do {targetSessionName}",
   "exercise.copy_to.button": "Skopiuj do",
-  "exercise.copy_to_session.button": "Skopiuj ćwiczenie do sesji",
   "exercise.copy_to_session.select_session.label": "Wybierz sesję, do której chcesz skopiować {exerciseName}:",
   "exercise.distance.label": "Dystans",
   "exercise.edit.title": "Edytuj ćwiczenie",
