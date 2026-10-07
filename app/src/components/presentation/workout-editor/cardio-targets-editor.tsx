@@ -27,7 +27,7 @@ import { spacing, useAppTheme } from '@/hooks/useAppTheme';
 import { CardioExerciseBlueprint, ExerciseBlueprint } from '@/models/blueprint-models';
 import { useTranslate } from '@tolgee/react';
 import { useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Keyboard, Pressable, StyleSheet, View } from 'react-native';
 
 /** The cardio Targets card's number pad, held by the sheet so the pad can sit under the scrolling cards. */
 export interface CardioPadControl {
@@ -50,6 +50,10 @@ export function useCardioTargetsPad(
       if (!cardio) {
         setPad(undefined);
         return;
+      }
+      if (action.type === 'open') {
+        // The pad stands in for the keyboard, so a notes field typing at the same time gives way.
+        Keyboard.dismiss();
       }
       const next = cardioPadReducer({ exercise: cardio, pad }, action);
       setPad(next.pad);

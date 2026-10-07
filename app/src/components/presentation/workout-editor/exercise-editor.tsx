@@ -81,6 +81,10 @@ export function ExerciseEditor(props: ExerciseEditorProps) {
     update((current) => (current instanceof WeightedExerciseBlueprint ? fn(current) : current));
   const updateCardio = (fn: (exercise: CardioExerciseBlueprint) => CardioExerciseBlueprint) =>
     update((current) => (current instanceof CardioExerciseBlueprint ? fn(current) : current));
+  const closePads = () => {
+    props.targets.dispatch({ type: 'close' });
+    props.cardioTargets.dispatch({ type: 'close' });
+  };
 
   return (
     <View style={{ gap: spacing[5] }}>
@@ -90,8 +94,7 @@ export function ExerciseEditor(props: ExerciseEditorProps) {
         meta={props.meta}
         onSwap={props.onSwap}
         onTrackingChange={(type) => {
-          props.targets.dispatch({ type: 'close' });
-          props.cardioTargets.dispatch({ type: 'close' });
+          closePads();
           update((current) => withTrackingType(current, type));
         }}
       />
@@ -105,6 +108,8 @@ export function ExerciseEditor(props: ExerciseEditorProps) {
         link={exercise.link}
         onNotesChange={(notes) => update((current) => withNotes(current, { notes }))}
         onLinkChange={(link) => update((current) => withNotes(current, { link }))}
+        // The number pad stands in for the keyboard, so the two never show at once.
+        onFocus={closePads}
       />
     </View>
   );
@@ -388,6 +393,7 @@ function NotesCard(props: {
   link: string;
   onNotesChange: (notes: string) => void;
   onLinkChange: (link: string) => void;
+  onFocus: () => void;
 }) {
   const { t } = useTranslate();
   const { tokens } = useAppTheme();
@@ -400,6 +406,7 @@ function NotesCard(props: {
           multiline
           value={props.notes}
           onChangeText={props.onNotesChange}
+          onFocus={props.onFocus}
           placeholder={t('exercise_editor.notes.placeholder')}
           placeholderTextColor={tokens.placeholder}
           accessibilityLabel={t('exercise_editor.notes.title')}
@@ -429,6 +436,7 @@ function NotesCard(props: {
             testID="exercise-link"
             value={props.link}
             onChangeText={props.onLinkChange}
+            onFocus={props.onFocus}
             placeholder={t('exercise_editor.link.placeholder')}
             placeholderTextColor={tokens.placeholder}
             accessibilityLabel={t('exercise_editor.link.label')}

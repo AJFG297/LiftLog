@@ -18,7 +18,7 @@ import { ExerciseBlueprint, RepsTarget, WeightedExerciseBlueprint } from '@/mode
 import { setLabels } from '@/models/session-models/set-kind';
 import { useTranslate } from '@tolgee/react';
 import { useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { Keyboard, Pressable, View } from 'react-native';
 
 /** The Targets card's number pad, held by the sheet so the pad can sit under the scrolling cards. */
 export interface TargetsPadControl {
@@ -39,6 +39,10 @@ export function useTargetsPad(
       if (!weighted) {
         setPad(undefined);
         return;
+      }
+      if (action.type === 'open') {
+        // The pad stands in for the keyboard, so a notes field typing at the same time gives way.
+        Keyboard.dismiss();
       }
       const next = targetsPadReducer({ exercise: weighted, pad }, action);
       setPad(next.pad);
