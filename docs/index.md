@@ -43,7 +43,7 @@ work to find the docs relevant to your area, and update it whenever you add, rem
 - [Routines.md](./Routines.md) - programs and routines: the Routines screen (active program, routines,
   other programs, the built-in library, and why changing the active program always asks), the program page,
   and the routine editor: its draft with Save and Cancel, the routine's colour, set rows on the number pad,
-  rest with Advanced, the progression presets and how they map to rules, and superset-safe moves.
+  the rest row and its wheel sheet, the progression presets and how they map to rules, and superset-safe moves.
 - [WorkoutDetail.md](./WorkoutDetail.md) - a past workout, opened from history: the header, stats row and set
   tables (e1RM, PR tags, the comparison with last time), Do again, Save as routine (into the active plan), and the
   overflow menu's edit, share and delete with Undo.
