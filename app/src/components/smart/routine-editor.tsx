@@ -157,7 +157,8 @@ export function RoutineEditor({ programId, sessionIndex, isNew }: RoutineEditorP
   const scrollRef = useRef<ScrollView>(null);
   const scrollY = useRef(0);
   const editingRowRef = useRef<View>(null);
-  // The rest sheet edits through an exercise edit this screen opens; the next one, or leaving, ends it.
+  // The rest sheet edits through an exercise edit this screen opens. The sheet ends it when it closes; this
+  // covers leaving while the sheet is still open.
   const restEdit = useRef<(() => void) | undefined>(undefined);
   useEffect(() => () => restEdit.current?.(), []);
 
@@ -444,7 +445,7 @@ export function RoutineEditor({ programId, sessionIndex, isNew }: RoutineEditorP
       return;
     }
     restEdit.current = edit.close;
-    router.push(getExerciseEditRestHref(edit.editId));
+    router.push(getExerciseEditRestHref(edit.editId, { endsEdit: true }));
   };
 
   const openSetType = (index: number, position: RoutineSetPosition) => {

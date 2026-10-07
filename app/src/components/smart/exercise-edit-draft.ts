@@ -1,5 +1,6 @@
 import { ExerciseBlueprint } from '@/models/blueprint-models';
 import { uuid } from '@/utils/uuid';
+import { useOnDismiss } from '@/hooks/useOnDismiss';
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 
 /**
@@ -37,10 +38,12 @@ export function openExerciseEdit(
 ): () => void {
   edits.set(id, { exercise, onChange });
   notify();
-  return () => {
-    edits.delete(id);
-    notify();
-  };
+  return () => endExerciseEdit(id);
+}
+
+function endExerciseEdit(id: string) {
+  edits.delete(id);
+  notify();
 }
 
 export function exerciseEditAt(id: string): ExerciseBlueprint | undefined {
@@ -88,4 +91,16 @@ export function useOwnedExerciseEdit(
 /** The edit a sheet over the editor works on: undefined once the editor has gone. */
 export function useExerciseEdit(id: string): ExerciseBlueprint | undefined {
   return useSyncExternalStore(subscribe, () => edits.get(id)?.exercise);
+}
+
+/**
+ * Ends the edit when the sheet goes, if the sheet was handed it: the routine editor opens one only for its
+ * rest sheet, while one opened over the edit exercise sheet belongs to that editor.
+ */
+export function useEndExerciseEditOnDismiss(id: string, ends: boolean) {
+  useOnDismiss(() => {
+    if (ends) {
+      endExerciseEdit(id);
+    }
+  });
 }

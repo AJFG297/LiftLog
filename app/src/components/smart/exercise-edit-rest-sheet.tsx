@@ -14,7 +14,11 @@ import {
   withFailedSetRestOn,
 } from '@/components/presentation/workout-editor/rest-edit';
 import { cardioRestOf, withCardioRest } from '@/components/presentation/workout-editor/cardio-targets';
-import { updateExerciseEdit, useExerciseEdit } from '@/components/smart/exercise-edit-draft';
+import {
+  updateExerciseEdit,
+  useEndExerciseEditOnDismiss,
+  useExerciseEdit,
+} from '@/components/smart/exercise-edit-draft';
 import { useBackWhenGone } from '@/hooks/useBackWhenGone';
 import { spacing, useAppTheme } from '@/hooks/useAppTheme';
 import { CardioExerciseBlueprint, Rest, WeightedExerciseBlueprint } from '@/models/blueprint-models';
@@ -26,8 +30,11 @@ import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 /** The Rest sheet over the edit exercise sheet, editing the exercise open there. */
-export function getExerciseEditRestHref(editId: string): Href {
-  return { pathname: '/exercise-edit-rest', params: { editId } } as unknown as Href;
+export function getExerciseEditRestHref(editId: string, options?: { endsEdit?: boolean }): Href {
+  return {
+    pathname: '/exercise-edit-rest',
+    params: options?.endsEdit ? { editId, endsEdit: '1' } : { editId },
+  } as unknown as Href;
 }
 
 /**
@@ -37,8 +44,9 @@ export function getExerciseEditRestHref(editId: string): Href {
  * distance it is the rest between rounds: no failed sets, and 0:00 for none.
  */
 export function ExerciseEditRestSheet() {
-  const { editId } = useLocalSearchParams<{ editId?: string }>();
+  const { editId, endsEdit } = useLocalSearchParams<{ editId?: string; endsEdit?: string }>();
   const exercise = useExerciseEdit(editId ?? '');
+  useEndExerciseEditOnDismiss(editId ?? '', endsEdit === '1');
   useBackWhenGone(!exercise);
   return exercise ? <SheetContent editId={editId ?? ''} exercise={exercise} /> : null;
 }

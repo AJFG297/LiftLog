@@ -6,6 +6,7 @@ import {
   exerciseEditAt,
   openExerciseEdit,
   updateExerciseEdit,
+  useEndExerciseEditOnDismiss,
   useExerciseEdit,
   useOwnedExerciseEdit,
 } from './exercise-edit-draft';
@@ -64,5 +65,25 @@ describe('useOwnedExerciseEdit', () => {
 
     editor.unmount();
     expect(sheet.result.current).toBeUndefined();
+  });
+
+  it('a sheet that was handed the edit ends it when it is dismissed', () => {
+    const close = openExerciseEdit('handed', bench, vi.fn());
+    const sheet = renderHook(() => useEndExerciseEditOnDismiss('handed', true));
+
+    sheet.unmount();
+
+    expect(exerciseEditAt('handed')).toBeUndefined();
+    close();
+  });
+
+  it("a sheet over the editor leaves the editor's edit open when it is dismissed", () => {
+    const close = openExerciseEdit('editor', bench, vi.fn());
+    const sheet = renderHook(() => useEndExerciseEditOnDismiss('editor', false));
+
+    sheet.unmount();
+
+    expect(exerciseEditAt('editor')).toBe(bench);
+    close();
   });
 });
