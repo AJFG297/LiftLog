@@ -62,9 +62,20 @@ the routine.
 ## Progressive overload
 
 In the routine editor, **Progression** offers Add weight, Reps then weight, or Off, which set these rules for
-you (see [Routines.md](./Routines.md#progression-presets)). **Advanced** there, and **Progressive Overload** in
-an exercise's More options, edit the rules themselves. A new exercise has no rules, so it stays
+you (see [Routines.md](./Routines.md#progression-presets)). **Advanced** there, and **Rules** on the edit
+exercise sheet's Progression sheet, edit the rules themselves. A new exercise has no rules, so it stays
 where you leave it until you add one.
+
+The **Progression sheet** (the Progression row of the edit exercise sheet, `app/exercise-progression.tsx`)
+shows the same three choices as radio cards, each explained with the exercise's numbers. The picked card
+has chips for the weight step (1.25, 2.5, 5, plus the exercise's own step if it is something else) and,
+for Reps then weight, the rep limit (14, 15, 16, 20, only those above the plan's reps). Under them, **If
+you hit every target** plays the next sessions out through `applyProgression` with every set logged at
+the top of its target (`progression-preview.ts`): three sessions for Add weight and custom rules, and for
+Reps then weight every rung until the weight goes up, with the middle of a long ladder left out. It starts
+from last time's best set, or counts up from nothing before the exercise has one. **Rules** opens the
+full rule editor; rules that no longer match a preset read as **Custom**. The sheet edits the exercise
+through `exercise-edit-draft.ts`, like the Load sheet.
 
 **Rules only fire after a successful session**, and what counts as successful depends on the rule:
 
@@ -100,7 +111,8 @@ all, so a weight rule always has to be last. The editor dims any rule that can n
 how to fix it, and **Add rule** arranges new rules so this does not happen - adding a rule to a
 weight-only exercise puts the new reps rung _in front_ of the weight rule, not behind it.
 
-Tap **Example** to see four sessions of your actual exercise played out under the rules you have set.
+In the routine editor's Advanced, tap **Example** to see four sessions of your actual exercise played out
+under the rules you have set. The Progression sheet shows its preview instead.
 
 ## Double progression
 
