@@ -1,199 +1,464 @@
-import FixedIncrementer from '@/components/presentation/foundation/editors/fixed-incrementer';
-import SegmentedPicker from '@/components/presentation/foundation/segmented-picker';
-import { spacing } from '@/hooks/useAppTheme';
-import { RepsConfig, RepsType, uniformTarget, WeightedExerciseBlueprint } from '@/models/blueprint-models';
-import { setLabels, type WorkingListKind } from '@/models/session-models/set-kind';
-import { ExtractType } from '@/utils/extract-type';
+import { SurfaceText } from '@/components/presentation/foundation/surface-text';
+import { MIN_TOUCH_TARGET } from '@/components/presentation/foundation/touch-target';
+import { MsIconSrc } from '@/components/presentation/foundation/ms-icon-source';
+import {
+  FIXED_REPS_CHIPS,
+  nextTargetsField,
+  RANGE_REPS_CHIPS,
+  repsTextOf,
+  TargetsField,
+  TargetsMode,
+  TargetsPad,
+  TargetsPadAction,
+  targetsPadReducer,
+} from '@/components/presentation/workout-editor/exercise-targets';
+import { TargetsNumberPad, TargetsPadDisplayPart } from '@/components/presentation/workout-editor/targets-number-pad';
+import { spacing, useAppTheme } from '@/hooks/useAppTheme';
+import { ExerciseBlueprint, RepsTarget, WeightedExerciseBlueprint } from '@/models/blueprint-models';
+import { setLabels } from '@/models/session-models/set-kind';
 import { useTranslate } from '@tolgee/react';
 import { useState } from 'react';
-import { View } from 'react-native';
+import { Pressable, View } from 'react-native';
+
+/** The Targets card's number pad, held by the sheet so the pad can sit under the scrolling cards. */
+export interface TargetsPadControl {
+  pad: TargetsPad | undefined;
+  dispatch: (action: TargetsPadAction) => void;
+}
+
+export function useTargetsPad(
+  exercise: ExerciseBlueprint,
+  update: (update: (exercise: ExerciseBlueprint) => ExerciseBlueprint) => void,
+): TargetsPadControl {
+  const [pad, setPad] = useState<TargetsPad>();
+  const weighted = exercise instanceof WeightedExerciseBlueprint ? exercise : undefined;
+  return {
+    // Cardio has no pad of its own yet (PM-51), so switching tracking type hides it.
+    pad: weighted && pad,
+    dispatch: (action) => {
+      if (!weighted) {
+        setPad(undefined);
+        return;
+      }
+      const next = targetsPadReducer({ exercise: weighted, pad }, action);
+      setPad(next.pad);
+      if (next.exercise !== weighted) {
+        update(() => next.exercise);
+      }
+    },
+  };
+}
+
+const MODES: { mode: TargetsMode; key: 'fixed' | 'range' | 'per_set' }[] = [
+  { mode: 'fixed', key: 'fixed' },
+  { mode: 'range', key: 'range' },
+  { mode: 'perSet', key: 'per_set' },
+];
 
 /**
- * The working sets' targets: Fixed, Range or Per set, then sets and reps on steppers. The edit exercise
- * sheet's Targets card holds it until the number pad takes over (PM-45).
+ * The working sets' targets (PM-45): Fixed, Range or Per set, then the Sets and Reps tiles, or a list of
+ * sets, each opening the number pad.
  */
-export function WeightedTargetsEditor({
-  exercise,
-  updateExercise,
-}: {
+export function WeightedTargetsEditor(props: {
   exercise: WeightedExerciseBlueprint;
-  updateExercise: (exercise: WeightedExerciseBlueprint) => void;
+  mode: TargetsMode;
+  onModeChange: (mode: TargetsMode) => void;
+  targets: TargetsPadControl;
+  onAddSet: () => void;
+  onRemoveSet: (index: number) => void;
 }) {
   const { t } = useTranslate();
-
-  // Only the targets persist, so a uniform list cannot say whether it was authored as fixed or as a
-  // range; the chosen mode lives here for as long as the editor is open.
-  const [mode, setMode] = useState<RepsType>(() => initialMode(exercise));
-  const repsConfig = repsConfigFor(exercise, mode);
-
-  const setRepsConfig = (next: RepsConfig) => {
-    updateExercise(exercise.with({ sets: exercise.plannedSets.length, repsConfig: next }));
-  };
-
-  const changeMode = (next: RepsType) => {
-    if (next === mode) {
-      return;
-    }
-    setMode(next);
-    setRepsConfig(seedRepsConfig(exercise, next));
-  };
+  const { exercise, mode, targets } = props;
+  const { pad, dispatch } = targets;
+  const field = pad?.field;
+  const open = (next: TargetsField) => dispatch({ type: 'open', field: next, mode });
 
   return (
-    <View style={{ gap: spacing[2] }}>
-      <SegmentedPicker
-        value={mode}
-        options={[
-          { value: 'fixed', label: 'Fixed', testID: 'reps-mode-fixed' },
-          { value: 'range', label: 'Range', testID: 'reps-mode-range' },
-          { value: 'perSet', label: 'Per set', testID: 'reps-mode-per-set' },
-        ]}
-        onChange={changeMode}
-      />
-
+    <View>
       <View
-        style={{
-          flexDirection: 'row',
-          alignItems: 'flex-start',
-          width: '100%',
-          gap: spacing[4],
-        }}
+        accessibilityRole="radiogroup"
+        accessibilityLabel={t('exercise_editor.targets.mode.label')}
+        style={{ flexDirection: 'row', gap: 6, paddingHorizontal: spacing[4], paddingTop: 14 }}
       >
-        <View style={{ flex: 1 }}>
-          <FixedIncrementer
-            label={t('exercise.sets.label')}
-            onValueChange={(value) => updateExercise(exercise.withSets(value))}
-            value={exercise.plannedSets.length}
+        {MODES.map((option) => (
+          <ModePill
+            key={option.mode}
+            label={t(`exercise_editor.targets.${option.key}.label`)}
+            selected={mode === option.mode}
+            onPress={() => props.onModeChange(option.mode)}
+            testID={`reps-mode-${option.key}`}
+          />
+        ))}
+      </View>
+      {mode === 'perSet' ? (
+        <PerSetList {...props} openSet={(index) => open({ kind: 'set', index })} />
+      ) : (
+        <View style={{ flexDirection: 'row', gap: 10, padding: spacing[4], paddingTop: 14 }}>
+          <Tile
             testID="exercise-sets"
-          />
+            label={t('exercise_editor.targets.sets.label')}
+            accessibilityLabel={t('exercise_editor.targets.sets.accessibility_label', {
+              sets: field?.kind === 'sets' ? pad!.value : exercise.plannedSets.length,
+            })}
+            active={field?.kind === 'sets'}
+            onPress={() => open({ kind: 'sets' })}
+          >
+            <TileValue text={String(field?.kind === 'sets' ? pad!.value : exercise.plannedSets.length)} />
+          </Tile>
+          <RepsTile exercise={exercise} mode={mode} pad={pad} onPress={() => open({ kind: 'reps' })} />
         </View>
-        {repsConfig.type === 'perSet' ? (
-          <PerSetRepsEditor
-            repsConfig={repsConfig}
-            setRepsConfig={setRepsConfig}
-            kinds={exercise.plannedSets.map((set) => set.kind)}
-          />
-        ) : repsConfig.type === 'range' ? (
-          <RangeRepsEditor repsConfig={repsConfig} setRepsConfig={setRepsConfig} />
-        ) : (
-          <FixedRepsEditor repsConfig={repsConfig} setRepsConfig={setRepsConfig} />
-        )}
-      </View>
+      )}
     </View>
   );
 }
 
-function RangeRepsEditor({
-  repsConfig,
-  setRepsConfig,
-}: {
-  repsConfig: ExtractType<RepsConfig, 'range'>;
-  setRepsConfig: (config: RepsConfig) => void;
+function RepsTile(props: {
+  exercise: WeightedExerciseBlueprint;
+  mode: TargetsMode;
+  pad: TargetsPad | undefined;
+  onPress: () => void;
 }) {
   const { t } = useTranslate();
+  const { tokens } = useAppTheme();
+  const kind = props.pad?.field.kind;
+  const active = kind === 'reps' || kind === 'bottom' || kind === 'top';
+  const target = shownTarget(props.exercise, props.pad);
+  const focus = (end: 'bottom' | 'top') =>
+    kind === end ? { borderBottomWidth: 2, borderColor: tokens.accent } : undefined;
   return (
-    <>
-      <View style={{ flex: 1 }}>
-        <FixedIncrementer
-          label={t('exercise.min_reps.label')}
-          onValueChange={(min) =>
-            setRepsConfig({ ...repsConfig, min: Math.max(min, 1), max: Math.max(repsConfig.max, min) })
-          }
-          value={repsConfig.min}
-          testID="exercise-min-reps"
-        />
-      </View>
-      <View style={{ flex: 1 }}>
-        <FixedIncrementer
-          label={t('exercise.max_reps.label')}
-          onValueChange={(max) => setRepsConfig({ ...repsConfig, max: Math.max(max, repsConfig.min) })}
-          value={repsConfig.max}
-          testID="exercise-max-reps"
-        />
-      </View>
-    </>
-  );
-}
-
-function FixedRepsEditor({
-  repsConfig,
-  setRepsConfig,
-}: {
-  repsConfig: ExtractType<RepsConfig, 'fixed'>;
-  setRepsConfig: (config: RepsConfig) => void;
-}) {
-  const { t } = useTranslate();
-  return (
-    <View style={{ flex: 1 }}>
-      <FixedIncrementer
-        label={t('exercise.reps.label')}
-        onValueChange={(reps) => setRepsConfig({ ...repsConfig, reps: Math.max(reps, 1) })}
-        value={repsConfig.reps}
-        testID="exercise-reps"
-      />
-    </View>
-  );
-}
-
-function PerSetRepsEditor({
-  repsConfig,
-  setRepsConfig,
-  kinds,
-}: {
-  repsConfig: ExtractType<RepsConfig, 'perSet'>;
-  setRepsConfig: (config: RepsConfig) => void;
-  kinds: WorkingListKind[];
-}) {
-  const { t } = useTranslate();
-  const labels = setLabels(repsConfig.targets.map((_, index) => kinds[index] ?? 'working'));
-
-  const setSetReps = (index: number, value: number) => {
-    const reps = Math.max(value, 1);
-    setRepsConfig({
-      type: 'perSet',
-      targets: repsConfig.targets.map((target, i) => (i === index ? { min: reps, max: reps } : target)),
-    });
-  };
-
-  return (
-    <View style={{ flex: 3, flexDirection: 'row', flexWrap: 'wrap', gap: spacing[4] }}>
-      {repsConfig.targets?.map((target, index) => (
-        <View key={index} style={{ flexGrow: 1, flexBasis: '25%', minWidth: spacing[16] }}>
-          <FixedIncrementer
-            label={t('exercise.set_number.label', { number: labels[index] })}
-            onValueChange={(value) => setSetReps(index, value)}
-            value={target.max}
-            testID={`exercise-set-reps-${index}`}
-          />
+    <Tile
+      testID="exercise-reps"
+      label={t('exercise_editor.targets.reps.label')}
+      accessibilityLabel={t('exercise_editor.targets.reps.accessibility_label', {
+        reps: repsTextOf(target, props.mode),
+      })}
+      active={active}
+      onPress={props.onPress}
+    >
+      {props.mode === 'range' ? (
+        <View style={{ flexDirection: 'row' }}>
+          <TileValue text={String(target.min)} style={focus('bottom')} />
+          <TileValue text="–" />
+          <TileValue text={String(target.max)} style={focus('top')} />
         </View>
-      ))}
-    </View>
+      ) : (
+        <TileValue text={String(target.max)} />
+      )}
+    </Tile>
   );
 }
 
-/** The layout the stored targets most likely came from, used to seed the editor's mode. */
-function initialMode(exercise: WeightedExerciseBlueprint): RepsType {
-  const uniform = uniformTarget(exercise.plannedSets);
-  if (!uniform) {
-    return 'perSet';
-  }
-  return uniform.min === uniform.max ? 'fixed' : 'range';
-}
-
-function repsConfigFor(exercise: WeightedExerciseBlueprint, mode: RepsType): RepsConfig {
-  const targets = exercise.plannedSets.map((s) => ({ ...s.reps }));
-  const first = targets[0] ?? { min: 10, max: 10 };
-  return mode === 'perSet'
-    ? { type: 'perSet', targets }
-    : mode === 'range'
-      ? { type: 'range', min: first.min, max: first.max }
-      : { type: 'fixed', reps: first.max };
-}
-
-function seedRepsConfig(exercise: WeightedExerciseBlueprint, mode: RepsType): RepsConfig {
+/** The first set's target, with the end being typed showing what is on the pad. */
+function shownTarget(exercise: WeightedExerciseBlueprint, pad: TargetsPad | undefined): RepsTarget {
   const target = exercise.repsTargetForSet(0);
-  return mode === 'perSet'
-    ? { type: 'perSet', targets: exercise.plannedSets.map(() => ({ min: target.max, max: target.max })) }
-    : mode === 'range'
-      ? { type: 'range', min: target.min, max: target.max }
-      : { type: 'fixed', reps: target.min };
+  switch (pad?.field.kind) {
+    case 'reps':
+      return { min: pad.value, max: pad.value };
+    case 'bottom':
+      return { ...target, min: pad.value };
+    case 'top':
+      return { ...target, max: pad.value };
+    default:
+      return target;
+  }
+}
+
+function PerSetList(props: {
+  exercise: WeightedExerciseBlueprint;
+  targets: TargetsPadControl;
+  openSet: (index: number) => void;
+  onAddSet: () => void;
+  onRemoveSet: (index: number) => void;
+}) {
+  const { t } = useTranslate();
+  const { tokens } = useAppTheme();
+  const { pad } = props.targets;
+  const sets = props.exercise.plannedSets;
+  const labels = setLabels(sets.map((s) => s.kind));
+  const canRemove = sets.length > 1;
+  return (
+    <View style={{ paddingTop: spacing[2], paddingBottom: spacing[1] }}>
+      {sets.map((set, index) => {
+        const active = pad?.field.kind === 'set' && pad.field.index === index;
+        const reps = active ? pad.value : set.reps.max;
+        const label = labels[index] ?? String(index + 1);
+        return (
+          <View
+            key={index}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              minHeight: 52,
+              paddingLeft: spacing[4],
+              paddingRight: spacing[2],
+              gap: spacing[1],
+            }}
+          >
+            <Pressable
+              testID={`exercise-set-reps-${index}`}
+              onPress={() => props.openSet(index)}
+              accessibilityRole="button"
+              accessibilityLabel={t('exercise_editor.targets.set.accessibility_label', { number: label, reps })}
+              accessibilityState={{ selected: active }}
+              style={{
+                flex: 1,
+                minHeight: 44,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                borderRadius: 10,
+                borderWidth: 2,
+                paddingLeft: active ? spacing[2] : 0,
+                paddingRight: 10,
+                borderColor: active ? tokens.accent : 'transparent',
+                backgroundColor: active ? tokens.accentSoft : 'transparent',
+              }}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[3] }}>
+                <View
+                  style={{
+                    width: 26,
+                    height: 26,
+                    borderRadius: 8,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: tokens.segment,
+                  }}
+                >
+                  <SurfaceText numeric font="text-sm" style={{ color: tokens.ink }}>
+                    {label}
+                  </SurfaceText>
+                </View>
+                <SurfaceText font="text-base" style={{ color: tokens.ink }}>
+                  {t('exercise_editor.targets.set.label', { number: label })}
+                </SurfaceText>
+              </View>
+              <SurfaceText numeric font="text-lg" style={{ color: tokens.ink }}>
+                {reps}{' '}
+                <SurfaceText font="text-sm" style={{ color: tokens.muted }}>
+                  {t('exercise_editor.targets.reps_unit.label')}
+                </SurfaceText>
+              </SurfaceText>
+            </Pressable>
+            <Pressable
+              testID={`exercise-remove-set-${index}`}
+              onPress={() => props.onRemoveSet(index)}
+              disabled={!canRemove}
+              accessibilityRole="button"
+              accessibilityLabel={t('exercise_editor.targets.remove_set.accessibility_label', { number: label })}
+              accessibilityState={{ disabled: !canRemove }}
+              style={{
+                width: MIN_TOUCH_TARGET,
+                height: MIN_TOUCH_TARGET,
+                alignItems: 'center',
+                justifyContent: 'center',
+                opacity: canRemove ? 1 : 0.3,
+              }}
+            >
+              <MsIconSrc name="close" size={16} color={tokens.muted} />
+            </Pressable>
+          </View>
+        );
+      })}
+      <Pressable
+        testID="exercise-add-set"
+        onPress={props.onAddSet}
+        accessibilityRole="button"
+        accessibilityLabel={t('exercise_editor.targets.add_set.button')}
+        style={({ pressed }) => ({
+          minHeight: MIN_TOUCH_TARGET,
+          marginHorizontal: spacing[4],
+          marginTop: spacing[1],
+          marginBottom: spacing[3],
+          borderRadius: 10,
+          borderWidth: 1,
+          borderStyle: 'dashed',
+          borderColor: tokens.line,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: pressed ? tokens.track : 'transparent',
+        })}
+      >
+        <SurfaceText font="text-sm" weight="500" style={{ color: tokens.accentInk }}>
+          {t('exercise_editor.targets.add_set.button')}
+        </SurfaceText>
+      </Pressable>
+    </View>
+  );
+}
+
+function ModePill(props: { label: string; selected: boolean; onPress: () => void; testID: string }) {
+  const { tokens } = useAppTheme();
+  return (
+    <Pressable
+      testID={props.testID}
+      onPress={props.onPress}
+      accessibilityRole="radio"
+      accessibilityLabel={props.label}
+      accessibilityState={{ checked: props.selected }}
+      style={{ minHeight: MIN_TOUCH_TARGET, justifyContent: 'center' }}
+    >
+      {({ pressed }) => (
+        <View
+          style={{
+            height: 34,
+            paddingHorizontal: 14,
+            borderRadius: 17,
+            borderWidth: 1,
+            justifyContent: 'center',
+            borderColor: props.selected ? tokens.ink : tokens.line,
+            backgroundColor: props.selected ? tokens.ink : pressed ? tokens.track : 'transparent',
+          }}
+        >
+          <SurfaceText font="text-sm" weight="500" style={{ color: props.selected ? tokens.bg : tokens.ink }}>
+            {props.label}
+          </SurfaceText>
+        </View>
+      )}
+    </Pressable>
+  );
+}
+
+function Tile(props: {
+  label: string;
+  accessibilityLabel: string;
+  active: boolean;
+  onPress: () => void;
+  testID: string;
+  children: React.ReactNode;
+}) {
+  const { tokens } = useAppTheme();
+  return (
+    <Pressable
+      testID={props.testID}
+      onPress={props.onPress}
+      accessibilityRole="button"
+      accessibilityLabel={props.accessibilityLabel}
+      accessibilityState={{ selected: props.active }}
+      style={{
+        flex: 1,
+        height: 76,
+        borderRadius: 12,
+        justifyContent: 'center',
+        gap: 2,
+        borderWidth: props.active ? 2 : 1,
+        paddingHorizontal: props.active ? 13 : 14,
+        borderColor: props.active ? tokens.accent : tokens.line,
+        backgroundColor: props.active ? tokens.card : tokens.bg,
+      }}
+    >
+      <SurfaceText
+        font="text-xs"
+        weight={props.active ? '500' : undefined}
+        style={{ color: props.active ? tokens.accentInk : tokens.muted }}
+      >
+        {props.label}
+      </SurfaceText>
+      {props.children}
+    </Pressable>
+  );
+}
+
+function TileValue({ text, style }: { text: string; style?: object }) {
+  const { tokens } = useAppTheme();
+  return (
+    <SurfaceText numeric font="text-3xl" weight="500" style={[{ color: tokens.ink }, style]}>
+      {text}
+    </SurfaceText>
+  );
+}
+
+/** The number pad for the Targets card, mounted by the sheet under its scrolling cards. */
+export function WeightedTargetsPad(props: { exercise: WeightedExerciseBlueprint; targets: TargetsPadControl }) {
+  const { t } = useTranslate();
+  const { exercise } = props;
+  const { pad, dispatch } = props.targets;
+  if (!pad) {
+    return null;
+  }
+  const { field } = pad;
+  const inRange = field.kind === 'bottom' || field.kind === 'top';
+  const target = shownTarget(exercise, pad);
+
+  const end = (kind: 'bottom' | 'top'): TargetsPadDisplayPart => {
+    const value = kind === 'bottom' ? target.min : target.max;
+    return {
+      text: String(value),
+      pick: {
+        active: field.kind === kind,
+        accessibilityLabel: t(`exercise_editor.pad.${kind}.accessibility_label`, { reps: value }),
+        onPress: () => dispatch({ type: 'pick', field: { kind } }),
+      },
+    };
+  };
+  const display: TargetsPadDisplayPart[] = inRange
+    ? [end('bottom'), { text: '–', separator: true }, end('top')]
+    : [{ text: String(pad.value) }];
+
+  const fixedChip = (reps: number) => ({
+    label: String(reps),
+    selected: pad.value === reps,
+    accessibilityLabel: t('exercise_editor.pad.reps_chip.accessibility_label', { reps }),
+    onPress: () => dispatch({ type: 'chip', reps: { min: reps, max: reps } }),
+  });
+  const chips =
+    field.kind === 'sets'
+      ? []
+      : inRange
+        ? RANGE_REPS_CHIPS.map((reps) => ({
+            label: `${reps.min}–${reps.max}`,
+            selected: target.min === reps.min && target.max === reps.max,
+            accessibilityLabel: t('exercise_editor.pad.range_chip.accessibility_label', {
+              min: reps.min,
+              max: reps.max,
+            }),
+            onPress: () => dispatch({ type: 'chip', reps }),
+          }))
+        : FIXED_REPS_CHIPS.map(fixedChip);
+
+  const next = nextTargetsField(pad, exercise);
+  const labels = setLabels(exercise.plannedSets.map((s) => s.kind));
+  const setName = (index: number) => labels[index] ?? String(index + 1);
+  const nextLabel =
+    next === undefined
+      ? t('exercise_editor.pad.next_rest.button')
+      : next.kind === 'set'
+        ? t('exercise_editor.pad.next_set.button', { number: setName(next.index) })
+        : next.kind === 'top'
+          ? t('exercise_editor.pad.next_top.button')
+          : t('exercise_editor.pad.next_reps.button');
+  const label =
+    field.kind === 'sets'
+      ? t('exercise_editor.targets.sets.label')
+      : field.kind === 'bottom'
+        ? t('exercise_editor.pad.bottom.label')
+        : field.kind === 'top'
+          ? t('exercise_editor.pad.top.label')
+          : field.kind === 'set'
+            ? t('exercise_editor.pad.set.label', { number: setName(field.index) })
+            : t('exercise_editor.targets.reps.label');
+
+  return (
+    <TargetsNumberPad
+      label={label}
+      display={display}
+      chips={chips}
+      thirdKey={
+        inRange
+          ? {
+              label: '–',
+              accessibilityLabel: t('exercise_editor.pad.dash.accessibility_label'),
+              enabled: field.kind === 'bottom',
+              onPress: () => dispatch({ type: 'dash' }),
+            }
+          : undefined
+      }
+      onDigit={(digit) => dispatch({ type: 'digit', digit })}
+      onBackspace={() => dispatch({ type: 'backspace' })}
+      onStep={(by) => dispatch({ type: 'step', by })}
+      nextLabel={nextLabel}
+      onNext={() => dispatch({ type: 'next' })}
+      onDone={() => dispatch({ type: 'close' })}
+    />
+  );
 }

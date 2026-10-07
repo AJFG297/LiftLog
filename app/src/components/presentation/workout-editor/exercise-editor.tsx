@@ -19,7 +19,17 @@ import {
 import { ProgressionRulesEditor } from '@/components/presentation/workout-editor/progressive-overload';
 import { restRowOf } from '@/components/presentation/workout-editor/rest-edit';
 import { WarmupSetsEditor } from '@/components/presentation/workout-editor/warmup-sets-editor';
-import { WeightedTargetsEditor } from '@/components/presentation/workout-editor/weighted-targets-editor';
+import {
+  targetsModeOf,
+  targetsSummaryOf,
+  withAddedSet,
+  withoutSet,
+  withTargetsMode,
+} from '@/components/presentation/workout-editor/exercise-targets';
+import {
+  TargetsPadControl,
+  WeightedTargetsEditor,
+} from '@/components/presentation/workout-editor/weighted-targets-editor';
 import { fontFamily, spacing, useAppTheme } from '@/hooks/useAppTheme';
 import { CardioExerciseBlueprint, ExerciseBlueprint, WeightedExerciseBlueprint } from '@/models/blueprint-models';
 import { useTranslate } from '@tolgee/react';
@@ -43,6 +53,8 @@ export interface ExerciseEditorProps {
   onSwap: () => void;
   onOpenLoad: () => void;
   onOpenRest: () => void;
+  /** The Targets card's number pad, which the sheet mounts under the cards. */
+  targets: TargetsPadControl;
 }
 
 /**
@@ -70,7 +82,10 @@ export function ExerciseEditor(props: ExerciseEditorProps) {
         exercise={exercise}
         meta={props.meta}
         onSwap={props.onSwap}
-        onTrackingChange={(type) => update((current) => withTrackingType(current, type))}
+        onTrackingChange={(type) => {
+          props.targets.dispatch({ type: 'close' });
+          update((current) => withTrackingType(current, type));
+        }}
       />
       {exercise instanceof WeightedExerciseBlueprint ? (
         <WeightedSections {...props} exercise={exercise} updateWeighted={updateWeighted} />
@@ -179,14 +194,35 @@ function WeightedSections(
   const [panel, setPanel] = useState<InlinePanel | undefined>();
   const toggle = (next: InlinePanel) => setPanel((open) => (open === next ? undefined : next));
   const restRow = restRowOf(t, exercise.restBetweenSets);
+  // Only the targets persist, so a uniform list cannot say whether it was authored as fixed or as a
+  // range; the chosen layout lives here for as long as the editor is open.
+  const [targetsMode, setTargetsMode] = useState(() => targetsModeOf(exercise));
+  const closePad = () => props.targets.dispatch({ type: 'close' });
 
   return (
     <>
-      <Section title={t('exercise_editor.targets.title')}>
+      <Section title={t('exercise_editor.targets.title')} aside={targetsSummaryOf(exercise, targetsMode)}>
         <Card style={{ padding: 0, overflow: 'hidden' }}>
-          <View style={{ padding: spacing[4] }}>
-            <WeightedTargetsEditor exercise={exercise} updateExercise={(next) => updateWeighted(() => next)} />
-          </View>
+          <WeightedTargetsEditor
+            exercise={exercise}
+            mode={targetsMode}
+            onModeChange={(mode) => {
+              closePad();
+              if (mode !== targetsMode) {
+                setTargetsMode(mode);
+                updateWeighted((current) => withTargetsMode(current, mode));
+              }
+            }}
+            targets={props.targets}
+            onAddSet={() => {
+              closePad();
+              updateWeighted(withAddedSet);
+            }}
+            onRemoveSet={(index) => {
+              closePad();
+              updateWeighted((current) => withoutSet(current, index));
+            }}
+          />
           <RowDivider />
           <EditorRow
             testID="exercise-editor-warmups"
@@ -340,18 +376,39 @@ function NotesCard(props: {
 }
 
 /** A card's heading above it, in small capitals: "TARGETS", "HOW IT RUNS". */
-function Section({ title, children }: { title: string; children: ReactNode }) {
+function Section({ title, aside, children }: { title: string; aside?: string; children: ReactNode }) {
   const { tokens } = useAppTheme();
+  const heading = (
+    <SurfaceText
+      font="text-sm"
+      weight="600"
+      accessibilityRole="header"
+      style={{ paddingHorizontal: spacing[1], textTransform: 'uppercase', letterSpacing: 0.8, color: tokens.muted }}
+    >
+      {title}
+    </SurfaceText>
+  );
   return (
     <View style={{ gap: spacing[2] }}>
-      <SurfaceText
-        font="text-sm"
-        weight="600"
-        accessibilityRole="header"
-        style={{ paddingHorizontal: spacing[1], textTransform: 'uppercase', letterSpacing: 0.8, color: tokens.muted }}
-      >
-        {title}
-      </SurfaceText>
+      {aside === undefined ? (
+        heading
+      ) : (
+        // A summary on the heading's line, such as the targets' "3 × 8–12".
+        <View
+          style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: spacing[3] }}
+        >
+          {heading}
+          <SurfaceText
+            numeric
+            font="text-sm"
+            numberOfLines={1}
+            testID="exercise-targets-summary"
+            style={{ flexShrink: 1, paddingHorizontal: spacing[1], color: tokens.muted }}
+          >
+            {aside}
+          </SurfaceText>
+        </View>
+      )}
       {children}
     </View>
   );
