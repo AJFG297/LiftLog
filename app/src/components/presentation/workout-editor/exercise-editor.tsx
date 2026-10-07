@@ -18,7 +18,6 @@ import {
 } from '@/components/presentation/workout-editor/exercise-edit-copy';
 import { ProgressionRulesEditor } from '@/components/presentation/workout-editor/progressive-overload';
 import { RestEditorDialog } from '@/components/presentation/workout-editor/rest-editor-dialog';
-import { WarmupSetsEditor } from '@/components/presentation/workout-editor/warmup-sets-editor';
 import {
   targetsModeOf,
   targetsSummaryOf,
@@ -55,13 +54,14 @@ export interface ExerciseEditorProps {
   onOpenLoad: () => void;
   /** The Targets card's number pad, which the sheet mounts under the cards. */
   targets: TargetsPadControl;
+  onOpenWarmups: () => void;
 }
 
 /**
- * Today's controls for the rows that will get sheets of their own (PM-46 rest, PM-47 warm-ups, PM-48
- * progression). Until then a row opens its control in place.
+ * Today's controls for the rows that will get sheets of their own (PM-46 rest, PM-48 progression). Until
+ * then a row opens its control in place.
  */
-type InlinePanel = 'warmups' | 'progression';
+type InlinePanel = 'progression';
 
 /**
  * The edit exercise screen's content (PM-43): the scope, then the Exercise, Targets, How it runs and Notes
@@ -229,17 +229,12 @@ function WeightedSections(
             testID="exercise-editor-warmups"
             title={t('exercise_editor.warmups.title')}
             subtitle={warmupsSummaryOf(t, exercise.warmupSets)}
-            expanded={panel === 'warmups'}
-            onPress={() => toggle('warmups')}
+            onPress={() => {
+              // The warm-up sheet brings its own pad; leave no targets cell selected behind it.
+              closePad();
+              props.onOpenWarmups();
+            }}
           />
-          {panel === 'warmups' ? (
-            <View style={{ paddingHorizontal: spacing[4], paddingBottom: spacing[3] }}>
-              <WarmupSetsEditor
-                exercise={exercise}
-                updateWarmupSets={(warmupSets) => updateWeighted((current) => current.with({ warmupSets }))}
-              />
-            </View>
-          ) : null}
         </Card>
       </Section>
 
