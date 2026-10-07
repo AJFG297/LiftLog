@@ -7,12 +7,13 @@ import {
 } from '@/components/presentation/workout-editor/exercise-edit-copy';
 import { ExerciseEditor } from '@/components/presentation/workout-editor/exercise-editor';
 import { blueprintSwappedTo } from '@/components/presentation/workout-editor/exercise-picker';
+import { useTargetsPad, WeightedTargetsPad } from '@/components/presentation/workout-editor/weighted-targets-editor';
 import { getExerciseLoadHref } from '@/components/smart/exercise-load-sheet';
 import { useOwnedExerciseEdit } from '@/components/smart/exercise-edit-draft';
 import { spacing, useAppTheme } from '@/hooks/useAppTheme';
 import { useExerciseSearch } from '@/hooks/useExerciseSearch';
 import { usePreferredWeightUnit } from '@/hooks/usePreferredWeightUnit';
-import { ExerciseBlueprint } from '@/models/blueprint-models';
+import { ExerciseBlueprint, WeightedExerciseBlueprint } from '@/models/blueprint-models';
 import { useAppSelector } from '@/store';
 import { selectExercises } from '@/store/stored-sessions';
 import { localeFormatBigNumber } from '@/utils/locale-bignumber';
@@ -53,6 +54,7 @@ export function ExerciseEditorSheet(props: ExerciseEditorSheetProps) {
   const { editId, exercise, update } = useOwnedExerciseEdit(props.exercise, props.onChange);
   // A second tap while the sheet animates away would go back past what opened it.
   const [closing, setClosing] = useState(false);
+  const targets = useTargetsPad(exercise, update);
 
   const openSearch = useExerciseSearch((picked) =>
     update((current) => blueprintSwappedTo(current, { id: picked.id, name: picked.descriptor.name })),
@@ -118,9 +120,13 @@ export function ExerciseEditorSheet(props: ExerciseEditorSheetProps) {
             formatStep={formatStep}
             onSwap={() => openSearch(exercise.name)}
             onOpenLoad={() => router.push(getExerciseLoadHref(editId))}
+            targets={targets}
           />
           {props.footer}
         </KeyboardAwareScrollView>
+        {exercise instanceof WeightedExerciseBlueprint ? (
+          <WeightedTargetsPad exercise={exercise} targets={targets} />
+        ) : null}
       </View>
     </Portal.Host>
   );
