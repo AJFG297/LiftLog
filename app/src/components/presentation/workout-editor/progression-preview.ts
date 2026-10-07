@@ -51,9 +51,7 @@ export function progressionPreview(exercise: WeightedExerciseBlueprint, start: B
   }
   const unit = 'kilograms';
   const first = hitTargets(
-    RecordedWeightedExercise.empty(exercise, unit).withAllSets((s) =>
-      s.with({ weight: new Weight(start ?? 0, unit) }),
-    ),
+    RecordedWeightedExercise.empty(exercise, unit).withAllSets((s) => s.with({ weight: new Weight(start ?? 0, unit) })),
   );
 
   const sessions = [first];

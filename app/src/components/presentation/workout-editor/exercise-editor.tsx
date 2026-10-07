@@ -16,7 +16,6 @@ import {
   warmupsSummaryOf,
   withTrackingType,
 } from '@/components/presentation/workout-editor/exercise-edit-copy';
-import { ProgressionRulesEditor } from '@/components/presentation/workout-editor/progressive-overload';
 import { RestEditorDialog } from '@/components/presentation/workout-editor/rest-editor-dialog';
 import { WarmupSetsEditor } from '@/components/presentation/workout-editor/warmup-sets-editor';
 import { WeightedTargetsEditor } from '@/components/presentation/workout-editor/weighted-targets-editor';
@@ -43,13 +42,14 @@ export interface ExerciseEditorProps {
   formatStep: (step: BigNumber) => string;
   onSwap: () => void;
   onOpenLoad: () => void;
+  onOpenProgression: () => void;
 }
 
 /**
- * Today's controls for the rows that will get sheets of their own (PM-46 rest, PM-47 warm-ups, PM-48
- * progression). Until then a row opens its control in place.
+ * Today's controls for the rows that will get sheets of their own (PM-46 rest, PM-47 warm-ups). Until then
+ * a row opens its control in place.
  */
-type InlinePanel = 'warmups' | 'progression';
+type InlinePanel = 'warmups';
 
 /**
  * The edit exercise screen's content (PM-43): the scope, then the Exercise, Targets, How it runs and Notes
@@ -225,17 +225,8 @@ function WeightedSections(
             testID="exercise-editor-progression"
             title={t('exercise_editor.progression.title')}
             subtitle={progressionSummaryOf(t, exercise, props.formatStep)}
-            expanded={panel === 'progression'}
-            onPress={() => toggle('progression')}
+            onPress={props.onOpenProgression}
           />
-          {panel === 'progression' ? (
-            <View style={{ paddingHorizontal: spacing[4], paddingBottom: spacing[3] }}>
-              <ProgressionRulesEditor
-                exercise={exercise}
-                onChange={(progression) => updateWeighted((current) => current.with({ progression }))}
-              />
-            </View>
-          ) : null}
           <RowDivider />
           <EditorRow
             testID="exercise-editor-load"

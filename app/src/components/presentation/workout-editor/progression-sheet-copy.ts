@@ -75,9 +75,12 @@ export function rulesSummaryOf(t: TranslateFn, rules: readonly ProgressionRule[]
   if (rules.length === 0) {
     return t('progression_sheet.rules.none.label');
   }
-  const count = t(rules.length === 1 ? 'progression_sheet.rules.count_one.label' : 'progression_sheet.rules.count_many.label', {
-    count: rules.length,
-  });
+  const count = t(
+    rules.length === 1 ? 'progression_sheet.rules.count_one.label' : 'progression_sheet.rules.count_many.label',
+    {
+      count: rules.length,
+    },
+  );
   return progressionChoiceOf(rules) === 'custom' ? count : t('progression_sheet.rules.preset.label', { count });
 }
 

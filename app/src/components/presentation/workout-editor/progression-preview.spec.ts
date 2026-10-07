@@ -38,9 +38,9 @@ describe('progressionPreview', () => {
   });
 
   it('adds the step every session for Add weight', () => {
-    expect(read(progressionPreview(withPreset({ type: 'range', min: 8, max: 12 }, 'weight'), new BigNumber(100)))).toEqual(
-      ['0: 100 × 8-12', '1: 102.5 × 8-12 (+2.5 kg)', '2: 105 × 8-12 (+2.5 kg)', '3: 107.5 × 8-12 (+2.5 kg)'],
-    );
+    expect(
+      read(progressionPreview(withPreset({ type: 'range', min: 8, max: 12 }, 'weight'), new BigNumber(100))),
+    ).toEqual(['0: 100 × 8-12', '1: 102.5 × 8-12 (+2.5 kg)', '2: 105 × 8-12 (+2.5 kg)', '3: 107.5 × 8-12 (+2.5 kg)']);
   });
 
   it('climbs a range as a block to the limit, then adds weight and starts over, for Reps then weight', () => {
