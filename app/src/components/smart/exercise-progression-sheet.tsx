@@ -1,5 +1,5 @@
+import { HeaderPillButton } from '@/components/presentation/foundation/header-pill-button';
 import { SurfaceText } from '@/components/presentation/foundation/surface-text';
-import { MIN_TOUCH_TARGET } from '@/components/presentation/foundation/touch-target';
 import { ProgressionSheetContent } from '@/components/presentation/workout-editor/progression-sheet';
 import { plannedTargetsOf } from '@/components/presentation/workout-editor/progression-sheet-copy';
 import { updateExerciseEdit, useExerciseEdit } from '@/components/smart/exercise-edit-draft';
@@ -16,7 +16,7 @@ import { useTranslate } from '@tolgee/react';
 import BigNumber from 'bignumber.js';
 import { Href, useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { View } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -81,7 +81,8 @@ export function ExerciseProgressionSheet() {
             {subtitle}
           </SurfaceText>
         </View>
-        <DoneButton
+        <HeaderPillButton
+          testID="progression-done"
           label={t('progression_sheet.done.button')}
           onPress={() => {
             if (!closing) {
@@ -115,35 +116,5 @@ export function ExerciseProgressionSheet() {
         />
       </ScrollView>
     </View>
-  );
-}
-
-function DoneButton({ label, onPress }: { label: string; onPress: () => void }) {
-  const { tokens } = useAppTheme();
-  return (
-    <Pressable
-      testID="progression-done"
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      style={{ minHeight: MIN_TOUCH_TARGET, justifyContent: 'center' }}
-    >
-      {({ pressed }) => (
-        <View
-          style={{
-            minHeight: 36,
-            borderRadius: 18,
-            paddingHorizontal: spacing[4],
-            justifyContent: 'center',
-            backgroundColor: tokens.accent,
-            opacity: pressed ? 0.85 : 1,
-          }}
-        >
-          <SurfaceText font="text-base" weight="600" style={{ color: tokens.onAccent }}>
-            {label}
-          </SurfaceText>
-        </View>
-      )}
-    </Pressable>
   );
 }

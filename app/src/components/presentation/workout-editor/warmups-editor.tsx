@@ -1,4 +1,5 @@
 import { Chip } from '@/components/presentation/foundation/chip';
+import { HeaderPillButton } from '@/components/presentation/foundation/header-pill-button';
 import { haptics } from '@/components/presentation/foundation/haptics';
 import { MsIconSrc } from '@/components/presentation/foundation/ms-icon-source';
 import {
@@ -206,7 +207,7 @@ export function WarmupsEditor(props: WarmupsEditorProps) {
             </SurfaceText>
           ) : null}
         </View>
-        <DonePill label={t('exercise_editor.save.done.button')} onPress={props.onDone} />
+        <HeaderPillButton testID="warmups-done" label={t('exercise_editor.save.done.button')} onPress={props.onDone} />
       </View>
 
       <ScrollView
@@ -565,33 +566,3 @@ function PresetCard(props: { name: string; summary: string; useLabel: string; on
 }
 
 /** The accent pill that closes the sheet, keeping what was changed. */
-function DonePill({ label, onPress }: { label: string; onPress: () => void }) {
-  const { tokens } = useAppTheme();
-  return (
-    <Pressable
-      testID="warmups-done"
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      style={{ minHeight: MIN_TOUCH_TARGET, justifyContent: 'center', flexShrink: 0 }}
-    >
-      {({ pressed }) => (
-        <View
-          // See ActionButton: a fill that changes opacity on a press that leaves the screen trips Android.
-          collapsable={false}
-          style={{
-            minHeight: 36,
-            borderRadius: 18,
-            paddingHorizontal: spacing[4],
-            justifyContent: 'center',
-            backgroundColor: pressed ? tokens.accentInk : tokens.accent,
-          }}
-        >
-          <SurfaceText font="text-base" weight="600" numberOfLines={1} style={{ color: tokens.onAccent }}>
-            {label}
-          </SurfaceText>
-        </View>
-      )}
-    </Pressable>
-  );
-}

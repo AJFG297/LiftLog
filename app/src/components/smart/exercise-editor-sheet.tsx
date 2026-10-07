@@ -1,5 +1,5 @@
+import { HeaderPillButton } from '@/components/presentation/foundation/header-pill-button';
 import { SurfaceText } from '@/components/presentation/foundation/surface-text';
-import { MIN_TOUCH_TARGET } from '@/components/presentation/foundation/touch-target';
 import {
   ExerciseEditScope,
   exerciseEditScopeCopy,
@@ -27,7 +27,7 @@ import { useTranslate } from '@tolgee/react';
 import BigNumber from 'bignumber.js';
 import { useRouter } from 'expo-router';
 import { ReactNode, useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { View } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { Portal } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -108,7 +108,7 @@ export function ExerciseEditorSheet(props: ExerciseEditorSheetProps) {
           >
             {t('exercise.edit.title')}
           </SurfaceText>
-          <SaveButton label={copy.saveLabel} onPress={save} />
+          <HeaderPillButton testID="exercise-editor-save" label={copy.saveLabel} onPress={save} maxWidth="60%" />
         </View>
         <KeyboardAwareScrollView
           bottomOffset={spacing[4]}
@@ -150,36 +150,5 @@ export function ExerciseEditorSheet(props: ExerciseEditorSheetProps) {
         ) : null}
       </View>
     </Portal.Host>
-  );
-}
-
-/** The accent pill in the header that names where the edit goes: "Save for today", "Save to Push A". */
-function SaveButton({ label, onPress }: { label: string; onPress: () => void }) {
-  const { tokens } = useAppTheme();
-  return (
-    <Pressable
-      testID="exercise-editor-save"
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      style={{ minHeight: MIN_TOUCH_TARGET, justifyContent: 'center', flexShrink: 0, maxWidth: '60%' }}
-    >
-      {({ pressed }) => (
-        <View
-          style={{
-            minHeight: 36,
-            borderRadius: 18,
-            paddingHorizontal: spacing[4],
-            justifyContent: 'center',
-            backgroundColor: tokens.accent,
-            opacity: pressed ? 0.85 : 1,
-          }}
-        >
-          <SurfaceText font="text-base" weight="600" numberOfLines={1} style={{ color: tokens.onAccent }}>
-            {label}
-          </SurfaceText>
-        </View>
-      )}
-    </Pressable>
   );
 }
