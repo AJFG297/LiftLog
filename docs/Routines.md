@@ -128,9 +128,11 @@ With no history it says the first workout sets them.
 
 ### Rest (D5)
 
-One rest time from presets (1:00 to 3:00). **Advanced** holds the rest and the rest after a failed set, in
-15-second steps; a failed-set rest stepped back to the rest becomes "the same" again and follows it. Rest is
-hidden when rest timers are off. (PM-49 moves this to the same wheels as the edit exercise sheet.)
+A Rest row with the rest ("2:00"), and the rest after a failed set under it when that differs. It opens the
+same rest sheet as the edit exercise sheet's Rest row (`exercise-edit-rest`: minute and second wheels, and the
+"Different rest after a failed set" switch). The sheet edits through an exercise edit the card opens
+(`openRoutineRestEdit` in `components/smart/routine-rest-edit.ts`), which writes only the rest into the
+routine's draft, so Save and Cancel cover it. Rest is hidden when rest timers are off.
 
 ### Progression presets
 

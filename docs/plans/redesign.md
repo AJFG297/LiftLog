@@ -135,8 +135,8 @@ tabular figures where a number has letters in it. Type sizes follow the existing
   the triple is one of the old built-in presets (1:00/1:30/3:00, 1:30/3:00/5:00, 3:00/5:00/8:00);
   otherwise it is kept (`Rest.fromJSON`). Exercises on the old defaults no longer rest longer after a
   miss unless the lifter sets it.
-- The edit exercise sheet's Rest row opens a sheet with minute and second wheels and a "Different rest
-  after a failed set" switch with its own wheels.
+- The edit exercise sheet's Rest row, and the routine editor card's (PM-49), open a sheet with minute and
+  second wheels and a "Different rest after a failed set" switch with its own wheels.
 - "Save as this exercise's default" writes the blueprint's rest.
 
 **D6. Set types become `working | warmup | drop | myo | failure`** (extending `SetKind`). What each one

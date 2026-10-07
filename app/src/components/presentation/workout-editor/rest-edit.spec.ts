@@ -8,6 +8,7 @@ import {
   restOfDraft,
   restDraftOf,
   restRowOf,
+  routineRestRowOf,
   restSaveLabelOf,
   withFailedSetRestOn,
 } from '@/components/presentation/workout-editor/rest-edit';
@@ -27,6 +28,21 @@ describe('restRowOf', () => {
   it('shows the rest, and the failed-set rest as the same or its own time', () => {
     expect(restRowOf(t, same)).toEqual({ value: '2:00', subtitle: 'After a failed set: same' });
     expect(restRowOf(t, longer)).toEqual({ value: '2:00', subtitle: 'After a failed set: 3:00' });
+  });
+});
+
+describe('routineRestRowOf', () => {
+  it('shows the rest, and the failed-set rest only when it is different', () => {
+    expect(routineRestRowOf(t, same)).toEqual({
+      value: '2:00',
+      note: undefined,
+      accessibilityLabel: 'Rest between sets: 2:00',
+    });
+    expect(routineRestRowOf(t, longer)).toEqual({
+      value: '2:00',
+      note: '3:00 after a failed set',
+      accessibilityLabel: 'Rest between sets: 2:00, 3:00 after a failed set',
+    });
   });
 });
 
