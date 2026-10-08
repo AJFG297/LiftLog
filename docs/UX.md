@@ -23,6 +23,8 @@ How to apply it, whenever a change adds transient UI inside a sheet or screen:
 - Stop the sheet's own dismissal from winning the gesture while the layer is up (for example
   `usePreventRemove`, or disabling the sheet's gesture).
 - A dismiss gesture never throws away editing context meant for a bigger layer.
+- Tapping empty space closes the open layer, tapping another field moves the layer to it in one tap, and
+  scrolling never closes it (`DismissArea` behind the sheet's scrolling content).
 
 Terms, for searching: back stack, dismissal hierarchy, transient UI, interactive dismissal, gesture conflict
 and gesture arbitration.

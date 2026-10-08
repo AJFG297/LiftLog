@@ -1,4 +1,5 @@
 import { Chip } from '@/components/presentation/foundation/chip';
+import { DismissArea } from '@/components/presentation/foundation/dismiss-area';
 import { HeaderPillButton } from '@/components/presentation/foundation/header-pill-button';
 import { haptics } from '@/components/presentation/foundation/haptics';
 import { MsIconSrc } from '@/components/presentation/foundation/ms-icon-source';
@@ -213,138 +214,144 @@ export function WarmupsEditor(props: WarmupsEditorProps) {
         />
       </View>
 
-      <ScrollView
-        keyboardShouldPersistTaps="handled"
-        contentContainerStyle={{
-          gap: spacing[4],
-          paddingHorizontal: spacing.pageHorizontalMargin,
-          paddingTop: spacing[2],
-          paddingBottom: (editing ? spacing[4] : props.bottomInset) + spacing[4],
-        }}
-      >
-        {warmups.length === 0 ? (
-          <View style={{ gap: 10 }} testID="warmups-empty">
-            <SurfaceText font="text-sm" style={{ color: tokens.muted }}>
-              {t('exercise_editor.warmups.empty.body')}
-            </SurfaceText>
-            {WARMUP_PRESETS.map((preset) => (
-              <PresetCard
-                key={preset.id}
-                testID={`warmups-preset-${preset.id}`}
-                name={t(preset.label)}
-                summary={formatPlannedWarmupSets(warmupPresetSets(preset.id, exercise.resistance, props.bar), percent)}
-                useLabel={t('exercise_editor.warmups.preset.use.button')}
-                onPress={() => structural((current) => withWarmupPreset(current, preset.id, props.bar))}
-              />
-            ))}
-            <Pressable
-              testID="warmups-add-first"
-              accessibilityRole="button"
-              onPress={() => structural(withWarmupAdded)}
-              style={({ pressed }) => ({
-                minHeight: 52,
-                borderRadius: 14,
-                borderWidth: 1,
-                borderStyle: 'dashed',
-                borderColor: tokens.line,
-                alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: pressed ? tokens.track : undefined,
-              })}
-            >
-              <SurfaceText font="text-base" weight="500" style={{ color: tokens.accentInk }}>
-                {`+ ${t('exercise_editor.warmups.add_set.button')}`}
+      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1 }}>
+        <DismissArea
+          open={!!editing}
+          onDismiss={closePad}
+          style={{
+            gap: spacing[4],
+            paddingHorizontal: spacing.pageHorizontalMargin,
+            paddingTop: spacing[2],
+            paddingBottom: (editing ? spacing[4] : props.bottomInset) + spacing[4],
+          }}
+        >
+          {warmups.length === 0 ? (
+            <View style={{ gap: 10 }} testID="warmups-empty">
+              <SurfaceText font="text-sm" style={{ color: tokens.muted }}>
+                {t('exercise_editor.warmups.empty.body')}
               </SurfaceText>
-            </Pressable>
-          </View>
-        ) : (
-          <>
-            <View
-              testID="warmups-table"
-              style={{
-                borderRadius: 16,
-                borderWidth: 1,
-                borderColor: tokens.line,
-                backgroundColor: tokens.card,
-                overflow: 'hidden',
-              }}
-            >
-              <View
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: spacing[3],
-                  paddingHorizontal: spacing[4],
-                  paddingVertical: 10,
-                  backgroundColor: tokens.bg,
-                  borderBottomWidth: StyleSheet.hairlineWidth,
-                  borderBottomColor: tokens.line,
-                }}
-              >
-                <ColumnLabel text={t('exercise_editor.warmups.column.set.label')} width={36} />
-                <ColumnLabel text={t('exercise_editor.warmups.column.load.label')} flex />
-                <ColumnLabel text={t('exercise_editor.warmups.column.reps.label')} width={72} center />
-                <View style={{ width: MIN_TOUCH_TARGET }} />
-              </View>
-              {warmups.map((warmup, index) => (
-                <WarmupRow
-                  key={index}
-                  index={index}
-                  warmup={warmup}
-                  hasLoad={loadTypes.length > 0}
-                  liveLoad={liveValue(index, 'load')}
-                  liveReps={liveValue(index, 'reps')}
-                  editingField={editing?.index === index ? editing.field : undefined}
-                  emptyBar={isEmptyBar(warmup, props.bar)}
-                  resolved={resolvedWarmupWeight(
-                    warmup,
-                    props.workingWeight,
-                    props.workingWeight && props.workingWeight.unit !== 'nil'
-                      ? props.stepFor(props.workingWeight.unit)
-                      : new BigNumber(0),
+              {WARMUP_PRESETS.map((preset) => (
+                <PresetCard
+                  key={preset.id}
+                  testID={`warmups-preset-${preset.id}`}
+                  name={t(preset.label)}
+                  summary={formatPlannedWarmupSets(
+                    warmupPresetSets(preset.id, exercise.resistance, props.bar),
+                    percent,
                   )}
-                  unit={loadUnitOf(warmup)}
-                  onLoad={() => openField(index, 'load')}
-                  onReps={() => openField(index, 'reps')}
-                  onRemove={() => structural((current) => withWarmupRemoved(current, index))}
+                  useLabel={t('exercise_editor.warmups.preset.use.button')}
+                  onPress={() => structural((current) => withWarmupPreset(current, preset.id, props.bar))}
                 />
               ))}
               <Pressable
-                testID="warmups-add"
+                testID="warmups-add-first"
                 accessibilityRole="button"
                 onPress={() => structural(withWarmupAdded)}
                 style={({ pressed }) => ({
-                  minHeight: 48,
+                  minHeight: 52,
+                  borderRadius: 14,
+                  borderWidth: 1,
+                  borderStyle: 'dashed',
+                  borderColor: tokens.line,
                   alignItems: 'center',
                   justifyContent: 'center',
                   backgroundColor: pressed ? tokens.track : undefined,
                 })}
               >
                 <SurfaceText font="text-base" weight="500" style={{ color: tokens.accentInk }}>
-                  {`+ ${t('exercise_editor.warmups.add.button')}`}
+                  {`+ ${t('exercise_editor.warmups.add_set.button')}`}
                 </SurfaceText>
               </Pressable>
             </View>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: spacing[1] }}>
-              <SurfaceText font="text-xs" style={{ color: tokens.muted, marginRight: spacing[1] }}>
-                {t('exercise_editor.warmups.replace.label')}
-              </SurfaceText>
-              {WARMUP_PRESETS.map((preset) => (
-                <Chip
-                  key={preset.id}
-                  testID={`warmups-replace-${preset.id}`}
-                  label={t(preset.label)}
-                  selected={presetIs(preset.id)}
-                  onPress={() => structural((current) => withWarmupPreset(current, preset.id, props.bar))}
-                />
-              ))}
-            </View>
-          </>
-        )}
+          ) : (
+            <>
+              <View
+                testID="warmups-table"
+                style={{
+                  borderRadius: 16,
+                  borderWidth: 1,
+                  borderColor: tokens.line,
+                  backgroundColor: tokens.card,
+                  overflow: 'hidden',
+                }}
+              >
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: spacing[3],
+                    paddingHorizontal: spacing[4],
+                    paddingVertical: 10,
+                    backgroundColor: tokens.bg,
+                    borderBottomWidth: StyleSheet.hairlineWidth,
+                    borderBottomColor: tokens.line,
+                  }}
+                >
+                  <ColumnLabel text={t('exercise_editor.warmups.column.set.label')} width={36} />
+                  <ColumnLabel text={t('exercise_editor.warmups.column.load.label')} flex />
+                  <ColumnLabel text={t('exercise_editor.warmups.column.reps.label')} width={72} center />
+                  <View style={{ width: MIN_TOUCH_TARGET }} />
+                </View>
+                {warmups.map((warmup, index) => (
+                  <WarmupRow
+                    key={index}
+                    index={index}
+                    warmup={warmup}
+                    hasLoad={loadTypes.length > 0}
+                    liveLoad={liveValue(index, 'load')}
+                    liveReps={liveValue(index, 'reps')}
+                    editingField={editing?.index === index ? editing.field : undefined}
+                    emptyBar={isEmptyBar(warmup, props.bar)}
+                    resolved={resolvedWarmupWeight(
+                      warmup,
+                      props.workingWeight,
+                      props.workingWeight && props.workingWeight.unit !== 'nil'
+                        ? props.stepFor(props.workingWeight.unit)
+                        : new BigNumber(0),
+                    )}
+                    unit={loadUnitOf(warmup)}
+                    onLoad={() => openField(index, 'load')}
+                    onReps={() => openField(index, 'reps')}
+                    onRemove={() => structural((current) => withWarmupRemoved(current, index))}
+                  />
+                ))}
+                <Pressable
+                  testID="warmups-add"
+                  accessibilityRole="button"
+                  onPress={() => structural(withWarmupAdded)}
+                  style={({ pressed }) => ({
+                    minHeight: 48,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: pressed ? tokens.track : undefined,
+                  })}
+                >
+                  <SurfaceText font="text-base" weight="500" style={{ color: tokens.accentInk }}>
+                    {`+ ${t('exercise_editor.warmups.add.button')}`}
+                  </SurfaceText>
+                </Pressable>
+              </View>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: spacing[1] }}>
+                <SurfaceText font="text-xs" style={{ color: tokens.muted, marginRight: spacing[1] }}>
+                  {t('exercise_editor.warmups.replace.label')}
+                </SurfaceText>
+                {WARMUP_PRESETS.map((preset) => (
+                  <Chip
+                    key={preset.id}
+                    testID={`warmups-replace-${preset.id}`}
+                    label={t(preset.label)}
+                    selected={presetIs(preset.id)}
+                    onPress={() => structural((current) => withWarmupPreset(current, preset.id, props.bar))}
+                  />
+                ))}
+              </View>
+            </>
+          )}
 
-        <SurfaceText font="text-sm" style={{ color: tokens.muted }} testID="warmups-scope">
-          {props.scopeNote}
-        </SurfaceText>
+          <SurfaceText font="text-sm" style={{ color: tokens.muted }} testID="warmups-scope">
+            {props.scopeNote}
+          </SurfaceText>
+        </DismissArea>
       </ScrollView>
 
       {editing?.field === 'load' && loadTypes.length > 1 && editedWarmup ? (

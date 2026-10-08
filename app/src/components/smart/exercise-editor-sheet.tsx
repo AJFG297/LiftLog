@@ -1,3 +1,4 @@
+import { DismissArea } from '@/components/presentation/foundation/dismiss-area';
 import { HeaderPillButton } from '@/components/presentation/foundation/header-pill-button';
 import { SurfaceText } from '@/components/presentation/foundation/surface-text';
 import {
@@ -65,14 +66,16 @@ export function ExerciseEditorSheet(props: ExerciseEditorSheetProps) {
   const [closing, setClosing] = useState(false);
   const targets = useTargetsPad(exercise, update);
   const cardioTargets = useCardioTargetsPad(exercise, update, useImperialUnits ? 'mile' : 'kilometre');
-  const padLayer = useDismissLayer(!!(targets.pad || cardioTargets.pad), () => {
+  const padOpen = !!(targets.pad || cardioTargets.pad);
+  const closePad = () => {
     if (targets.pad) {
       targets.dispatch({ type: 'close' });
     }
     if (cardioTargets.pad) {
       cardioTargets.dispatch({ type: 'close' });
     }
-  });
+  };
+  const padLayer = useDismissLayer(padOpen, closePad);
   const scrollRef = useRef<KeyboardAwareScrollViewRef>(null);
   const scrollY = useRef(0);
 
@@ -149,30 +152,36 @@ export function ExerciseEditorSheet(props: ExerciseEditorSheetProps) {
         }}
         bottomOffset={spacing[4]}
         keyboardShouldPersistTaps="handled"
-        contentContainerStyle={{
-          gap: spacing[5],
-          paddingHorizontal: spacing.pageHorizontalMargin,
-          paddingTop: spacing[2],
-          paddingBottom: insets.bottom + spacing[8],
-        }}
+        contentContainerStyle={{ flexGrow: 1 }}
       >
-        <ExerciseEditor
-          exercise={exercise}
-          update={update}
-          scopeSentence={copy.sentence}
-          meta={exerciseMetaOf(t, catalog[exercise.exerciseId])}
-          nextExerciseName={props.nextExerciseName}
-          restTimersEnabled={restTimersEnabled}
-          formatStep={formatStep}
-          onSwap={() => openSearch(exercise.name)}
-          onOpenLoad={() => router.push(getExerciseLoadHref(editId))}
-          onOpenRest={() => router.push(getExerciseEditRestHref(editId))}
-          onOpenWarmups={() => router.push(getEditorWarmupsHref(editId, props.scope, props.workingWeight))}
-          onOpenProgression={() => router.push(getExerciseProgressionHref(editId))}
-          targets={targets}
-          cardioTargets={cardioTargets}
-        />
-        {props.footer}
+        <DismissArea
+          open={padOpen}
+          onDismiss={closePad}
+          style={{
+            gap: spacing[5],
+            paddingHorizontal: spacing.pageHorizontalMargin,
+            paddingTop: spacing[2],
+            paddingBottom: insets.bottom + spacing[8],
+          }}
+        >
+          <ExerciseEditor
+            exercise={exercise}
+            update={update}
+            scopeSentence={copy.sentence}
+            meta={exerciseMetaOf(t, catalog[exercise.exerciseId])}
+            nextExerciseName={props.nextExerciseName}
+            restTimersEnabled={restTimersEnabled}
+            formatStep={formatStep}
+            onSwap={() => openSearch(exercise.name)}
+            onOpenLoad={() => router.push(getExerciseLoadHref(editId))}
+            onOpenRest={() => router.push(getExerciseEditRestHref(editId))}
+            onOpenWarmups={() => router.push(getEditorWarmupsHref(editId, props.scope, props.workingWeight))}
+            onOpenProgression={() => router.push(getExerciseProgressionHref(editId))}
+            targets={targets}
+            cardioTargets={cardioTargets}
+          />
+          {props.footer}
+        </DismissArea>
       </KeyboardAwareScrollView>
       {exercise instanceof WeightedExerciseBlueprint ? (
         <WeightedTargetsPad exercise={exercise} targets={targets} />

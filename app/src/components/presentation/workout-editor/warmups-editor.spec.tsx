@@ -26,10 +26,26 @@ vi.mock('react-native', () => ({
   },
   View: ({ children, testID }: PropsWithChildren<{ testID?: string }>) => <div data-testid={testID}>{children}</div>,
   ScrollView: ({ children }: PropsWithChildren) => <div>{children}</div>,
-  Pressable: ({ children, testID, onPress }: PropsWithChildren<{ testID?: string; onPress: () => void }>) => (
-    <button data-testid={testID} onClick={onPress}>
+  // As React Native's responder system does, the innermost enabled Pressable takes the tap and no outer one sees it.
+  Pressable: ({
+    children,
+    testID,
+    onPress,
+    disabled,
+  }: PropsWithChildren<{ testID?: string; onPress?: () => void; disabled?: boolean }>) => (
+    <div
+      role="button"
+      data-testid={testID}
+      onClick={(event) => {
+        if (disabled) {
+          return;
+        }
+        event.stopPropagation();
+        onPress?.();
+      }}
+    >
       {children}
-    </button>
+    </div>
   ),
   StyleSheet: { hairlineWidth: 1 },
 }));
@@ -173,5 +189,40 @@ describe('warm-up sheet back', () => {
 
     // With the pad gone, the next back is the navigator's, which closes the sheet.
     expect(back.press()).toBe(false);
+  });
+});
+
+describe('warm-up sheet tap outside the pad', () => {
+  const openOnReps = () => {
+    const editor = openEditor(
+      makeWeightedBlueprint({ warmupSets: [{ load: { type: 'percent', percent: 50 }, reps: 10 }] }),
+    );
+    fireEvent.click(editor.view.getByTestId('warmups-reps-0'));
+    return editor;
+  };
+
+  it('closes the pad on a tap on empty space and leaves the sheet open', () => {
+    const editor = openOnReps();
+    fireEvent.click(editor.view.getByText('8'));
+    fireEvent.click(editor.view.getByText('Applies to today'));
+    expect(editor.view.queryByText('Backspace')).toBeNull();
+    expect(editor.view.getByTestId('warmups-done')).toBeTruthy();
+    expect(editor.draft().warmupSets[0]?.reps).toBe(8);
+  });
+
+  it('moves the pad to another field in one tap', () => {
+    const editor = openOnReps();
+    fireEvent.click(editor.view.getByTestId('warmups-load-0'));
+    expect(editor.view.getByText('Backspace')).toBeTruthy();
+    fireEvent.click(editor.view.getByText('8'));
+    expect(editor.draft().warmupSets[0]?.load).toEqual({ type: 'percent', percent: 8 });
+    expect(editor.draft().warmupSets[0]?.reps).toBe(10);
+  });
+
+  it('keeps the pad open on a tap on one of its keys', () => {
+    const editor = openOnReps();
+    fireEvent.click(editor.view.getByText('8'));
+    fireEvent.click(editor.view.getByText('Backspace'));
+    expect(editor.view.getByText('Backspace')).toBeTruthy();
   });
 });
