@@ -29,6 +29,10 @@ work to find the docs relevant to your area, and update it whenever you add, rem
   Toast), their accessibility rules (roles, labels, 44pt targets via `hitSlopFor`), the native-sheet
   convention (`formSheetOptions` + `SheetHeader`), haptics, and the `liftlog://dev/components` screen.
 
+- [UX.md](./UX.md) - interaction rules every screen follows, read before designing or building a screen,
+  sheet or control. Starts with dismiss the innermost layer first: back and swipe-down close an open pad,
+  menu or popover before the sheet it sits in.
+
 ## Features
 
 - [Home.md](./Home.md) - the four tabs (Home, Routines, Progress, You) and which route folders they hold,
