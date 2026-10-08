@@ -58,6 +58,7 @@ export function getTimerInfo(session: Session): RestTimerInfo | undefined {
   return {
     startedAt: toInstantJson(window.startedAt.toInstant()),
     partiallyEndAt: toInstantJson(window.readyAt.toInstant()),
-    endAt: toInstantJson(window.fullAt.toInstant()),
+    // The countdown has one end since D5 dropped the max rest; both instants stay for the native worker.
+    endAt: toInstantJson(window.readyAt.toInstant()),
   };
 }

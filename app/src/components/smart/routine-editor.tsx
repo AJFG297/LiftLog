@@ -16,6 +16,9 @@ import { MIN_TOUCH_TARGET } from '@/components/presentation/foundation/touch-tar
 import { ASK_AI_BAR_ENABLED, AskAiBar } from '@/components/presentation/workout-editor/ask-ai-bar';
 import { formatCardioTarget } from '@/utils/format-cardio-target';
 import { withPickAppended } from '@/components/presentation/workout-editor/exercise-picker';
+import { getExerciseEditRestHref } from '@/components/smart/exercise-edit-rest-sheet';
+import { getRoutineExerciseEditorHref } from '@/components/smart/routine-exercise-editor';
+import { openRoutineRestEdit } from '@/components/smart/routine-rest-edit';
 import { RoutineColorSwatches } from '@/components/presentation/workout-editor/routine-color-swatches';
 import { RoutineExerciseActions } from '@/components/presentation/workout-editor/routine-exercise-actions';
 import {
@@ -39,7 +42,7 @@ import {
   RoutineProgressionEditor,
 } from '@/components/presentation/workout-editor/routine-progression-editor';
 import { withLadderKeptClimbable } from '@/components/presentation/workout-editor/routine-progression';
-import { RoutineRestEditor } from '@/components/presentation/workout-editor/routine-rest-editor';
+import { RoutineRestRow } from '@/components/presentation/workout-editor/routine-rest-row';
 import { RoutineSetTable, type RoutineSetTableRow } from '@/components/presentation/workout-editor/routine-set-table';
 import {
   canRemoveRoutineSet,
@@ -69,6 +72,7 @@ import { fontFamily, spacing, useAppTheme } from '@/hooks/useAppTheme';
 import { useBackWhenGone } from '@/hooks/useBackWhenGone';
 import { type ExercisePick, useExercisePicker } from '@/hooks/useExerciseSearch';
 import { useGoToRoutines } from '@/hooks/useGoToRoutines';
+import { usePreferredWeightFormat } from '@/hooks/usePreferredWeightUnit';
 import {
   CardioExerciseBlueprint,
   ExerciseBlueprint,
@@ -83,7 +87,7 @@ import { setLabels } from '@/models/session-models/set-kind';
 import { type LoadUnit, Weight } from '@/models/weight';
 import { useAppSelector } from '@/store';
 import { updateProgram } from '@/store/program';
-import { selectPreferredWeightUnit } from '@/store/settings';
+
 import { selectExercises, selectLatestExercises } from '@/store/stored-sessions';
 import { formatTimeSpan } from '@/utils/format-time-span';
 import { localeFormatBigNumber } from '@/utils/locale-bignumber';
@@ -136,7 +140,7 @@ export function RoutineEditor({ programId, sessionIndex, isNew }: RoutineEditorP
   const program = useAppSelector((state) => state.program.savedPrograms[programId]);
   const latestExercises = useAppSelector(selectLatestExercises);
   const catalog = useAppSelector(selectExercises);
-  const preferredUnit = useAppSelector(selectPreferredWeightUnit);
+  const { unit: preferredUnit, unitLabel, formatWeight: formatStep } = usePreferredWeightFormat();
   const restTimersEnabled = useAppSelector((x) => x.settings.restTimersEnabled);
   const barWeight = useAppSelector((x) => x.settings.barWeight);
   const availablePlates = useAppSelector((x) => x.settings.availablePlates);
@@ -153,6 +157,10 @@ export function RoutineEditor({ programId, sessionIndex, isNew }: RoutineEditorP
   const scrollRef = useRef<ScrollView>(null);
   const scrollY = useRef(0);
   const editingRowRef = useRef<View>(null);
+  // The rest sheet edits through an exercise edit this screen opens. The sheet ends it when it closes; this
+  // covers leaving while the sheet is still open.
+  const restEdit = useRef<(() => void) | undefined>(undefined);
+  useEffect(() => () => restEdit.current?.(), []);
 
   // Typing on the pad reaches the draft when the field is left, so a number still on the pad counts too.
   const changed = isRoutineDraftChanged(draft) || (!!editing && buffer.typed !== null);
@@ -182,10 +190,6 @@ export function RoutineEditor({ programId, sessionIndex, isNew }: RoutineEditorP
 
   const equipmentOf = (exercise: ExerciseBlueprint) =>
     equipmentClassOf(catalog[exercise.exerciseId]?.equipment ?? null);
-  const unitLabel = t(
-    preferredUnit === 'pounds' ? 'routine_editor.unit.pounds.label' : 'routine_editor.unit.kilograms.label',
-  );
-  const formatStep = (step: BigNumber) => `${localeFormatBigNumber(step)} ${unitLabel}`;
 
   const updateExerciseAt = (index: number, update: (exercise: WeightedExerciseBlueprint) => ExerciseBlueprint) =>
     updateRoutineDraft(location, (r) => {
@@ -430,10 +434,18 @@ export function RoutineEditor({ programId, sessionIndex, isNew }: RoutineEditorP
 
   const openDetails = (index: number) => {
     closePad();
-    router.push({
-      pathname: '/routines/manage-workouts/[programId]/manage-session/[sessionIndex]/exercise',
-      params: { programId, sessionIndex, exerciseIndex: index },
-    });
+    router.push(getRoutineExerciseEditorHref({ programId, sessionIndex, exerciseIndex: index }));
+  };
+
+  const openRest = (index: number) => {
+    closePad();
+    restEdit.current?.();
+    const edit = openRoutineRestEdit(location, index);
+    if (!edit) {
+      return;
+    }
+    restEdit.current = edit.close;
+    router.push(getExerciseEditRestHref(edit.editId, { endsEdit: true }));
   };
 
   const openSetType = (index: number, position: RoutineSetPosition) => {
@@ -564,10 +576,7 @@ export function RoutineEditor({ programId, sessionIndex, isNew }: RoutineEditorP
               editingRowRef={editingRowRef}
             />
             {restTimersEnabled ? (
-              <RoutineRestEditor
-                rest={weighted.restBetweenSets}
-                onChange={(restBetweenSets) => updateExerciseAt(index, (e) => e.with({ restBetweenSets }))}
-              />
+              <RoutineRestRow rest={weighted.restBetweenSets} onPress={() => openRest(index)} />
             ) : null}
             <RoutineProgressionEditor
               exercise={weighted}
@@ -974,7 +983,7 @@ function weightedSummary(
       : sets,
     ...(heaviest && !heaviest.value.isZero() ? [heaviest.shortLocaleFormat()] : []),
     ...(showRest
-      ? [t('routine_editor.exercise.rest.label', { rest: formatTimeSpan(exercise.restBetweenSets.minRest) })]
+      ? [t('routine_editor.exercise.rest.label', { rest: formatTimeSpan(exercise.restBetweenSets.rest) })]
       : []),
   ];
   return parts.join(' · ');

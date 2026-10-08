@@ -22,3 +22,8 @@ const metresPerUnit: Record<DistanceUnit, string> = {
 export function toMetres(distance: Distance): BigNumber {
   return distance.value.multipliedBy(metresPerUnit[distance.unit]);
 }
+
+/** `distance` expressed in `unit`, exactly when it is already in that unit. */
+export function distanceIn(distance: Distance, unit: DistanceUnit): BigNumber {
+  return distance.unit === unit ? distance.value : toMetres(distance).dividedBy(metresPerUnit[unit]);
+}

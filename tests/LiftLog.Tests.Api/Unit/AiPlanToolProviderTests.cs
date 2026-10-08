@@ -48,4 +48,24 @@ public class AiPlanToolProviderTests
     {
         await Assert.That(new AiPlanToolProvider().CurrentAiPlanVersion).IsEqualTo(4);
     }
+
+    [Test]
+    [Category("Unit")]
+    public async Task EmbeddedSchema_DescribesRestAsOneRestAndAnOptionalFailedSetRest()
+    {
+        var schema = AiPlanToolProvider.LoadInputSchema();
+
+        var rest = schema.RawData["definitions"].GetProperty("Rest");
+        var properties = rest.GetProperty("properties")
+            .EnumerateObject()
+            .Select(p => p.Name)
+            .ToList();
+        var required = rest.GetProperty("required")
+            .EnumerateArray()
+            .Select(r => r.GetString()!)
+            .ToList();
+
+        await Assert.That(properties).IsEquivalentTo(new[] { "rest", "failedSetRest" });
+        await Assert.That(required).IsEquivalentTo(new[] { "rest" });
+    }
 }

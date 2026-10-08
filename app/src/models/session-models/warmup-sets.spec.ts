@@ -216,10 +216,10 @@ describe('Session with warm-ups', () => {
     );
   }
 
-  it('rests the minimum after a warm-up, even a short one', () => {
+  it('rests the rest after a warm-up, even a short one', () => {
     const start = tickAt(12, 0);
     const session = sessionWith(withWarmups().withWarmupRepCount(0, 1, tick()), new RestTimer(start));
-    expect(session.restTimerEndTime).toEqual(start.plus(makeWeightedBlueprint().restBetweenSets.minRest));
+    expect(session.restTimerEndTime).toEqual(start.plus(makeWeightedBlueprint().restBetweenSets.rest));
   });
 
   it('round-trips warm-ups through JSON', () => {

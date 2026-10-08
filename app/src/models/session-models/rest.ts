@@ -1,4 +1,5 @@
 import { Duration, OffsetDateTime } from '@js-joda/core';
+import { failedSetRestOf } from '@/models/blueprint-models';
 import { RecordedCardioExercise } from '@/models/session-models/recorded-cardio-exercise';
 import type { RecordedExercise } from '@/models/session-models/recorded-exercise';
 import { RecordedWeightedExercise } from '@/models/session-models/recorded-weighted-exercise';
@@ -20,30 +21,27 @@ export const REST_PRESETS: readonly Duration[] = [30, 60, 90, 120, 150, 180].map
  */
 export interface RestWindow {
   startedAt: OffsetDateTime;
-  /** What the countdown runs for: a picked length, or the min rest (the failure rest after a missed set). */
+  /** What the countdown runs for: a picked length, or the rest (the failed-set rest after a missed set). */
   length: Duration;
   readyAt: OffsetDateTime;
-  /** The end of the min to max window, which only the notification shows. Equal to `readyAt` without one. */
-  fullAt: OffsetDateTime;
 }
 
 export type RestPhase =
   | { kind: 'idle' }
   | { kind: 'resting'; remaining: Duration; length: Duration }
   /** The countdown is over: the pill reads Go until the next set restarts the timer. */
-  | { kind: 'ready'; pastFull: boolean };
+  | { kind: 'ready' };
 
 /** The rest the latest set earned, before any length picked in the sheet. */
-function earnedRestOf(exercise: RecordedExercise | undefined): { first: Duration; full: Duration } | undefined {
+function earnedRestOf(exercise: RecordedExercise | undefined): Duration | undefined {
   if (exercise instanceof RecordedCardioExercise) {
-    const rest = exercise.lastCompletedSet?.blueprint.restBetweenSets;
-    return rest && { first: rest.minRest, full: rest.maxRest };
+    return exercise.lastCompletedSet?.blueprint.restBetweenSets?.rest;
   }
   if (!(exercise instanceof RecordedWeightedExercise) || !exercise.hasLoggedAnySet) {
     return undefined;
   }
-  const { minRest, maxRest, failureRest } = exercise.restAfterLastSet;
-  return exercise.lastSetMissedTarget ? { first: failureRest, full: failureRest } : { first: minRest, full: maxRest };
+  const rest = exercise.blueprint.restBetweenSets;
+  return exercise.lastSetMissedTarget ? failedSetRestOf(rest) : rest.rest;
 }
 
 export function restWindowOf(session: Session): RestWindow | undefined {
@@ -52,15 +50,11 @@ export function restWindowOf(session: Session): RestWindow | undefined {
   if (!timer || !session.nextExercise || session.runningCardioSet) {
     return undefined;
   }
-  const earned = earnedRestOf(session.lastExercise);
-  const length = timer.length ?? earned?.first;
+  const length = timer.length ?? earnedRestOf(session.lastExercise);
   if (!length || length.isZero() || length.isNegative()) {
     return undefined;
   }
-  // A picked length replaces the first phase; the min to max window keeps its width after it.
-  const window = earned && earned.full.compareTo(earned.first) > 0 ? earned.full.minus(earned.first) : Duration.ZERO;
-  const readyAt = timer.startedAt.plus(length);
-  return { startedAt: timer.startedAt, length, readyAt, fullAt: readyAt.plus(window) };
+  return { startedAt: timer.startedAt, length, readyAt: timer.startedAt.plus(length) };
 }
 
 export function restPhaseAt(session: Session, now: OffsetDateTime): RestPhase {
@@ -74,16 +68,16 @@ export function restPhaseOf(window: RestWindow | undefined, now: OffsetDateTime)
   if (now.isBefore(window.readyAt)) {
     return { kind: 'resting', remaining: Duration.between(now, window.readyAt), length: window.length };
   }
-  return { kind: 'ready', pastFull: !now.isBefore(window.fullAt) };
+  return { kind: 'ready' };
 }
 
 /** A buzz that lands later than this after its moment (the app was in the background) is dropped. */
 const CUE_LATENESS = Duration.ofSeconds(2);
 
 /**
- * Whether going from `before` to `after` crosses the end of the countdown or the end of the min to max
- * window, the two moments the phone buzzes while the workout is on screen. The notification covers them
- * otherwise, so a crossing noticed late, on coming back to the app, stays quiet.
+ * Whether going from `before` to `after` crosses the end of the countdown, the moment the phone buzzes while
+ * the workout is on screen. The notification covers it otherwise, so a crossing noticed late, on coming back
+ * to the app, stays quiet.
  */
 export function isRestCue(
   before: RestPhase,
@@ -94,13 +88,7 @@ export function isRestCue(
   if (!window || after.kind !== 'ready') {
     return false;
   }
-  const crossed =
-    before.kind === 'resting'
-      ? window.readyAt
-      : before.kind === 'ready' && !before.pastFull && after.pastFull
-        ? window.fullAt
-        : undefined;
-  return !!crossed && Duration.between(crossed, now).compareTo(CUE_LATENESS) <= 0;
+  return before.kind === 'resting' && Duration.between(window.readyAt, now).compareTo(CUE_LATENESS) <= 0;
 }
 
 /**
@@ -139,7 +127,7 @@ export function withRestStarted(session: Session, length: Duration, now: OffsetD
 
 /**
  * Whether a length is one of the sheet's presets, the only lengths it offers to keep as the exercise's rest.
- * +15 can make any length, including a lengthened failure rest after a missed set, which isn't a rest the
+ * +15 can make any length, including a lengthened failed-set rest after a missed set, which isn't a rest the
  * lifter chose for the exercise.
  */
 export function isRestPreset(length: Duration): boolean {
@@ -153,11 +141,11 @@ export function withRestSkipped(session: Session): Session {
 /** The exercise's own rest: what the idle pill shows and what a picked length is compared with. */
 export function exerciseRestOf(exercise: RecordedExercise | undefined): Duration | undefined {
   if (exercise instanceof RecordedWeightedExercise) {
-    return exercise.blueprint.restBetweenSets.minRest;
+    return exercise.blueprint.restBetweenSets.rest;
   }
   if (exercise instanceof RecordedCardioExercise) {
     const next = exercise.sets.find((set) => !set.completionDateTime) ?? exercise.lastCompletedSet;
-    return next?.blueprint.restBetweenSets?.minRest;
+    return next?.blueprint.restBetweenSets?.rest;
   }
   return undefined;
 }

@@ -1,89 +1,44 @@
-import FullHeightScrollView from '@/components/layout/full-height-scroll-view';
-import { ExerciseEditor } from '@/components/presentation/workout-editor/exercise-editor';
-import { ExerciseBlueprint } from '@/models/blueprint-models';
-import { sessionWithExerciseEdited } from '@/models/session-models/carry-over';
-import { RootState, useAppSelectorWithArg } from '@/store';
-import { selectSession, updateStoredSession } from '@/store/stored-sessions';
-import { useTranslate } from '@tolgee/react';
-import { Href, Stack, useRouter } from 'expo-router';
-import { HeaderHeightContext } from 'expo-router/react-navigation';
-import { useContext, useEffect, useRef } from 'react';
-import { Platform } from 'react-native';
-import { useDispatch, useStore } from 'react-redux';
-import { useOnDismiss } from '@/hooks/useOnDismiss';
-import { useCarryOver } from '@/hooks/useCarryOver';
+import { sessionEditScope } from '@/components/presentation/workout-editor/exercise-edit-copy';
+import { workingWeightOf } from '@/components/presentation/workout-editor/warmup-edit';
+import { ExerciseEditorSheet } from '@/components/smart/exercise-editor-sheet';
+import { useSessionExerciseDraft } from '@/components/smart/session-exercise-draft';
+import { RecordedWeightedExercise } from '@/models/session-models';
+import { useAppSelector, useAppSelectorWithArg } from '@/store';
+import { selectActiveSessionId, selectSession } from '@/store/stored-sessions';
+import { Href } from 'expo-router';
+import { useBackWhenGone } from '@/hooks/useBackWhenGone';
 
 export function getSessionExerciseEditorHref(sessionId: string, index: number): Href {
   return `/exercise-editor?sessionId=${encodeURIComponent(sessionId)}&index=${index}` as Href;
 }
 
+/**
+ * The edit exercise sheet on one exercise of a workout: the workout in progress (today only), or a past one
+ * opened from history. The edit is held until the sheet closes, by its save button or a swipe, and then
+ * applied to the workout.
+ */
 export function SessionExerciseEditor(props: { sessionId: string; index: number }) {
-  const { t } = useTranslate();
   const exerciseIndex = props.index;
   const session = useAppSelectorWithArg(selectSession, props.sessionId);
-  const dispatch = useDispatch();
-  const store = useStore<RootState>();
-  const withCarryOver = useCarryOver();
-  const { dismiss } = useRouter();
+  const activeSessionId = useAppSelector(selectActiveSessionId);
+  const keepDraft = useSessionExerciseDraft(props.sessionId, exerciseIndex);
 
-  const exercise = session?.recordedExercises[exerciseIndex]?.blueprint;
+  const recorded = session?.recordedExercises[exerciseIndex];
+  const exercise = recorded?.blueprint;
 
-  const title = t('exercise.edit.title');
+  useBackWhenGone(!exercise);
 
-  // Hold the edited exercise locally and only apply it to the session when the route is dismissed
-  const draftRef = useRef<ExerciseBlueprint | undefined>(undefined);
-  const saveExercise = (updated: ExerciseBlueprint) => {
-    draftRef.current = updated;
-  };
-  const headerHeight = useContext(HeaderHeightContext); // Intentionally don't use useHeaderHeight as it might not be in a stack
-  const topInsetHeight = Platform.select({ ios: headerHeight }) ?? 0;
-
-  useOnDismiss(() => {
-    const updated = draftRef.current;
-    if (!updated) {
-      return;
-    }
-    const state = store.getState();
-    const edited = state.storedSessions.sessions[props.sessionId]?.recordedExercises[exerciseIndex]?.blueprint;
-    // The exercise can have been removed while the editor was open, in which case the edit is moot.
-    if (!edited) {
-      return;
-    }
-    // Only another movement opens on carried numbers, so only that can need the tables read.
-    const keys = edited.movementKey() === updated.movementKey() ? [] : [updated.progressionKey()];
-    withCarryOver(props.sessionId, keys, (carryOver) =>
-      dispatch(
-        updateStoredSession({
-          sessionId: props.sessionId,
-          update: (s) =>
-            s.recordedExercises[exerciseIndex]?.blueprint === edited
-              ? sessionWithExerciseEdited(s, exerciseIndex, updated, carryOver)
-              : s,
-        }),
-      ),
-    );
-  });
-
-  const hasExercise = !!exercise;
-  useEffect(() => {
-    if (!hasExercise) {
-      dismiss();
-    }
-  }, [hasExercise, dismiss]);
+  if (!session || !exercise) {
+    return null;
+  }
 
   return (
-    <FullHeightScrollView
-      safeAreaEdges={{
-        left: 'additive',
-        right: 'additive',
-        top: 'off',
-        bottom: 'additive',
-      }}
-      avoidKeyboard
-      contentContainerStyle={{ insetBlockStart: topInsetHeight }}
-    >
-      <Stack.Screen options={{ title }} />
-      {exercise ? <ExerciseEditor exercise={exercise} updateExercise={saveExercise} /> : null}
-    </FullHeightScrollView>
+    <ExerciseEditorSheet
+      exercise={exercise}
+      scope={sessionEditScope(session, activeSessionId)}
+      nextExerciseName={session.recordedExercises[exerciseIndex + 1]?.blueprint.name}
+      workingWeight={recorded instanceof RecordedWeightedExercise ? workingWeightOf(recorded.potentialSets) : undefined}
+      onChange={keepDraft}
+    />
   );
 }

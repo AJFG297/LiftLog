@@ -163,7 +163,7 @@ describe('aiPlanFromJSON', () => {
       expect(exercise.notes).toBe('');
       expect(exercise.link).toBe('');
       expect(exercise.progression).toEqual([]);
-      expect(exercise.restBetweenSets.minRest.equals(Rest.medium.minRest)).toBe(true);
+      expect(exercise.restBetweenSets.rest.equals(Rest.medium.rest)).toBe(true);
     });
 
     it('fills only the missing parts of rest', () => {
@@ -186,9 +186,35 @@ describe('aiPlanFromJSON', () => {
         },
       }) as WeightedExerciseBlueprint;
 
-      expect(exercise.restBetweenSets.minRest.equals(Duration.ofSeconds(45))).toBe(true);
-      expect(exercise.restBetweenSets.maxRest.equals(Rest.medium.maxRest)).toBe(true);
-      expect(exercise.restBetweenSets.failureRest.equals(Rest.medium.failureRest)).toBe(true);
+      expect(exercise.restBetweenSets.rest.equals(Duration.ofSeconds(45))).toBe(true);
+      // A missing failure rest is the same as the rest, not the default's.
+      expect(exercise.restBetweenSets.failedSetRest).toBeUndefined();
+    });
+
+    it('keeps a failure rest the planner gives', () => {
+      const exercise = firstExercise({
+        version: 4,
+        name: 'PPL',
+        blueprint: {
+          sessions: [
+            {
+              exercises: [
+                {
+                  type: 'WeightedExerciseBlueprint',
+                  restBetweenSets: {
+                    minRest: toDurationJSON(Duration.ofSeconds(120)),
+                    maxRest: toDurationJSON(Duration.ofSeconds(180)),
+                    failureRest: toDurationJSON(Duration.ofSeconds(240)),
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      }) as WeightedExerciseBlueprint;
+
+      expect(exercise.restBetweenSets.rest.equals(Duration.ofSeconds(120))).toBe(true);
+      expect(exercise.restBetweenSets.failedSetRest?.equals(Duration.ofSeconds(240))).toBe(true);
     });
 
     it('keeps every field of a fully specified weighted exercise', () => {

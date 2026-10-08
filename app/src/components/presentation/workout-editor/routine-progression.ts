@@ -139,3 +139,59 @@ export function sharedWorkingTopReps(exercise: WeightedExerciseBlueprint): numbe
 export function offersProgressionPresets(exercise: WeightedExerciseBlueprint): boolean {
   return exercise.resistance !== 'none';
 }
+
+/** The weight steps the progression sheet offers, in the user's unit. */
+const STEP_CHOICES = [1.25, 2.5, 5];
+
+/** Where the progression sheet offers to stop "Reps, then weight". */
+const LADDER_CEILING_CHOICES = [14, 15, 16, 20];
+
+/**
+ * The step chips: the usual small steps, plus the exercise's own `current` when it is something else
+ * (a dumbbell's 2), so the chip that is on is always one of them.
+ */
+export function stepChoices(current: BigNumber): BigNumber[] {
+  return withCurrent(
+    STEP_CHOICES.map((step) => new BigNumber(step)),
+    current,
+  );
+}
+
+/**
+ * The rep limit chips: only limits above the plan's reps, since the ladder could never climb to one at or
+ * below them, plus the exercise's own `current`.
+ */
+export function ladderCeilingChoices(exercise: WeightedExerciseBlueprint, current: BigNumber): BigNumber[] {
+  const top = topPlannedReps(exercise);
+  return withCurrent(
+    LADDER_CEILING_CHOICES.filter((ceiling) => ceiling > top).map((ceiling) => new BigNumber(ceiling)),
+    current,
+  );
+}
+
+function withCurrent(choices: BigNumber[], current: BigNumber): BigNumber[] {
+  if (choices.some((choice) => choice.isEqualTo(current))) {
+    return choices;
+  }
+  return [...choices, current].sort((a, b) => a.comparedTo(b) ?? 0);
+}
+
+/** Add weight or Reps, then weight adding `step` instead. Any other progression is left alone. */
+export function withProgressionStep(exercise: WeightedExerciseBlueprint, step: BigNumber): WeightedExerciseBlueprint {
+  const choice = progressionChoiceOf(exercise.progression);
+  if (choice !== 'weight' && choice !== 'double') {
+    return exercise;
+  }
+  return exercise.with({
+    progression: exercise.progression.map((rule) => (rule.axis === 'load' ? rule.with({ step }) : rule)),
+  });
+}
+
+/** Reps, then weight climbing to `ceiling` instead. Any other progression is left alone. */
+export function withLadderCeiling(exercise: WeightedExerciseBlueprint, ceiling: BigNumber): WeightedExerciseBlueprint {
+  if (progressionChoiceOf(exercise.progression) !== 'double') {
+    return exercise;
+  }
+  const [rung, ...rest] = exercise.progression;
+  return exercise.with({ progression: [rung!.with({ ceiling }), ...rest] });
+}

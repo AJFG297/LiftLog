@@ -5,6 +5,7 @@ import {
   latestInLineage,
   lineageKeys,
   ProgressionKey,
+  WeightedExerciseBlueprint,
 } from '@/models/blueprint-models';
 import { RecordedCardioExercise, RecordedCardioExerciseSet } from '@/models/session-models/recorded-cardio-exercise';
 import type { RecordedExercise } from '@/models/session-models/recorded-exercise';
@@ -27,6 +28,18 @@ export interface CarryOver {
  * Cardio carries incline and resistance. Starting a routine, adding or swapping an exercise and Do again
  * all open exercises through this, so they agree on what "last time" gives.
  */
+export function nextRecordedExercise(
+  blueprint: WeightedExerciseBlueprint,
+  lineage: ProgressionKey,
+  latest: LatestByLineage,
+  unit: WeightUnit,
+): RecordedWeightedExercise;
+export function nextRecordedExercise(
+  blueprint: ExerciseBlueprint,
+  lineage: ProgressionKey,
+  latest: LatestByLineage,
+  unit: WeightUnit,
+): RecordedExercise;
 export function nextRecordedExercise(
   blueprint: ExerciseBlueprint,
   lineage: ProgressionKey,
