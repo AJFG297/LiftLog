@@ -16,6 +16,7 @@ import { getExerciseProgressionHref } from '@/components/smart/exercise-progress
 import { getEditorWarmupsHref } from '@/components/smart/exercise-warmups-sheet';
 import { useOwnedExerciseEdit } from '@/components/smart/exercise-edit-draft';
 import { spacing, useAppTheme } from '@/hooks/useAppTheme';
+import { useDismissLayer } from '@/hooks/useDismissLayer';
 import { useExerciseSearch } from '@/hooks/useExerciseSearch';
 import { usePreferredWeightFormat } from '@/hooks/usePreferredWeightUnit';
 import { CardioExerciseBlueprint, ExerciseBlueprint, WeightedExerciseBlueprint } from '@/models/blueprint-models';
@@ -64,6 +65,14 @@ export function ExerciseEditorSheet(props: ExerciseEditorSheetProps) {
   const [closing, setClosing] = useState(false);
   const targets = useTargetsPad(exercise, update);
   const cardioTargets = useCardioTargetsPad(exercise, update, useImperialUnits ? 'mile' : 'kilometre');
+  const padLayer = useDismissLayer(!!(targets.pad || cardioTargets.pad), () => {
+    if (targets.pad) {
+      targets.dispatch({ type: 'close' });
+    }
+    if (cardioTargets.pad) {
+      cardioTargets.dispatch({ type: 'close' });
+    }
+  });
   const scrollRef = useRef<KeyboardAwareScrollViewRef>(null);
   const scrollY = useRef(0);
 
@@ -105,7 +114,7 @@ export function ExerciseEditorSheet(props: ExerciseEditorSheetProps) {
       return;
     }
     setClosing(true);
-    router.back();
+    padLayer.leave(() => router.back());
   };
 
   return (

@@ -41,6 +41,7 @@ import {
 import { LoadUnit, shortFormatWeightUnit, Weight } from '@/models/weight';
 import { localeFormatBigNumber } from '@/utils/locale-bignumber';
 import { useTranslate } from '@tolgee/react';
+import { useDismissLayer } from '@/hooks/useDismissLayer';
 import BigNumber from 'bignumber.js';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
@@ -129,6 +130,7 @@ export function WarmupsEditor(props: WarmupsEditorProps) {
   const closePad = () => {
     setEditing(undefined);
   };
+  const padLayer = useDismissLayer(!!editing, closePad);
 
   /** Load then reps on each row, top to bottom. */
   const fields: PadEditing[] = warmups.flatMap((_, index) => [
@@ -204,7 +206,11 @@ export function WarmupsEditor(props: WarmupsEditorProps) {
             </SurfaceText>
           ) : null}
         </View>
-        <HeaderPillButton testID="warmups-done" label={t('exercise_editor.save.done.button')} onPress={props.onDone} />
+        <HeaderPillButton
+          testID="warmups-done"
+          label={t('exercise_editor.save.done.button')}
+          onPress={() => padLayer.leave(props.onDone)}
+        />
       </View>
 
       <ScrollView

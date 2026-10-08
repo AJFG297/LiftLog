@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render } from '@testing-library/react';
+import { act, cleanup, fireEvent, render } from '@testing-library/react';
 import BigNumber from 'bignumber.js';
 import { type PropsWithChildren, useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -7,7 +7,23 @@ import { type NumberPadAction } from '@/components/presentation/foundation/numbe
 import { makeWeightedBlueprint } from '@/models/session-models/__test__/helpers';
 import { Weight } from '@/models/weight';
 
+const back = vi.hoisted(() => {
+  const listeners: (() => boolean)[] = [];
+  return {
+    listeners,
+    /** A hardware back, as React Native runs it: newest listener first. True when something consumed it. */
+    press: () => [...listeners].reverse().some((listener) => listener()),
+  };
+});
+
 vi.mock('react-native', () => ({
+  Platform: { OS: 'android' },
+  BackHandler: {
+    addEventListener: (_event: string, listener: () => boolean) => {
+      back.listeners.push(listener);
+      return { remove: () => back.listeners.splice(back.listeners.indexOf(listener), 1) };
+    },
+  },
   View: ({ children, testID }: PropsWithChildren<{ testID?: string }>) => <div data-testid={testID}>{children}</div>,
   ScrollView: ({ children }: PropsWithChildren) => <div>{children}</div>,
   Pressable: ({ children, testID, onPress }: PropsWithChildren<{ testID?: string; onPress: () => void }>) => (
@@ -16,6 +32,10 @@ vi.mock('react-native', () => ({
     </button>
   ),
   StyleSheet: { hairlineWidth: 1 },
+}));
+vi.mock('expo-router/react-navigation', () => ({
+  useNavigation: () => ({ isFocused: () => true, dispatch: () => {} }),
+  usePreventRemove: () => {},
 }));
 vi.mock('@tolgee/react', () => ({ useTranslate: () => ({ t: (key: string) => key }) }));
 vi.mock('expo-localization', () => ({ getLocales: () => [{ decimalSeparator: '.' }] }));
@@ -131,5 +151,27 @@ describe('warm-up sheet dismissal', () => {
     fireEvent.click(editor.view.getByText('Backspace'));
     fireEvent.click(editor.view.getByTestId('warmups-done'));
     expect(editor.saved().warmupSets).toEqual([{ load: undefined, reps: 10 }]);
+  });
+});
+
+describe('warm-up sheet back', () => {
+  it('closes the number pad first and leaves the sheet open', () => {
+    const editor = openEditor(
+      makeWeightedBlueprint({ warmupSets: [{ load: { type: 'percent', percent: 50 }, reps: 10 }] }),
+    );
+    fireEvent.click(editor.view.getByTestId('warmups-reps-0'));
+    fireEvent.click(editor.view.getByText('8'));
+
+    let consumed = false;
+    act(() => {
+      consumed = back.press();
+    });
+    expect(consumed).toBe(true);
+    expect(editor.view.queryByText('Backspace')).toBeNull();
+    expect(editor.view.getByTestId('warmups-done')).toBeTruthy();
+    expect(editor.draft().warmupSets[0]?.reps).toBe(8);
+
+    // With the pad gone, the next back is the navigator's, which closes the sheet.
+    expect(back.press()).toBe(false);
   });
 });
