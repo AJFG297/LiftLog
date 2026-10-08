@@ -96,7 +96,7 @@ work to find the docs relevant to your area, and update it whenever you add, rem
 
 - [adr/0001-own-backend-no-upstream-compatibility.md](./adr/0001-own-backend-no-upstream-compatibility.md)
   - the fork talks only to its own backend and keeps no compatibility with upstream LiftLog (wire
-  formats, backups, hosted service); what that frees up and what still must stay compatible.
+    formats, backups, hosted service); what that frees up and what still must stay compatible.
 - [adr/0002-own-visual-language.md](./adr/0002-own-visual-language.md) - content surfaces are
   our own components on the theme tokens; system chrome (tabs, sheets, menus, switches, pickers) stays
   native via expo-ui; react-native-paper is phased out screen by screen.
