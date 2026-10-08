@@ -26,6 +26,8 @@ import {
 import { spacing, useAppTheme } from '@/hooks/useAppTheme';
 import type { TranslateFn } from '@/i18n/translate-fn';
 import { ProgressionRule, uniformTarget, WeightedExerciseBlueprint } from '@/models/blueprint-models';
+import { RecordedWeightedExercise } from '@/models/session-models';
+import { WeightUnit } from '@/models/weight';
 import { useTranslate } from '@tolgee/react';
 import BigNumber from 'bignumber.js';
 import { ReactNode, useState } from 'react';
@@ -39,8 +41,10 @@ export interface ProgressionSheetContentProps {
   formatStep: (step: BigNumber) => string;
   /** A weight with its unit, "102.5 kg". */
   formatWeight: (weight: BigNumber) => string;
-  /** The weight next time opens on, or undefined before the exercise has been done. */
-  startWeight: BigNumber | undefined;
+  /** The complete exercise next time opens on, including earned progression. */
+  nextExercise: RecordedWeightedExercise;
+  weightKnown: boolean;
+  unit: WeightUnit;
   onChange: (progression: ProgressionRule[]) => void;
 }
 
@@ -54,7 +58,7 @@ export function ProgressionSheetContent(props: ProgressionSheetContentProps) {
   const { exercise } = props;
   const choice = progressionChoiceOf(exercise.progression);
   const presets = offersProgressionPresets(exercise);
-  const preview = progressionPreview(exercise, props.startWeight);
+  const preview = progressionPreview(props.nextExercise, props.unit);
 
   return (
     <View style={{ gap: spacing[4] }}>
@@ -97,7 +101,7 @@ export function ProgressionSheetContent(props: ProgressionSheetContentProps) {
           rows={preview}
           note={previewNoteOf(t, exercise)}
           showWeight={exercise.resistance !== 'none'}
-          weightKnown={props.startWeight !== undefined}
+          weightKnown={props.weightKnown}
           formatWeight={props.formatWeight}
           formatStep={props.formatStep}
         />

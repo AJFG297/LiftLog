@@ -9,6 +9,7 @@ import { spacing, useAppTheme } from '@/hooks/useAppTheme';
 import { WeightedExerciseBlueprint } from '@/models/blueprint-models';
 import { equipmentClassOf, weightStepFor } from '@/models/equipment';
 import { RecordedWeightedExercise } from '@/models/session-models';
+import { nextRecordedExercise } from '@/models/session-models/carry-over';
 import { useAppSelector } from '@/store';
 import { selectExercises, selectLatestExercises } from '@/store/stored-sessions';
 import { useTranslate } from '@tolgee/react';
@@ -46,12 +47,10 @@ export function ExerciseProgressionSheet() {
     return null;
   }
 
-  // The preview opens on the weight the next workout would: the best set last time this exercise was done.
   const last = latest[weighted.progressionKey()];
-  const startWeight =
-    weighted.resistance !== 'none' && last instanceof RecordedWeightedExercise
-      ? last.bestSet?.weight.convertTo(unit).value
-      : undefined;
+  const nextExercise = nextRecordedExercise(weighted, weighted.progressionKey(), latest, unit);
+  const weightKnown = weighted.resistance !== 'none' && last instanceof RecordedWeightedExercise && !!last.bestSet;
+  const startWeight = weightKnown ? nextExercise.maxWeight.convertTo(unit).value : undefined;
   const targets = plannedTargetsOf(weighted);
   const subtitle = startWeight
     ? t('progression_sheet.subtitle_with_weight', { name: weighted.name, targets, weight: formatWeight(startWeight) })
@@ -103,7 +102,9 @@ export function ExerciseProgressionSheet() {
           )}
           formatStep={formatWeight}
           formatWeight={formatWeight}
-          startWeight={startWeight}
+          nextExercise={nextExercise}
+          weightKnown={weightKnown}
+          unit={unit}
           onChange={(progression) =>
             updateExerciseEdit(editId ?? '', (current) =>
               current instanceof WeightedExerciseBlueprint ? current.with({ progression }) : current,

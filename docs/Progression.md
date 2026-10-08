@@ -70,10 +70,11 @@ The **Progression sheet** (the Progression row of the edit exercise sheet, `app/
 shows the same three choices as radio cards, each explained with the exercise's numbers. The picked card
 has chips for the weight step (1.25, 2.5, 5, plus the exercise's own step if it is something else) and,
 for Reps then weight, the rep limit (14, 15, 16, 20, only those above the plan's reps). Under them, **If
-you hit every target** plays the next sessions out through `applyProgression` with every set logged at
+you hit every target** plays the next sessions out through `nextRecordedExercise` with every set logged at
 the top of its target (`progression-preview.ts`): three sessions for Add weight and custom rules, and for
 Reps then weight every rung until the weight goes up, with the middle of a long ladder left out. It starts
-from last time's best set, or counts up from nothing before the exercise has one. **Rules** opens the
+from the next workout's carried weight and rep targets, including progression earned last time, or
+counts up from nothing before the exercise has history. **Rules** opens the
 full rule editor; rules that no longer match a preset read as **Custom**. The sheet edits the exercise
 through `exercise-edit-draft.ts`, like the Load sheet.
 

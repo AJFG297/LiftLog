@@ -4,6 +4,7 @@ import { haptics } from '@/components/presentation/foundation/haptics';
 import { MsIconSrc } from '@/components/presentation/foundation/ms-icon-source';
 import {
   NumberPad,
+  type NumberPadAction,
   type NumberPadBuffer,
   type NumberPadField,
   numberPadReducer,
@@ -100,12 +101,13 @@ export function WarmupsEditor(props: WarmupsEditorProps) {
     };
   };
 
-  /** Writes what the pad holds. Nothing is written while the field still shows its old value. */
-  const commitTyping = () => {
-    const value = buffer.typed === null ? undefined : numberPadValue(buffer);
-    if (!editing || !value) {
+  const typeInPad = (action: NumberPadAction) => {
+    const next = numberPadReducer(buffer, action);
+    setBuffer(next);
+    if (!editing) {
       return;
     }
+    const value = numberPadValue(next) ?? new BigNumber(0);
     const { index, field } = editing;
     update((current) =>
       field === 'reps'
@@ -114,10 +116,7 @@ export function WarmupsEditor(props: WarmupsEditorProps) {
     );
   };
 
-  const openField = (index: number, field: PadField, commit = true) => {
-    if (commit) {
-      commitTyping();
-    }
+  const openField = (index: number, field: PadField) => {
     const warmup = warmups[index];
     if (!warmup) {
       setEditing(undefined);
@@ -128,7 +127,6 @@ export function WarmupsEditor(props: WarmupsEditorProps) {
   };
 
   const closePad = () => {
-    commitTyping();
     setEditing(undefined);
   };
 
@@ -163,7 +161,6 @@ export function WarmupsEditor(props: WarmupsEditorProps) {
       return;
     }
     const { index } = editing;
-    commitTyping();
     update((current) => withWarmupLoadTypeAt(current, index, type));
     // Switching type starts the load over (50%, or an empty weight), so the typed value can't change it.
     const warmup = withWarmupLoadTypeAt(exercise, index, type).warmupSets[index];
@@ -361,7 +358,7 @@ export function WarmupsEditor(props: WarmupsEditorProps) {
       <NumberPad
         visible={!!editing}
         buffer={buffer}
-        onAction={(action) => setBuffer((b) => numberPadReducer(b, action))}
+        onAction={typeInPad}
         unit={padUnit}
         accessory={undefined}
         primary="next"

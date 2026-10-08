@@ -1,8 +1,9 @@
 import { progressionChoiceOf } from '@/components/presentation/workout-editor/routine-progression';
-import { applyProgression, RepsTarget, WeightedExerciseBlueprint } from '@/models/blueprint-models';
+import { RepsTarget } from '@/models/blueprint-models';
 import { RecordedSet, RecordedWeightedExercise } from '@/models/session-models';
 import { setKindHas } from '@/models/session-models/set-kind';
-import { Weight } from '@/models/weight';
+import { nextRecordedExercise } from '@/models/session-models/carry-over';
+import { WeightUnit } from '@/models/weight';
 import { OffsetDateTime } from '@js-joda/core';
 import BigNumber from 'bignumber.js';
 
@@ -37,28 +38,28 @@ const MAX_LADDER_SESSIONS = 30;
 
 /**
  * "If you hit every target": the sessions after next time when every set is logged at the top of its
- * target, played out by the progression engine itself (`applyProgression`), so the preview cannot say one
- * thing while the workout does another. `start` is the weight next time opens on, or undefined when it is
- * not known yet, in which case the preview counts up from nothing.
+ * target, played out by the workout carry-over engine itself (`nextRecordedExercise`). `start` is the
+ * complete exercise next time opens on, including earned weight and rep targets.
  *
  * Add weight and custom rules show three sessions ahead. Reps, then weight runs until the weight goes up,
  * which is the point of the ladder, leaving out the middle rungs of a long one. Off has nothing to show.
  */
-export function progressionPreview(exercise: WeightedExerciseBlueprint, start: BigNumber | undefined): PreviewRow[] {
+export function progressionPreview(start: RecordedWeightedExercise, unit: WeightUnit): PreviewRow[] {
+  const exercise = start.blueprint;
   const choice = progressionChoiceOf(exercise.progression);
   if (choice === 'off') {
     return [];
   }
-  const unit = 'kilograms';
-  const first = hitTargets(
-    RecordedWeightedExercise.empty(exercise, unit).withAllSets((s) => s.with({ weight: new Weight(start ?? 0, unit) })),
-  );
+  const first = hitTargets(start, unit);
 
   const sessions = [first];
   const untilWeightMoves = choice === 'double';
   while (sessions.length <= (untilWeightMoves ? MAX_LADDER_SESSIONS : SESSIONS_AHEAD)) {
     const previous = sessions[sessions.length - 1]!;
-    const next = hitTargets(applyProgression(exercise.progression, previous));
+    const next = hitTargets(
+      nextRecordedExercise(exercise, exercise.progressionKey(), { [exercise.progressionKey()]: previous }, unit),
+      unit,
+    );
     sessions.push(next);
     if (untilWeightMoves && changeBetween(previous, next, first)?.axis === 'load') {
       break;
@@ -102,11 +103,12 @@ function changeBetween(
  * Logs every set at the top of its own target. The rules only advance a session that was met, so a
  * session showing anything else would be one that earns nothing.
  */
-function hitTargets(exercise: RecordedWeightedExercise): RecordedWeightedExercise {
+function hitTargets(exercise: RecordedWeightedExercise, unit: WeightUnit): RecordedWeightedExercise {
   return exercise.potentialSets.reduce(
     (ex, _, index) =>
       ex.withSet(index, (s) =>
         s.with({
+          weight: s.weight.convertTo(unit),
           set: RecordedSet.of({
             repsCompleted: ex.repsTargetForSet(index).max,
             completionDateTime: OffsetDateTime.MIN,
