@@ -116,13 +116,7 @@ export function WeightedTargetsEditor(props: {
           >
             <TileValue text={String(field?.kind === 'sets' ? pad!.value : exercise.plannedSets.length)} />
           </Tile>
-          <RepsTile
-            exercise={exercise}
-            mode={mode}
-            pad={pad}
-            fieldRef={targets.fieldRef}
-            onPress={() => open({ kind: 'reps' })}
-          />
+          <RepsTile exercise={exercise} mode={mode} pad={pad} fieldRef={targets.fieldRef} open={open} />
         </View>
       )}
     </View>
@@ -134,16 +128,19 @@ function RepsTile(props: {
   mode: TargetsMode;
   pad: TargetsPad | undefined;
   fieldRef: RefObject<View | null>;
-  onPress: () => void;
+  open: (field: TargetsField) => void;
 }) {
   const { t } = useTranslate();
   const { tokens } = useAppTheme();
+  // Where the dash's middle sits across the tile, so each end's tap target reaches to it.
+  const [rowX, setRowX] = useState<number>();
+  const [dashMiddle, setDashMiddle] = useState<number>();
   const kind = props.pad?.field.kind;
   const active = kind === 'reps' || kind === 'bottom' || kind === 'top';
   const target = shownTarget(props.exercise, props.pad);
   const focus = (end: 'bottom' | 'top') =>
     kind === end ? { borderBottomWidth: 2, borderColor: tokens.accent } : undefined;
-  return (
+  const tile = (
     <Tile
       testID="exercise-reps"
       label={t('exercise_editor.targets.reps.label')}
@@ -152,18 +149,46 @@ function RepsTile(props: {
       })}
       active={active}
       ref={active ? props.fieldRef : undefined}
-      onPress={props.onPress}
+      onPress={() => props.open({ kind: 'reps' })}
     >
       {props.mode === 'range' ? (
-        <View style={{ flexDirection: 'row' }}>
+        <View style={{ flexDirection: 'row' }} onLayout={(e) => setRowX(e.nativeEvent.layout.x)}>
           <TileValue text={String(target.min)} style={focus('bottom')} />
-          <TileValue text="–" />
+          <View onLayout={(e) => setDashMiddle(e.nativeEvent.layout.x + e.nativeEvent.layout.width / 2)}>
+            <TileValue text="–" />
+          </View>
           <TileValue text={String(target.max)} style={focus('top')} />
         </View>
       ) : (
         <TileValue text={String(target.max)} />
       )}
     </Tile>
+  );
+  if (props.mode !== 'range') {
+    return tile;
+  }
+
+  // The tile is split at the dash: everything left of it picks the bottom, everything right the top. When the
+  // pad is open on one end, picking the other switches to it as the pad's own display does.
+  const split = rowX !== undefined && dashMiddle !== undefined ? rowX + dashMiddle : undefined;
+  const pick = (end: 'bottom' | 'top', value: number) => ({
+    testID: `exercise-reps-${end}`,
+    onPress: () => props.open({ kind: end }),
+    accessibilityRole: 'button' as const,
+    accessibilityLabel: t(`exercise_editor.pad.${end}.accessibility_label`, { reps: value }),
+    accessibilityState: { selected: kind === end },
+  });
+  return (
+    <View style={{ flex: 1 }}>
+      {/* The halves speak for the tile, so screen readers skip its single "Reps" button. */}
+      <View style={{ flex: 1 }} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
+        {tile}
+      </View>
+      <View style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, flexDirection: 'row' }}>
+        <Pressable {...pick('bottom', target.min)} style={split === undefined ? { flex: 1 } : { width: split }} />
+        <Pressable {...pick('top', target.max)} style={{ flex: 1 }} />
+      </View>
+    </View>
   );
 }
 
