@@ -30,9 +30,9 @@ export const WARMUP_PRESETS = [
     id: 'standard',
     label: 'exercise_editor.warmups.preset.standard.label',
     steps: [
-      { bar: true, reps: 10 },
-      { percent: 50, reps: 8 },
-      { percent: 75, reps: 5 },
+      { percent: 40, reps: 8 },
+      { percent: 60, reps: 5 },
+      { percent: 80, reps: 3 },
     ],
   },
   {

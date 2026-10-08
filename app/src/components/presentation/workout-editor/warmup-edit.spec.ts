@@ -3,7 +3,7 @@ import { UseTranslateResult } from '@tolgee/react';
 import BigNumber from 'bignumber.js';
 import en from '@/i18n/en.json';
 import { PlannedWarmupSet } from '@/models/blueprint-models';
-import { makeWeightedBlueprint } from '@/models/session-models/__test__/helpers';
+import { makeRecordedExercise, makeWeightedBlueprint } from '@/models/session-models/__test__/helpers';
 import { Weight } from '@/models/weight';
 import {
   isEmptyBar,
@@ -45,8 +45,20 @@ describe('warm-up presets', () => {
     expect(WARMUP_PRESETS.map((preset) => preset.id)).toEqual(['standard', 'quick', 'heavy']);
   });
 
-  it('opens the standard ramp on the empty bar, then 50% and 75%', () => {
-    expect(warmupPresetSets('standard', 'external', bar)).toEqual([absolute(20, 10), percent(50, 8), percent(75, 5)]);
+  it('uses three percentage sets for the standard ramp', () => {
+    expect(warmupPresetSets('standard', 'external', bar)).toEqual([percent(40, 8), percent(60, 5), percent(80, 3)]);
+  });
+
+  it.each(['kilograms', 'pounds'] as const)('scales the standard ramp with the working weight in %s', (unit) => {
+    const blueprint = withWarmupPreset(makeWeightedBlueprint({ sets: 1 }), 'standard', new Weight(20, unit));
+    const exercise = makeRecordedExercise(blueprint, [undefined], new Weight(100, unit)).withWarmupsFromPlan(unit);
+    expect(exercise.warmupSets.map((set) => [set.weight.value.toNumber(), set.weight.unit, set.target.min])).toEqual([
+      [40, unit, 8],
+      [60, unit, 5],
+      [80, unit, 3],
+    ]);
+    const heavier = makeRecordedExercise(blueprint, [undefined], new Weight(150, unit)).withWarmupsFromPlan(unit);
+    expect(heavier.warmupSets.map((set) => set.weight.value.toNumber())).toEqual([60, 90, 120]);
   });
 
   it('keeps the quick ramp to two percentage sets', () => {
@@ -64,7 +76,7 @@ describe('warm-up presets', () => {
   });
 
   it('uses the bar in the unit asked for', () => {
-    expect(warmupPresetSets('standard', 'external', new Weight(45, 'pounds'))[0]).toEqual({
+    expect(warmupPresetSets('heavy', 'external', new Weight(45, 'pounds'))[0]).toEqual({
       load: { type: 'absolute', weight: new Weight(45, 'pounds') },
       reps: 10,
     });

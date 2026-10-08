@@ -79,7 +79,8 @@ editor opens edit the same draft:
   editor holds the exercise in `exercise-edit-draft.ts` so the sheets it opens over itself (Load, Warm-ups,
   Progression) edit it too. The Warm-ups row opens the warm-up sheet (`app/exercise-warmups.tsx`): W1, W2…
   with load and reps on the number pad, a percentage shown with what it works out to, and one-tap ramps
-  (Standard, Quick, Heavy day) when there are none.
+  (Standard, Quick, Heavy day) when there are none. Standard uses 40% × 8, 60% × 5, then 80% × 3
+  of the working weight; the percentages stay in the routine and resolve when the workout starts.
 - The **set-type sheet** (`app/routine-set-type.tsx`, a root form sheet) changes one set's type.
 
 Two editors can be open on one routine, one from Routines and one from the Workout tab's upcoming card. They
