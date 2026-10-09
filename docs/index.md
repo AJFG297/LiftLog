@@ -82,6 +82,9 @@ work to find the docs relevant to your area, and update it whenever you add, rem
 
 ## Running it yourself
 
+- [BrowserVerification.md](./BrowserVerification.md) - the emulator-free shared workout prototype for
+  Codex cloud agents: Regular and Large viewport checks, commands, evidence, adapters, coverage, and native exclusions.
+
 - [PhoneBuilds.md](./PhoneBuilds.md) - getting a change onto the two Android phones: when a change needs a
   new build and when an EAS Update is enough (the fingerprint runtime version), the commands for each,
   rollback, and keeping both phones on the same version.

@@ -1,0 +1,66 @@
+:root {
+  font-family: system-ui, sans-serif;
+  color: #f4f0eb;
+  background: #171615;
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+}
+* {
+  box-sizing: border-box;
+}
+.viewer {
+  display: grid;
+  justify-items: center;
+  gap: 20px;
+  padding: 24px;
+}
+.viewer-controls {
+  display: grid;
+  gap: 16px;
+  width: 100%;
+  max-width: 640px;
+}
+.viewer-controls h1 {
+  margin: 0;
+  font-size: 20px;
+}
+.viewer-controls p {
+  margin: 8px 0 0;
+  color: #b8b0a7;
+  font-size: 14px;
+}
+.viewport-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.viewport-presets button {
+  min-height: 44px;
+  padding: 10px 14px;
+  border: 1px solid #716a62;
+  border-radius: 10px;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+.viewport-presets button[aria-pressed='true'] {
+  background: #f4f0eb;
+  color: #171615;
+}
+.viewport-presets button:focus-visible {
+  outline: 3px solid #d7ad79;
+  outline-offset: 3px;
+}
+.preview-frame {
+  border: 1px solid #716a62;
+  border-radius: 16px;
+  overflow: hidden;
+}
+.preview-frame iframe {
+  display: block;
+  border: 0;
+}
