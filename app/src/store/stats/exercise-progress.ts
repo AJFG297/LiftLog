@@ -139,12 +139,45 @@ export function exerciseChartOf(
     }
     sessions.push(sessionOf(point, measure, value, unit, bests.has(point.workoutId), recordWorkouts));
   }
+  const rowValue = rowValueKindOf(measure);
+  const firstSession = sessions[0];
+  const lastSession = sessions.at(-1);
+  let change: number | undefined;
+  if (sessions.length >= 2 && firstSession && lastSession) {
+    const kind = KIND_OF[measure];
+    const first = raw[0];
+    const last = raw.at(-1);
+    if (kind && first && last) {
+      const shown = shownChange(last, first, kind, unit);
+      firstSession.value = shown.previous.value.toNumber();
+      lastSession.value = shown.value.value.toNumber();
+      if (measure === 'heaviest') {
+        if (firstSession.set) {
+          firstSession.set.weight = shown.previous;
+        }
+        if (lastSession.set) {
+          lastSession.set.weight = shown.value;
+        }
+      }
+      for (const session of [firstSession, lastSession]) {
+        if (rowValue === measure) {
+          session.rowValue = session.value;
+        }
+        if (measure === 'volume') {
+          session.volume = session.value;
+        }
+      }
+      change = shown.change.value.toNumber();
+    } else {
+      change = lastSession.value - firstSession.value;
+    }
+  }
   const selectedIndex = sessions.findIndex((session) => session.workoutId === selectedWorkoutId);
   return {
     measure,
-    rowValue: rowValueKindOf(measure),
+    rowValue,
     sessions,
-    change: changeOver(sessions, raw, measure, unit),
+    change,
     selected: sessions.length ? (selectedIndex >= 0 ? selectedIndex : sessions.length - 1) : undefined,
   };
 }
@@ -266,24 +299,6 @@ function bestsOn(exercise: ExerciseHistory, measure: ExerciseMeasure): Set<strin
 /** Whether the chart on `measure` can mark records, so whether it needs the Record key. */
 export function hasRecordDots(exercise: ExerciseHistory, measure: ExerciseMeasure): boolean {
   return measure === 'oneRepMax' || (measure === 'heaviest' && exercise.blueprint.resistance === 'external');
-}
-
-function changeOver(
-  sessions: readonly ExerciseSession[],
-  raw: readonly Weight[],
-  measure: ExerciseMeasure,
-  unit: WeightUnit,
-): number | undefined {
-  if (sessions.length < 2) {
-    return undefined;
-  }
-  const kind = KIND_OF[measure];
-  const first = raw[0];
-  const last = raw.at(-1);
-  if (kind && first && last) {
-    return shownChange(last, first, kind, unit).change.value.toNumber();
-  }
-  return sessions.at(-1)!.value - sessions[0]!.value;
 }
 
 /** The latest {@link RECENT_SESSIONS_SHOWN} of the chart's workouts, newest first. */

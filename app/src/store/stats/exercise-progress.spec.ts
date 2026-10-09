@@ -224,8 +224,8 @@ describe('exerciseChartOf', () => {
       exerciseChartOf(mixed, mixed.exercises.get(bench.movementKey())!, 'heaviest', undefined, 'pounds'),
     ).toMatchObject({
       sessions: [
-        { value: 137.8, rowValue: 137.8 },
-        { value: 137.9, rowValue: 137.9 },
+        { value: 137.8, rowValue: 137.8, set: { weight: new Weight(137.8, 'pounds'), reps: 5 } },
+        { value: 137.9, rowValue: 137.9, set: { weight: new Weight(137.9, 'pounds'), reps: 5 } },
       ],
       change: 0.1,
     });
@@ -241,8 +241,8 @@ describe('exerciseChartOf', () => {
       exerciseChartOf(mixed, mixed.exercises.get(bench.movementKey())!, 'heaviest', undefined, 'pounds'),
     ).toMatchObject({
       sessions: [
-        { value: 137.9, rowValue: 137.9 },
-        { value: 137.8, rowValue: 137.8 },
+        { value: 137.9, rowValue: 137.9, set: { weight: new Weight(137.9, 'pounds'), reps: 5 } },
+        { value: 137.8, rowValue: 137.8, set: { weight: new Weight(137.8, 'pounds'), reps: 5 } },
       ],
       change: -0.1,
     });
