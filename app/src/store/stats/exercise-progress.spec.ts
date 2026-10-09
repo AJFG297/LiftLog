@@ -3,7 +3,7 @@ import { LocalDate, OffsetDateTime } from '@js-joda/core';
 import { SessionBlueprint, WeightedExerciseBlueprint } from '@/models/blueprint-models';
 import { makeWeightedBlueprint } from '@/models/session-models/__test__/helpers';
 import { PotentialSet, RecordedSet, RecordedWeightedExercise, Session } from '@/models/session-models';
-import { Weight } from '@/models/weight';
+import { Weight, WeightUnit } from '@/models/weight';
 import {
   defaultRangeOf,
   exerciseChartOf,
@@ -23,23 +23,29 @@ const bench = makeWeightedBlueprint({ name: 'Bench' });
 const pushUp = makeWeightedBlueprint({ name: 'Push-up', resistance: 'none' });
 const dip = makeWeightedBlueprint({ name: 'Dip', resistance: 'bodyweight' });
 
-function set(weight: number, reps: number) {
+function set(weight: number, reps: number, unit: WeightUnit = 'kilograms') {
   return PotentialSet.of({
     set: RecordedSet.of({ repsCompleted: reps, completionDateTime: time }),
-    weight: kg(weight),
+    weight: new Weight(weight, unit),
     target: { min: reps, max: reps },
     kind: 'working',
   });
 }
 
-function session(date: LocalDate, blueprint: WeightedExerciseBlueprint, sets: [number, number][], bodyweight?: number) {
+function session(
+  date: LocalDate,
+  blueprint: WeightedExerciseBlueprint,
+  sets: [number, number][],
+  bodyweight?: number,
+  unit: WeightUnit = 'kilograms',
+) {
   return new Session(
     `w-${date.toString()}`,
     new SessionBlueprint('Day', [], ''),
     [
       new RecordedWeightedExercise(
         blueprint,
-        sets.map(([w, r]) => set(w, r)),
+        sets.map(([w, r]) => set(w, r, unit)),
         undefined,
       ),
     ],
@@ -175,17 +181,71 @@ describe('exerciseChartOf', () => {
     expect(chartOf('oneRepMax', day(9, 20)).change).toBeUndefined();
   });
 
-  it('refines a volume change the whole numbers would hide, as every change on Progress is', () => {
-    const volumeOf = (sets: [number, number][]) => {
-      const tiny = buildProgressHistory([session(day(9, 1), bench, [[60, 5]]), session(day(9, 8), bench, sets)]);
-      return exerciseChartOf(tiny, tiny.exercises.get(bench.movementKey())!, 'volume', undefined, 'kilograms');
-    };
+  it.each([
+    ['gain', 60.08, 300.4, 0.4],
+    ['fall', 59.92, 299.6, -0.4],
+    ['same', 60, 300, 0],
+    ['usual gain', 62, 310, 10],
+  ])('shows a volume %s consistently on the chart and in Last times', (_, weight, volume, change) => {
+    const tiny = buildProgressHistory([session(day(9, 1), bench, [[60, 5]]), session(day(9, 8), bench, [[weight, 5]])]);
 
-    // 300 against 300.4: both read 300, so the change shows a place finer rather than "Same".
-    expect(volumeOf([[60.08, 5]])).toMatchObject({ sessions: [{ value: 300 }, { value: 300 }], change: 0.4 });
-    expect(volumeOf([[59.92, 5]]).change).toBe(-0.4);
-    expect(volumeOf([[60, 5]]).change).toBe(0);
-    expect(volumeOf([[62, 5]]).change).toBe(10);
+    expect(
+      exerciseChartOf(tiny, tiny.exercises.get(bench.movementKey())!, 'volume', undefined, 'kilograms'),
+    ).toMatchObject({
+      sessions: [
+        { value: 300, volume: 300 },
+        { value: volume, volume },
+      ],
+      change,
+    });
+  });
+
+  it('shows a tiny estimate gain on the chart and in Last times', () => {
+    const tiny = buildProgressHistory([session(day(9, 1), bench, [[60, 5]]), session(day(9, 8), bench, [[60.02, 5]])]);
+
+    expect(
+      exerciseChartOf(tiny, tiny.exercises.get(bench.movementKey())!, 'oneRepMax', undefined, 'kilograms'),
+    ).toMatchObject({
+      sessions: [
+        { value: 70, rowValue: 70 },
+        { value: 70.02, rowValue: 70.02 },
+      ],
+      change: 0.02,
+    });
+  });
+
+  it('keeps a converted load gain from reading as a fall at the chart endpoints', () => {
+    const mixed = buildProgressHistory([
+      session(day(9, 1), bench, [[62.5, 5]]),
+      session(day(9, 8), bench, [[137.9, 5]], undefined, 'pounds'),
+    ]);
+
+    expect(
+      exerciseChartOf(mixed, mixed.exercises.get(bench.movementKey())!, 'heaviest', undefined, 'pounds'),
+    ).toMatchObject({
+      sessions: [
+        { value: 137.8, rowValue: 137.8 },
+        { value: 137.9, rowValue: 137.9 },
+      ],
+      change: 0.1,
+    });
+  });
+
+  it('keeps a converted load fall from reading as a gain at the chart endpoints', () => {
+    const mixed = buildProgressHistory([
+      session(day(9, 1), bench, [[137.9, 5]], undefined, 'pounds'),
+      session(day(9, 8), bench, [[62.5, 5]]),
+    ]);
+
+    expect(
+      exerciseChartOf(mixed, mixed.exercises.get(bench.movementKey())!, 'heaviest', undefined, 'pounds'),
+    ).toMatchObject({
+      sessions: [
+        { value: 137.9, rowValue: 137.9 },
+        { value: 137.8, rowValue: 137.8 },
+      ],
+      change: -0.1,
+    });
   });
 
   it('tags the workouts where the record ledger set a record', () => {
