@@ -12,8 +12,8 @@ import ExerciseNotesDisplay from '@/components/presentation/workout/exercise-not
 import RecordedExerciseNotesEditor from '@/components/presentation/workout/recorded-exercise-notes-editor';
 import IconButton from '@/components/presentation/foundation/icon-button';
 import { useRouter } from 'expo-router';
+import { useOpenExerciseProgress } from '@/hooks/useOpenExerciseProgress';
 import { getExerciseHistoryHref } from '@/components/smart/exercise-history';
-import { getExerciseStatsHref } from '@/components/smart/exercise-stats-href';
 import { Updater } from '@/utils/types';
 
 interface ExerciseSectionProps<T extends RecordedExercise> {
@@ -39,6 +39,7 @@ export default function ExerciseSection<T extends RecordedExercise>(props: Exerc
   const { updateExercise, onRemoveExercise } = props;
   const { t } = useTranslate();
   const { push } = useRouter();
+  const openExerciseProgress = useOpenExerciseProgress();
   const { recordedExercise } = props;
   const [notesDialogOpen, setNotesDialogOpen] = useState(false);
   const [removeExerciseDialogOpen, setRemoveExerciseDialogOpen] = useState(false);
@@ -90,11 +91,10 @@ export default function ExerciseSection<T extends RecordedExercise>(props: Exerc
           ...(showStats
             ? [
                 {
-                  label: t('stats.stats.title'),
-                  icon: 'analytics',
-                  systemImage: 'chart.bar',
-                  onPress: () =>
-                    push(getExerciseStatsHref(recordedExercise.blueprint.exerciseId), { withAnchor: true }),
+                  label: t('progress.exercise.view_progress.button'),
+                  icon: 'trendingUp',
+                  systemImage: 'chart.line.uptrend.xyaxis',
+                  onPress: () => openExerciseProgress(recordedExercise.blueprint.exerciseId),
                 } satisfies MenuItem,
               ]
             : []),

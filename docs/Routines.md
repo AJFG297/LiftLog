@@ -98,8 +98,9 @@ The draft also keeps one key per exercise, so an open card stays open while exer
 - **Exercise cards**, collapsed to a summary ("1 warm-up + 4 × 5 · 87.5 kg · rest 2:30") and a progression
   tag. Exercises from the picker land in the order they were tapped, linked when picked As superset, each
   3 × 10 with 1:30 rest and no rules. The first of them opens expanded.
-- Expanded, a card has the **set rows**, **rest**, **progression**, More options, and Move up, Move down,
-  Superset or Unlink, and Remove (with an Undo toast).
+- Expanded, a card has the **set rows**, **rest**, **progression**, View progress (a weighted exercise's
+  [progress page](./Progress.md#the-exercise-page); the card's header already opens and closes it, so the name
+  can't), More options, and Move up, Move down, Superset or Unlink, and Remove (with an Undo toast).
 - The **Ask AI to change this routine** bar is built but hidden (`ASK_AI_BAR_ENABLED` in `ask-ai-bar.tsx`)
   until the AI routine builder (PM-33) lands.
 

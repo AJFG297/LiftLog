@@ -1,4 +1,5 @@
 import { LocalDate } from '@js-joda/core';
+import { roundGridStep } from '@/components/presentation/stats/geometry/grid-step';
 import { linePath } from '@/components/presentation/stats/geometry/line-path';
 import type { BodyChartPoint } from '@/store/stats/progress-body';
 
@@ -8,7 +9,9 @@ const DATE_HEIGHT = 26;
 const LEFT = 4;
 const TOP = 10;
 const MAX_GRID_LINES = 5;
-const GRID_STEPS = [0.5, 1, 2, 5, 10, 20, 50];
+/** Steps of 1, 2 or 5 times a power of ten, from half a unit. */
+const GRID_STEP_MANTISSAS = [1, 2, 5] as const;
+const MIN_GRID_STEP = 0.5;
 
 export interface BodyChartGeometry {
   path: string;
@@ -49,7 +52,10 @@ export function bodyChartGeometry(
   const yOf = (weight: number) => bottom - ((weight - lowest) / (highest - lowest)) * (bottom - TOP);
 
   const span = highest - lowest;
-  const step = GRID_STEPS.find((candidate) => Math.floor(span / candidate) + 1 <= MAX_GRID_LINES) ?? 100;
+  const step = roundGridStep((candidate) => Math.floor(span / candidate) + 1 <= MAX_GRID_LINES, {
+    mantissas: GRID_STEP_MANTISSAS,
+    min: MIN_GRID_STEP,
+  });
   const grid: { y: number; value: number }[] = [];
   for (let value = Math.ceil(lowest / step) * step; value <= highest; value += step) {
     grid.push({ y: yOf(value), value });

@@ -1,0 +1,345 @@
+import { LocalDate } from '@js-joda/core';
+import { MovementKey } from '@/models/blueprint-models';
+import { Weight, WeightUnit } from '@/models/weight';
+import { heaviestSetOf } from '@/store/stats/personal-records';
+import { AmountKind, shownChange, shownWeight } from '@/store/stats/progress-amounts';
+import { axisOf, ExerciseHistory, ExercisePoint, LiftedSet, ProgressHistory } from '@/store/stats/progress-history';
+import { newestWorkoutFirst, RecordListRow, recordListRowOf } from '@/store/stats/records-list';
+
+/**
+ * What the exercise page charts. A movement that tracks load reads its estimated 1RM, its heaviest set and the
+ * volume of each workout; one that tracks no load reads the most reps in a set and the reps in all.
+ */
+export type ExerciseMeasure = 'oneRepMax' | 'heaviest' | 'volume' | 'mostReps' | 'totalReps';
+/** The measures one exercise offers: two or three. */
+export type ExerciseMeasures =
+  | readonly [ExerciseMeasure, ExerciseMeasure]
+  | readonly [ExerciseMeasure, ExerciseMeasure, ExerciseMeasure];
+
+/** What a Last times row closes on (see {@link ExerciseSession.rowValue}). */
+export type RowValueKind = 'oneRepMax' | 'heaviest' | 'mostReps';
+
+export const EXERCISE_RANGES = ['3m', '6m', '1y', 'all'] as const;
+export type ExerciseRange = (typeof EXERCISE_RANGES)[number];
+
+const RANGE_MONTHS: Record<Exclude<ExerciseRange, 'all'>, number> = { '3m': 3, '6m': 6, '1y': 12 };
+
+/** How many sessions Last times lists, and how many records the timeline shows. */
+export const RECENT_SESSIONS_SHOWN = 5;
+export const EXERCISE_RECORDS_SHOWN = 4;
+/** The rep counts Best weight by reps has a column for. */
+export const REP_BEST_COUNTS = [5, 6, 7, 8] as const;
+
+/** The first day `range` covers, counting back from `today`; undefined for all of it. */
+export function rangeStart(range: ExerciseRange, today: LocalDate): LocalDate | undefined {
+  return range === 'all' ? undefined : today.minusMonths(RANGE_MONTHS[range]);
+}
+
+/**
+ * The range the page opens on: the shortest that holds at least two workouts, so there is a trend to read,
+ * else all of them. Someone who last did a lift in the spring doesn't open on an empty chart.
+ */
+export function defaultRangeOf(exercise: ExerciseHistory, today: LocalDate): ExerciseRange {
+  return (
+    EXERCISE_RANGES.find((range) => {
+      const start = rangeStart(range, today);
+      return !start || exercise.points.filter((point) => !point.date.isBefore(start)).length >= 2;
+    }) ?? 'all'
+  );
+}
+
+/**
+ * The measures the switch offers, the first being the default: reps on the reps axis (see {@link axisOf}).
+ * Heaviest needs a weight on the bar: a bodyweight movement that never had any added has nothing to chart there.
+ */
+export function measuresOf(exercise: ExerciseHistory): ExerciseMeasures {
+  if (axisOf(exercise) === 'reps') {
+    return ['mostReps', 'totalReps'];
+  }
+  return hasLoadOnTheBar(exercise) ? ['oneRepMax', 'heaviest', 'volume'] : ['oneRepMax', 'volume'];
+}
+
+function hasLoadOnTheBar(exercise: ExerciseHistory): boolean {
+  return (
+    exercise.blueprint.resistance === 'external' ||
+    exercise.points.some((point) => point.sets.some((set) => !set.weight.value.isZero()))
+  );
+}
+
+/** A set as shown: the weight as lifted, in the user's unit (undefined for a movement that tracks no load). */
+export interface ShownSet {
+  weight: Weight | undefined;
+  reps: number;
+}
+
+/** One workout that did the exercise, on a measure. Amounts are in the user's unit and rounded as shown. */
+export interface ExerciseSession {
+  workoutId: string;
+  date: LocalDate;
+  /** Its value on the measure, as shown. */
+  value: number;
+  /** A new best on the measure, against every earlier workout: a dot on the chart. */
+  best: boolean;
+  /** The set behind the value: the estimate's set, or the heaviest set. On volume it is the estimate's set. */
+  set: ShownSet | undefined;
+  /**
+   * The figure its Last times row closes on: the heaviest weight on Heaviest, the estimated 1RM on the other
+   * measures (volume is already in the row), or the most reps for a movement that tracks no load.
+   */
+  rowValue: number | undefined;
+  /** Sets that count towards volume. */
+  sets: number;
+  /** The volume to the whole in the user's unit, or the reps in all for a movement that tracks no load. */
+  volume: number;
+  /** The record ledger set a record for the exercise in this workout: the PR tag. */
+  record: boolean;
+}
+
+export interface ExerciseChart {
+  measure: ExerciseMeasure;
+  /** What every session's `rowValue` is. */
+  rowValue: RowValueKind;
+  /** The workouts in the range with a value on the measure, oldest first. */
+  sessions: ExerciseSession[];
+  /** The last value less the first, as shown; undefined with fewer than two. */
+  change: number | undefined;
+  /** Index into `sessions` of the one picked: the one asked for while it is in range, else the latest. */
+  selected: number | undefined;
+}
+
+/**
+ * The exercise's workouts on `measure` since `since` (all of them when undefined), what each shows, and the
+ * change over them. `selectedWorkoutId` keeps a pick across a change of range or measure while it is still
+ * there.
+ */
+export function exerciseChartOf(
+  history: ProgressHistory,
+  exercise: ExerciseHistory,
+  measure: ExerciseMeasure,
+  since: LocalDate | undefined,
+  unit: WeightUnit,
+  selectedWorkoutId?: string,
+): ExerciseChart {
+  const recordWorkouts = new Set(
+    history.records.filter(({ record }) => record.key === exercise.key).map(({ workoutId }) => workoutId),
+  );
+  const bests = bestsOn(exercise, measure);
+  const sessions: ExerciseSession[] = [];
+  const raw: Weight[] = [];
+  for (const point of exercise.points) {
+    if (since && point.date.isBefore(since)) {
+      continue;
+    }
+    const value = rawValueOf(point, measure);
+    if (value === undefined) {
+      continue;
+    }
+    if (value instanceof Weight) {
+      raw.push(value);
+    }
+    sessions.push(sessionOf(point, measure, value, unit, bests.has(point.workoutId), recordWorkouts));
+  }
+  const rowValue = rowValueKindOf(measure);
+  const firstSession = sessions[0];
+  const lastSession = sessions.at(-1);
+  let change: number | undefined;
+  if (sessions.length >= 2 && firstSession && lastSession) {
+    const kind = KIND_OF[measure];
+    const first = raw[0];
+    const last = raw.at(-1);
+    if (kind && first && last) {
+      const shown = shownChange(last, first, kind, unit);
+      firstSession.value = shown.previous.value.toNumber();
+      lastSession.value = shown.value.value.toNumber();
+      if (measure === 'heaviest') {
+        if (firstSession.set) {
+          firstSession.set.weight = shown.previous;
+        }
+        if (lastSession.set) {
+          lastSession.set.weight = shown.value;
+        }
+      }
+      for (const session of [firstSession, lastSession]) {
+        if (rowValue === measure) {
+          session.rowValue = session.value;
+        }
+        if (measure === 'volume') {
+          session.volume = session.value;
+        }
+      }
+      change = shown.change.value.toNumber();
+    } else {
+      change = lastSession.value - firstSession.value;
+    }
+  }
+  const selectedIndex = sessions.findIndex((session) => session.workoutId === selectedWorkoutId);
+  return {
+    measure,
+    rowValue,
+    sessions,
+    change,
+    selected: sessions.length ? (selectedIndex >= 0 ? selectedIndex : sessions.length - 1) : undefined,
+  };
+}
+
+/** A weight, or a count for volume and reps. Undefined when the workout has nothing on the measure. */
+function rawValueOf(point: ExercisePoint, measure: ExerciseMeasure): Weight | number | undefined {
+  switch (measure) {
+    case 'oneRepMax':
+      return point.oneRepMax;
+    case 'heaviest':
+      return heaviestSetOf(point.sets)?.weight;
+    case 'volume':
+      // Zero only when nothing was lifted (a bodyweight movement logged without a bodyweight): no value, like the estimate.
+      return point.workingSets && !point.volume.value.isZero() ? point.volume : undefined;
+    case 'mostReps':
+      return point.bestReps || undefined;
+    case 'totalReps':
+      return point.totalReps || undefined;
+  }
+}
+
+const KIND_OF: Partial<Record<ExerciseMeasure, AmountKind>> = {
+  oneRepMax: 'estimate',
+  heaviest: 'load',
+  volume: 'volume',
+};
+
+function shownNumber(value: Weight | number, measure: ExerciseMeasure, unit: WeightUnit): number {
+  if (typeof value === 'number') {
+    return value;
+  }
+  const kind = KIND_OF[measure];
+  return kind ? shownWeight(value, kind, unit).value.toNumber() : value.convertTo(unit).value.toNumber();
+}
+
+function sessionOf(
+  point: ExercisePoint,
+  measure: ExerciseMeasure,
+  value: Weight | number,
+  unit: WeightUnit,
+  best: boolean,
+  recordWorkouts: ReadonlySet<string>,
+): ExerciseSession {
+  const kind = rowValueKindOf(measure);
+  const reps = kind === 'mostReps';
+  const heaviest = heaviestSetOf(point.sets);
+  const set = reps
+    ? { weight: undefined, reps: point.bestReps }
+    : kind === 'heaviest'
+      ? heaviest && shownSet(heaviest, unit)
+      : point.oneRepMaxSet && shownSet(point.oneRepMaxSet, unit);
+  const rowValue = reps
+    ? point.bestReps
+    : kind === 'heaviest'
+      ? heaviest && shownWeight(heaviest.weight, 'load', unit).value.toNumber()
+      : point.oneRepMax && shownWeight(point.oneRepMax, 'estimate', unit).value.toNumber();
+  return {
+    workoutId: point.workoutId,
+    date: point.date,
+    value: shownNumber(value, measure, unit),
+    best,
+    set,
+    rowValue,
+    sets: point.workingSets,
+    volume: reps ? point.totalReps : shownWeight(point.volume, 'volume', unit).value.toNumber(),
+    record: recordWorkouts.has(point.workoutId),
+  };
+}
+
+/** Volume's row closes on the estimate, since the volume is in the row already. */
+function rowValueKindOf(measure: ExerciseMeasure): RowValueKind {
+  switch (measure) {
+    case 'mostReps':
+    case 'totalReps':
+      return 'mostReps';
+    case 'heaviest':
+      return 'heaviest';
+    case 'oneRepMax':
+    case 'volume':
+      return 'oneRepMax';
+  }
+}
+
+function shownSet(set: LiftedSet, unit: WeightUnit): ShownSet {
+  return { weight: shownWeight(set.weight, 'load', unit), reps: set.reps };
+}
+
+/**
+ * The workouts that beat every earlier one on `measure`, over the whole history so a dot means the same in any
+ * range; never the first. Estimated 1RM marks a better estimate whatever else the workout set, and Heaviest a
+ * heavier weight on an externally loaded exercise, the record ledger's heaviest-weight rule. Volume and reps
+ * have no records, so no dots.
+ */
+function bestsOn(exercise: ExerciseHistory, measure: ExerciseMeasure): Set<string> {
+  const bests = new Set<string>();
+  if (!hasRecordDots(exercise, measure)) {
+    return bests;
+  }
+  const read =
+    measure === 'oneRepMax'
+      ? (point: ExercisePoint) => point.oneRepMax
+      : (point: ExercisePoint) => heaviestSetOf(point.sets)?.weight;
+  let best: Weight | undefined;
+  for (const point of exercise.points) {
+    const value = read(point);
+    if (!value) {
+      continue;
+    }
+    if (best && value.isGreaterThan(best)) {
+      bests.add(point.workoutId);
+    }
+    if (!best || value.isGreaterThan(best)) {
+      best = value;
+    }
+  }
+  return bests;
+}
+
+/** Whether the chart on `measure` can mark records, so whether it needs the Record key. */
+export function hasRecordDots(exercise: ExerciseHistory, measure: ExerciseMeasure): boolean {
+  return measure === 'oneRepMax' || (measure === 'heaviest' && exercise.blueprint.resistance === 'external');
+}
+
+/** The latest {@link RECENT_SESSIONS_SHOWN} of the chart's workouts, newest first. */
+export function recentSessionsOf(chart: ExerciseChart): ExerciseSession[] {
+  return chart.sessions.slice(-RECENT_SESSIONS_SHOWN).reverse();
+}
+
+/** The heaviest weight lifted for at least `reps` reps, as shown, and the first workout that lifted it. */
+export interface RepBest {
+  reps: number;
+  weight: Weight | undefined;
+  date: LocalDate | undefined;
+}
+
+/**
+ * Best weight by reps over the whole history, one per {@link REP_BEST_COUNTS}: the heaviest set of at least
+ * that many reps, dated by the first workout that did it. Only for an externally loaded exercise: a bodyweight
+ * movement's sets hold only what was added, which says little on its own, and a no-load one has no weight.
+ */
+export function repBestsOf(exercise: ExerciseHistory, unit: WeightUnit): RepBest[] | undefined {
+  if (exercise.blueprint.resistance !== 'external') {
+    return undefined;
+  }
+  return REP_BEST_COUNTS.map((reps) => {
+    let weight: Weight | undefined;
+    let date: LocalDate | undefined;
+    for (const point of exercise.points) {
+      for (const set of point.sets) {
+        if (set.reps >= reps && (!weight || set.weight.isGreaterThan(weight))) {
+          weight = set.weight;
+          date = point.date;
+        }
+      }
+    }
+    return { reps, weight: weight && shownWeight(weight, 'load', unit), date };
+  });
+}
+
+/** The exercise's latest {@link EXERCISE_RECORDS_SHOWN} records, newest first, as the Records list shows them. */
+export function exerciseRecordsOf(history: ProgressHistory, key: MovementKey, unit: WeightUnit): RecordListRow[] {
+  return newestWorkoutFirst(history.records.filter(({ record }) => record.key === key))
+    .slice(0, EXERCISE_RECORDS_SHOWN)
+    .map((dated) => recordListRowOf(history, dated, unit));
+}

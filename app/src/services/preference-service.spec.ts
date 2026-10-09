@@ -188,6 +188,26 @@ describe('PreferenceService - progressTab', () => {
   });
 });
 
+// ─── pinnedLifts ──────────────────────────────────────────────────────────────
+
+describe('PreferenceService - pinnedLifts', () => {
+  it('defaults to none when unset or not a list of ids', async () => {
+    expect(await makeService().service.getPreference('pinnedLifts')).toEqual([]);
+    expect(await makeService({ pinnedLifts: 'garbage' }).service.getPreference('pinnedLifts')).toEqual([]);
+    expect(await makeService({ pinnedLifts: '[1, 2]' }).service.getPreference('pinnedLifts')).toEqual([]);
+  });
+
+  it('round-trips the ids as JSON, in pin order', async () => {
+    const { service, store } = makeService();
+    await service.setPreference('pinnedLifts', ['squat', 'bench']);
+    expect(store.setItem).toHaveBeenCalledWith('pinnedLifts', '["squat","bench"]');
+    expect(await makeService({ pinnedLifts: '["squat","bench"]' }).service.getPreference('pinnedLifts')).toEqual([
+      'squat',
+      'bench',
+    ]);
+  });
+});
+
 // ─── firstDayOfWeek ───────────────────────────────────────────────────────────
 
 describe('PreferenceService - firstDayOfWeek', () => {

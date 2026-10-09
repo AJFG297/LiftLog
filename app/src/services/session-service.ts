@@ -1,7 +1,8 @@
-import { ProgressionKey, SessionBlueprint, lineageKeys } from '@/models/blueprint-models';
+import { SessionBlueprint } from '@/models/blueprint-models';
 import { WeightUnit } from '@/models/weight';
-import { RecordedExercise, Session } from '@/models/session-models';
-import { LatestByLineage, nextRecordedExercise } from '@/models/session-models/carry-over';
+import { Session } from '@/models/session-models';
+import type { LatestByLineage } from '@/models/session-models/carry-over';
+import { nextSessionExercises } from '@/models/session-models/next-exercise';
 import { repeatBlueprint } from '@/models/workout-detail';
 import type { WorkoutRepository } from '@/services/workout-repository';
 import type { RootState } from '@/store';
@@ -20,7 +21,7 @@ export class SessionService {
 
   async *getUpcomingSessions(
     sessionBlueprints: SessionBlueprint[],
-    latestExercises: Record<ProgressionKey, RecordedExercise | undefined>,
+    latestExercises: LatestByLineage,
   ): AsyncIterableIterator<Session> {
     const currentState = this.getState();
     const currentSession = selectActiveSession(currentState);
@@ -55,10 +56,7 @@ export class SessionService {
     }
   }
 
-  public hydrateSessionFromBlueprint(
-    blueprint: SessionBlueprint,
-    latestExercises: Record<ProgressionKey, RecordedExercise | undefined>,
-  ): Session {
+  public hydrateSessionFromBlueprint(blueprint: SessionBlueprint, latestExercises: LatestByLineage): Session {
     return this.createNewSession(blueprint, latestExercises);
   }
 
@@ -74,14 +72,10 @@ export class SessionService {
   }
 
   private createNewSession(sessionBlueprint: SessionBlueprint, latestRecordedExercises: LatestByLineage): Session {
-    const lineages = lineageKeys(sessionBlueprint.exercises);
-    const unit = this.getDefaultWeightUnit();
     return new Session(
       uuid(),
       sessionBlueprint,
-      sessionBlueprint.exercises.map((e, index) =>
-        nextRecordedExercise(e, lineages[index]!, latestRecordedExercises, unit),
-      ),
+      nextSessionExercises(sessionBlueprint, latestRecordedExercises, this.getDefaultWeightUnit()),
       LocalDate.now(),
       undefined,
       undefined,

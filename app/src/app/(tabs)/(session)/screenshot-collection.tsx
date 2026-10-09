@@ -1,5 +1,5 @@
 import { useMountEffect } from '@/hooks/useMountEffect';
-import { getExerciseStatsHref } from '@/components/smart/exercise-stats-href';
+import { exerciseProgressHref } from '@/components/smart/exercise-progress-href';
 import {
   ProgressionRule,
   SessionBlueprint,
@@ -266,7 +266,7 @@ function PrepareStatsPage() {
 function PrepareExerciseStatsPage() {
   const dispatch = useDispatch();
   useMountEffect(() => buildStatsSessionData(dispatch));
-  return <Redirect href={getExerciseStatsHref(stubExerciseId('Bench Press'))} />;
+  return <Redirect href={exerciseProgressHref(stubExerciseId('Bench Press'))} />;
 }
 
 function PrepareHomePage() {

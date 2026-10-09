@@ -1,8 +1,8 @@
 # Progress
 
-The Progress tab (`app/src/app/(tabs)/stats/`) and the screens it opens: Records and All exercises. They all
-read one model of the finished history, built in a single walk over it. This doc covers that model first,
-then each screen.
+The Progress tab (`app/src/app/(tabs)/stats/`) and the screens it opens: Records, All exercises and the
+exercise page. They all read one model of the finished history, built in a single walk over it. This doc covers
+that model first, then each screen.
 
 ## The history model
 
@@ -17,11 +17,18 @@ then each screen.
     movement twice gives one point.
     - `oneRepMax`: the best Epley estimate over the sets that count towards records (working and failure),
       with bodyweight folded in as records fold it: the same scan as the record rules
-      (`bestOneRepMaxSet`). Undefined for a movement that tracks no load, and when
-      only drop or myo sets were logged.
+      (`bestOneRepMaxSet`). Undefined for a movement that tracks no load, when
+      only drop or myo sets were logged, and when the estimate is zero: a bodyweight movement logged with no
+      bodyweight and nothing added has no load to estimate from. So that workout charts nothing rather than
+      0 kg, and the first workout with a load starts the record bests instead of beating a zero.
     - `bestReps`: the most reps in one of those sets, 0 if none: the axis of a movement that tracks no load.
     - `workingSets`: logged sets that count towards volume (every kind but warm-ups), as Stats' sets per
       week counts them.
+    - `oneRepMaxSet`: the set `oneRepMax` comes from, as lifted.
+    - `sets`: every logged set that counts towards records, as lifted (`LiftedSet`: weight and reps). The
+      exercise page reads its heaviest set and best weight by reps from them.
+    - `volume`: load times reps over the sets that count towards volume, bodyweight folded in;
+      `Weight.NIL` for a movement that tracks no load. `totalReps`: the reps over those sets.
 - `records`: every record ever set (`SessionRecord`, see below), oldest first and in exercise order within a
   workout, each with the `workoutId` and `date` of the workout that set it.
 - `workouts`: one `WorkoutPoint` (id, date, bodyweight) per started workout, cardio-only ones included, for
@@ -83,14 +90,14 @@ The screen calls `useProgressHistory()` once. Every number comes from pure funct
 file per part, and the components in `components/presentation/stats/progress/` only format and draw them. What
 the Records and All exercises lists share with the tab sits one folder up, in `components/presentation/stats/`:
 `list-parts.tsx` (`ListCard`, `useRowDivider`, `useToneColor`, `ListEmptyLine`, and the list pages' `ListPageTitle`
-and `ListEmptyState`), `amount-format.ts` (`amountText`, `signedText`, `signedAmount`) and `amount-text.tsx`
-(`AmountText`). A change's direction is one `ChangeTone` (`gain`, `fall`, `none`, from `toneOf` in
+and `ListEmptyState`), `amount-format.ts` (`amountText`, `weightText`, `signedText`, `signedAmount`),
+`record-text.ts` (`recordKindLabel`) and `amount-text.tsx` (`AmountText`). A change's direction is one `ChangeTone` (`gain`, `fall`, `none`, from `toneOf` in
 `progress-amounts.ts`) on every screen.
 
 | File | Gives |
 | --- | --- |
 | `progress-tab.ts` | The tabs, the range table, and `progressPeriod`: the weeks a range covers. |
-| `progress-strength.ts` | `mostTrainedLifts` and `recentRecords`. |
+| `progress-strength.ts` | `strengthLifts` (pinned lifts first, then the most trained) and `recentRecords`. |
 | `progress-training.ts` | `buildWeeklyTable`, then `trainingView` over it. |
 | `progress-body.ts` | `weighInsOf` and `bodyView`. |
 | `progress-amounts.ts` | How a weight reads: `shownWeight` and `shownChange` (below). |
@@ -103,6 +110,7 @@ reads the same on Strength and on Records:
 - An estimated 1RM (`'estimate'`) shows in the user's unit to the nearest half: "104.5 kg".
 - A weight that was on the bar (`'load'`) shows as lifted, to at most two places, in the unit it was lifted in.
   Converted to the other unit, it shows to the nearest half too: 62.5 kg reads "138 lbs", not "137.79".
+- A workout's volume (`'volume'`) shows to the whole of the user's unit: "840 kg".
 - A gain or a change is always the difference of the two values as shown (`shownChange`), so a row adds up as
   it reads. When the two would show alike although they differ, a real but tiny gain, both show a place finer,
   to a tenth and then a hundredth, and the gain reads "+0.1" or "+0.03" rather than "+0".
@@ -126,13 +134,22 @@ hold no history.
 
 - **Lifts**: the 4 movements done in the most workouts in the range (ties to the one done last, then by
   name), each with its latest estimated 1RM (best reps for a movement that tracks no load), the change over
-  the range from `progressSince` as shown, the session count and a `Sparkline` of the range. There is no pinning yet.
+  the range from `progressSince` as shown, the session count and a `Sparkline` of the range.
+- **Pinned lifts** come first: the `pinnedLifts` preference (exercise ids, in the order pinned, stored as JSON;
+  set from the exercise page's Pin to Progress). The most-trained lifts fill the rest up to 4. A pinned lift always
+  shows, with nothing in the range (a dash and no sparkline) and past 4 too: pinning a fifth lift never drops one the
+  user asked for, the most-trained ones make room instead. A pinned row has a pin after its name, and the subtitle
+  says the list starts with pinned lifts. `strengthLifts(history, since, unit, pinned)` is in `progress-strength.ts`,
+  and `togglePinned` beside the preference in `store/settings/pinned-lifts.ts`.
+  Pins are a preference, so like every preference they are not in backups and a restore doesn't carry them: restoring
+  onto a new install starts with none. The stored ids are never rewritten, so one that no longer resolves to a
+  history (never logged, merged away into another exercise, or missing from a restored history) is skipped rather
+  than shown.
 - **Recent records**: the newest 3 records, whatever the range: the first three rows of the Records list, built
   by the same `recordListRowOf`, with the gain over what each beat. A heaviest record shows its set; an
   estimated-1RM one shows the set the estimate comes from.
-- Lift and record rows open the expanded exercise view over all time (`useOpenExerciseStats`), since it
-  otherwise covers only its own period and an older lift would open on "no data". All exercises and See all
-  open `/stats/exercises` and `/stats/records`.
+- Lift and record rows open the [exercise page](#the-exercise-page) (`useOpenExerciseProgress`). All exercises
+  and See all open `/stats/exercises` and `/stats/records`.
 
 ### Training
 
@@ -170,8 +187,10 @@ muscle says the same rather than that there are no sets.
 
 Both are pushed from the Progress tab (`stats/records`, `stats/exercises`) and draw their own title under the
 native header's back button (`ListPageTitle`). Each calls `useProgressHistory()` once and hands it to a pure
-function that returns what the screen draws; a row opens the exercise's stats over all time
-(`useOpenExerciseStats`). They share the tab's list pieces (`list-parts.tsx`, `amount-format.ts`, `AmountText`)
+function that returns what the screen draws; a row opens the [exercise page](#the-exercise-page)
+(`useOpenExerciseProgress`). Records is `RecordsScreen` (`components/smart/records-screen.tsx`), routed twice: at
+`stats/records` in the tab, and at `/records` on the root stack for the exercise page's All records, so Back from
+there returns to the exercise rather than to the tab. They share the tab's list pieces (`list-parts.tsx`, `amount-format.ts`, `AmountText`)
 and its rounding (`progress-amounts.ts`), so a value reads the same on every screen.
 
 ### Records
@@ -232,3 +251,68 @@ movement in `history.exercises`: only what the user has logged.
 rows larger (an 18pt value, a 64 × 28 sparkline in `accentInk` with an end dot, a chevron) and the exercise rows
 smaller, with the sparkline coloured by the change. They share `AmountText`, `signedText`, `useToneColor` and
 `useRowDivider`.
+
+## The exercise page
+
+One weighted exercise's progress, at `/exercise-progress?exerciseId=` (`app/src/app/exercise-progress.tsx`, the
+screen in `components/smart/exercise-progress-screen.tsx`, drawn from `components/presentation/stats/exercise/`).
+It is on the root stack, over the tabs, so it opens from any tab and Back returns to the screen that opened it.
+Everything opens it through `useOpenExerciseProgress(exerciseId)`, by stable exercise id:
+
+- the Progress tab's lift and record rows, All exercises and Records;
+- a past workout's exercise names ([WorkoutDetail.md](./WorkoutDetail.md));
+- View progress in an expanded routine editor card ([Routines.md](./Routines.md)), since a tap on the card's
+  header opens and closes it;
+- View progress in the live workout's exercise menu ([LiveWorkout.md](./LiveWorkout.md)), not a tap on the name, so
+  a tap mid-set never leaves the workout.
+
+Cardio exercises have no page: none of these offer it for one. The page calls `useProgressHistory()` once; the view
+model is `store/stats/exercise-progress.ts`, and the screen only picks and formats.
+
+- **Header.** Pin to Progress (Pinned to Progress once on) at the end of the row under the native back button,
+  then the muscles (primary, then secondary, at most 3) and equipment from the catalog, then the name.
+- **Measure** (`measuresOf`): Est. 1RM · Heaviest · Volume. A movement that tracks no load (resistance None) reads
+  Most reps · Total reps instead, in reps. A bodyweight movement stays on the estimate with bodyweight folded in, as
+  on Strength, and drops Heaviest if it never had weight added. One whose history never had any load at all (no
+  bodyweight logged and nothing added) has no estimate to read, so it reads in reps like a no-load movement.
+  `axisOf` in `progress-history.ts` decides this for the page and the Progress lists alike, so a list row and
+  the page it opens agree. Workouts without a load in an otherwise loaded history are left off the estimate and
+  volume charts.
+- **Chart card** (`exerciseChartOf`): the picked workout's value, its date ("Last time, Oct 1" for the latest) and
+  the set behind it (the estimate's set, or the heaviest set on Heaviest); the change over the range, last value
+  against first, through `shownChange` like everywhere else; a line chart with round grid lines
+  (`geometry/exercise-chart-geometry.ts`, at most three gaps); the ranges 3M · 6M · 1Y · All; and, on Est. 1RM,
+  how the estimate is made. Workouts with nothing on the measure (only drop sets, say) are left out of its chart.
+  - **Record dots** (`hasRecordDots`): on Est. 1RM, every workout whose estimate beat all earlier ones; on Heaviest,
+    every heavier weight than ever on an externally loaded exercise (the ledger's heaviest-weight rule). Both are
+    judged against the whole history, so a dot doesn't move with the range, and the first workout never has one.
+    The page reads the same picks as the ledger: the estimate from `bestOneRepMaxSet` and the heaviest set from
+    `heaviestSetOf` (both in `personal-records.ts`, so one tie-break). Dots and records still differ on purpose:
+    the ledger sets at most one record per movement per workout, a heavier weight winning over a better estimate,
+    while each chart dots every new best on its own measure. So a workout that set a heaviest-weight record also
+    gets an estimate dot when its estimate was a best too. Volume and reps have none, and no Record key.
+  - **Picking**: a tap, or a horizontal drag (react-native-gesture-handler; a vertical drag still scrolls), picks
+    the nearest workout, with a selection tick. Screen readers adjust the chart a workout at a time. The pick is
+    kept by workout id across a change of measure or range while that workout is still there, else it falls back
+    to the latest.
+  - **Range**: the page opens on the shortest range that holds two workouts (`defaultRangeOf`), else All, so a lift
+    last done in the spring doesn't open on an empty chart. No workouts in the range says so in the card; a
+    single workout ever is one point with no line and a line asking for a few more.
+- **Next time** (`nextTimeOf` in `models/session-models/next-exercise.ts`): the top set the next workout will open
+  on, and why, from the first routine of the active program to come up (`program.upcomingSessions`' order, else
+  the plan's) that plans the exercise. It runs the same code session creation does and reads the reason through
+  `todaysTarget`, so it agrees with the workout's Today line. The reason is worded by the same switch as that
+  line (`targetReasonText` in `live-workout/target-text.ts`, in its `short` form). Hidden when no routine in the active program has it.
+  See [Progression.md](./Progression.md).
+- **Best weight by reps** (`repBestsOf`): the heaviest weight lifted for at least 5, 6, 7 and 8 reps over the whole
+  history, dated by the first workout that lifted it, as lifted. Only for an externally loaded exercise: a
+  bodyweight movement's sets hold only the weight added, and a no-load one has none.
+- **Last 5 times** (`recentSessionsOf`): the chart's latest five workouts, newest first: the date, the set behind
+  the value, the sets and volume, and on the right the estimated 1RM (the heaviest weight on Heaviest, most reps
+  for a no-load movement). On Volume the right shows the estimate, as the board does, since the volume is already in
+  the row. A PR tag marks a workout where the ledger set a record for the exercise. Tapping a row picks it on the
+  chart.
+- **Records** (`exerciseRecordsOf`): the exercise's latest 4 records as a timeline, the newest with the accent dot,
+  each built by `recordListRowOf` like the Records list. All records opens `/records`. Not shown for a no-load
+  movement, which sets no records.
+- **No history**: the header, the Next time card if a routine plans it, and "No sessions yet".

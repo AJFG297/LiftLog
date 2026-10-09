@@ -16,6 +16,28 @@ type Options<T extends string> =
   | readonly [SegmentedOption<T>, SegmentedOption<T>, SegmentedOption<T>]
   | readonly [SegmentedOption<T>, SegmentedOption<T>, SegmentedOption<T>, SegmentedOption<T>];
 
+/** Two to four values, in order: what a list of options is built from. */
+export type SegmentedValues<T extends string> = readonly [T, T] | readonly [T, T, T] | readonly [T, T, T, T];
+
+/**
+ * `values` as options, each labelled by `label`, for a list of values worked out at run time. `map` would lose
+ * the count the control needs; this keeps it.
+ */
+export function segmentedOptions<T extends string>(
+  values: SegmentedValues<T>,
+  label: (value: T) => string,
+): Options<T> {
+  const option = (value: T): SegmentedOption<T> => ({ value, label: label(value) });
+  switch (values.length) {
+    case 2:
+      return [option(values[0]), option(values[1])];
+    case 3:
+      return [option(values[0]), option(values[1]), option(values[2])];
+    case 4:
+      return [option(values[0]), option(values[1]), option(values[2]), option(values[3])];
+  }
+}
+
 interface SegmentedControlProps<T extends string> {
   options: Options<T>;
   value: T;

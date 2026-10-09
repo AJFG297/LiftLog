@@ -145,7 +145,10 @@ workout's own entries for an add or swap, read from the tables when an entry is 
 order (`withCarryOver`), in `app/src/store/stored-sessions/index.ts`, and the hook the screens call it
 through (`useCarryOver`) in `app/src/hooks/useCarryOver.ts`; Do again's structure (`repeatBlueprint`) in
 `app/src/models/workout-detail.ts`; session start and Do again (`repeatSession`, which reads the cache from
-the store when tapped) in `app/src/services/session-service.ts`; the editor in
+the store when tapped) in `app/src/services/session-service.ts`. Session start goes through
+`nextSessionExercises` in `app/src/models/session-models/next-exercise.ts`, which opens each exercise through
+`nextRecordedExercise`. The exercise page's Next time card uses that same carry-over function (`nextTimeOf`,
+with `todaysTarget` for the reason), so it says what the next workout will open on; the editor in
 `app/src/components/presentation/workout-editor/progressive-overload.tsx`. The stored
 `workout_exercise.progression_key` column was rewritten to the new key by the
 `REKEY_PROGRESSION_BY_EXERCISE` data migration (`app/src/services/data-migrations/rekey-progression.ts`).

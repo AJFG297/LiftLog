@@ -31,6 +31,20 @@ describe('shownWeight', () => {
   });
 });
 
+describe('shownWeight for volume', () => {
+  it('shows a volume to the whole of the user unit', () => {
+    expect(shownWeight(kg(312.5), 'volume', 'kilograms')).toEqual(kg(313));
+    expect(shownWeight(kg(300.4), 'volume', 'kilograms')).toEqual(kg(300));
+    // 1000 kg is 2204.62 lbs.
+    expect(shownWeight(kg(1000), 'volume', 'pounds')).toEqual(lbs(2205));
+  });
+
+  it('refines a volume change to a tenth when the wholes would hide it', () => {
+    expect(shownChange(kg(300.4), kg(300), 'volume', 'kilograms').change).toEqual(kg(0.4));
+    expect(shownChange(kg(310.4), kg(300), 'volume', 'kilograms').change).toEqual(kg(10));
+  });
+});
+
 describe('shownChange', () => {
   it('gives the change between the two values as shown', () => {
     const shown = shownChange(kg(104.3), kg(101.8), 'estimate', 'kilograms');

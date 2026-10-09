@@ -19,6 +19,23 @@ export interface ExercisePoint {
   bestReps: number;
   /** Logged sets that count towards volume (every kind but warm-ups), as Stats' sets per week counts them. */
   workingSets: number;
+  /** The set {@link oneRepMax} comes from, as lifted. */
+  oneRepMaxSet: LiftedSet | undefined;
+  /** Every logged set that counts towards records, as lifted, in the order done: the exercise page's heaviest and reps bests. */
+  sets: readonly LiftedSet[];
+  /**
+   * Load times reps over the sets that count towards volume, bodyweight folded in as for the estimate. Nothing
+   * (`Weight.NIL`) for a movement that tracks no load.
+   */
+  volume: Weight;
+  /** Reps over the sets that count towards volume: the volume of a movement that tracks no load. */
+  totalReps: number;
+}
+
+/** A logged set: the weight as lifted (added weight on a bodyweight movement) and the reps. */
+export interface LiftedSet {
+  weight: Weight;
+  reps: number;
 }
 
 export interface ExerciseHistory {
@@ -108,22 +125,34 @@ function pointsOf(session: Session): Map<MovementKey, { blueprint: WeightedExerc
 
 function pointOf(session: Session, exercise: RecordedWeightedExercise): ExercisePoint {
   const counted = exercise.setsCountingTowards('countsTowardsPrs');
+  const volumeSets = exercise.setsCountingTowards('countsTowardsVolume').filter((x) => x.set);
+  const best = bestOneRepMaxSet(exercise, session.bodyweight);
   return {
     workoutId: session.id,
     date: session.date,
-    oneRepMax: bestOneRepMaxSet(exercise, session.bodyweight)?.oneRepMax,
+    oneRepMax: best?.oneRepMax,
+    oneRepMaxSet: best && { weight: best.weight, reps: best.reps },
     bestReps: Math.max(0, ...counted.map((potentialSet) => potentialSet.set?.repsCompleted ?? 0)),
-    workingSets: exercise.setsCountingTowards('countsTowardsVolume').filter((x) => x.set).length,
+    workingSets: volumeSets.length,
+    sets: counted.flatMap((potentialSet) =>
+      potentialSet.set?.repsCompleted ? [{ weight: potentialSet.weight, reps: potentialSet.set.repsCompleted }] : [],
+    ),
+    volume: exercise.tracksResistance ? exercise.totalWeightLiftedWith(session.bodyweight) : Weight.NIL,
+    totalReps: volumeSets.reduce((total, potentialSet) => total + (potentialSet.set?.repsCompleted ?? 0), 0),
   };
 }
 
 function merged(a: ExercisePoint, b: ExercisePoint): ExercisePoint {
-  const oneRepMax = !a.oneRepMax || (b.oneRepMax && b.oneRepMax.isGreaterThan(a.oneRepMax)) ? b.oneRepMax : a.oneRepMax;
+  const bFirst = !a.oneRepMax || (b.oneRepMax && b.oneRepMax.isGreaterThan(a.oneRepMax));
   return {
     ...a,
-    oneRepMax,
+    oneRepMax: bFirst ? b.oneRepMax : a.oneRepMax,
+    oneRepMaxSet: bFirst ? b.oneRepMaxSet : a.oneRepMaxSet,
     bestReps: Math.max(a.bestReps, b.bestReps),
     workingSets: a.workingSets + b.workingSets,
+    sets: [...a.sets, ...b.sets],
+    volume: a.volume.plus(b.volume),
+    totalReps: a.totalReps + b.totalReps,
   };
 }
 
@@ -133,7 +162,7 @@ type LoadChange = { axis: 'load'; first: Weight; last: Weight; delta: Weight };
 type RepsChange = { axis: 'reps'; first: number; last: number; delta: number };
 
 interface WindowOf<Axis extends StatAxis, Value, Change> {
-  /** Read off the blueprint it was last logged with: reps for a movement that tracks no load, else load. */
+  /** See {@link axisOf}. */
   axis: Axis;
   /** The points on or after the window's start, oldest first. */
   points: readonly ExercisePoint[];
@@ -146,12 +175,28 @@ interface WindowOf<Axis extends StatAxis, Value, Change> {
 export type ExerciseProgress = WindowOf<'load', Weight, LoadChange> | WindowOf<'reps', number, RepsChange>;
 
 /**
+ * The movement's axis: reps for one that tracks no load, and for a bodyweight movement that never had any load
+ * to estimate from (no bodyweight logged and nothing added), which has no estimate to read. Else load.
+ */
+export function axisOf(history: ExerciseHistory): StatAxis {
+  if (primaryAxisFor(history.blueprint) === 'reps') {
+    return 'reps';
+  }
+  return history.blueprint.resistance === 'bodyweight' && !history.points.some(hasEffectiveLoad) ? 'reps' : 'load';
+}
+
+/** Whether a workout moved any load, bodyweight folded in. */
+function hasEffectiveLoad(point: ExercisePoint): boolean {
+  return point.oneRepMax !== undefined || !point.volume.value.isZero();
+}
+
+/**
  * An exercise's points since `since` (inclusive) and how far it moved over them: the first point's estimated
- * 1RM against the last's, or best reps for a movement that tracks no load.
+ * 1RM against the last's, or best reps on the reps axis (see {@link axisOf}).
  */
 export function progressSince(history: ExerciseHistory, since: LocalDate): ExerciseProgress {
   const points = history.points.filter((point) => !point.date.isBefore(since));
-  if (primaryAxisFor(history.blueprint) === 'reps') {
+  if (axisOf(history) === 'reps') {
     const values = points.flatMap((point) => (point.bestReps > 0 ? [point.bestReps] : []));
     const first = values[0];
     const last = values.at(-1);

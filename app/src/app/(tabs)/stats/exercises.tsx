@@ -20,7 +20,7 @@ import { selectExercises } from '@/store/stored-sessions';
 import { LocalDate } from '@js-joda/core';
 import { useTranslate } from '@tolgee/react';
 import { Stack } from 'expo-router';
-import { useOpenExerciseStats } from '@/hooks/useOpenExerciseStats';
+import { useOpenExerciseProgress } from '@/hooks/useOpenExerciseProgress';
 import { useState } from 'react';
 import { View } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
@@ -31,7 +31,7 @@ export default function ExercisesScreen() {
   const { tokens } = useAppTheme();
   const { handleScroll } = useScroll();
   const formatDate = useFormatDate();
-  const openExerciseStats = useOpenExerciseStats();
+  const openExerciseProgress = useOpenExerciseProgress();
   const unit = usePreferredWeightUnit();
   const catalog = useAppSelector(selectExercises);
   const history = useProgressHistory();
@@ -114,7 +114,7 @@ export default function ExercisesScreen() {
                 value={row.current && { amount: amountOf(row.current), unit: unitOf(t, row.current) }}
                 change={changeText(t, row)}
                 accessibilityLabel={spokenExercise(t, formatDate, row, today)}
-                onPress={() => openExerciseStats(row.exerciseId)}
+                onPress={() => openExerciseProgress(row.exerciseId)}
               />
             ))}
           </ListCard>

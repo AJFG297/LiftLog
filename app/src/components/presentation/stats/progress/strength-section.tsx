@@ -33,7 +33,11 @@ export function StrengthSection(props: StrengthSectionProps) {
     <View style={{ gap: spacing[5] }}>
       <ProgressSection
         title={t('progress.tab.lifts.title')}
-        subtitle={t('progress.tab.lifts.subtitle')}
+        subtitle={
+          props.lifts.some((lift) => lift.pinned)
+            ? t('progress.tab.lifts.pinned.subtitle')
+            : t('progress.tab.lifts.subtitle')
+        }
         action={{
           label: t('progress.tab.lifts.all_exercises.button'),
           onPress: props.onAllExercises,
@@ -123,7 +127,15 @@ function LiftRowView({
       testID={`progress-lift-${index}`}
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={[lift.name, subtitle, `${value} ${valueUnit}`, changeSpoken].filter(Boolean).join(', ')}
+      accessibilityLabel={[
+        lift.name,
+        lift.pinned ? t('progress.tab.lifts.pinned.label') : undefined,
+        subtitle,
+        `${value} ${valueUnit}`,
+        changeSpoken,
+      ]
+        .filter(Boolean)
+        .join(', ')}
       style={({ pressed }) => [
         {
           flexDirection: 'row',
@@ -139,9 +151,12 @@ function LiftRowView({
       ]}
     >
       <View style={{ flex: 1, gap: spacing[0.5], minWidth: 0 }}>
-        <SurfaceText font="text-base" weight="600" numberOfLines={1} style={{ color: tokens.ink }}>
-          {lift.name}
-        </SurfaceText>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[1] }}>
+          <SurfaceText font="text-base" weight="600" numberOfLines={1} style={{ color: tokens.ink, flexShrink: 1 }}>
+            {lift.name}
+          </SurfaceText>
+          {lift.pinned ? <MsIconSrc name="keepFill" size={14} color={tokens.muted} /> : null}
+        </View>
         <SurfaceText numberOfLines={1} style={{ fontSize: 13, lineHeight: 18, color: tokens.muted }}>
           {subtitle}
         </SurfaceText>
