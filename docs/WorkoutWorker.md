@@ -106,7 +106,9 @@ The native bridge receives a json string directly and uses generated classes for
 ### Rest timer info
 
 `WorkoutUpdatedEvent.restTimerInfo` carries three instants: `startedAt`, `partiallyEndAt` (the end of the
-countdown the rest pill shows) and `endAt` (the end of the min to max window). They come from
+countdown the rest pill shows) and `endAt`. Since the max rest went (plan decision D5) `endAt` always equals
+`partiallyEndAt`, so the notification counts down to the rest and fires once; the field stays so the native
+worker needs no change. They come from
 `restWindowOf` in `models/session-models/rest.ts`, the same function the pill counts down with, so a length
 picked in the rest sheet or a -15 reaches the notification as new instants and nothing on the native side
 changes. See [LiveWorkout.md](./LiveWorkout.md#rest).

@@ -73,8 +73,8 @@ exports[`export-plaintext-effects > addExportPlaintextEffects - JSON > JSON outp
           ],
           "resistance": "external",
           "restBetweenSets": {
-            "failureRest": "PT5M",
-            "maxRest": "PT3M",
+            "failureRest": "PT1M30S",
+            "maxRest": "PT1M30S",
             "minRest": "PT1M30S",
           },
           "supersetWithNext": false,
@@ -188,8 +188,8 @@ exports[`export-plaintext-effects > addExportPlaintextEffects - JSON > JSON outp
           ],
           "resistance": "external",
           "restBetweenSets": {
-            "failureRest": "PT5M",
-            "maxRest": "PT3M",
+            "failureRest": "PT1M30S",
+            "maxRest": "PT1M30S",
             "minRest": "PT1M30S",
           },
           "supersetWithNext": false,

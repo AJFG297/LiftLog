@@ -176,6 +176,12 @@ older client would silently misread (set kinds, v3 to v4), raise the AI plan's
 `pseudoMigrateUntil` and its `latest/` version together, then regenerate the
 schemas.
 
+One part of that schema is not passed to the model as generated: the backend
+swaps the `Rest` definition for one rest plus an optional failed-set rest, and
+turns every rest the model writes back into the three fields the app reads
+(`AiPlanRest` in `backend/LiftLog.Api/Service/`). If the app's rest JSON changes,
+change that translation with it.
+
 ---
 
 ## Rules

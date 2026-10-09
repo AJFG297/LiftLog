@@ -874,9 +874,11 @@ describe('Session derived values', () => {
 // ─── restTimerEndTime ─────────────────────────────────────────────────────────
 
 describe('Session.restTimerEndTime', () => {
+  const rest = { rest: Duration.ofSeconds(90), failedSetRest: Duration.ofSeconds(180) };
+
   function startedSession(reps: number, restTimerStartTime: OffsetDateTime | undefined) {
     const restTimer = restTimerStartTime ? new RestTimer(restTimerStartTime) : undefined;
-    const bp = makeWeightedBlueprint();
+    const bp = makeWeightedBlueprint({ restBetweenSets: rest });
     const t = tick();
     const exercise = new RecordedWeightedExercise(bp, [filledPotentialSet(reps, t), emptyPotentialSet(100)], undefined);
     return new Session(
@@ -893,18 +895,16 @@ describe('Session.restTimerEndTime', () => {
     expect(startedSession(10, undefined).restTimerEndTime).toBeUndefined();
   });
 
-  it('uses minRest after a successful set', () => {
+  it('uses the rest after a successful set', () => {
     const start = tickAt(12, 0);
     const session = startedSession(10, start);
-    const minRest = makeWeightedBlueprint().restBetweenSets.minRest;
-    expect(session.restTimerEndTime).toEqual(start.plus(minRest));
+    expect(session.restTimerEndTime).toEqual(start.plus(rest.rest));
   });
 
-  it('uses failureRest after a failed set', () => {
+  it('uses the failed-set rest after a failed set', () => {
     const start = tickAt(12, 0);
     const session = startedSession(3, start);
-    const failureRest = makeWeightedBlueprint().restBetweenSets.failureRest;
-    expect(session.restTimerEndTime).toEqual(start.plus(failureRest));
+    expect(session.restTimerEndTime).toEqual(start.plus(rest.failedSetRest));
   });
 });
 

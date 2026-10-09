@@ -70,10 +70,17 @@ throws it away, asking first when anything changed. For a new routine, Save need
 The draft lives in a small module-level store keyed by program and routine index, so the other routes the
 editor opens edit the same draft:
 
-- **More options** opens the full exercise editor (`manage-session/[sessionIndex]/exercise`): swap the
-  exercise, weighted or cardio, fixed, range or per-set reps, warm-up loads, resistance, notes, link, and Copy
-  to another routine. Opened on its own, with no editor behind it, that screen edits the saved routine
-  directly, as it always has.
+- **More options** opens the edit exercise sheet (`app/routine-exercise-editor.tsx`, a root form sheet, the
+  same editor the live workout opens): swap the exercise, weighted or cardio, the targets, warm-ups, rest,
+  progression, load, superset, notes, link, and Copy to another routine (a native menu of the program's other
+  routines; picking one appends the exercise to it). Its first line says the change goes
+  into the routine when the routine is saved, and its button is Done. Opened on its own, with no editor
+  behind it, it edits the saved routine directly, says so, and its button is "Save to <routine>". The
+  editor holds the exercise in `exercise-edit-draft.ts` so the sheets it opens over itself (Load, Warm-ups,
+  Progression) edit it too. The Warm-ups row opens the warm-up sheet (`app/exercise-warmups.tsx`): W1, W2…
+  with load and reps on the number pad, a percentage shown with what it works out to, and one-tap ramps
+  (Standard, Quick, Heavy day) when there are none. Standard uses 40% × 8, 60% × 5, then 80% × 3
+  of the working weight; the percentages stay in the routine and resolve when the workout starts.
 - The **set-type sheet** (`app/routine-set-type.tsx`, a root form sheet) changes one set's type.
 
 Two editors can be open on one routine, one from Routines and one from the Workout tab's upcoming card. They
@@ -124,9 +131,11 @@ With no history it says the first workout sets them.
 
 ### Rest (D5)
 
-One rest time, the minimum, from presets (1:00 to 3:00). **Advanced** holds all three times the timer uses:
-the shortest rest, the longest, and the rest after a missed set, in 15-second steps. A preset keeps the
-longest rest at least as long as the shortest (`withMinRest`). Rest is hidden when rest timers are off.
+A Rest row with the rest ("2:00"), and the rest after a failed set under it when that differs. It opens the
+same rest sheet as the edit exercise sheet's Rest row (`exercise-edit-rest`: minute and second wheels, and the
+"Different rest after a failed set" switch). The sheet edits through an exercise edit the card opens
+(`openRoutineRestEdit` in `components/smart/routine-rest-edit.ts`), which writes only the rest into the
+routine's draft, so Save and Cancel cover it. Rest is hidden when rest timers are off.
 
 ### Progression presets
 

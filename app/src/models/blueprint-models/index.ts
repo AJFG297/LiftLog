@@ -1171,9 +1171,7 @@ export class WeightedExerciseBlueprint {
       this.exerciseId === other.exerciseId &&
       plannedSetsEqual(this.plannedSets, other.plannedSets) &&
       progressionEquals(this.progression, other.progression) &&
-      this.restBetweenSets.minRest.equals(other.restBetweenSets.minRest) &&
-      this.restBetweenSets.maxRest.equals(other.restBetweenSets.maxRest) &&
-      this.restBetweenSets.failureRest.equals(other.restBetweenSets.failureRest) &&
+      restEquals(this.restBetweenSets, other.restBetweenSets) &&
       this.supersetWithNext === other.supersetWithNext &&
       this.notes === other.notes &&
       this.link === other.link &&
@@ -1372,50 +1370,61 @@ export function keysOfExercise(exerciseId: ExerciseId): { movementKey: MovementK
   ].map((blueprint) => ({ movementKey: blueprint.movementKey(), progressionKey: blueprint.progressionKey() }));
 }
 
+/**
+ * The rest between sets: one rest, and a different one after a set that missed its target. Without
+ * `failedSetRest` a failed set rests the same as any other (plan decision D5).
+ */
 export interface Rest {
-  minRest: Duration;
-  maxRest: Duration;
-  failureRest: Duration;
+  rest: Duration;
+  failedSetRest?: Duration | undefined;
 }
 
-export const Rest = {
-  short: {
-    minRest: Duration.ofSeconds(60),
-    maxRest: Duration.ofSeconds(90),
-    failureRest: Duration.ofSeconds(180),
-  },
-  medium: {
-    minRest: Duration.ofSeconds(90),
-    maxRest: Duration.ofSeconds(180),
-    failureRest: Duration.ofSeconds(300),
-  },
-  long: {
-    minRest: Duration.ofMinutes(3),
-    maxRest: Duration.ofMinutes(5),
-    failureRest: Duration.ofMinutes(8),
-  },
+/**
+ * The built-in rests before D5 dropped the max rest. A stored rest still matching one of them never chose
+ * its longer failure rest, so it reads as the same rest after a failed set.
+ */
+const OLD_PRESETS: readonly (readonly [number, number, number])[] = [
+  [60, 90, 180],
+  [90, 180, 300],
+  [180, 300, 480],
+];
 
+export const Rest = {
+  short: { rest: Duration.ofSeconds(60) },
+  medium: { rest: Duration.ofSeconds(90) },
+  long: { rest: Duration.ofMinutes(3) },
+
+  /**
+   * The stored rest keeps the old three fields (see `RestJSON`). New writes always store the max rest equal
+   * to the rest, which no old preset does, so reading them back never mistakes a chosen failed-set rest
+   * for a preset.
+   */
   fromJSON(json: RestJSON): Rest {
-    return {
-      minRest: fromDurationJSON(json.minRest),
-      maxRest: fromDurationJSON(json.maxRest),
-      failureRest: fromDurationJSON(json.failureRest),
-    };
+    const rest = fromDurationJSON(json.minRest);
+    const failure = fromDurationJSON(json.failureRest);
+    const seconds = [rest, fromDurationJSON(json.maxRest), failure].map((d) => d.seconds());
+    const wasPreset = OLD_PRESETS.some((preset) => preset.every((value, i) => value === seconds[i]));
+    return failure.equals(rest) || wasPreset ? { rest } : { rest, failedSetRest: failure };
   },
 
   toJSON(value: Rest): RestJSON {
     return {
-      minRest: toDurationJSON(value.minRest),
-      maxRest: toDurationJSON(value.maxRest),
-      failureRest: toDurationJSON(value.failureRest),
+      minRest: toDurationJSON(value.rest),
+      maxRest: toDurationJSON(value.rest),
+      failureRest: toDurationJSON(failedSetRestOf(value)),
     };
   },
 } as const;
+
+/** What a set that missed its target rests: its own rest if it has one, otherwise the rest. */
+export function failedSetRestOf(rest: Rest): Duration {
+  return rest.failedSetRest ?? rest.rest;
+}
 export const EmptyExerciseBlueprint = WeightedExerciseBlueprint.of();
 
 export function restEquals(a: Rest | undefined, b: Rest | undefined): boolean {
   if (!a || !b) return a === b;
-  return a.minRest.equals(b.minRest) && a.maxRest.equals(b.maxRest) && a.failureRest.equals(b.failureRest);
+  return a.rest.equals(b.rest) && failedSetRestOf(a).equals(failedSetRestOf(b));
 }
 
 export function cardioTargetEquals(a: CardioTarget, b: CardioTarget): boolean {
