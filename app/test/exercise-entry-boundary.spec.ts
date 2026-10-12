@@ -4,11 +4,11 @@ import { readFile } from 'node:fs/promises';
 import { describe, expect, it } from 'vitest';
 
 const eslint = new ESLint({ cwd: process.cwd() });
-async function errors(source: string, filePath = 'src/components/smart/entry.tsx') {
+async function errors(source: string, filePath = 'src/components/smart/entry.tsx', rule = 'storage/exercise-entry') {
   const results = await eslint.lintText(source, { filePath: resolve(filePath) });
   const messages = results.flatMap((result) => result.messages);
   expect(messages.filter((message) => message.fatal)).toEqual([]);
-  return messages.filter((message) => message.ruleId === 'storage/exercise-entry');
+  return messages.filter((message) => message.ruleId === rule);
 }
 
 describe('exercise entry ownership', () => {
@@ -67,5 +67,65 @@ describe('exercise entry ownership', () => {
     expect(
       await errors("import { sessionWithPickAdded } from '@/models/exercise-pick';", 'src/hooks/useAddExercise.ts'),
     ).toHaveLength(1);
+  });
+});
+
+describe('exercise entry factory ownership', () => {
+  it.each([
+    "import { createExerciseEntry } from '@/store/stored-sessions/exercise-entry';",
+    "import { createExerciseEntry as create } from '../../store/stored-sessions/exercise-entry';",
+    "import * as owner from '@/store/stored-sessions/exercise-entry';",
+    "import owner from '@/store/stored-sessions/exercise-entry';",
+    "import '@/store/stored-sessions/exercise-entry';",
+    "import { type ExerciseEntry, createExerciseEntry as create } from '@/store/stored-sessions/exercise-entry';",
+    "export { createExerciseEntry as create } from '@/store/stored-sessions/exercise-entry';",
+    "export * from '@/store/stored-sessions/exercise-entry';",
+    "export * as owner from '@/store/stored-sessions/exercise-entry';",
+    "const owner = require('@/store/stored-sessions/exercise-entry');",
+    'const owner = require(`@/store/stored-sessions/exercise-entry`);',
+    "const owner = await import('@/store/stored-sessions/exercise-entry');",
+  ])('rejects runtime factory access outside composition: %s', async (source) => {
+    expect(await errors(source, 'src/components/smart/entry.tsx', 'storage/exercise-entry-factory')).toHaveLength(1);
+  });
+
+  it('also rejects a factory hidden in a domain model', async () => {
+    expect(
+      await errors(
+        "import { createExerciseEntry } from '../store/stored-sessions/exercise-entry';",
+        'src/models/entry.ts',
+        'storage/exercise-entry-factory',
+      ),
+    ).toHaveLength(1);
+  });
+
+  it.each([
+    ["import { createExerciseEntry } from '@/store/stored-sessions/exercise-entry';", 'src/services/index.ts'],
+    [
+      "import type { ExerciseEntry, ExerciseTarget } from '@/store/stored-sessions/exercise-entry';",
+      'src/components/smart/entry.tsx',
+    ],
+    ["import { type ExerciseEntry } from '@/store/stored-sessions/exercise-entry';", 'src/components/smart/entry.tsx'],
+    ["import type * as Entry from '@/store/stored-sessions/exercise-entry';", 'src/components/smart/entry.tsx'],
+    [
+      "import type { createExerciseEntry } from '@/store/stored-sessions/exercise-entry';",
+      'src/components/smart/entry.tsx',
+    ],
+    ["export type { ExerciseEntry } from '@/store/stored-sessions/exercise-entry';", 'src/models/entry-types.ts'],
+    ["export { type ExerciseTarget } from '@/store/stored-sessions/exercise-entry';", 'src/models/entry-types.ts'],
+    ["export type * from '@/store/stored-sessions/exercise-entry';", 'src/models/entry-types.ts'],
+    [
+      "import { createExerciseEntry } from '@/store/stored-sessions/exercise-entry';",
+      'src/store/stored-sessions/exercise-entry.spec.ts',
+    ],
+  ])('allows composition and erased type access', async (source, path) => {
+    expect(await errors(source, path, 'storage/exercise-entry-factory')).toEqual([]);
+  });
+
+  it('does not claim indirect dynamic loading or computed module paths', async () => {
+    for (const source of [
+      "const path = '@/store/stored-sessions/exercise-entry'; const owner = await import(path);",
+      "const load = require; const owner = load('@/store/stored-sessions/exercise-entry');",
+    ])
+      expect(await errors(source, 'src/components/smart/entry.tsx', 'storage/exercise-entry-factory')).toEqual([]);
   });
 });

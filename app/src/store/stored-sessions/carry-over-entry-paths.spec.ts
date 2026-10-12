@@ -49,7 +49,7 @@ import { repeatBlueprint } from '@/models/workout-detail';
  * of its lineage, carried over and progressed. Driven through the store, over real SQLite, as the app does.
  */
 vi.stubEnv('TZ', 'UTC');
-const hookOwner = vi.hoisted(() => ({ current: undefined as ExerciseEntry | undefined }));
+const hookOwner = vi.hoisted((): { current: ExerciseEntry | undefined } => ({ current: undefined }));
 vi.mock('@/components/smart/services-provider', () => ({ useServices: () => ({ exerciseEntry: hookOwner.current }) }));
 
 const logger = {
