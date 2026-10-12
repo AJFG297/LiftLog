@@ -162,6 +162,45 @@ describe('parsePlanImport from a spreadsheet', () => {
     ]);
   });
 
+  it('keeps an exercise with missing reps immediately before a repeated header', () => {
+    const result = csv('Full Body.csv', 'Exercise,Reps\nSquat,5\nPull Up,\nExercise,Reps\nBench,8');
+
+    expect(summary(result)).toEqual({
+      name: 'Full Body',
+      routines: [
+        {
+          name: 'Full Body',
+          exercises: [
+            { name: 'Squat', reps: ['5', '5', '5'], rest: 90 },
+            { name: 'Pull Up', reps: ['10', '10', '10'], rest: 90 },
+            { name: 'Bench', reps: ['8', '8', '8'], rest: 90 },
+          ],
+        },
+      ],
+    });
+  });
+
+  it.each(['', '8'])('keeps an unsupported prescription from Sets in notes with Reps %j', (reps) => {
+    const result = csv('Bodyweight.csv', `Exercise,Sets,Reps\nPull Up,5xAMRAP,${reps}`);
+
+    expect(summary(result)).toEqual({
+      name: 'Bodyweight',
+      routines: [
+        {
+          name: 'Bodyweight',
+          exercises: [
+            {
+              name: 'Pull Up',
+              reps: reps ? ['8', '8', '8'] : ['10', '10', '10'],
+              rest: 90,
+              notes: 'Sets: 5xAMRAP',
+            },
+          ],
+        },
+      ],
+    });
+  });
+
   it('reads a CSV with quoted fields, commas and line breaks inside quotes, CRLF and a BOM', () => {
     const text =
       '\uFEFFWorkout,Exercise,Sets,Reps,Rest (sec),Notes\r\n' +
