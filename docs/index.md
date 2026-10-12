@@ -114,6 +114,10 @@ work to find the docs relevant to your area, and update it whenever you add, rem
 
 ## Plans
 
+- [plans/agent-friendly-architecture.md](./plans/agent-friendly-architecture.md) - approved transaction,
+  import and workout-entry ownership boundaries, their contracts, verification and rollback.
+- [plans/agent-friendly-architecture-evidence.md](./plans/agent-friendly-architecture-evidence.md) - the
+  37-repair census, decisive experiments, shipped reproduction commands and native-verification limits.
 - [plans/relational-storage.md](./plans/relational-storage.md) - the plan (assuming no existing users,
   own backend only) to replace session JSON blobs with relational tables and put stable exercise IDs on
   blueprints, done (PM-9 to PM-14): key decisions, target schema, each phase with what was settled while
