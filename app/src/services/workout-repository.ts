@@ -156,7 +156,7 @@ export class WorkoutRepository {
   // it, awaited or not. The device driver queues statements that way itself; the async driver under test
   // does not.
   private queue: Promise<unknown> = Promise.resolve();
-  private readonly exerciseSurvivors = new Map<ExerciseId, ExerciseId>();
+  private readonly exerciseRepoints: ReadonlyMap<ExerciseId, ExerciseId>[] = [];
 
   constructor(
     private readonly db: ExpoSQLiteDatabase,
@@ -725,10 +725,7 @@ export class WorkoutRepository {
       ],
       { workoutIds, activeChanged: false },
       () => {
-        for (const [from, current] of this.exerciseSurvivors) {
-          this.exerciseSurvivors.set(from, survivorOf.get(current) ?? current);
-        }
-        for (const [from, to] of survivorOf) this.exerciseSurvivors.set(from, to);
+        this.exerciseRepoints.push(new Map(survivorOf));
         onCommitted();
       },
     );
@@ -739,12 +736,12 @@ export class WorkoutRepository {
     return this.putMany([session]);
   }
 
-  putCurrent(read: () => Session | undefined): Promise<Session | undefined> {
+  putCurrent(read: () => Session | undefined, closedFallback?: Session): Promise<Session | undefined> {
+    const afterRound = this.exerciseRepoints.length;
     return this.inOrder(async () => {
       let session: Session | undefined;
       await writeAtomically(this.db, (tx) => {
-        const input = read();
-        session = input ? this.repointCurrent(input) : undefined;
+        session = read() ?? (closedFallback ? this.repointFallback(closedFallback, afterRound) : undefined);
         return session ? writeContent(tx, [toWorkoutRows(session)], { activate: false }) : [];
       });
       if (session) this.notify({ workoutIds: [session.id], activeChanged: false });
@@ -756,8 +753,7 @@ export class WorkoutRepository {
     return this.inOrder(async () => {
       let session: Session | undefined;
       await writeAtomically(this.db, (tx) => {
-        const input = read();
-        session = input ? this.repointCurrent(input) : undefined;
+        session = read();
         return [
           tx.update(workoutsSchema).set({ active: false }).where(eq(workoutsSchema.active, true)),
           ...(session ? writeContent(tx, [toWorkoutRows(session)], { activate: true }) : []),
@@ -815,11 +811,15 @@ export class WorkoutRepository {
     });
   }
 
-  private repointCurrent(session: Session): Session {
-    return mapSessionExercises(session, <T extends ExerciseBlueprint>(blueprint: T): T => {
-      const id = this.exerciseSurvivors.get(blueprint.exerciseId) ?? blueprint.exerciseId;
-      return id === blueprint.exerciseId ? blueprint : (blueprint.with({ exerciseId: id }) as T);
-    });
+  private repointFallback(session: Session, afterRound: number): Session {
+    return this.exerciseRepoints.slice(afterRound).reduce(
+      (result, survivors) =>
+        mapSessionExercises(result, <T extends ExerciseBlueprint>(blueprint: T): T => {
+          const id = survivors.get(blueprint.exerciseId);
+          return id === undefined ? blueprint : (blueprint.with({ exerciseId: id }) as T);
+        }),
+      session,
+    );
   }
 
   private notify(write: WorkoutWrite): void {

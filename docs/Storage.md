@@ -144,13 +144,18 @@ A duplicate retry still repairs exercise identity and refreshes carry-over.
 `ProgramWriter` and `DescriptorWriter` serialize their table writes and read current Redux state when
 SQL executes. Startup seeding uses the program writer before saving its marker. Runtime imports hold
 program ownership, then descriptor ownership, through repair. Startup data migrations use those same
-queues without flushing unhydrated Redux. `writeAtomically` orders transactions per database connection.
+queues without flushing unhydrated Redux. `writeAtomically` orders participating transactions per database
+connection. The ordinary Services API exposes only writer flushing. ESLint restricts concrete writers
+and private import actions to their declared owners, including relative and aliased imports.
 
 Each committed merge round synchronously repoints current plans and open workouts before later awaits.
 A descriptor edited during the round keeps its current value. If only a loser was edited, its current
 fields move to the survivor. If both were edited, the survivor's fields win. Unrelated creations and
-removals stay in Redux and the final descriptor flush writes them. Ordinary queued workout writes read
-current content when their SQL executes and follow committed identity mappings even after their slot closes.
+removals stay in Redux and the final descriptor flush writes them. A built-in hidden while a round
+awaits SQL causes that obsolete survivor choice to be replanned before any statement runs. Ordinary
+queued workout writes read current content when their SQL executes. A closed slot uses its captured
+content, repointed only through rounds committed after that write was queued. Later backups can
+recreate a former loser ID as a separate exercise.
 
 An import spans several transactions. A failed result names its stage, completed durable stages, attempted
 writes, committed merge rounds, and remaining repair or cache work. Earlier commits are retained. Retrying

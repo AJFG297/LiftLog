@@ -1,4 +1,4 @@
-import { applyHistoryImport } from '@/models/history-import-actions';
+import { applyHistoryImport } from '@/store/history-import-actions';
 import type { Session } from '@/models/session-models';
 
 export function importedHistory(workouts: Session[]) {

@@ -51,18 +51,34 @@ export async function planStoredExerciseMerges(
  */
 export async function mergeExerciseNames(
   db: ExpoSQLiteDatabase,
-  hiddenBuiltInIds: readonly ExerciseId[],
+  hiddenBuiltInIds: readonly ExerciseId[] | (() => readonly ExerciseId[]),
   workoutRepository = new WorkoutRepository(db),
   onCommittedRound: (merges: ExerciseMerge[]) => void = () => {},
   afterRound: () => Promise<void> = async () => {},
 ): Promise<ExerciseMerge[][]> {
   const rounds: ExerciseMerge[][] = [];
+  const readHidden = typeof hiddenBuiltInIds === 'function' ? hiddenBuiltInIds : () => hiddenBuiltInIds;
   for (;;) {
-    const merges = await planStoredExerciseMerges(db, hiddenBuiltInIds);
+    const hiddenSnapshot = readHidden();
+    const merges = await planStoredExerciseMerges(db, hiddenSnapshot);
+    if (!sameHidden(hiddenSnapshot, readHidden())) continue;
     if (!merges.length) {
       break;
     }
-    await applyExerciseMerges(db, workoutRepository, merges, () => onCommittedRound(merges));
+    try {
+      await applyExerciseMerges(
+        db,
+        workoutRepository,
+        merges,
+        () => onCommittedRound(merges),
+        () => {
+          if (!sameHidden(hiddenSnapshot, readHidden())) throw new ExerciseMergeViewChanged();
+        },
+      );
+    } catch (error) {
+      if (error instanceof ExerciseMergeViewChanged) continue;
+      throw error;
+    }
     rounds.push(merges);
     await afterRound();
   }
@@ -72,11 +88,18 @@ export async function mergeExerciseNames(
   return rounds;
 }
 
+class ExerciseMergeViewChanged extends Error {}
+
+function sameHidden(before: readonly ExerciseId[], after: readonly ExerciseId[]): boolean {
+  return before.length === after.length && before.every((id) => after.includes(id));
+}
+
 async function applyExerciseMerges(
   db: ExpoSQLiteDatabase,
   workoutRepository: WorkoutRepository,
   merges: ExerciseMerge[],
   onCommitted: () => void,
+  checkView: () => void,
 ) {
   const survivorOf = survivorsOf(merges);
   const survivors = merges.flatMap(({ survivor, survivorDescriptor }) =>
@@ -90,21 +113,26 @@ async function applyExerciseMerges(
 
   await workoutRepository.repointExercises(
     survivorOf,
-    (tx) => [
-      tx.delete(exercisesSchema).where(inArray(exercisesSchema.id, [...survivorOf.keys()])),
-      ...(survivors.length
-        ? [
-            tx
-              .insert(exercisesSchema)
-              .values(survivors)
-              .onConflictDoUpdate({
-                target: exercisesSchema.id,
-                set: { payload: sql.raw(`excluded.${exercisesSchema.payload.name}`) },
-              }),
-          ]
-        : []),
-      ...programs.map(({ id, payload }) => tx.update(programsSchema).set({ payload }).where(eq(programsSchema.id, id))),
-    ],
+    (tx) => {
+      checkView();
+      return [
+        tx.delete(exercisesSchema).where(inArray(exercisesSchema.id, [...survivorOf.keys()])),
+        ...(survivors.length
+          ? [
+              tx
+                .insert(exercisesSchema)
+                .values(survivors)
+                .onConflictDoUpdate({
+                  target: exercisesSchema.id,
+                  set: { payload: sql.raw(`excluded.${exercisesSchema.payload.name}`) },
+                }),
+            ]
+          : []),
+        ...programs.map(({ id, payload }) =>
+          tx.update(programsSchema).set({ payload }).where(eq(programsSchema.id, id)),
+        ),
+      ];
+    },
     onCommitted,
   );
 }

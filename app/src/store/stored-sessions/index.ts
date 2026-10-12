@@ -1,4 +1,4 @@
-import { applyHistoryImport, reconcileHistoryMerge } from '@/models/history-import-actions';
+import { applyHistoryImport, reconcileHistoryMerge } from '@/store/history-import-actions';
 import { RecordedExercise, Session } from '@/models/session-models';
 import { lineageKeys, ProgressionKey } from '@/models/blueprint-models';
 import { OffsetDateTime, ZoneId } from '@js-joda/core';

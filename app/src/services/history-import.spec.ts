@@ -39,6 +39,7 @@ import {
   setActiveSession,
   setActiveSessionId,
   setExercises,
+  setBuiltInExercises,
   setIsHydrated as setExercisesHydrated,
   setLatestExercises,
   updateExercise,
@@ -808,6 +809,75 @@ describe('HistoryImport', () => {
       expect(persisted.toJSON()).toEqual(runtime.toJSON());
     }
     expect((await f.repository.active())?.id).toBe('active');
+  });
+
+  it('replans when a built-in is hidden while the merge transaction waits', async () => {
+    const plural = makeWeightedBlueprint({ name: 'Dumbbell Lunge', exerciseId: 'custom-plural', sets: 1 });
+    const f = await fixture({
+      exercises: { 'custom-plural': descriptor('Dumbbell Lunge') },
+      workouts: [workout('plural', plural)],
+    });
+    f.app.store.dispatch(setBuiltInExercises({ 'Dumbbell Lunges': descriptor('Dumbbell Lunges') }));
+    const entered = Promise.withResolvers<void>();
+    const release = Promise.withResolvers<void>();
+    const actual = f.repository.repointExercises.bind(f.repository);
+    vi.spyOn(f.repository, 'repointExercises').mockImplementationOnce(async (...args) => {
+      pauseNextTransaction(f.db, { entered, release });
+      await actual(...args);
+    });
+    const pending = f.owner.apply({ kind: 'external', data: emptyData });
+    await entered.promise;
+    f.app.store.dispatch(deleteExercise('Dumbbell Lunges'));
+    release.resolve();
+    expect(await pending).toEqual({ kind: 'unchanged' });
+    await f.app.settle();
+    expect(weighted(await f.repository.get('plural')).blueprint.exerciseId).toBe('custom-plural');
+    expect(f.app.getState().storedSessions.savedExercises).toEqual({ 'custom-plural': descriptor('Dumbbell Lunge') });
+    expect(f.app.getState().storedSessions.hiddenBuiltInIds).toEqual(['Dumbbell Lunges']);
+    expect(f.preferences.get('HiddenBuiltInExerciseIdList')).toBe(JSON.stringify(['Dumbbell Lunges']));
+  });
+
+  it('repoints only a closed snapshot queued before the committed round', async () => {
+    const f = await splitFixture();
+    const entered = Promise.withResolvers<void>();
+    const release = Promise.withResolvers<void>();
+    const actual = f.repository.repointExercises.bind(f.repository);
+    vi.spyOn(f.repository, 'repointExercises').mockImplementationOnce(async (...args) => {
+      pauseNextTransaction(f.db, { entered, release });
+      await actual(...args);
+    });
+    const pending = f.owner.apply({ kind: 'external', data: emptyData });
+    await entered.promise;
+    const closed = workout('closed-during-merge', lunges, 17, 88);
+    const write = f.repository.putCurrent(() => undefined, closed);
+    release.resolve();
+    expect(await pending).toEqual({ kind: 'unchanged' });
+    await write;
+    const persisted = weighted(await f.repository.get(closed.id));
+    expect(persisted.blueprint.exerciseId).toBe('user-lunge');
+    expect(persisted.potentialSets[0]?.set?.repsCompleted).toBe(17);
+    expect(persisted.potentialSets[0]?.weight.value.toNumber()).toBe(88);
+  });
+
+  it('keeps a later backup identity that reuses a previously merged ID under a distinct name', async () => {
+    const f = await splitFixture();
+    expect(await f.owner.apply({ kind: 'external', data: emptyData })).toEqual({ kind: 'unchanged' });
+    const separate = makeWeightedBlueprint({ name: 'Separate lift', exerciseId: 'user-lunges', sets: 1 });
+    const restored = workout('later-backup', separate, 13);
+    expect(
+      await f.owner.apply({
+        kind: 'backup',
+        data: { workouts: [restored], programs: {}, exercises: { 'user-lunges': descriptor('Separate lift') } },
+      }),
+    ).toEqual({ kind: 'complete', count: 1 });
+    f.app.store.dispatch(openSession({ session: restored, slot: 'editing' }));
+    f.app.store.dispatch(
+      updateStoredSession({ sessionId: restored.id, update: (session) => session.withName('Edited later backup') }),
+    );
+    f.app.store.dispatch(setActiveSessionId(restored.id));
+    await f.app.settle();
+    expect(weighted(await f.repository.get(restored.id)).blueprint.exerciseId).toBe('user-lunges');
+    expect((await f.repository.active())?.id).toBe(restored.id);
   });
 
   it('keeps import queues independent for two stores with matching IDs', async () => {

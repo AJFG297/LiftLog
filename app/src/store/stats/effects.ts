@@ -1,4 +1,4 @@
-import { applyHistoryImport } from '@/models/history-import-actions';
+import { applyHistoryImport } from '@/store/history-import-actions';
 import { LocalDate } from '@js-joda/core';
 import { fetchOverallStats, OVERALL_STATS_DAYS, setOverallStats, setStatsIsDirty } from './index';
 import { AddEffectFn } from '@/store/store';
