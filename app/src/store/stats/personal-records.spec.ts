@@ -118,6 +118,27 @@ describe('findPersonalRecords', () => {
     expect(records.has('s2')).toBe(true);
   });
 
+  it('starts a bodyweight exercise’s bests at its first workout with a load, not at a zero', () => {
+    // No bodyweight and nothing added leaves nothing to estimate from; that workout can't be beaten.
+    const blueprint = makeWeightedBlueprint({ name: 'Dip', resistance: 'bodyweight' });
+    const build = (id: string, date: LocalDate, bodyweightKg: number | undefined) => {
+      const time = OffsetDateTime.parse('2026-01-01T10:00:00Z');
+      const ex = new RecordedWeightedExercise(blueprint, [filledPotentialSet(10, time, kg(0))], undefined);
+      return new Session(
+        id,
+        new SessionBlueprint('Day', [], ''),
+        [ex],
+        date,
+        bodyweightKg === undefined ? undefined : kg(bodyweightKg),
+        undefined,
+      );
+    };
+
+    const records = findPersonalRecords([build('s1', day(1), undefined), build('s2', day(8), 80)]);
+
+    expect(records.has('s2')).toBe(false);
+  });
+
   it('ignores sessions with no completed sets', () => {
     const records = findPersonalRecords([
       session('s1', day(1), [exercise('Squat', kg(100), 5)]),

@@ -10,6 +10,7 @@ import { WorkoutStat, WorkoutStatsRow } from '@/components/presentation/workout-
 import { formatExerciseSummary } from '@/components/presentation/summary/format-exercise-summary';
 import { spacing, useAppTheme } from '@/hooks/useAppTheme';
 import { useFormatDate } from '@/hooks/useFormatDate';
+import { useOpenExerciseProgress } from '@/hooks/useOpenExerciseProgress';
 import { useStartWorkoutWithConfirmation } from '@/hooks/useStartWorkoutWithConfirmation';
 import { useWorkoutComparison } from '@/hooks/useWorkoutComparison';
 import { MovementKey } from '@/models/blueprint-models';
@@ -55,6 +56,7 @@ import { useDispatch } from 'react-redux';
 export function WorkoutDetail({ sessionId }: { sessionId: string }) {
   const dispatch = useDispatch();
   const router = useRouter();
+  const openExerciseProgress = useOpenExerciseProgress();
   const toast = useToast();
   const { t } = useTranslate();
   const { tokens } = useAppTheme();
@@ -274,6 +276,14 @@ export function WorkoutDetail({ sessionId }: { sessionId: string }) {
               headings={headings}
               prLabel={t('workout_detail.pr.label')}
               rows={(rows ?? []).map((row) => rowCopy(row, unit, t))}
+              openExercise={
+                weighted
+                  ? {
+                      onPress: () => openExerciseProgress(exercise.blueprint.exerciseId),
+                      accessibilityLabel: t('workout_detail.exercise.open.spoken', { name: exercise.blueprint.name }),
+                    }
+                  : undefined
+              }
               fallbackText={
                 weighted || !exercise.isStarted
                   ? t('workout_detail.not_done.label')

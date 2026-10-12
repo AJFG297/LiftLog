@@ -16,7 +16,7 @@ import { ExerciseId } from '@/models/blueprint-models';
 import { useAppSelector } from '@/store';
 import { setProgressTab } from '@/store/settings';
 import { bodyView } from '@/store/stats/progress-body';
-import { mostTrainedLifts, recentRecords } from '@/store/stats/progress-strength';
+import { recentRecords, strengthLifts } from '@/store/stats/progress-strength';
 import {
   DEFAULT_PROGRESS_RANGE,
   hasBodyweight,
@@ -32,7 +32,7 @@ import { buildWeeklyTable, MuscleKey, trainingView } from '@/store/stats/progres
 import { exerciseMetaLabel } from '@/utils/exercise-meta';
 import { TranslationKey, useTranslate } from '@tolgee/react';
 import { Stack, useRouter } from 'expo-router';
-import { useOpenExerciseStats } from '@/hooks/useOpenExerciseStats';
+import { useOpenExerciseProgress } from '@/hooks/useOpenExerciseProgress';
 import { useState } from 'react';
 import { View } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
@@ -59,7 +59,7 @@ export default function ProgressScreen() {
   const { tokens } = useAppTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const openExerciseStats = useOpenExerciseStats();
+  const openExerciseProgress = useOpenExerciseProgress();
   const dispatch = useDispatch();
   const goToRoutines = useGoToRoutines();
   const formatDate = useFormatDate();
@@ -69,6 +69,7 @@ export default function ProgressScreen() {
   const firstDayOfWeek = useAppSelector((x) => x.settings.firstDayOfWeek);
   const showBodyweight = useAppSelector((x) => x.settings.showBodyweight);
   const lastTab = useAppSelector((x) => x.settings.progressTab);
+  const pinnedLifts = useAppSelector((x) => x.settings.pinnedLifts);
   const builtInExercises = useAppSelector((x) => x.storedSessions.builtInExercises);
   const savedExercises = useAppSelector((x) => x.storedSessions.savedExercises);
   const [rangeId, setRangeId] = useState<ProgressRangeId>(DEFAULT_PROGRESS_RANGE);
@@ -81,7 +82,7 @@ export default function ProgressScreen() {
   const shortDate = (date: Parameters<typeof formatDate>[0]) => formatDate(date, { month: 'short', day: 'numeric' });
   const openExercise = (exerciseId: ExerciseId | undefined) => {
     if (exerciseId) {
-      openExerciseStats(exerciseId);
+      openExerciseProgress(exerciseId);
     }
   };
 
@@ -93,7 +94,7 @@ export default function ProgressScreen() {
       case 'strength':
         return (
           <StrengthSection
-            lifts={mostTrainedLifts(history, period.start, unit)}
+            lifts={strengthLifts(history, period.start, unit, pinnedLifts)}
             records={recentRecords(history, unit)}
             unit={unitLabel}
             onOpenLift={(lift) => openExercise(lift.exerciseId)}

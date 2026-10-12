@@ -195,6 +195,21 @@ function SegmentedSection() {
   );
 }
 
+function PinToggle() {
+  const [pinned, setPinned] = useState(false);
+  const label = pinned ? 'Pinned to Progress' : 'Pin to Progress';
+  return (
+    <RoundIconButton
+      icon={pinned ? 'keepFill' : 'keep'}
+      size="compact"
+      label={label}
+      accessibilityLabel={label}
+      selected={pinned}
+      onPress={() => setPinned(!pinned)}
+    />
+  );
+}
+
 function IconButtonSection() {
   const toast = useToast();
   return (
@@ -209,6 +224,9 @@ function IconButtonSection() {
           onPress={() => toast.show({ message: 'More' })}
         />
         <RoundIconButton icon="delete" disabled accessibilityLabel="Delete" onPress={() => {}} />
+      </View>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[3] }}>
+        <PinToggle />
       </View>
     </Section>
   );

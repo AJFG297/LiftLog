@@ -17,7 +17,17 @@ export function periodFor(range: ProgressRangeId, firstDayOfWeek = DayOfWeek.MON
 }
 
 export function point(date: LocalDate, workingSets: number, oneRepMax?: Weight, bestReps = 5): ExercisePoint {
-  return { workoutId: `w-${date.toString()}`, date, oneRepMax, bestReps, workingSets };
+  return {
+    workoutId: `w-${date.toString()}`,
+    date,
+    oneRepMax,
+    oneRepMaxSet: undefined,
+    bestReps,
+    workingSets,
+    sets: [],
+    volume: Weight.NIL,
+    totalReps: 0,
+  };
 }
 
 export function exerciseHistory(

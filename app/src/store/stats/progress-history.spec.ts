@@ -60,18 +60,53 @@ describe('buildProgressHistory', () => {
 
   it('gives each started movement a point per workout, oldest first', () => {
     expect([...progress.exercises.keys()]).toEqual([benchKey, crunchKey]);
-    expect(progress.exercises.get(benchKey)?.points).toEqual([
+    expect(progress.exercises.get(benchKey)?.points).toMatchObject([
       { workoutId: 's1', date: day(7, 1), oneRepMax: epley(80, 8), bestReps: 8, workingSets: 2 },
       { workoutId: 's2', date: day(7, 8), oneRepMax: epley(85, 3), bestReps: 3, workingSets: 2 },
       { workoutId: 's3', date: day(7, 15), oneRepMax: epley(82.5, 10), bestReps: 12, workingSets: 2 },
     ]);
   });
 
-  it('gives a movement that tracks no load reps and no estimated 1RM', () => {
-    expect(progress.exercises.get(crunchKey)?.points).toEqual([
-      { workoutId: 's1', date: day(7, 1), oneRepMax: undefined, bestReps: 20, workingSets: 2 },
-      { workoutId: 's2', date: day(7, 8), oneRepMax: undefined, bestReps: 25, workingSets: 1 },
+  it('keeps the sets that count towards records, the set behind the estimate, and the volume', () => {
+    const points = progress.exercises.get(benchKey)!.points;
+    const facts = points.map((p) => ({
+      sets: p.sets.map((s) => [s.weight.value.toNumber(), s.reps]),
+      oneRepMaxSet: p.oneRepMaxSet && [p.oneRepMaxSet.weight.value.toNumber(), p.oneRepMaxSet.reps],
+      volume: p.volume.convertTo('kilograms').value.toNumber(),
+      totalReps: p.totalReps,
+    }));
+
+    expect(facts).toEqual([
+      {
+        sets: [
+          [80, 8],
+          [80, 8],
+        ],
+        oneRepMaxSet: [80, 8],
+        volume: 1280,
+        totalReps: 16,
+      },
+      // The drop set adds volume but is no set for records.
+      { sets: [[85, 3]], oneRepMaxSet: [85, 3], volume: 855, totalReps: 13 },
+      // Done twice: the sets of both, and the better estimate's set.
+      {
+        sets: [
+          [82.5, 10],
+          [70, 12],
+        ],
+        oneRepMaxSet: [82.5, 10],
+        volume: 1665,
+        totalReps: 22,
+      },
     ]);
+  });
+
+  it('gives a movement that tracks no load reps and no estimated 1RM', () => {
+    expect(progress.exercises.get(crunchKey)?.points).toMatchObject([
+      { workoutId: 's1', date: day(7, 1), oneRepMax: undefined, bestReps: 20, workingSets: 2, totalReps: 35 },
+      { workoutId: 's2', date: day(7, 8), oneRepMax: undefined, bestReps: 25, workingSets: 1, totalReps: 25 },
+    ]);
+    expect(progress.exercises.get(crunchKey)?.points.map((p) => p.volume)).toEqual([Weight.NIL, Weight.NIL]);
   });
 
   it('names a movement by how it was last logged', () => {

@@ -95,6 +95,7 @@ export const {
   setProToken,
   setPlansSortOrder,
   setProgressTab,
+  setPinnedLifts,
   setPreferredLanguage,
   setNotesExpandedByDefault,
   setKeepScreenAwakeDuringWorkout,

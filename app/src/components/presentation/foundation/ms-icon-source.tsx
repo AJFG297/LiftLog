@@ -134,6 +134,8 @@ import { msElevation } from '@material-symbols-react-native/outlined-400/msEleva
 import { msAssignmentTurnedIn } from '@material-symbols-react-native/outlined-400/msAssignmentTurnedIn';
 import { msTerminal } from '@material-symbols-react-native/outlined-400/msTerminal';
 import { msTrendingUp } from '@material-symbols-react-native/outlined-400/msTrendingUp';
+import { msKeep } from '@material-symbols-react-native/outlined-400/msKeep';
+import { msKeepFill } from '@material-symbols-react-native/outlined-400/msKeepFill';
 import { msCampaign } from '@material-symbols-react-native/outlined-400/msCampaign';
 import { msVisibilityOff } from '@material-symbols-react-native/outlined-400/msVisibilityOff';
 
@@ -170,6 +172,8 @@ const MaterialSymbols = {
   visibilityOff: msVisibilityOff,
   minus: msRemove,
   trendingUp: msTrendingUp,
+  keep: msKeep,
+  keepFill: msKeepFill,
   moreHoriz: msMoreHoriz,
   playArrow: msPlayArrow,
   moreVert: msMoreVert,

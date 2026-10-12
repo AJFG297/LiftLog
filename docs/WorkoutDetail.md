@@ -19,6 +19,7 @@ card's summary (the summary is the button, so the card's own buttons stay reacha
   reps (with its RPE after them, "8 @8", when the set was rated) and estimated one-rep max (Epley, `calculateOneRepMax`), or "–" for a set that can't set a record (warm-up,
   drop, myo, or no load). A **PR** tag marks the first set that reached the workout's record for that movement.
   The line beside the name compares the best set with the last workout of the same routine ("+2.5 kg vs last").
+  A weighted exercise's name, with a chevron, opens its [progress page](./Progress.md#the-exercise-page).
   An exercise with nothing logged says "Not done"; a cardio exercise shows its one-line summary.
 
 `sessionSetRows` in `models/workout-detail.ts` builds the table rows.

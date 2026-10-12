@@ -1,4 +1,5 @@
 import { BackendId } from '@/models/backend';
+import type { ExerciseId } from '@/models/blueprint-models';
 import { DEFAULT_BAR_WEIGHT, DEFAULT_PLATES } from '@/models/plates';
 import type { PerUnit } from '@/models/weight';
 import { RemoteData } from '@/models/remote';
@@ -11,6 +12,7 @@ import {
   colorSchemeSeedCodec,
   ColorSchemeSeed,
   dayOfWeekCodec,
+  exerciseIdListCodec,
   intCodec,
   isBarWeight,
   isPlateList,
@@ -84,6 +86,8 @@ export const preferenceRegistry = {
   plansSortOrder: pref<PlansSortOrder>({ default: 'name', codec: plansSortOrderCodec }),
   // The Progress tab reopens on the section last used.
   progressTab: pref<ProgressTab>({ default: 'strength', codec: progressTabCodec }),
+  // The lifts pinned to the Strength list, by exercise id, in the order pinned.
+  pinnedLifts: pref<ExerciseId[]>({ default: [], codec: exerciseIdListCodec }),
   firstDayOfWeek: pref<DayOfWeek>({ default: DayOfWeek.SUNDAY, codec: dayOfWeekCodec }),
   barWeight: pref<PerUnit<number>>({ default: DEFAULT_BAR_WEIGHT, codec: perUnitCodec(isBarWeight) }),
   availablePlates: pref<PerUnit<number[]>>({ default: DEFAULT_PLATES, codec: perUnitCodec(isPlateList) }),
