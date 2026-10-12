@@ -9,17 +9,13 @@ import { LiveSetTable } from '@/components/smart/live-set-table';
 import { RecordedExerciseView } from '@/components/smart/recorded-exercise-view';
 import { getSessionExerciseEditorHref } from '@/components/smart/session-exercise-editor';
 import { getSessionWarmupsHref } from '@/components/smart/exercise-warmups-sheet';
-import { useCarryOver } from '@/hooks/useCarryOver';
+import { useServices } from '@/components/smart/services-provider';
 import { useExerciseSearch } from '@/hooks/useExerciseSearch';
 import { LiveSetEntry } from '@/hooks/useLiveSetEntry';
 import { usesBodyweight, useTodaysTarget } from '@/hooks/useTodaysTarget';
-import {
-  blueprintSwappedTo,
-  sessionWithExerciseSwapped,
-} from '@/components/presentation/workout-editor/exercise-picker';
 import { RecordedExercise, RecordedWeightedExercise, Session } from '@/models/session-models';
 import { exerciseGroupsOf, exerciseLabelOf } from '@/models/session-models/exercise-groups';
-import { RootState, useAppSelector } from '@/store';
+import { useAppSelector } from '@/store';
 import { selectExercises } from '@/store/stored-sessions';
 import { translateExerciseMeta } from '@/utils/exercise-meta';
 import { formatTimeSpan } from '@/utils/format-time-span';
@@ -29,7 +25,6 @@ import { useRouter } from 'expo-router';
 import { useOpenExerciseProgress } from '@/hooks/useOpenExerciseProgress';
 import { type Ref, useState } from 'react';
 import { View } from 'react-native';
-import { useStore } from 'react-redux';
 
 interface LiveExerciseCardProps {
   session: Session;
@@ -48,8 +43,7 @@ export function LiveExerciseCard(props: LiveExerciseCardProps) {
   const { t } = useTranslate();
   const { push } = useRouter();
   const openExerciseProgress = useOpenExerciseProgress();
-  const store = useStore<RootState>();
-  const withCarryOver = useCarryOver();
+  const { exerciseEntry } = useServices();
   const exercises = useAppSelector(selectExercises);
   const restTimersEnabled = useAppSelector((x) => x.settings.restTimersEnabled);
   const targetFor = useTodaysTarget(session);
@@ -59,16 +53,10 @@ export function LiveExerciseCard(props: LiveExerciseCardProps) {
 
   const openSearch = useExerciseSearch(
     (picked) => {
-      const state = store.getState();
-      const swappedOut = state.storedSessions.sessions[session.id]?.recordedExercises[exerciseIndex]?.blueprint;
-      if (!swappedOut) {
-        return;
+      const target = exerciseEntry.target({ workoutId: session.id, index: exerciseIndex });
+      if (target) {
+        void exerciseEntry.swap({ target, picked: { id: picked.id, name: picked.descriptor.name } });
       }
-      const ref = { id: picked.id, name: picked.descriptor.name };
-      const key = blueprintSwappedTo(swappedOut, ref).progressionKey();
-      withCarryOver(session.id, [key], (carryOver) =>
-        updateSession((s) => sessionWithExerciseSwapped(s, exerciseIndex, swappedOut.movementKey(), ref, carryOver)),
-      );
     },
     {
       name: session.blueprint.name,
