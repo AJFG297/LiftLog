@@ -36,6 +36,24 @@ module.exports = defineConfig([
       ],
     },
   },
+  {
+    files: ['src/**/*.ts', 'src/**/*.tsx'],
+    ignores: ['src/db/helpers.ts'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        ...[
+          'MemberExpression[computed=false][property.name="transaction"]',
+          'MemberExpression[computed=true][property.value="transaction"]',
+          'ObjectPattern > Property[computed=false][key.name="transaction"]',
+          'ObjectPattern > Property[key.value="transaction"]',
+        ].map((selector) => ({
+          selector,
+          message: 'Use writeAtomically from @/db/helpers. Device transactions are synchronous.',
+        })),
+      ],
+    },
+  },
   globalIgnores([
     'plugins',
     '**/gen',
