@@ -129,7 +129,8 @@ When several statements must move together, use `writeAtomically(db, (tx) => [..
 `db/helpers.ts`. Don't write `db.transaction(async (tx) => …)`: on a device the expo-sqlite driver is
 synchronous and commits as soon as the callback returns, so every awaited statement runs after the commit,
 outside the transaction. Tests can't catch that, because Vitest's libsql driver is async and awaits the
-callback.
+callback. ESLint restricts static `transaction` access outside `db/helpers.ts`, including
+aliases, destructuring and optional access. Dynamic property construction is outside this lint guarantee.
 
 ### Workouts
 
