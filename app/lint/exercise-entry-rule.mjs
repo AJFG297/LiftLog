@@ -64,8 +64,8 @@ export const exerciseEntryRule = {
       return {};
     /** @param {import('@typescript-eslint/utils').TSESTree.Node} source */
     function restricted(source) {
-      if (source.type !== AST_NODE_TYPES.Literal || typeof source.value !== 'string') return undefined;
-      const name = source.value;
+      const name = staticName(source);
+      if (!name) return undefined;
       const path = name.startsWith('@/')
         ? `src/${name.slice(2)}`
         : name.startsWith('.')
@@ -75,9 +75,11 @@ export const exerciseEntryRule = {
     }
     return {
       ImportDeclaration(node) {
+        if (node.importKind === 'type') return;
         const names = restricted(node.source);
         if (!names) return;
         for (const specifier of node.specifiers) {
+          if (specifier.type === AST_NODE_TYPES.ImportSpecifier && specifier.importKind === 'type') continue;
           if (
             specifier.type !== AST_NODE_TYPES.ImportSpecifier ||
             (names.has(staticName(specifier.imported)) &&
@@ -87,13 +89,15 @@ export const exerciseEntryRule = {
         }
       },
       ExportNamedDeclaration(node) {
+        if (node.exportKind === 'type') return;
         const names = node.source && restricted(node.source);
         if (!names) return;
         for (const specifier of node.specifiers)
-          if (names.has(staticName(specifier.local))) context.report({ node: specifier, messageId: 'useEntry' });
+          if (specifier.exportKind !== 'type' && names.has(staticName(specifier.local)))
+            context.report({ node: specifier, messageId: 'useEntry' });
       },
       ExportAllDeclaration(node) {
-        if (restricted(node.source)) context.report({ node, messageId: 'useEntry' });
+        if (node.exportKind !== 'type' && restricted(node.source)) context.report({ node, messageId: 'useEntry' });
       },
       ImportExpression(node) {
         if (restricted(node.source)) context.report({ node, messageId: 'useEntry' });
