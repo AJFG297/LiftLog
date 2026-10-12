@@ -25,12 +25,12 @@ import {
   sessionFinished,
   setActiveSessionId,
   updateStoredSession,
-  upsertStoredSessions,
   openSessionForEditing,
   openSessionForSummary,
 } from '@/store/stored-sessions';
 import type { RootState } from '@/store/store';
-import type { UnknownAction } from '@reduxjs/toolkit';
+import type { ImportOutcome } from '@/services/history-import';
+import { setIsHydrated as setProgramHydrated } from '@/store/program';
 import { fetchOverallStats } from '@/store/stats';
 import { oneRepMaxOf } from '@/store/stats/calculate-stats';
 import { setIsHydrated as setSettingsIsHydrated } from '@/store/settings';
@@ -85,6 +85,7 @@ async function startApp(sessions: Session[]) {
   applyStoredSessionsEffects(harness.addEffect);
   applyStatsEffects(harness.addEffect);
   harness.store.dispatch(setSettingsIsHydrated(true));
+  harness.store.dispatch(setProgramHydrated(true));
   harness.store.dispatch(initializeStoredSessionsStateSlice());
   await harness.settle();
   return { ...harness, workoutRepository };
@@ -293,10 +294,10 @@ describe('history read from SQL', () => {
     await openForEditing(app, 'week-1');
     // The persist effect's write waits on the test, as a big import or a slow device would make it.
     let commit = () => {};
-    const putMany = repository.putMany.bind(repository);
-    vi.spyOn(repository, 'putMany').mockImplementation(async (sessions) => {
+    const putCurrent = repository.putCurrent.bind(repository);
+    vi.spyOn(repository, 'putCurrent').mockImplementation(async (read) => {
       await new Promise<void>((resolve) => (commit = resolve));
-      return putMany(sessions);
+      return putCurrent(read);
     });
     app.store.dispatch(
       updateStoredSession({
@@ -478,7 +479,7 @@ describe('history read from SQL', () => {
     });
 
     interface Write {
-      kind: 'put' | 'update' | 'upsert' | 'delete';
+      kind: 'put' | 'update' | 'import' | 'delete';
       id: string;
       hour: number;
       name: string;
@@ -497,7 +498,8 @@ describe('history read from SQL', () => {
       await fc.assert(
         fc.asyncProperty(fc.array(write, { minLength: 2, maxLength: 12 }), async (writes) => {
           const app = await startApp([]);
-          const actions = writes.map((w): UnknownAction => {
+          const imports: Promise<ImportOutcome>[] = [];
+          for (const w of writes) {
             const blueprint = makeWeightedBlueprint({ name: w.name, exerciseId: w.name, sets: 1 });
             const at = OffsetDateTime.of(2026, 4, 1, w.hour, 0, 0, 0, ZoneOffset.UTC);
             const built = new Session(
@@ -510,17 +512,19 @@ describe('history read from SQL', () => {
             );
             switch (w.kind) {
               case 'put':
-                return putStoredSession(built);
+                app.store.dispatch(putStoredSession(built));
+                break;
               case 'update':
-                return updateStoredSession({ sessionId: w.id, update: () => built });
-              case 'upsert':
-                return upsertStoredSessions([built]);
+                app.store.dispatch(updateStoredSession({ sessionId: w.id, update: () => built }));
+                break;
+              case 'import':
+                imports.push(app.historyImport!.apply({ kind: 'backup', data: { workouts: [built], programs: {} } }));
+                break;
               default:
-                return deleteStoredSession(w.id);
+                app.store.dispatch(deleteStoredSession(w.id));
             }
-          });
-          // Back to back, so the refreshes overlap the writes.
-          actions.forEach((action) => app.store.dispatch(action));
+          }
+          expect((await Promise.all(imports)).some((result) => result.kind === 'failed')).toBe(false);
           await app.settle();
 
           const state: RootState = app.getState();
@@ -539,7 +543,7 @@ describe('history read from SQL', () => {
     it('stays equal to the tables after any mix of writes', async () => {
       await cacheMatchesTablesAfter(
         fc.record({
-          kind: fc.constantFrom('put', 'update', 'upsert', 'delete'),
+          kind: fc.constantFrom('put', 'update', 'import', 'delete'),
           id: fc.constantFrom('a', 'b', 'c', 'd'),
           hour: fc.integer({ min: 0, max: 3 }),
           name: fc.constantFrom('Squat', 'Bench'),

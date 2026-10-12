@@ -1,5 +1,5 @@
 import { showSnackbar } from '@/store/app';
-import { importBackupData, importFromExternal, selectPreferredWeightUnit } from '@/store/settings';
+import { importFromExternal, selectPreferredWeightUnit } from '@/store/settings';
 import { AddEffectFn } from '@/store/store';
 import { setStatsIsDirty } from '@/store/stats';
 import { getExternalImporter } from '@/services/csv-import';
@@ -9,7 +9,7 @@ export function addImportExternalEffects(addEffect: AddEffectFn) {
     importFromExternal,
     async (
       { payload: { format } },
-      { dispatch, getState, extra: { filePickerService, tolgee, logger, workoutRepository } },
+      { dispatch, getState, extra: { filePickerService, tolgee, logger, historyImport } },
     ) => {
       const file = await filePickerService.pickFile();
       if (!file) {
@@ -21,32 +21,25 @@ export function addImportExternalEffects(addEffect: AddEffectFn) {
       try {
         const backupData = getExternalImporter(format)(file.bytes, { defaultWeightUnit });
 
-        // Grouping-key session ids: skip any workout already present so re-importing
-        // the same day (FitNotes) or date+Workout slot (StrongLifts) is a no-op.
-        const existing = await workoutRepository.existingIds(backupData.workouts.map((w) => w.id));
-        const newWorkouts = backupData.workouts.filter((w) => !existing.has(w.id));
-        if (newWorkouts.length === 0) {
+        const result = await historyImport.apply({ kind: 'external', data: backupData });
+        if (result.kind === 'failed') {
+          logger.error('External import incomplete', result);
           dispatch(
             showSnackbar({
-              text: tolgee.t('backup.import_from_other_apps.already_imported.message'),
+              text: 'Import incomplete. Some data may have been saved. Import the file again to finish.',
             }),
           );
           return;
         }
-
         dispatch(
-          importBackupData({
-            source: 'external',
-            workouts: newWorkouts,
-            programs: backupData.programs,
-            feed: backupData.feed,
-            successMessage: tolgee.t('backup.import_from_other_apps.complete.message', {
-              count: newWorkouts.length,
-            }),
+          showSnackbar({
+            text:
+              result.kind === 'unchanged'
+                ? tolgee.t('backup.import_from_other_apps.already_imported.message')
+                : tolgee.t('backup.import_from_other_apps.complete.message', { count: result.count }),
           }),
         );
-        // History merge only: full restore via importBackupData leaves stats dirty handling unchanged.
-        dispatch(setStatsIsDirty(true));
+        if (result.kind === 'complete') dispatch(setStatsIsDirty(true));
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         logger.warn('External import failed', { err, format });

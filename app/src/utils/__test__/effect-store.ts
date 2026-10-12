@@ -1,3 +1,6 @@
+import { ProgramWriter } from '@/services/program-writer';
+import { DescriptorWriter } from '@/services/descriptor-writer';
+import { HistoryImport } from '@/services/history-import';
 import { combineReducers, configureStore, createListenerMiddleware, UnknownAction } from '@reduxjs/toolkit';
 import type { AddEffectFn, RootState } from '@/store/store';
 import type { Services } from '@/services';
@@ -9,8 +12,7 @@ import { storedSessionsReducer } from '@/store/stored-sessions';
 
 /**
  * A real store with the listener middleware, for tests where effects must trigger each other the way they
- * do in the app. `createAddEffectTestBed` doesn't run effects for actions dispatched from inside an effect,
- * so it can't show an ordering bug between two effects. The app's own `createStore` can't be used because
+ * do in the app. The app's own `createStore` can't be used because
  * it builds every service, and some of those don't load under Vitest.
  *
  * Carries the slices the history, stats and import code reads. Add one if a test needs it.
@@ -30,6 +32,33 @@ export function createEffectStore(services: Partial<Services>) {
       getDefault({ serializableCheck: false, immutableCheck: false }).prepend(listenerMiddleware.middleware),
   });
 
+  const getState = () => store.getState() as unknown as RootState;
+  if (services.db) {
+    const programOwner =
+      services.programWriter instanceof ProgramWriter
+        ? services.programWriter
+        : new ProgramWriter(services.db, getState);
+    const descriptorOwner =
+      services.descriptorWriter instanceof DescriptorWriter
+        ? services.descriptorWriter
+        : services.keyValueStore
+          ? new DescriptorWriter(services.db, getState, services.keyValueStore)
+          : undefined;
+    services.programWriter ??= programOwner;
+    services.descriptorWriter ??= descriptorOwner;
+    if (services.workoutRepository && descriptorOwner && services.logger) {
+      services.historyImport ??= new HistoryImport(
+        { getState, dispatch: store.dispatch, subscribe: store.subscribe },
+        {
+          db: services.db,
+          workoutRepository: services.workoutRepository,
+          programWriter: programOwner,
+          descriptorWriter: descriptorOwner,
+          logger: services.logger,
+        },
+      );
+    }
+  }
   // Mirrors `addEffect` in store/store.ts, plus tracking so a test can wait for effects to finish.
   const addEffect = ((
     actionPredicate: { type: string } | { type: string }[] | undefined,
@@ -60,6 +89,7 @@ export function createEffectStore(services: Partial<Services>) {
 
   return {
     store,
+    historyImport: services.historyImport,
     addEffect,
     getState: () => store.getState() as unknown as RootState,
     /** Resolves once every effect, including ones started by other effects, has finished. */

@@ -1,7 +1,7 @@
 import { Backend } from '@/models/backend';
 import { whatsNewEntries, WhatsNewEntry } from '@/models/whats-new';
 import type { RootState } from '@/store';
-import { BackupData, FeedBackupData } from '@/models/backup';
+import { FeedBackupData } from '@/models/backup';
 import type { ExternalImportFormat } from '@/services/csv-import';
 import type { LoadUnit } from '@/models/weight';
 import { createAction, createSlice, PayloadAction } from '@reduxjs/toolkit';
@@ -55,17 +55,12 @@ export type PlaintextExportFormat = 'CSV' | 'JSON';
 
 export const importData = createAction('importData');
 export const importDataSql = createAction<{ db: SQLiteDatabase }>('importDataSql');
-export type ImportBackupDataPayload = BackupData & {
-  source: 'backup' | 'external';
-  successMessage: string;
-};
-export const importBackupData = createAction<ImportBackupDataPayload>('importBackupData');
 export const beginFeedImport = createAction<FeedBackupData>('beginFeedImport');
 export const exportData = createAction<{ includeFeed: boolean }>('exportData');
 
 export const exportPlainText = createAction<{ format: PlaintextExportFormat }>('exportPlainText');
 
-/** Pick a third-party export file and merge history via importBackupData. */
+/** Pick a third-party export file and merge history through HistoryImport. */
 export const importFromExternal = createAction<{ format: ExternalImportFormat }>('importFromExternal');
 
 export const executeRemoteBackup = createAction<{

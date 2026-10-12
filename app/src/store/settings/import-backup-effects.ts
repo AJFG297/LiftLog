@@ -1,10 +1,7 @@
 import { Logger } from '@/services/logger';
 import { showSnackbar } from '@/store/app';
 import { AddEffectFn } from '@/store/store';
-import { upsertSavedPlans } from '@/store/program';
-import { beginFeedImport, importBackupData, importData, importDataSql } from '@/store/settings';
-import { upsertExercises, upsertStoredSessions } from '@/store/stored-sessions';
-import { createExerciseResolver } from '@/store/stored-sessions/exercise-resolver';
+import { beginFeedImport, importData, importDataSql } from '@/store/settings';
 import { streamToUint8Array, writeInChunks } from '@/utils/stream';
 import { sleep } from '@/utils/sleep';
 import { ProgramBlueprint } from '@/models/blueprint-models';
@@ -65,38 +62,7 @@ export function addImportBackupEffects(addEffect: AddEffectFn) {
     }
   });
 
-  addEffect(importBackupData, async ({ payload }, api) => {
-    const { dispatch } = api;
-    const { workouts, programs, exercises, feed, successMessage, source } = payload;
-    // Own backups keep linked ids, including references to deleted exercises. Unlinked legacy rows and
-    // external imports still resolve by name.
-    const resolver = await createExerciseResolver(api, api.extra.logger, {
-      alsoSaved: exercises,
-      preserveLinkedIds: source === 'backup',
-    });
-    const linkedWorkouts = workouts.map((x) => resolver.linkSession(x));
-    const linkedPrograms = Object.fromEntries(
-      Object.entries(programs).map(([id, program]) => [id, resolver.linkProgram(program)]),
-    );
-    const newExercises = { ...exercises, ...resolver.stubs };
-    if (Object.keys(newExercises).length) {
-      dispatch(upsertExercises(newExercises));
-    }
-    // After the exercises and the plans: once the workouts are written, the device merges what this brought
-    // back apart, which reads the exercise table and repoints the plans.
-    dispatch(upsertSavedPlans(linkedPrograms));
-    dispatch(upsertStoredSessions(linkedWorkouts));
-    dispatch(
-      showSnackbar({
-        text: successMessage,
-      }),
-    );
-    if (feed) {
-      dispatch(beginFeedImport(feed));
-    }
-  });
-
-  addEffect(importDataSql, async (action, { dispatch, extra: { logger, tolgee } }) => {
+  addEffect(importDataSql, async (action, { dispatch, extra: { logger, tolgee, historyImport } }) => {
     try {
       const {
         payload: { db: backupDb },
@@ -124,7 +90,7 @@ export function addImportBackupEffects(addEffect: AddEffectFn) {
 
       await migrator.migrate();
       // A backup taken before the plural merge can have Lunge and Lunges apart, and stubs at old-fold ids.
-      // They are merged on the device once restored (see `upsertStoredSessions`), on the device's counts.
+      // They are merged on the device once restored (see `HistoryImport`), on the device's counts.
       // A backup's in-progress workout comes back as history: restoring never resumes a workout.
       const { workouts } = await new WorkoutRepository(drizzleBackupDb).loadAll();
       const programs = (await drizzleBackupDb.select().from(programsSchema)).reduce(
@@ -166,16 +132,16 @@ export function addImportBackupEffects(addEffect: AddEffectFn) {
         };
       }
 
-      dispatch(
-        importBackupData({
-          source: 'backup',
-          programs,
-          exercises,
-          workouts,
-          feed,
-          successMessage: tolgee.t('Restore complete!'),
-        }),
-      );
+      const result = await historyImport.apply({ kind: 'backup', data: { programs, exercises, workouts, feed } });
+      if (result.kind === 'failed') {
+        logger.error('Local restore failed', result);
+        dispatch(
+          showSnackbar({ text: 'Restore incomplete. Some data may have been saved. Retry the restore to finish.' }),
+        );
+        return;
+      }
+      dispatch(showSnackbar({ text: tolgee.t('Restore complete!') }));
+      if (feed) dispatch(beginFeedImport(feed));
     } finally {
       await action.payload.db.closeAsync();
     }

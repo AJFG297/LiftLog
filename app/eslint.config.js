@@ -4,6 +4,7 @@ const { defineConfig, globalIgnores } = require('eslint/config');
 const reactCompiler = require('eslint-plugin-react-compiler');
 const tsParser = require('@typescript-eslint/parser');
 const { storageTransactionRule } = require('./lint/storage-transaction-rule.mjs');
+const { importOwnershipRule } = require('./lint/import-ownership-rule.mjs');
 
 module.exports = defineConfig([
   {
@@ -39,13 +40,15 @@ module.exports = defineConfig([
   },
   {
     files: ['src/**/*.ts', 'src/**/*.tsx'],
-    ignores: ['src/db/helpers.ts'],
     plugins: {
-      storage: { rules: { 'atomic-transactions': storageTransactionRule } },
+      storage: { rules: { 'atomic-transactions': storageTransactionRule, 'import-ownership': importOwnershipRule } },
     },
-    rules: {
-      'storage/atomic-transactions': 'error',
-    },
+    rules: { 'storage/import-ownership': 'error' },
+  },
+  {
+    files: ['src/**/*.ts', 'src/**/*.tsx'],
+    ignores: ['src/db/helpers.ts'],
+    rules: { 'storage/atomic-transactions': 'error' },
   },
   globalIgnores([
     'plugins',

@@ -1,3 +1,4 @@
+import { importedHistory } from '@/utils/__test__/history-import-action';
 import { describe, it, expect } from 'vitest';
 import { PlanPositionSource, SessionService } from '@/services/session-service';
 import {
@@ -21,7 +22,7 @@ import {
 import type { WorkingListKind } from '@/models/session-models/set-kind';
 import { todaysTarget } from '@/models/session-models/todays-target';
 import { nextTargets } from '@/models/workout-summary';
-import { storedSessionsReducer, upsertStoredSessions } from '@/store/stored-sessions';
+import { storedSessionsReducer } from '@/store/stored-sessions';
 import {
   makeCardioBlueprint,
   makeRecordedExercise,
@@ -585,7 +586,7 @@ describe('SessionService carry over from the best set', () => {
       ]),
       LocalDate.of(2026, 9, 29),
     );
-    const { latestExercises } = storedSessionsReducer(undefined, upsertStoredSessions([lastWeek, today]));
+    const { latestExercises } = storedSessionsReducer(undefined, importedHistory([lastWeek, today]));
 
     const nextPush = makeService(makeState()).hydrateSessionFromBlueprint(
       new SessionBlueprint('Push', [routine], ''),
@@ -610,7 +611,7 @@ describe('SessionService carry over from the best set', () => {
       [60, 10],
     ]).withAllSets((set) => set.with({ set: set.set?.with({ completionDateTime: at(29, 30) }) }));
     const lastWeek = new Session(uuid(), routine, [single, backOffs], LocalDate.of(2026, 9, 29), undefined, undefined);
-    const { latestExercises } = storedSessionsReducer(undefined, upsertStoredSessions([lastWeek]));
+    const { latestExercises } = storedSessionsReducer(undefined, importedHistory([lastWeek]));
 
     const nextPush = makeService(makeState()).hydrateSessionFromBlueprint(routine, latestExercises);
 

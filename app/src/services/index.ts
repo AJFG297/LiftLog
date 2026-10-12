@@ -1,3 +1,6 @@
+import { ProgramWriter } from '@/services/program-writer';
+import { DescriptorWriter } from '@/services/descriptor-writer';
+import { HistoryImport } from '@/services/history-import';
 import { AiChatServiceV2 } from '@/services/ai-chat-service-v2';
 import { EncryptionService } from '@/services/encryption-service';
 import { FeedApiService } from '@/services/feed-api';
@@ -31,7 +34,12 @@ export type Services = ReturnType<typeof createServices>;
 export function createServices(store: Store<RootState>, db: ExpoSQLiteDatabase, expoDb: SQLiteDatabase) {
   const logger = new Logger();
   const keyValueStore = new KeyValueStore();
-  const workoutRepository = new WorkoutRepository(db);
+  const workoutRepository = new WorkoutRepository(db, (error) =>
+    logger.error('Workout commit subscriber failed', error),
+  );
+  const programWriter = new ProgramWriter(db, store.getState);
+  const descriptorWriter = new DescriptorWriter(db, store.getState, keyValueStore);
+  const historyImport = new HistoryImport(store, { db, workoutRepository, programWriter, descriptorWriter, logger });
   const sessionService = new SessionService(workoutRepository, store.getState);
   const notificationService = new NotificationService(store.getState, store.dispatch);
   const encryptionService = new EncryptionService();
@@ -50,11 +58,19 @@ export function createServices(store: Store<RootState>, db: ExpoSQLiteDatabase, 
   const databaseMigrationService = new DatabaseMigrationService(
     db,
     logger,
-    new DatabaseImportService(db, keyValueStore, preferenceService),
+    new DatabaseImportService(db, keyValueStore, preferenceService, (operation) =>
+      programWriter.run(() => descriptorWriter.run(operation)),
+    ),
   );
+
+  const programPersistence: Pick<ProgramWriter, 'flush'> = programWriter;
+  const descriptorPersistence: Pick<DescriptorWriter, 'flush'> = descriptorWriter;
 
   return {
     logger,
+    programWriter: programPersistence,
+    descriptorWriter: descriptorPersistence,
+    historyImport,
     keyValueStore,
     sessionService,
     notificationService,
