@@ -19,6 +19,9 @@ describe('storage transaction boundary', () => {
   it.each([
     ['direct', 'db.transaction(async tx => {});'],
     ['computed', "db['transaction'](async tx => {});"],
+    ['template computed', 'db[`transaction`](async tx => {});'],
+    ['optional template computed', 'db?.[`transaction`]?.(async tx => {});'],
+    ['template destructured', 'const { [`transaction`]: run } = db; run(async tx => {});'],
     ['aliased', 'const run = db.transaction; run(async tx => {});'],
     ['database alias', 'const connection = db; connection.transaction(async tx => {});'],
     ['destructured', 'const { transaction: run } = db; run(async tx => {});'],
@@ -60,8 +63,11 @@ describe('storage transaction boundary', () => {
     }
   });
 
-  it('does not claim to detect dynamic property construction', async () => {
-    expect(await lint("const key = ['trans', 'action'].join(''); db[key](async tx => {});")).toEqual([]);
+  it.each([
+    "const key = ['trans', 'action'].join(''); db[key](async tx => {});",
+    'const key = "transaction"; db[`${key}`](async tx => {});',
+  ])('does not claim to detect dynamic property construction in %s', async (source) => {
+    expect(await lint(source)).toEqual([]);
   });
 
   it.each(['toSorted', 'toSpliced', 'toReversed'])('preserves the Hermes %s restriction', async (method) => {

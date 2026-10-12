@@ -45,8 +45,10 @@ module.exports = defineConfig([
         ...[
           'MemberExpression[computed=false][property.name="transaction"]',
           'MemberExpression[computed=true][property.value="transaction"]',
+          'MemberExpression[computed=true][property.type="TemplateLiteral"][property.expressions.length=0][property.quasis.0.value.cooked="transaction"]',
           'ObjectPattern > Property[computed=false][key.name="transaction"]',
           'ObjectPattern > Property[key.value="transaction"]',
+          'ObjectPattern > Property[computed=true][key.type="TemplateLiteral"][key.expressions.length=0][key.quasis.0.value.cooked="transaction"]',
         ].map((selector) => ({
           selector,
           message: 'Use writeAtomically from @/db/helpers. Device transactions are synchronous.',
