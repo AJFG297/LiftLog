@@ -25,7 +25,12 @@
     "merge-exercises:dry-run": "vitest run src/services/data-migrations/merge-exercise-names.dry-run.spec.ts",
     "typecheck": "tsgo --noEmit",
     "e2e": "maestro test .maestro --exclude-tags ci-only",
-    "e2e:ci": "maestro test .maestro"
+    "e2e:ci": "maestro test .maestro",
+    "verify:browser": "node browser-verification/control.mjs test",
+    "verify:browser:up": "node browser-verification/control.mjs up",
+    "verify:browser:doctor": "node browser-verification/control.mjs doctor",
+    "verify:browser:down": "node browser-verification/control.mjs down",
+    "verify:browser:install": "playwright install chromium"
   },
   "dependencies": {
     "@babel/plugin-proposal-export-namespace-from": "^7.18.9",
@@ -81,6 +86,7 @@
     "protobufjs": "^7.6.5",
     "react": "19.2.3",
     "react-compiler-runtime": "^1.0.0",
+    "react-dom": "19.2.3",
     "react-native": "0.86.3",
     "react-native-csv": "^0.2.0",
     "react-native-gesture-handler": "~2.32.0",
@@ -103,6 +109,7 @@
     "react-native-svg": "15.15.4",
     "react-native-swipe-list-view": "^3.2.9",
     "react-native-vector-icons": "^10.3.0",
+    "react-native-web": "^0.21.3",
     "react-native-worklets": "0.10.1",
     "react-redux": "^9.2.0",
     "ts-pattern": "^5.6.2",
@@ -112,10 +119,13 @@
   "devDependencies": {
     "@babel/core": "^7.29.0",
     "@libsql/client": "^0.17.3",
+    "@playwright/test": "^1.63.0",
     "@react-native-community/cli": "^20.1.2",
     "@types/node": "^24.3.3",
     "@types/react": "~19.2.10",
+    "@types/react-dom": "~19.2.3",
     "@typescript/native-preview": "^7.0.0-dev.20251121.1",
+    "@vitejs/plugin-react": "^6.1.2",
     "@vitest/coverage-v8": "^4.1.9",
     "babel-plugin-inline-import": "^3.0.0",
     "drizzle-kit": "^0.31.10",
@@ -132,6 +142,7 @@
     "patch-package": "^8.0.0",
     "ts-json-schema-generator": "^2.9.0",
     "typescript": "~6.0.3",
+    "vite": "^8.3.3",
     "vitest": "^4.1.8"
   },
   "private": true,

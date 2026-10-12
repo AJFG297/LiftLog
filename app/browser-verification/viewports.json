@@ -1,0 +1,4 @@
+{
+  "default": { "id": "regular", "label": "Regular", "width": 390, "height": 844 },
+  "additional": [{ "id": "large", "label": "Large", "width": 430, "height": 932 }]
+}
