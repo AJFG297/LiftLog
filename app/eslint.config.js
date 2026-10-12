@@ -40,14 +40,15 @@ module.exports = defineConfig([
   },
   {
     files: ['src/**/*.ts', 'src/**/*.tsx'],
-    ignores: ['src/db/helpers.ts'],
     plugins: {
       storage: { rules: { 'atomic-transactions': storageTransactionRule, 'import-ownership': importOwnershipRule } },
     },
-    rules: {
-      'storage/atomic-transactions': 'error',
-      'storage/import-ownership': 'error',
-    },
+    rules: { 'storage/import-ownership': 'error' },
+  },
+  {
+    files: ['src/**/*.ts', 'src/**/*.tsx'],
+    ignores: ['src/db/helpers.ts'],
+    rules: { 'storage/atomic-transactions': 'error' },
   },
   globalIgnores([
     'plugins',
