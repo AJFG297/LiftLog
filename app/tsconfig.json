@@ -13,7 +13,7 @@
       "~/modules/*": ["./modules/*"]
     },
     "noUncheckedIndexedAccess": true,
-    "types": ["vitest", "node"],
+    "types": ["expo/types", "vitest", "node"],
     "exactOptionalPropertyTypes": false
   },
   "include": ["**/*.ts", "**/*.tsx", "types/*.d.ts", ".expo/types/**/*.ts", "expo-env.d.ts", "store/tolgee.d.ts"],
