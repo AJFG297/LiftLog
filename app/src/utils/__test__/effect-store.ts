@@ -34,17 +34,26 @@ export function createEffectStore(services: Partial<Services>) {
 
   const getState = () => store.getState() as unknown as RootState;
   if (services.db) {
-    services.programWriter ??= new ProgramWriter(services.db, getState);
-    if (services.keyValueStore)
-      services.descriptorWriter ??= new DescriptorWriter(services.db, getState, services.keyValueStore);
-    if (services.workoutRepository && services.programWriter && services.descriptorWriter && services.logger) {
+    const programOwner =
+      services.programWriter instanceof ProgramWriter
+        ? services.programWriter
+        : new ProgramWriter(services.db, getState);
+    const descriptorOwner =
+      services.descriptorWriter instanceof DescriptorWriter
+        ? services.descriptorWriter
+        : services.keyValueStore
+          ? new DescriptorWriter(services.db, getState, services.keyValueStore)
+          : undefined;
+    services.programWriter ??= programOwner;
+    services.descriptorWriter ??= descriptorOwner;
+    if (services.workoutRepository && descriptorOwner && services.logger) {
       services.historyImport ??= new HistoryImport(
         { getState, dispatch: store.dispatch, subscribe: store.subscribe },
         {
           db: services.db,
           workoutRepository: services.workoutRepository,
-          programWriter: services.programWriter,
-          descriptorWriter: services.descriptorWriter,
+          programWriter: programOwner,
+          descriptorWriter: descriptorOwner,
           logger: services.logger,
         },
       );

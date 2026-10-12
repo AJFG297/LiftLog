@@ -1,4 +1,4 @@
-import { applyHistoryImport, reconcileHistoryMerge } from '@/models/history-import-actions';
+import { applyHistoryImport, reconcileHistoryMerge } from '@/store/history-import-actions';
 import { applySessionBlueprintDiff, PlanDiff } from '@/models/blueprint-diff';
 import { ProgramBlueprint, SessionBlueprint } from '@/models/blueprint-models';
 import { RemoteData } from '@/models/remote';

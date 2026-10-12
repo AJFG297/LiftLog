@@ -4,7 +4,7 @@ import type { BackupData } from '@/models/backup';
 import type { ExerciseMerge } from '@/models/exercise-merge';
 import type { ExerciseDescriptor } from '@/models/exercise-models';
 import { ExerciseResolver, logAmbiguousInDev } from '@/models/exercise-resolver';
-import { applyHistoryImport, reconcileHistoryMerge } from '@/models/history-import-actions';
+import { applyHistoryImport, reconcileHistoryMerge } from '@/store/history-import-actions';
 import { loadBuiltInExerciseNames } from '@/services/exercise-catalog';
 import { mergeExerciseNames, repointProgram, repointSession } from '@/services/data-migrations/merge-exercise-names';
 import { setLatestExercisesFor } from '@/store/stored-sessions';
@@ -121,7 +121,7 @@ export class HistoryImport {
           let before = store.getState().storedSessions.savedExercises;
           await mergeExerciseNames(
             services.db,
-            store.getState().storedSessions.hiddenBuiltInIds,
+            () => store.getState().storedSessions.hiddenBuiltInIds,
             services.workoutRepository,
             (round) => {
               this.reconcile(round, before);

@@ -1,4 +1,4 @@
-import { applyHistoryImport, reconcileHistoryMerge } from '@/models/history-import-actions';
+import { applyHistoryImport, reconcileHistoryMerge } from '@/store/history-import-actions';
 import { BuiltInPrograms } from '@/models/built-in-programs';
 import { RemoteData } from '@/models/remote';
 import { ProgramBlueprint } from '@/models/blueprint-models';

@@ -1,4 +1,4 @@
-import { applyHistoryImport } from '@/models/history-import-actions';
+import { applyHistoryImport } from '@/store/history-import-actions';
 import { HistoryImport } from '@/services/history-import';
 import { ProgramWriter } from '@/services/program-writer';
 import { DescriptorWriter } from '@/services/descriptor-writer';

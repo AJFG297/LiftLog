@@ -63,10 +63,13 @@ export function createServices(store: Store<RootState>, db: ExpoSQLiteDatabase, 
     ),
   );
 
+  const programPersistence: Pick<ProgramWriter, 'flush'> = programWriter;
+  const descriptorPersistence: Pick<DescriptorWriter, 'flush'> = descriptorWriter;
+
   return {
     logger,
-    programWriter,
-    descriptorWriter,
+    programWriter: programPersistence,
+    descriptorWriter: descriptorPersistence,
     historyImport,
     keyValueStore,
     sessionService,

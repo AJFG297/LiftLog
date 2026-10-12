@@ -187,7 +187,7 @@ export function applyStoredSessionsEffects(addEffect: AddEffectFn) {
         return;
       }
       const written = await logger.time('persistStoredSession', () =>
-        workoutRepository.putCurrent(() => selectSession(getState(), sessionId) ?? session),
+        workoutRepository.putCurrent(() => selectSession(getState(), sessionId), session),
       );
       await refreshStaleLineages(sessionId, getState, dispatch, workoutRepository, written);
     },
