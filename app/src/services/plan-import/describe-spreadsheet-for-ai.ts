@@ -3,14 +3,14 @@ import type { Sheet } from './sheet';
 
 /**
  * The backend's SignalR hub keeps its default 32 KB receive limit, and a message over it drops the
- * connection. This leaves room for the instructions around the sheets and for multi-byte text.
+ * connection. Cap the complete JSON-escaped prompt, leaving room for the invocation envelope.
  */
 export const MAX_SPREADSHEET_AI_BYTES = 24_000;
 
 const TRUNCATED_NOTE = '(The spreadsheet was cut short here because it is too long to send in full.)';
 
 const encoder = new TextEncoder();
-const byteLengthOf = (text: string) => encoder.encode(text).length;
+const byteLengthOf = (text: string) => encoder.encode(JSON.stringify(text)).length - 2;
 
 function toCsvCell(cell: string): string {
   return /[",\r\n]/.test(cell) ? `"${cell.replace(/"/g, '""')}"` : cell;
@@ -29,18 +29,19 @@ export function describeSpreadsheetForAi(
   { locale, preferredWeightUnit }: { locale: string; preferredWeightUnit: LoadUnit },
 ): string {
   const intro =
-    `Here is a workout program from a spreadsheet, "${fileName}". ` +
+    `Here is a workout program from a spreadsheet, "${fileName.slice(0, 1_000)}". ` +
     'Turn it into a plan with the create_workout_plan tool: one routine per training day, ' +
     'exercise names kept exactly as written, and anything the plan cannot express, such as percentages ' +
     "or weights, in that exercise's notes.\n" +
     `Reply in my locale, ${locale}. My preferred weight unit is ${preferredWeightUnit}.`;
 
   const lines: string[] = [];
-  let bytes = 0;
+  // Reserve separators and the truncation note before accepting any complete rows.
+  let bytes = byteLengthOf(intro + '\n\n' + TRUNCATED_NOTE);
   let truncated = false;
   // Only whole rows go in, so the AI never reads half a row as if it were complete.
   const tryAdd = (line: string) => {
-    const lineBytes = byteLengthOf(line) + 1;
+    const lineBytes = byteLengthOf(line + '\n');
     if (bytes + lineBytes > MAX_SPREADSHEET_AI_BYTES) {
       truncated = true;
       return false;

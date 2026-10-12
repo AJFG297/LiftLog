@@ -91,7 +91,12 @@ describe('describeSpreadsheetForAi', () => {
     const rowCount = csv.match(/,END/g)?.length ?? 0;
     expect(rowCount).toBeGreaterThan(0);
     expect(rowCount).toBeLessThan(rows.length);
-    expect(csv).toBe(rows.slice(0, rowCount).map(([id]) => `${id},${csvCell},END`).join('\n'));
+    expect(csv).toBe(
+      rows
+        .slice(0, rowCount)
+        .map(([id]) => `${id},${csvCell},END`)
+        .join('\n'),
+    );
   });
 
   it('includes escaped sheet names and the instructions in the send budget', () => {
