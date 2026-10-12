@@ -13,6 +13,7 @@ async function errors(source: string, filePath: string) {
 
 describe('import ownership boundary', () => {
   it.each([
+    ["import { ProgramWriter } from '@/services/program-writer';", 'src/db/helpers.ts'],
     [
       "import { applyHistoryImport as apply } from '@/store/history-import-actions';",
       'src/components/smart/import.tsx',
