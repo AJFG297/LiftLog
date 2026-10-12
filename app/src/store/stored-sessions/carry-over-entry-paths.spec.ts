@@ -130,12 +130,7 @@ async function startFreeform(app: App): Promise<string> {
  * What `useAddExercise` dispatches when the picker hands back a pick. The app does not wait for it before
  * the next tap; the promise is for a test to wait on.
  */
-function startAdding(
-  app: App,
-  sessionId: string,
-  picked: PickedExerciseRef[],
-  onAdded?: (firstIndex: number) => void,
-) {
+function startAdding(app: App, sessionId: string, picked: PickedExerciseRef[], onAdded?: (firstIndex: number) => void) {
   return app.exerciseEntry.add({ workoutId: sessionId, picked, asSuperset: false, onAdded });
 }
 
