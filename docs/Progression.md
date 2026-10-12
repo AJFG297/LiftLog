@@ -142,11 +142,10 @@ what each set kind carries in `app/src/models/session-models/set-kind.ts`; one e
 time (`nextRecordedExercise`, which routine start, add, swap and Do again all go through) and a swap
 (`sessionWithExerciseReplaced`) in `app/src/models/session-models/carry-over.ts`; the cache minus the
 workout's own entries for an add or swap, read from the tables when an entry is the workout's own, in pick
-order inside `createWorkoutExerciseChanges`, in
-`app/src/store/stored-sessions/workout-exercise-changes.ts`, and the hook the screens call it through
-(`useWorkoutExerciseChanges`) in `app/src/hooks/useWorkoutExerciseChanges.ts`; Do again's structure
-(`repeatBlueprint`) in `app/src/models/workout-detail.ts`; session start and Do again (`repeatSession`, which
-reads the cache from the store when tapped) in `app/src/services/session-service.ts`. Session start goes through
+order (`ExerciseEntry`), in `app/src/store/stored-sessions/exercise-entry.ts`, instantiated once per store
+in `createServices`; Do again's structure (`repeatBlueprint`) in
+`app/src/models/workout-detail.ts`; session start and Do again (`repeatSession`, which reads the cache from
+the store when tapped) in `app/src/services/session-service.ts`. Session start goes through
 `nextSessionExercises` in `app/src/models/session-models/next-exercise.ts`, which opens each exercise through
 `nextRecordedExercise`. The exercise page's Next time card uses that same carry-over function (`nextTimeOf`,
 with `todaysTarget` for the reason), so it says what the next workout will open on; the editor in
