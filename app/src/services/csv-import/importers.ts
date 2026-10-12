@@ -12,7 +12,7 @@ function decodeCsvBytes(contentBytes: Uint8Array): string {
 }
 
 /**
- * FitNotes CSV column layout → BackupData for importBackupData.
+ * FitNotes CSV column layout → BackupData for HistoryImport.
  * Throws Error with a user-facing message on parse/map failure.
  */
 export function getImportForFitNotes(contentBytes: Uint8Array, options?: CsvImportOptions): BackupData {
@@ -31,7 +31,7 @@ export function getImportForFitNotes(contentBytes: Uint8Array, options?: CsvImpo
 }
 
 /**
- * StrongLifts CSV export → BackupData for importBackupData.
+ * StrongLifts CSV export → BackupData for HistoryImport.
  * Throws Error with a user-facing message on parse/map failure.
  */
 export function getImportForStrongLifts(contentBytes: Uint8Array, options?: CsvImportOptions): BackupData {

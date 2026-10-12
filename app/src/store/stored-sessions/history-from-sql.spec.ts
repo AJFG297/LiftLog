@@ -25,7 +25,6 @@ import {
   sessionFinished,
   setActiveSessionId,
   updateStoredSession,
-  upsertStoredSessions,
   openSessionForEditing,
   openSessionForSummary,
 } from '@/store/stored-sessions';
@@ -293,10 +292,10 @@ describe('history read from SQL', () => {
     await openForEditing(app, 'week-1');
     // The persist effect's write waits on the test, as a big import or a slow device would make it.
     let commit = () => {};
-    const putMany = repository.putMany.bind(repository);
-    vi.spyOn(repository, 'putMany').mockImplementation(async (sessions) => {
+    const putCurrent = repository.putCurrent.bind(repository);
+    vi.spyOn(repository, 'putCurrent').mockImplementation(async (read) => {
       await new Promise<void>((resolve) => (commit = resolve));
-      return putMany(sessions);
+      return putCurrent(read);
     });
     app.store.dispatch(
       updateStoredSession({
@@ -478,7 +477,7 @@ describe('history read from SQL', () => {
     });
 
     interface Write {
-      kind: 'put' | 'update' | 'upsert' | 'delete';
+      kind: 'put' | 'update' | 'delete';
       id: string;
       hour: number;
       name: string;
@@ -513,8 +512,6 @@ describe('history read from SQL', () => {
                 return putStoredSession(built);
               case 'update':
                 return updateStoredSession({ sessionId: w.id, update: () => built });
-              case 'upsert':
-                return upsertStoredSessions([built]);
               default:
                 return deleteStoredSession(w.id);
             }
@@ -539,7 +536,7 @@ describe('history read from SQL', () => {
     it('stays equal to the tables after any mix of writes', async () => {
       await cacheMatchesTablesAfter(
         fc.record({
-          kind: fc.constantFrom('put', 'update', 'upsert', 'delete'),
+          kind: fc.constantFrom('put', 'update', 'delete'),
           id: fc.constantFrom('a', 'b', 'c', 'd'),
           hour: fc.integer({ min: 0, max: 3 }),
           name: fc.constantFrom('Squat', 'Bench'),

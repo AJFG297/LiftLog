@@ -1,16 +1,16 @@
-import { beginFeedImport, importBackupData, importData, importDataSql } from '@/store/settings';
+import { setIsHydrated as setProgramHydrated } from '@/store/program';
+import { beginFeedImport, importData, importDataSql } from '@/store/settings';
 import { addImportBackupEffects } from '@/store/settings/import-backup-effects';
 import { createAddEffectTestBed } from '@/utils/__test__/add-effect-testbed';
 import { describe, expect, it, vi } from 'vitest';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'path';
 import { gzipSync } from 'node:zlib';
-import { FeedBackupData } from '@/models/backup';
-import { FeedIdentity } from '@/models/feed-models';
+import type { BackupData } from '@/models/backup';
+import type { ImportRequest, ImportOutcome } from '@/services/history-import';
 import { ProgramBlueprint } from '@/models/blueprint-models';
-import { EmptySession, Session } from '@/models/session-models';
-import { uuid } from '@/utils/uuid';
-import { setIsHydrated, upsertExercises, upsertStoredSessions } from '@/store/stored-sessions';
+import { Session } from '@/models/session-models';
+import { setIsHydrated } from '@/store/stored-sessions';
 import { applyStoredSessionsEffects } from '@/store/stored-sessions/effects';
 import { createEffectStore } from '@/utils/__test__/effect-store';
 import { openDatabaseAsync } from 'expo-sqlite';
@@ -20,7 +20,6 @@ import { WorkoutRepository } from '@/services/workout-repository';
 import { exercisesSchema, programsSchema } from '@/db/schema';
 import { upsert } from '@/db/helpers';
 import { makeSession, makeWeightedBlueprint } from '@/models/session-models/__test__/helpers';
-import { upsertSavedPlans } from '@/store/program';
 import { showSnackbar } from '@/store/app';
 import { getBackupBytes } from '@/store/settings/util';
 import { loadHistoryFixture } from '@/utils/__test__/history-fixture';
@@ -51,19 +50,26 @@ const silentLogger = {
   time: async (_: string, action: () => unknown) => action(),
 };
 
-/** Picks `bytes` as the backup file and runs the restore up to the `importBackupData` it dispatches. */
-async function restore(bytes: Uint8Array) {
+/** Reads a backup file through the actual SQL restore effect. */
+async function restore(bytes: Uint8Array, outcome: ImportOutcome = { kind: 'complete', count: 0 }) {
+  let data: BackupData | undefined;
+  const apply = vi.fn(async (request: ImportRequest) => {
+    data = request.data;
+    return outcome;
+  });
   const testBed = createAddEffectTestBed({
     services: {
       filePickerService: { pickFile: vi.fn().mockResolvedValue({ bytes }) },
       logger: silentLogger,
       tolgee: { t: (s: string) => s },
+      historyImport: { apply },
     },
   });
   addImportBackupEffects(testBed.addEffect);
   await testBed.dispatchHandled(importData());
   await testBed.dispatchHandled(testBed.getDispatchedAction(importDataSql));
-  return testBed.getDispatchedAction(importBackupData).payload;
+  expect(apply).toHaveBeenCalledOnce();
+  return { ...data!, testBed };
 }
 
 describe('import-backup-effects', () => {
@@ -79,8 +85,9 @@ describe('import-backup-effects', () => {
     // Read as the backup holds them, plural pairs included: the device merges those once they are written.
     expect(Object.values(restored.exercises ?? {})).toHaveLength(962);
     expect(restored.feed).toBeDefined();
-    expect(restored.successMessage).toBe('Restore complete!');
-    expect(restored.source).toBe('backup');
+    expect(restored.testBed.dispatchedActions.filter(showSnackbar.match).at(-1)?.payload.text).toBe(
+      'Restore complete!',
+    );
     // Workout ids are health-export record ids and the CSV-import dedupe key, so a restore must keep them.
     const expected = loadHistoryFixture();
     expect(restored.workouts.map((x) => x.id).toSorted()).toEqual(expected.map((x) => x.id).toSorted());
@@ -104,6 +111,7 @@ describe('import-backup-effects', () => {
         filePickerService: { pickFile: vi.fn().mockResolvedValue({ bytes }) },
         logger: silentLogger,
         tolgee: { t: (s: string) => s },
+        historyImport: { apply: vi.fn().mockResolvedValue({ kind: 'complete', count: 0 }) },
       },
     });
     addImportBackupEffects(testBed.addEffect);
@@ -111,103 +119,29 @@ describe('import-backup-effects', () => {
     await testBed.dispatchHandled(importData());
     await testBed.dispatchHandled(testBed.getDispatchedAction(importDataSql));
 
-    testBed.expectNotDispatched(importBackupData);
+    expect(testBed.mockServices.historyImport.apply).not.toHaveBeenCalled();
     expect(testBed.dispatchedActions.filter(showSnackbar.match).at(-1)?.payload.text).toBe(
       "This backup is from an older version of LiftLog and can't be restored.",
     );
   });
 
-  it('dispatches the appropriate actions when importing', async () => {
-    const testBed = createAddEffectTestBed({
-      initialState: { settings: { useImperialUnits: false }, storedSessions: { isHydrated: true } },
-      services: {
-        tolgee: { t: (s: string) => s },
-      },
+  it('reports partial failure and gates feed confirmation on local completion', async () => {
+    const bytes = await readFile(resolve(__dirname, '../../utils/__test__/backup.liftlogbackup.sqlite.gz'));
+    const failed = await restore(bytes, {
+      kind: 'failed',
+      stage: 'repair',
+      error: new Error('marker'),
+      durableStages: ['workouts'],
+      possibleWrites: ['repair'],
+      committedRounds: [],
+      pending: 'repair-and-cache',
     });
-    addImportBackupEffects(testBed.addEffect);
-
-    const mockWorkouts = [EmptySession, EmptySession.with({ id: uuid() })] as Session[];
-    const mockPrograms = {} as Record<string, ProgramBlueprint>;
-    const mockExercises = {
-      custom: {
-        name: 'Custom exercise',
-        force: null,
-        level: '',
-        mechanic: null,
-        equipment: null,
-        primaryMuscles: [],
-        secondaryMuscles: [],
-        instructions: '',
-        category: '',
-      },
-    };
-    const mockFeed: FeedBackupData = {
-      identity: {} as FeedIdentity,
-      feedItems: [],
-      followRequests: [],
-      followed: [],
-      followers: [],
-    };
-
-    await testBed.dispatchHandled(
-      importBackupData({
-        source: 'backup',
-        workouts: mockWorkouts,
-        programs: mockPrograms,
-        exercises: mockExercises,
-        feed: mockFeed,
-        successMessage: 'Restore complete!',
-      }),
+    failed.testBed.expectNotDispatched(beginFeedImport);
+    expect(failed.testBed.dispatchedActions.filter(showSnackbar.match).at(-1)?.payload.text).toBe(
+      'Restore incomplete. Some data may have been saved. Retry the restore to finish.',
     );
-
-    expect(testBed.getDispatchedAction(upsertStoredSessions).payload).toEqual(mockWorkouts);
-    expect(testBed.getDispatchedAction(upsertSavedPlans).payload).toEqual(mockPrograms);
-    expect(testBed.getDispatchedAction(upsertExercises).payload).toEqual(mockExercises);
-    expect(testBed.getDispatchedAction(showSnackbar).payload.text).toBe('Restore complete!');
-    expect(testBed.getDispatchedAction(beginFeedImport).payload).toBe(mockFeed);
-  });
-
-  it('shows the provided successMessage', async () => {
-    const testBed = createAddEffectTestBed({
-      initialState: { settings: { useImperialUnits: false }, storedSessions: { isHydrated: true } },
-      services: {
-        tolgee: { t: (s: string) => s },
-      },
-    });
-    addImportBackupEffects(testBed.addEffect);
-
-    await testBed.dispatchHandled(
-      importBackupData({
-        source: 'external',
-        workouts: [],
-        programs: {},
-        successMessage: 'Imported 3 workout(s)',
-      }),
-    );
-
-    expect(testBed.getDispatchedAction(showSnackbar).payload.text).toBe('Imported 3 workout(s)');
-  });
-
-  it('does not dispatch beginFeedImport when feed is absent', async () => {
-    const testBed = createAddEffectTestBed({
-      initialState: { settings: { useImperialUnits: false }, storedSessions: { isHydrated: true } },
-      services: {
-        tolgee: { t: (s: string) => s },
-      },
-    });
-    addImportBackupEffects(testBed.addEffect);
-
-    await testBed.dispatchHandled(
-      importBackupData({
-        source: 'backup',
-        workouts: [],
-        programs: {},
-        feed: undefined,
-        successMessage: 'Restore complete!',
-      }),
-    );
-
-    testBed.expectNotDispatched(beginFeedImport);
+    const complete = await restore(bytes);
+    expect(complete.testBed.getDispatchedAction(beginFeedImport).payload).toEqual(complete.feed);
   });
 });
 
@@ -268,16 +202,20 @@ describe('export then restore', () => {
     const harness = createEffectStore({
       db,
       workoutRepository,
-      keyValueStore: { getItem: () => Promise.resolve(undefined) } as never,
+      keyValueStore: { getItem: () => Promise.resolve(undefined), setItem: () => Promise.resolve() } as never,
       logger: silentLogger as never,
       tolgee: { t: (s: string) => s } as never,
     });
     applyStoredSessionsEffects(harness.addEffect);
     addImportBackupEffects(harness.addEffect);
     harness.store.dispatch(setIsHydrated(true));
+    harness.store.dispatch(setSettingsIsHydrated(true));
+    harness.store.dispatch(setProgramHydrated(true));
     const workouts = loadHistoryFixture().slice(0, 20);
 
-    harness.store.dispatch(importBackupData({ source: 'backup', workouts, programs: {}, successMessage: 'done' }));
+    expect(await harness.historyImport!.apply({ kind: 'backup', data: { workouts, programs: {} } })).toMatchObject({
+      kind: 'complete',
+    });
     await harness.settle();
 
     const stored = await workoutRepository.loadAll();
@@ -361,6 +299,7 @@ describe('restoring a backup taken before the plural merge', () => {
     applyStoredSessionsEffects(harness.addEffect);
     addImportBackupEffects(harness.addEffect);
     harness.store.dispatch(setSettingsIsHydrated(true));
+    harness.store.dispatch(setProgramHydrated(true));
     harness.store.dispatch(initializeStoredSessionsStateSlice());
     await harness.settle();
 

@@ -1,3 +1,4 @@
+import { setIsHydrated as setProgramHydrated } from '@/store/program';
 import { describe, expect, it, vi } from 'vitest';
 import { drizzle } from 'drizzle-orm/expo-sqlite';
 import { openDatabaseAsync } from 'expo-sqlite';
@@ -32,7 +33,7 @@ import {
 import { applyStoredSessionsEffects } from '@/store/stored-sessions/effects';
 import { applyProgramEffects } from '@/store/program/effects';
 import { linkPlanExercises, savePlan } from '@/store/program';
-import { importBackupData, setIsHydrated as setSettingsIsHydrated, setPreferredLanguage } from '@/store/settings';
+import { setIsHydrated as setSettingsIsHydrated, setPreferredLanguage } from '@/store/settings';
 import { addImportBackupEffects } from '@/store/settings/import-backup-effects';
 import { calculateStats } from '@/store/stats/calculate-stats';
 import { sessionsFromNormalized } from '@/services/csv-import/csv-to-sessions';
@@ -115,6 +116,7 @@ async function startApp(db: ExpoSQLiteDatabase, extra: Record<string, unknown> =
   harness.store.dispatch(setSettingsIsHydrated(true));
   harness.store.dispatch(initializeStoredSessionsStateSlice());
   await harness.settle();
+  harness.store.dispatch(setProgramHydrated(true));
   return { ...harness, sessionService };
 }
 
@@ -277,7 +279,9 @@ describe('exercise identity through the store', () => {
       })),
     );
 
-    app.store.dispatch(importBackupData({ source: 'external', workouts, programs: {}, successMessage: 'done' }));
+    expect(await app.historyImport!.apply({ kind: 'external', data: { workouts, programs: {} } })).toMatchObject({
+      kind: 'complete',
+    });
     await app.settle();
 
     const imported = (await storedWorkouts(db)).filter((x) => x.blueprint.name === 'Imported');
@@ -350,7 +354,9 @@ describe('exercise identity through the store', () => {
         exercises: [{ name: 'Lunges', sets: [{ reps: 8, weight: 20, unit: 'kilograms' }] }],
       },
     ]);
-    app.store.dispatch(importBackupData({ source: 'external', workouts: csv, programs: {}, successMessage: 'done' }));
+    expect(await app.historyImport!.apply({ kind: 'external', data: { workouts: csv, programs: {} } })).toMatchObject({
+      kind: 'complete',
+    });
 
     app.store.dispatch(fetchSharedItem({ id: 'shared', key: { value: new Uint8Array() } }));
     await app.settle();
@@ -388,7 +394,9 @@ describe('exercise identity through the store', () => {
         exercises: [{ name: originalName, sets: [{ reps: 8, weight: 60, unit: 'kilograms' }] }],
       },
     ]);
-    app.store.dispatch(importBackupData({ source: 'external', workouts, programs: {}, successMessage: 'done' }));
+    expect(await app.historyImport!.apply({ kind: 'external', data: { workouts, programs: {} } })).toMatchObject({
+      kind: 'complete',
+    });
     await app.settle();
 
     expect(selectExerciseById(app.getState(), id)).toEqual(renamed);
@@ -427,15 +435,14 @@ describe('exercise identity through the store', () => {
       [new SessionBlueprint('Day', [hackSquat.with({ name: 'Renamed custom lift' }), legacyBlueprint], '')],
       LocalDate.of(2026, 4, 1),
     );
-    app.store.dispatch(
-      importBackupData({
-        source: 'backup',
+    await app.historyImport!.apply({
+      kind: 'backup',
+      data: {
         workouts: [...workouts, legacy],
         programs: { restored: plan },
         exercises: {},
-        successMessage: 'done',
-      }),
-    );
+      },
+    });
     await app.settle();
     expect(app.getState().program.savedPrograms.restored?.sessions[0]?.exercises.map((x) => x.exerciseId)).toEqual([
       USER_EXERCISE,

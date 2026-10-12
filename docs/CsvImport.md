@@ -79,12 +79,12 @@ The in-app **Read documentation** button opens this page; the sections above are
 the user-facing guide.
 
 Rows are parsed, grouped into sessions (see each format), then turned into `BackupData` and merged
-with the same path as Restore (`importBackupData`). Session IDs are grouping-key derived: UUID v5
+through the same awaitable `HistoryImport` owner as Restore. Session IDs are grouping-key derived: UUID v5
 over the FitNotes calendar date, or StrongLifts date + Workout id (A/B) - not Workout Name, and not
 sets or notes. Re-import skips IDs already in History (first import wins). Changing sets or comments
 in the source app and exporting again does not create a second session for that day; delete the
 imported session and import again to refresh it. Stats invalidation (`setStatsIsDirty`) runs on the
-external-import path only, not inside full backup restore.
+external-import path after completion. Restore retains the generic import-action and repository-commit stats observers.
 
 Internal format ids (UI dropdown / `importFromExternal`): `FitNotes` | `StrongLifts`. These are
 unrelated to plaintext export’s own `CSV` value.
@@ -96,8 +96,10 @@ importFromExternal({ format })
   → getExternalImporter(format)(bytes, { defaultWeightUnit })
        → format-specific parse + group → NormalizedImportSession[]
        → sessionsFromNormalized() → BackupData { workouts, programs: {} }
-  → filter session ids already stored (WorkoutRepository.existingIds)
-  → importBackupData(...); setStatsIsDirty(true)   // external path only
+  → await HistoryImport.apply({ kind: external, data })
+       → wait for hydration, filter existing IDs, persist, repair, refresh cache
+  → report complete, unchanged, or incomplete
+  → setStatsIsDirty(true) after an external import completes
 ```
 
 - Package: `app/src/services/csv-import/`
@@ -106,6 +108,6 @@ importFromExternal({ format })
   - `csv-to-sessions.ts` — `sessionsFromNormalized`, `sessionIdFromCsvContent`
   - `importers.ts` — `getImportForFitNotes` / `getImportForStrongLifts`
   - `csv-parse-utils.ts` — shared cell/number/Papa preamble helpers
-- Settings effect: `import-external-effects.ts` uses the registry; filters the session IDs already in the
-  workout tables (`existingIds`);
-  dispatches `importBackupData` + `setStatsIsDirty` (or already-imported snackbar).
+- Settings effect: `import-external-effects.ts` uses the registry and awaits `HistoryImport.apply`.
+  The owner's FIFO keeps duplicate lookup and insertion together. An incomplete result can include
+  saved data. Re-importing the file finishes repair and cache refresh before reporting unchanged.

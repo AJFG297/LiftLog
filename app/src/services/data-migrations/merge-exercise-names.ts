@@ -1,10 +1,12 @@
+import { writeAtomically } from '@/db/helpers';
+import type { Session } from '@/models/session-models';
 import { ExpoSQLiteDatabase } from 'drizzle-orm/expo-sqlite';
 import { eq, inArray, sql } from 'drizzle-orm';
 import { dataMigrationsSchema, exercisesSchema, programsSchema } from '@/db/schema';
 import { ExerciseBlueprint, ExerciseId, ProgramBlueprint } from '@/models/blueprint-models';
 import { fromExerciseDescriptorJSON, toExerciseDescriptorJSON } from '@/models/exercise-models';
 import { ExerciseMerge, planExerciseMerges } from '@/models/exercise-merge';
-import { mapProgramExercises } from '@/models/map-exercise-blueprints';
+import { mapProgramExercises, mapSessionExercises } from '@/models/map-exercise-blueprints';
 import { exerciseDescriptorMigrations, programBlueprintMigrations } from '@/models/storage/versions/migrations';
 import { loadBuiltInExerciseNames, loadCanonicalBuiltInExercises } from '@/services/exercise-catalog';
 import { WorkoutRepository } from '@/services/workout-repository';
@@ -45,12 +47,14 @@ export async function planStoredExerciseMerges(
  * Each round is one transaction, so a run that stops part way leaves whole rounds and plans the rest
  * again. Workouts are rewritten in SQL (`WorkoutRepository.repointExercises`): reading and writing back
  * thousands of them took over a second at startup. A user with nothing to merge has none of their data
- * written. Also run after every restore or import, whatever `data_migrations` says: see `upsertStoredSessions`.
+ * written. Also run after every restore or import, whatever `data_migrations` says: see `HistoryImport`.
  */
 export async function mergeExerciseNames(
   db: ExpoSQLiteDatabase,
   hiddenBuiltInIds: readonly ExerciseId[],
   workoutRepository = new WorkoutRepository(db),
+  onCommittedRound: (merges: ExerciseMerge[]) => void = () => {},
+  afterRound: () => Promise<void> = async () => {},
 ): Promise<ExerciseMerge[][]> {
   const rounds: ExerciseMerge[][] = [];
   for (;;) {
@@ -58,10 +62,13 @@ export async function mergeExerciseNames(
     if (!merges.length) {
       break;
     }
-    await applyExerciseMerges(db, workoutRepository, merges);
+    await applyExerciseMerges(db, workoutRepository, merges, () => onCommittedRound(merges));
     rounds.push(merges);
+    await afterRound();
   }
-  await db.insert(dataMigrationsSchema).values({ id: mergeExerciseNamesDataMigration }).onConflictDoNothing();
+  await writeAtomically(db, (tx) => [
+    tx.insert(dataMigrationsSchema).values({ id: mergeExerciseNamesDataMigration }).onConflictDoNothing(),
+  ]);
   return rounds;
 }
 
@@ -69,6 +76,7 @@ async function applyExerciseMerges(
   db: ExpoSQLiteDatabase,
   workoutRepository: WorkoutRepository,
   merges: ExerciseMerge[],
+  onCommitted: () => void,
 ) {
   const survivorOf = survivorsOf(merges);
   const survivors = merges.flatMap(({ survivor, survivorDescriptor }) =>
@@ -80,21 +88,25 @@ async function applyExerciseMerges(
     return JSON.stringify(payload) === JSON.stringify(program.toJSON()) ? [] : [{ id: row.id, payload }];
   });
 
-  await workoutRepository.repointExercises(survivorOf, (tx) => [
-    tx.delete(exercisesSchema).where(inArray(exercisesSchema.id, [...survivorOf.keys()])),
-    ...(survivors.length
-      ? [
-          tx
-            .insert(exercisesSchema)
-            .values(survivors)
-            .onConflictDoUpdate({
-              target: exercisesSchema.id,
-              set: { payload: sql.raw(`excluded.${exercisesSchema.payload.name}`) },
-            }),
-        ]
-      : []),
-    ...programs.map(({ id, payload }) => tx.update(programsSchema).set({ payload }).where(eq(programsSchema.id, id))),
-  ]);
+  await workoutRepository.repointExercises(
+    survivorOf,
+    (tx) => [
+      tx.delete(exercisesSchema).where(inArray(exercisesSchema.id, [...survivorOf.keys()])),
+      ...(survivors.length
+        ? [
+            tx
+              .insert(exercisesSchema)
+              .values(survivors)
+              .onConflictDoUpdate({
+                target: exercisesSchema.id,
+                set: { payload: sql.raw(`excluded.${exercisesSchema.payload.name}`) },
+              }),
+          ]
+        : []),
+      ...programs.map(({ id, payload }) => tx.update(programsSchema).set({ payload }).where(eq(programsSchema.id, id))),
+    ],
+    onCommitted,
+  );
 }
 
 /** `program` with each merged exercise pointed at its survivor, round after round. */
@@ -106,6 +118,16 @@ export function repointProgram(program: ProgramBlueprint, rounds: readonly Exerc
       return survivor === undefined ? blueprint : (blueprint.with({ exerciseId: survivor }) as T);
     });
   }, program);
+}
+
+export function repointSession(session: Session, rounds: readonly ExerciseMerge[][]): Session {
+  return rounds.reduce((result, merges) => {
+    const survivorOf = survivorsOf(merges);
+    return mapSessionExercises(result, <T extends ExerciseBlueprint>(blueprint: T): T => {
+      const survivor = survivorOf.get(blueprint.exerciseId);
+      return survivor === undefined ? blueprint : (blueprint.with({ exerciseId: survivor }) as T);
+    });
+  }, session);
 }
 
 function survivorsOf(merges: readonly ExerciseMerge[]): Map<ExerciseId, ExerciseId> {

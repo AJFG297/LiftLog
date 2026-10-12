@@ -134,6 +134,29 @@ aliases, destructuring, optional access, template keys without interpolation and
 wrappers around those keys. Dynamic property construction, including interpolated template keys, is
 outside this lint guarantee.
 
+### Import completion and shared writers
+
+`HistoryImport` is constructed once per store. Both CSV import and SQL backup restore await its
+`apply` result before showing completion. Its queue waits for settings, program, and exercise hydration,
+then owns external duplicate lookup through insertion. Existing external IDs keep their original content.
+A duplicate retry still repairs exercise identity and refreshes carry-over.
+
+`ProgramWriter` and `DescriptorWriter` serialize their table writes and read current Redux state when
+SQL executes. Startup seeding uses the program writer before saving its marker. Runtime imports hold
+program ownership, then descriptor ownership, through repair. Startup data migrations use those same
+queues without flushing unhydrated Redux. `writeAtomically` orders transactions per database connection.
+
+Each committed merge round synchronously repoints current plans and open workouts before later awaits.
+A descriptor edited during the round keeps its current value. If only a loser was edited, its current
+fields move to the survivor. If both were edited, the survivor's fields win. Unrelated creations and
+removals stay in Redux and the final descriptor flush writes them. Ordinary queued workout writes read
+current content when their SQL executes and follow committed identity mappings even after their slot closes.
+
+An import spans several transactions. A failed result names its stage, completed durable stages, attempted
+writes, committed merge rounds, and remaining repair or cache work. Earlier commits are retained. Retrying
+the same file finishes repair before acknowledging unchanged input. Feed restore remains a separate
+confirmation after local completion.
+
 ### Workouts
 
 A workout is stored across five tables (`db/schema.ts`), not as one payload:
