@@ -130,8 +130,9 @@ When several statements must move together, use `writeAtomically(db, (tx) => [..
 synchronous and commits as soon as the callback returns, so every awaited statement runs after the commit,
 outside the transaction. Tests can't catch that, because Vitest's libsql driver is async and awaits the
 callback. ESLint restricts static `transaction` access outside `db/helpers.ts`, including
-aliases, destructuring, optional access and template keys without interpolation. Dynamic property
-construction, including interpolated template keys, is outside this lint guarantee.
+aliases, destructuring, optional access, template keys without interpolation and erased TypeScript
+wrappers around those keys. Dynamic property construction, including interpolated template keys, is
+outside this lint guarantee.
 
 ### Workouts
 
