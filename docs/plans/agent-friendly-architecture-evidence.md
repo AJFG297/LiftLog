@@ -84,7 +84,7 @@ Precursor commits were not uniformly proven introducing commits.
   editor/read-failure and start/repeat principal paths were still unchanged in that experiment.
 - The implementation migrates editor and read-failure paths as well. It reuses five picker construction
   functions; a static comparison found equivalence after comments and formatting were removed. The
-  shipped suite retains 21 original cases and adds 12 owner cases, with 49 focused lint cases, including 23 factory-boundary cases.
+  shipped suite retains 21 original cases and adds 12 owner cases, with 60 focused lint cases, including factory and static-template/type-only boundary cases.
 
 The four candidate prototypes were compared under the same behavior checks. The cross-judge preferred
 existing entry APIs plus a store-scoped queue. The approved pilot instead tests whether moving add,
