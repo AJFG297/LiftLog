@@ -120,7 +120,7 @@ async function fixture({
     preferences.set(key, value);
   });
   await new DatabaseMigrationService(db, logger, { importOldData: async () => {} }).migrate();
-  const repository = new WorkoutRepository(db);
+  const repository = new WorkoutRepository(db, (error) => logger.error('Workout commit subscriber failed', error));
   await repository.putMany(workouts);
   if (active) await repository.setActive(active);
   const exerciseRows = Object.entries(exercises).map(([id, exercise]) => ({
@@ -605,7 +605,6 @@ describe('HistoryImport', () => {
 
   it('contains postcommit subscriber errors and still reconciles committed identities', async () => {
     const f = await splitFixture();
-    const logged = vi.spyOn(console, 'error').mockImplementation(() => {});
     const subscriber = vi.fn(() => {
       throw new Error('view subscriber failed');
     });
@@ -613,7 +612,10 @@ describe('HistoryImport', () => {
     expect(await f.owner.apply({ kind: 'external', data: emptyData })).toEqual({ kind: 'unchanged' });
     unsubscribe();
     expect(subscriber).toHaveBeenCalled();
-    expect(logged).toHaveBeenCalled();
+    expect(f.logger.error).toHaveBeenCalledWith(
+      'Workout commit subscriber failed',
+      expect.objectContaining({ message: 'view subscriber failed' }),
+    );
     expect(weighted(await f.repository.get('loser')).blueprint.exerciseId).toBe('user-lunge');
     expect(f.app.getState().program.savedPrograms.plan?.sessions[0]?.exercises[0]?.exerciseId).toBe('user-lunge');
     expect(f.app.getState().storedSessions.savedExercises['user-lunges']).toBeUndefined();
