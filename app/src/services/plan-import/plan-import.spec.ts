@@ -162,22 +162,34 @@ describe('parsePlanImport from a spreadsheet', () => {
     ]);
   });
 
-  it('keeps an exercise with missing reps immediately before a repeated header', () => {
-    const result = csv('Full Body.csv', 'Exercise,Reps\nSquat,5\nPull Up,\nExercise,Reps\nBench,8');
+  it.each(['', '\n'])(
+    'keeps an exercise with missing reps before a repeated header, with separator %j',
+    (separator) => {
+      const result = csv('Full Body.csv', `Exercise,Reps\nSquat,5\nPull Up,\n${separator}Exercise,Reps\nBench,8`);
 
-    expect(summary(result)).toEqual({
-      name: 'Full Body',
-      routines: [
-        {
-          name: 'Full Body',
-          exercises: [
-            { name: 'Squat', reps: ['5', '5', '5'], rest: 90 },
-            { name: 'Pull Up', reps: ['10', '10', '10'], rest: 90 },
-            { name: 'Bench', reps: ['8', '8', '8'], rest: 90 },
-          ],
-        },
-      ],
-    });
+      expect(summary(result)).toEqual({
+        name: 'Full Body',
+        routines: [
+          {
+            name: 'Full Body',
+            exercises: [
+              { name: 'Squat', reps: ['5', '5', '5'], rest: 90 },
+              { name: 'Pull Up', reps: ['10', '10', '10'], rest: 90 },
+              { name: 'Bench', reps: ['8', '8', '8'], rest: 90 },
+            ],
+          },
+        ],
+      });
+    },
+  );
+
+  it('reads a repeated table title outside the previous Exercise column without a blank row', () => {
+    const result = csv('Split.csv', 'Reps,Exercise\n5,Squat\nDay 2 - Pull,\nReps,Exercise\n8,Pull Up');
+
+    expect(summary(result).routines).toEqual([
+      { name: '', exercises: [{ name: 'Squat', reps: ['5', '5', '5'], rest: 90 }] },
+      { name: 'Day 2 - Pull', exercises: [{ name: 'Pull Up', reps: ['8', '8', '8'], rest: 90 }] },
+    ]);
   });
 
   it.each(['', '8'])('keeps an unsupported prescription from Sets in notes with Reps %j', (reps) => {

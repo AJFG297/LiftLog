@@ -114,8 +114,8 @@ interface Block {
 
 /**
  * The tables on a sheet. The first header must be near the top; after it, every row that reads as a
- * header starts another table, and a single-cell row just above that header names it. This is how
- * programs laid out as one sheet with a table per day read.
+ * header starts another table. A single-cell title in the previous exercise column needs a blank row
+ * before it so an exercise with missing targets is not mistaken for the next table's title.
  */
 function blocksOf(sheet: Sheet): Block[] {
   const blocks: Block[] = [];
@@ -126,8 +126,13 @@ function blocksOf(sheet: Sheet): Block[] {
       while (above >= 0 && sheet.rows[above]!.every((cell) => !cell.trim())) {
         above--;
       }
-      const title = titleOf(sheet.rows[above]);
       const previous = blocks[blocks.length - 1];
+      const titleRow = sheet.rows[above];
+      const separated = above > 0 && sheet.rows[above - 1]!.every((cell) => !cell.trim());
+      const title =
+        !previous || separated || !cellAt(titleRow ?? [], previous.header.columns.exercise)
+          ? titleOf(titleRow)
+          : undefined;
       if (previous && title !== undefined && above >= 0) {
         // The title row was read as part of the previous table; it belongs to this one.
         previous.rows = previous.rows.filter((r) => r !== sheet.rows[above]);
@@ -159,7 +164,11 @@ function exerciseFrom(row: string[], header: Header): WeightedExerciseBlueprint 
   if (!reps || !reps.exact) {
     keepAsNote(schemeField ?? (cell('reps') ? 'reps' : 'setsXReps'));
   }
-  const sets = scheme?.sets ?? parseSetsCell(cell('sets')) ?? reps?.sets;
+  const parsedSets = parseSetsCell(cell('sets'));
+  if (schemeField !== 'sets' && parsedSets === undefined && !parseSetsXRepsCell(cell('sets'))) {
+    keepAsNote('sets');
+  }
+  const sets = scheme?.sets ?? parsedSets ?? reps?.sets;
   const rest = parseRestCell(cell('rest'), header.restUnit);
   // A routine has no starting weight, so the weight is kept where the user will see it.
   keepAsNote('weight');
