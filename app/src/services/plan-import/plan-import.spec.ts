@@ -22,7 +22,7 @@ function summary(result: PlanImportResult) {
           reps: weighted.plannedSets.map((s) =>
             s.reps.min === s.reps.max ? `${s.reps.min}` : `${s.reps.min}-${s.reps.max}`,
           ),
-          rest: weighted.restBetweenSets.minRest.seconds(),
+          rest: weighted.restBetweenSets.rest.seconds(),
           ...(weighted.notes ? { notes: weighted.notes } : {}),
         };
       }),

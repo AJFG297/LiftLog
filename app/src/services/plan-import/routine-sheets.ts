@@ -5,7 +5,7 @@ import {
   SessionBlueprint,
   WeightedExerciseBlueprint,
 } from '@/models/blueprint-models';
-import { withMinRest } from '@/models/rest-default';
+import { withRest } from '@/models/rest-default';
 import { LocalDate } from '@js-joda/core';
 import BigNumber from 'bignumber.js';
 import {
@@ -177,7 +177,7 @@ function exerciseFrom(row: string[], header: Header): WeightedExerciseBlueprint 
     name: cell('exercise'),
     sets,
     repsConfig: reps?.reps,
-    restBetweenSets: rest ? withMinRest(Rest.medium, rest) : Rest.medium,
+    restBetweenSets: rest ? withRest(Rest.medium, rest) : Rest.medium,
     notes: [cell('notes'), ...notes].filter(Boolean).join('\n'),
     progression: [ProgressionRule.load(new BigNumber(2.5))],
   });
