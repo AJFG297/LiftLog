@@ -35,6 +35,12 @@ That imports as two routines, Push and Pull.
 
 If no sheet has a header LiftLog recognises, it says so and nothing is imported. Only the first 5,000 rows and 100 columns of a sheet are read, and a spreadsheet that unpacks to more than 20 MB is refused; copy just the routine into a new file if yours is bigger.
 
+### Convert with AI
+
+When no table is recognised, the message offers **Convert with AI**. That opens the AI planner on a new chat whose first message is the spreadsheet, and the planner replies with a plan you add with **Save new plan**, then edit like any other. Fixing the header and importing again still works.
+
+The planner gets every sheet as CSV (empty rows dropped), with your locale and weight unit, and is asked for one routine per training day with the exercise names as written; what a plan can't hold, such as percentages or weights, goes into the exercise's notes. The CSV is cut at about 24 KB, at the end of a row, so it stays under the backend's 32 KB message limit; the planner is told when that happens. The text is built by `describeSpreadsheetForAi` in `app/src/services/plan-import/`.
+
 The authoritative definition of the format is the JSON Schema at [`docs/schemas/program-blueprint/ProgramBlueprint.json`](./schemas/program-blueprint/ProgramBlueprint.json). It is generated from the app's own models, so it is always in step with what the app will accept.
 
 ## Generating a plan with Claude

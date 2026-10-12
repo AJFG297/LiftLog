@@ -1,4 +1,5 @@
-import { AiChatResponseV2, AiChatSharedProgramMessage } from '@/models/ai-models';
+import { AiChatResponseV2, AiChatSharedProgramMessage, AiChatSharedSpreadsheetMessage } from '@/models/ai-models';
+import type { Sheet } from '@/services/plan-import/sheet';
 import { createAction, createSlice, PayloadAction } from '@reduxjs/toolkit';
 
 const initialState: AppState = {
@@ -6,15 +7,22 @@ const initialState: AppState = {
   plannerChat: [],
 };
 
-export type ChatMessage = (AiChatResponseV2 | AiChatSharedProgramMessage) & {
+export type ChatMessage = (AiChatResponseV2 | AiChatSharedProgramMessage | AiChatSharedSpreadsheetMessage) & {
   id: string;
   from: 'User' | 'Agent';
   isLoading?: boolean;
 };
 
+export interface PendingSpreadsheet {
+  fileName: string;
+  sheets: Sheet[];
+}
+
 type AppState = {
   isHydrated: boolean;
   plannerChat: ChatMessage[];
+  /** A spreadsheet waiting for the planner to open and start a new chat with it. */
+  pendingSpreadsheet?: PendingSpreadsheet;
 };
 
 const aiPlannerSlice = createSlice({
@@ -49,6 +57,12 @@ const aiPlannerSlice = createSlice({
     setChat(state, action: PayloadAction<ChatMessage[]>) {
       state.plannerChat = action.payload;
     },
+    convertSpreadsheetWithAi(state, action: PayloadAction<PendingSpreadsheet>) {
+      state.pendingSpreadsheet = action.payload;
+    },
+    clearPendingSpreadsheet(state) {
+      state.pendingSpreadsheet = undefined;
+    },
   },
   selectors: {
     selectIsLoadingAiPlannerMessage: (s) => s.plannerChat.some((x) => x.isLoading),
@@ -57,7 +71,15 @@ const aiPlannerSlice = createSlice({
 
 export const initializeAiPlannerStateSlice = createAction('initializeAiPlannerStateSlice');
 
-export const { setIsHydrated, addMessage, restartChat, updateMessage, setChat } = aiPlannerSlice.actions;
+export const {
+  setIsHydrated,
+  addMessage,
+  restartChat,
+  updateMessage,
+  setChat,
+  convertSpreadsheetWithAi,
+  clearPendingSpreadsheet,
+} = aiPlannerSlice.actions;
 
 export const { selectIsLoadingAiPlannerMessage } = aiPlannerSlice.selectors;
 
