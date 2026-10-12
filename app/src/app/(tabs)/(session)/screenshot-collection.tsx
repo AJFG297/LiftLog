@@ -19,7 +19,8 @@ import { AiPlan } from '@/models/ai-models';
 import { setStatsIsDirty, fetchOverallStats } from '@/store/stats';
 import { savePlan, setSavedPlans } from '@/store/program';
 import { ProgramBlueprint } from '@/models/blueprint-models';
-import { upsertStoredSessions } from '@/store/stored-sessions';
+import { useServices } from '@/components/smart/services-provider';
+import type { HistoryImport } from '@/services/history-import';
 import {
   setColorSchemeSeed,
   setLastSeenWhatsNewId,
@@ -157,7 +158,7 @@ function PrepareAiPlannerPage() {
   return <Redirect href={'/settings/ai/planner'} />;
 }
 
-function buildStatsSessionData(dispatch: ReturnType<typeof useDispatch>) {
+async function buildStatsSessionData(dispatch: ReturnType<typeof useDispatch>, historyImport: HistoryImport) {
   const bw = new Weight(80, 'kilograms');
 
   const ex = (name: string, sets: number, repsPerSet: number) =>
@@ -246,26 +247,36 @@ function buildStatsSessionData(dispatch: ReturnType<typeof useDispatch>) {
     return legs(daysAgo, i);
   });
 
-  dispatch(upsertStoredSessions(sessions));
+  const outcome = await historyImport.apply({ kind: 'backup', data: { workouts: sessions, programs: {} } });
+  if (outcome.kind === 'failed') throw outcome.error;
   dispatch(setStatsIsDirty(true));
   dispatch(fetchOverallStats());
 }
 
 function PrepareHistoryPage() {
   const dispatch = useDispatch();
-  useMountEffect(() => buildStatsSessionData(dispatch));
+  const { historyImport } = useServices();
+  useMountEffect(() => {
+    void buildStatsSessionData(dispatch, historyImport);
+  });
   return <Redirect href={'/history'} />;
 }
 
 function PrepareStatsPage() {
   const dispatch = useDispatch();
-  useMountEffect(() => buildStatsSessionData(dispatch));
+  const { historyImport } = useServices();
+  useMountEffect(() => {
+    void buildStatsSessionData(dispatch, historyImport);
+  });
   return <Redirect href={'/stats'} />;
 }
 
 function PrepareExerciseStatsPage() {
   const dispatch = useDispatch();
-  useMountEffect(() => buildStatsSessionData(dispatch));
+  const { historyImport } = useServices();
+  useMountEffect(() => {
+    void buildStatsSessionData(dispatch, historyImport);
+  });
   return <Redirect href={exerciseProgressHref(stubExerciseId('Bench Press'))} />;
 }
 

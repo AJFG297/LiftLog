@@ -1,3 +1,6 @@
+import { combineReducers } from '@reduxjs/toolkit';
+import { storedSessionsReducer } from '@/store/stored-sessions';
+import { settingsReducer } from '@/store/settings';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Duration, LocalDate } from '@js-joda/core';
 import { drizzle } from 'drizzle-orm/expo-sqlite';
@@ -15,7 +18,6 @@ import {
   setActiveSession,
   setExercises,
   upsertExercises,
-  upsertStoredSessions,
   updateStoredSession,
 } from '@/store/stored-sessions';
 import { addUnpublishedSessionId } from '@/store/feed';
@@ -79,9 +81,10 @@ describe('stored-sessions effects', () => {
 
   function bed(options: { keyValueStore?: ReturnType<typeof makeKvStore>; state?: Partial<RootState> }) {
     const testBed = createAddEffectTestBed({
+      reducer: combineReducers({ storedSessions: storedSessionsReducer, settings: settingsReducer }),
       initialState: {
         settings: { isHydrated: true, preferredLanguage: 'en', exportToHealthAggregator: false },
-        storedSessions: { sessions: {}, activeSessionId: undefined },
+        storedSessions: { isHydrated: true, sessions: {}, activeSessionId: undefined },
         ...options.state,
       } as Partial<RootState>,
       services: {
@@ -115,6 +118,7 @@ describe('stored-sessions effects', () => {
       const testBed = bed({ state: { storedSessions: { sessions } } as Partial<RootState> });
 
       await testBed.dispatchHandled(setActiveSessionId(first.id));
+      await testBed.dispatchHandled(putStoredSession(second));
       await testBed.dispatchHandled(setActiveSessionId(second.id));
 
       const active = (await db.select().from(workoutsSchema)).filter((x) => x.active);
@@ -145,7 +149,7 @@ describe('stored-sessions effects', () => {
       const restored = Session.freeformSession(LocalDate.of(2026, 4, 10), undefined);
       const testBed = bed({});
 
-      await testBed.dispatchHandled(upsertStoredSessions([restored]));
+      await testBed.mockServices.workoutRepository.putMany([restored]);
 
       const [row] = await db.select().from(workoutsSchema).where(eq(workoutsSchema.id, restored.id));
       expect(row?.active).toBe(false);
@@ -156,7 +160,7 @@ describe('stored-sessions effects', () => {
       const testBed = bed({ state: { storedSessions: { sessions: { [active.id]: active } } } as Partial<RootState> });
       await testBed.dispatchHandled(setActiveSessionId(active.id));
 
-      await testBed.dispatchHandled(upsertStoredSessions([active]));
+      await testBed.mockServices.workoutRepository.putMany([active]);
 
       const [row] = await db.select().from(workoutsSchema).where(eq(workoutsSchema.id, active.id));
       expect(row?.active).toBe(true);
@@ -422,7 +426,7 @@ describe('stored-sessions effects', () => {
   describe('updateStoredSession', () => {
     async function startedWorkout() {
       const workoutRepository = new WorkoutRepository(db);
-      const put = vi.spyOn(workoutRepository, 'put');
+      const put = vi.spyOn(workoutRepository, 'putCurrent');
       const harness = createEffectStore({ db, workoutRepository, logger: logger as never });
       applyStoredSessionsEffects(harness.addEffect);
       harness.store.dispatch(setSettingsIsHydrated(true));

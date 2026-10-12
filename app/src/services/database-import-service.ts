@@ -23,14 +23,18 @@ export interface DatabaseImporter {
 }
 
 export class DatabaseImportService implements DatabaseImporter {
-  // DO NOT Add a dependency to getState here, it gets messy quick
   constructor(
     private readonly db: ExpoSQLiteDatabase,
     private readonly keyValueStore: KeyValueStore,
     private readonly preferenceService: PreferenceService,
+    private readonly inWriteOrder: (operation: () => Promise<void>) => Promise<void> = (operation) => operation(),
   ) {}
 
   async importOldData(): Promise<void> {
+    await this.inWriteOrder(() => this.importDatabase());
+  }
+
+  private async importDatabase(): Promise<void> {
     const now = performance.now();
     const dataMigrationsRun = (await this.db.select().from(dataMigrationsSchema)).map((x) => x.id);
 

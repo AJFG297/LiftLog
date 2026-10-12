@@ -1,3 +1,5 @@
+import { mapSessionExercises } from '@/models/map-exercise-blueprints';
+import type { ExerciseBlueprint } from '@/models/blueprint-models';
 import { ExpoSQLiteDatabase } from 'drizzle-orm/expo-sqlite';
 import { SQL, and, asc, count, desc, eq, getTableColumns, gte, inArray, isNotNull, lte, sql } from 'drizzle-orm';
 import { SQLiteColumn, SQLiteTable } from 'drizzle-orm/sqlite-core';
@@ -154,8 +156,12 @@ export class WorkoutRepository {
   // it, awaited or not. The device driver queues statements that way itself; the async driver under test
   // does not.
   private queue: Promise<unknown> = Promise.resolve();
+  private readonly exerciseSurvivors = new Map<ExerciseId, ExerciseId>();
 
-  constructor(private readonly db: ExpoSQLiteDatabase) {}
+  constructor(
+    private readonly db: ExpoSQLiteDatabase,
+    private readonly onNotificationError: (error: unknown) => void = () => {},
+  ) {}
 
   /**
    * Calls `listener` after each write has landed, with what it touched. Returns the unsubscribe. A listener
@@ -687,6 +693,7 @@ export class WorkoutRepository {
   async repointExercises(
     survivorOf: ReadonlyMap<ExerciseId, ExerciseId>,
     alsoWrite: (tx: Transaction) => Statement[] = () => [],
+    onCommitted: () => void = () => {},
   ): Promise<void> {
     const workoutIds = await this.workoutIdsLogging([...survivorOf.keys()]);
     const { blueprint, movementKey, progressionKey } = workoutExercisesSchema;
@@ -717,12 +724,47 @@ export class WorkoutRepository {
         ...alsoWrite(tx),
       ],
       { workoutIds, activeChanged: false },
+      () => {
+        for (const [from, current] of this.exerciseSurvivors) {
+          this.exerciseSurvivors.set(from, survivorOf.get(current) ?? current);
+        }
+        for (const [from, to] of survivorOf) this.exerciseSurvivors.set(from, to);
+        onCommitted();
+      },
     );
   }
 
   /** Writes one workout's content. */
   put(session: Session): Promise<void> {
     return this.putMany([session]);
+  }
+
+  putCurrent(read: () => Session | undefined): Promise<Session | undefined> {
+    return this.inOrder(async () => {
+      let session: Session | undefined;
+      await writeAtomically(this.db, (tx) => {
+        const input = read();
+        session = input ? this.repointCurrent(input) : undefined;
+        return session ? writeContent(tx, [toWorkoutRows(session)], { activate: false }) : [];
+      });
+      if (session) this.notify({ workoutIds: [session.id], activeChanged: false });
+      return session;
+    });
+  }
+
+  setActiveCurrent(read: () => Session | undefined): Promise<void> {
+    return this.inOrder(async () => {
+      let session: Session | undefined;
+      await writeAtomically(this.db, (tx) => {
+        const input = read();
+        session = input ? this.repointCurrent(input) : undefined;
+        return [
+          tx.update(workoutsSchema).set({ active: false }).where(eq(workoutsSchema.active, true)),
+          ...(session ? writeContent(tx, [toWorkoutRows(session)], { activate: true }) : []),
+        ];
+      });
+      this.notify({ workoutIds: session ? [session.id] : [], activeChanged: true });
+    });
   }
 
   /**
@@ -762,9 +804,32 @@ export class WorkoutRepository {
     );
   }
 
-  private async write(build: (tx: Transaction) => Statement[], write: WorkoutWrite): Promise<void> {
-    await this.inOrder(() => writeAtomically(this.db, build));
-    this.listeners.forEach((listener) => listener(write));
+  private async write(
+    build: (tx: Transaction) => Statement[],
+    write: WorkoutWrite,
+    onCommitted: () => void = () => {},
+  ): Promise<void> {
+    await this.inOrder(async () => {
+      await writeAtomically(this.db, build, onCommitted);
+      this.notify(write);
+    });
+  }
+
+  private repointCurrent(session: Session): Session {
+    return mapSessionExercises(session, <T extends ExerciseBlueprint>(blueprint: T): T => {
+      const id = this.exerciseSurvivors.get(blueprint.exerciseId) ?? blueprint.exerciseId;
+      return id === blueprint.exerciseId ? blueprint : (blueprint.with({ exerciseId: id }) as T);
+    });
+  }
+
+  private notify(write: WorkoutWrite): void {
+    for (const listener of this.listeners) {
+      try {
+        listener(write);
+      } catch (error) {
+        this.onNotificationError(error);
+      }
+    }
   }
 
   /** Runs `task` after everything queued before it, and makes what follows wait for it. */

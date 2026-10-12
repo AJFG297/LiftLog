@@ -2,7 +2,6 @@ import { AddEffectFn, RootState } from '@/store/store';
 import {
   deleteExercise,
   deleteStoredSession,
-  exercisesMerged,
   initializeStoredSessionsStateSlice,
   openSession,
   setSessionNotFound,
@@ -24,27 +23,23 @@ import {
   updateExercise,
   updateStoredSession,
   upsertExercises,
-  upsertStoredSessions,
 } from './index';
 import { progressionKeyOf } from '@/models/blueprint-models';
 import { WorkoutRepository } from '@/services/workout-repository';
 import type { Session } from '@/models/session-models';
 import { Dispatch } from '@reduxjs/toolkit';
-import { fetchUpcomingSessions, upsertSavedPlans } from '@/store/program';
-import { mergeExerciseNames, repointProgram } from '@/services/data-migrations/merge-exercise-names';
+import { fetchUpcomingSessions } from '@/store/program';
 import { addUnpublishedSessionId } from '@/store/feed';
 import { setStatsIsDirty } from '@/store/stats';
 import { setPreferredLanguage } from '@/store/settings';
 import { exercisesSchema } from '@/db/schema';
-import { writeAtomically } from '@/db/helpers';
 import { samePersistedContent } from '@/services/workout-rows';
-import { eq, sql } from 'drizzle-orm';
 import { toRecord } from '@/utils/reduce';
-import { fromExerciseDescriptorJSON, toExerciseDescriptorJSON } from '@/models/exercise-models';
+import { fromExerciseDescriptorJSON } from '@/models/exercise-models';
 import { exerciseDescriptorMigrations } from '@/models/storage/versions/migrations';
 import { loadBuiltInExercises } from '@/services/exercise-catalog';
 import { missingStubs } from '@/models/exercise-resolver';
-import { readHiddenBuiltInIds, writeHiddenBuiltInIds } from '@/services/hidden-built-in-exercises';
+import { readHiddenBuiltInIds } from '@/services/hidden-built-in-exercises';
 
 export function applyStoredSessionsEffects(addEffect: AddEffectFn) {
   // Dispatched AFTER settings, so we can safely access settings
@@ -191,106 +186,33 @@ export function applyStoredSessionsEffects(addEffect: AddEffectFn) {
       if (!session) {
         return;
       }
-      await logger.time('persistStoredSession', () => workoutRepository.put(session));
-      await refreshStaleLineages(sessionId, getState, dispatch, workoutRepository, session);
+      const written = await logger.time('persistStoredSession', () =>
+        workoutRepository.putCurrent(() => selectSession(getState(), sessionId) ?? session),
+      );
+      await refreshStaleLineages(sessionId, getState, dispatch, workoutRepository, written);
     },
   );
 
-  addEffect(setActiveSessionId, async (action, { getState, extra: { logger, workoutRepository } }) => {
+  addEffect(setActiveSessionId, async (_, { getState, extra: { logger, workoutRepository } }) => {
     await logger.time('setActiveSessionId', () => {
-      const sessionId = action.payload;
-      return workoutRepository.setActive(sessionId === undefined ? undefined : selectSession(getState(), sessionId));
+      return workoutRepository.setActiveCurrent(() => {
+        const sessionId = getState().storedSessions.activeSessionId;
+        return sessionId === undefined ? undefined : selectSession(getState(), sessionId);
+      });
     });
   });
 
   addEffect(
-    upsertStoredSessions,
-    async (
-      action,
-      { cancelActiveListeners, dispatch, getState, extra: { db, keyValueStore, logger, workoutRepository } },
-    ) => {
-      cancelActiveListeners();
-      await logger.time('upsertStoredSessions', () => workoutRepository.putMany(action.payload));
-      // A restore can bring back a plural pair the startup merge joined: the device and an older backup, each
-      // merged on its own counts, can keep different survivors. So merge again once the workouts are in,
-      // whatever `data_migrations` says. The exercises came first (`importBackupData`); with nothing split
-      // this plans nothing and writes nothing.
-      const rounds = await mergeExerciseNames(db, await readHiddenBuiltInIds(keyValueStore), workoutRepository);
-      if (rounds.length) {
-        dispatch(exercisesMerged(rounds));
-        const plans = Object.entries(getState().program.savedPrograms).flatMap(([id, program]) => {
-          const repointed = repointProgram(program, rounds);
-          return repointed.equals(program) ? [] : [[id, repointed] as const];
-        });
-        if (plans.length) {
-          dispatch(upsertSavedPlans(Object.fromEntries(plans)));
-        }
+    [deleteExercise, restoreExercise, updateExercise, upsertExercises, setExercises],
+    async (_, { getState, extra: { descriptorWriter, logger } }) => {
+      if (!getState().storedSessions.isHydrated) return;
+      try {
+        await descriptorWriter.flush();
+      } catch (error) {
+        logger.error('Failed to persist exercise descriptors', error);
       }
-      // A restore or import can move any lineage back; cheaper to re-read them all than to work out which.
-      dispatch(setLatestExercises(await workoutRepository.latestPerLineage()));
     },
   );
-
-  addEffect(deleteExercise, async (action, { stateAfterReduce, extra: { db, keyValueStore } }) => {
-    if (stateAfterReduce.storedSessions.builtInExercises[action.payload]) {
-      // Built-ins are tombstoned rather than removed; their override row (if any) is kept for undo.
-      await writeHiddenBuiltInIds(keyValueStore, stateAfterReduce.storedSessions.hiddenBuiltInIds);
-    } else {
-      await db.delete(exercisesSchema).where(eq(exercisesSchema.id, action.payload));
-    }
-  });
-
-  addEffect(restoreExercise, async (_, { stateAfterReduce, extra: { keyValueStore } }) => {
-    await writeHiddenBuiltInIds(keyValueStore, stateAfterReduce.storedSessions.hiddenBuiltInIds);
-  });
-
-  addEffect(updateExercise, async (action, { extra: { db } }) => {
-    await db
-      .insert(exercisesSchema)
-      .values({
-        id: action.payload.id,
-        payload: toExerciseDescriptorJSON(action.payload.exercise),
-      })
-      .onConflictDoUpdate({
-        target: exercisesSchema.id,
-        set: {
-          payload: sql.raw(`excluded.${exercisesSchema.payload.name}`),
-        },
-      });
-  });
-
-  addEffect(upsertExercises, async (action, { extra: { db } }) => {
-    const exercises = Object.entries(action.payload).map(([id, exercise]) => ({
-      id,
-      payload: toExerciseDescriptorJSON(exercise),
-    }));
-    if (!exercises.length) {
-      return;
-    }
-    await db
-      .insert(exercisesSchema)
-      .values(exercises)
-      .onConflictDoUpdate({
-        target: exercisesSchema.id,
-        set: {
-          payload: sql.raw(`excluded.${exercisesSchema.payload.name}`),
-        },
-      });
-  });
-
-  addEffect(setExercises, async (action, { stateAfterReduce, extra: { db } }) => {
-    if (!stateAfterReduce.storedSessions.isHydrated) {
-      return;
-    }
-    const rows = Object.entries(action.payload).map(([id, exercise]) => ({
-      id,
-      payload: toExerciseDescriptorJSON(exercise),
-    }));
-    await writeAtomically(db, (tx) => [
-      tx.delete(exercisesSchema),
-      ...(rows.length ? [tx.insert(exercisesSchema).values(rows)] : []),
-    ]);
-  });
 }
 
 /**

@@ -1,3 +1,4 @@
+import { applyHistoryImport } from '@/models/history-import-actions';
 import { LocalDate } from '@js-joda/core';
 import { fetchOverallStats, OVERALL_STATS_DAYS, setOverallStats, setStatsIsDirty } from './index';
 import { AddEffectFn } from '@/store/store';
@@ -6,7 +7,6 @@ import {
   initializeStoredSessionsStateSlice,
   putStoredSession,
   updateStoredSession,
-  upsertStoredSessions,
 } from '@/store/stored-sessions';
 
 import { sleep } from '@/utils/sleep';
@@ -59,7 +59,7 @@ export function applyStatsEffects(addEffect: AddEffectFn) {
   // Stats cover finished sessions only, so a set recorded in the workout in progress changes nothing and
   // is skipped here; `sessionFinished` marks them stale when that workout ends.
   addEffect(
-    [putStoredSession, updateStoredSession, upsertStoredSessions, deleteStoredSession],
+    [putStoredSession, updateStoredSession, applyHistoryImport, deleteStoredSession],
     async (action, { dispatch, stateAfterReduce }) => {
       if (stateAfterReduce.stats.isDirty) {
         return;
