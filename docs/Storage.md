@@ -153,7 +153,10 @@ A descriptor edited during the round keeps its current value. If only a loser wa
 fields move to the survivor. If both were edited, the survivor's fields win. Unrelated creations and
 removals stay in Redux and the final descriptor flush writes them. A built-in hidden while a round
 awaits SQL causes that obsolete survivor choice to be replanned before any statement runs. Ordinary
-queued workout writes read current content when their SQL executes. A closed slot uses its captured
+queued workout writes read current content when their SQL executes. After private import apply, a later
+ordinary content write, activation, or deletion supersedes that workout in the pending import. Its
+completion is awaited before import acknowledgement, and its failure propagates. These intents exist
+only while the import is active. A closed slot uses its captured
 content, repointed only through rounds committed after that write was queued. Later backups can
 recreate a former loser ID as a separate exercise.
 

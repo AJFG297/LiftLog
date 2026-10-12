@@ -198,7 +198,7 @@ export function applyStoredSessionsEffects(addEffect: AddEffectFn) {
       return workoutRepository.setActiveCurrent(() => {
         const sessionId = getState().storedSessions.activeSessionId;
         return sessionId === undefined ? undefined : selectSession(getState(), sessionId);
-      });
+      }, getState().storedSessions.activeSessionId);
     });
   });
 

@@ -5,11 +5,7 @@ import { OffsetDateTime, ZoneId } from '@js-joda/core';
 import { createAction, createSelector, createSlice, PayloadAction, WritableDraft } from '@reduxjs/toolkit';
 import Enumerable from 'linq';
 import { ExerciseDescriptor, musclesOf } from '@/models/exercise-models';
-import type { ExerciseMerge } from '@/models/exercise-merge';
-import type { LatestPerformance, WorkoutRepository } from '@/services/workout-repository';
-import type { Logger } from '@/services/logger';
-import type { CarryOver } from '@/models/session-models/carry-over';
-import type { RootState } from '@/store/store';
+import type { LatestPerformance } from '@/services/workout-repository';
 
 interface StoredSessionState {
   isHydrated: boolean;

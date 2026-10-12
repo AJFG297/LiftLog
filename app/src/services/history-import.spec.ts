@@ -34,6 +34,7 @@ import { setIsHydrated as setSettingsHydrated } from '@/store/settings';
 import { applyStoredSessionsEffects } from '@/store/stored-sessions/effects';
 import {
   deleteExercise,
+  deleteStoredSession,
   initializeStoredSessionsStateSlice,
   openSession,
   setActiveSession,
@@ -268,7 +269,7 @@ describe('deferred connection writes', () => {
             ? f.descriptorWriter.flush()
             : entrypoint === 'content'
               ? f.repository.putCurrent(read)
-              : f.repository.setActiveCurrent(read);
+              : f.repository.setActiveCurrent(read, before.id);
       await Promise.resolve();
       await Promise.resolve();
       expect(read).not.toHaveBeenCalled();
@@ -318,7 +319,7 @@ describe('deferred connection writes', () => {
 describe('HistoryImport', () => {
   it('waits for all hydration flags and removes its waiting subscription', async () => {
     const f = await fixture({ hydrated: false });
-    const insert = vi.spyOn(f.repository, 'putMany');
+    const insert = vi.spyOn(f.repository, 'prepareImport');
     const pending = f.owner.apply({ kind: 'backup', data: { workouts: [workout('restored')], programs: {} } });
     await Promise.resolve();
     expect(f.subscriptions()).toBe(1);
@@ -337,11 +338,17 @@ describe('HistoryImport', () => {
     const f = await fixture();
     const entered = Promise.withResolvers<void>();
     const release = Promise.withResolvers<void>();
-    const actual = f.repository.putMany.bind(f.repository);
-    vi.spyOn(f.repository, 'putMany').mockImplementationOnce(async (workouts) => {
-      entered.resolve();
-      await release.promise;
-      await actual(workouts);
+    const actual = f.repository.prepareImport.bind(f.repository);
+    vi.spyOn(f.repository, 'prepareImport').mockImplementationOnce((workouts) => {
+      const prepared = actual(workouts);
+      return {
+        cancel: prepared.cancel,
+        write: async () => {
+          entered.resolve();
+          await release.promise;
+          return await prepared.write();
+        },
+      };
     });
     const cacheEntered = Promise.withResolvers<void>();
     const cacheRelease = Promise.withResolvers<void>();
@@ -381,11 +388,17 @@ describe('HistoryImport', () => {
     );
     const entered = Promise.withResolvers<void>();
     const release = Promise.withResolvers<void>();
-    const actual = f.repository.putMany.bind(f.repository);
-    const inserts = vi.spyOn(f.repository, 'putMany').mockImplementationOnce(async (workouts) => {
-      entered.resolve();
-      await release.promise;
-      await actual(workouts);
+    const actual = f.repository.prepareImport.bind(f.repository);
+    const inserts = vi.spyOn(f.repository, 'prepareImport').mockImplementationOnce((workouts) => {
+      const prepared = actual(workouts);
+      return {
+        cancel: prepared.cancel,
+        write: async () => {
+          entered.resolve();
+          await release.promise;
+          return await prepared.write();
+        },
+      };
     });
     const a = f.owner.apply({ kind: 'external', data: first });
     await entered.promise;
@@ -432,7 +445,7 @@ describe('HistoryImport', () => {
     const f = await fixture({ hydrated: false });
     f.app.store.dispatch(setSettingsHydrated(true));
     f.app.store.dispatch(setExercisesHydrated(true));
-    const insert = vi.spyOn(f.repository, 'putMany');
+    const insert = vi.spyOn(f.repository, 'prepareImport');
     const pending = f.owner.apply({ kind: 'backup', data: { workouts: [workout('imported')], programs: {} } });
     await Promise.resolve();
     expect(f.subscriptions()).toBe(1);
@@ -523,7 +536,7 @@ describe('HistoryImport', () => {
     const first = failed(await f.owner.apply({ kind: 'external', data: { workouts: [imported], programs: {} } }));
     expect(first).toMatchObject({ stage: 'repair', error, durableStages: ['descriptors', 'programs', 'workouts'] });
     expect(await f.repository.existingIds(['new'])).toEqual(new Set(['new']));
-    const insert = vi.spyOn(f.repository, 'putMany');
+    const insert = vi.spyOn(f.repository, 'prepareImport');
     expect(
       await f.owner.apply({ kind: 'external', data: { workouts: [workout('new', lunges, 1, 999)], programs: {} } }),
     ).toEqual({ kind: 'unchanged' });
@@ -635,7 +648,7 @@ describe('HistoryImport', () => {
       durableStages: ['descriptors', 'programs', 'workouts', 'repair', 'flush'],
     });
     expect(await f.repository.existingIds(['imported'])).toEqual(new Set(['imported']));
-    const insert = vi.spyOn(f.repository, 'putMany');
+    const insert = vi.spyOn(f.repository, 'prepareImport');
     expect(await f.owner.apply({ kind: 'external', data })).toEqual({ kind: 'unchanged' });
     expect(insert).not.toHaveBeenCalled();
     expect(Object.values(f.app.getState().storedSessions.latestExerciseWorkoutIds)).toEqual(['imported']);
@@ -859,6 +872,111 @@ describe('HistoryImport', () => {
     expect(persisted.potentialSets[0]?.weight.value.toNumber()).toBe(88);
   });
 
+  it.each(['active', 'editing', 'recent', 'closed', 'deleted'] as const)(
+    'preserves %s workout changes after imported state is visible',
+    async (slot) => {
+      const initial = workout('active', lunge, 10, 42);
+      const f = await fixture({
+        active: slot === 'active' ? initial : undefined,
+        workouts: slot === 'active' ? [] : [initial],
+      });
+      if (slot !== 'active')
+        f.app.store.dispatch(openSession({ session: initial, slot: slot === 'recent' ? 'recent' : 'editing' }));
+      const entered = Promise.withResolvers<void>();
+      const release = Promise.withResolvers<void>();
+      let hiddenWrites = 0;
+      vi.spyOn(f.keyValueStore, 'setItem').mockImplementation(async (key, value) => {
+        f.preferences.set(key, String(value));
+        if (key === 'HiddenBuiltInExerciseIdList' && ++hiddenWrites === 2) {
+          entered.resolve();
+          await release.promise;
+        }
+      });
+      const pending = f.owner.apply({
+        kind: 'backup',
+        data: { workouts: [workout('active', lunge, 8, 40)], programs: {} },
+      });
+      await entered.promise;
+      f.app.store.dispatch(
+        updateStoredSession({
+          sessionId: 'active',
+          update: (session) =>
+            session.with({
+              recordedExercises: [
+                makeRecordedExercise(lunge, [17], new Weight(88, 'kilograms'), () => at.plusMinutes(1)),
+              ],
+            }),
+        }),
+      );
+      await f.app.settle();
+      expect(weighted(await f.repository.get('active')).potentialSets[0]?.set?.repsCompleted).toBe(17);
+      if (slot === 'closed') f.app.store.dispatch(openSession({ session: workout('other'), slot: 'editing' }));
+      if (slot === 'deleted') {
+        f.app.store.dispatch(deleteStoredSession('active'));
+        await f.app.settle();
+        expect(await f.repository.get('active')).toBeUndefined();
+      }
+      release.resolve();
+      expect(await pending).toEqual({ kind: 'complete', count: 1 });
+      if (slot !== 'closed' && slot !== 'deleted')
+        expect(weighted(f.app.getState().storedSessions.sessions.active).potentialSets[0]?.set?.repsCompleted).toBe(17);
+      if (slot === 'deleted') expect(await f.repository.get('active')).toBeUndefined();
+      else expect(weighted(await f.repository.get('active')).potentialSets[0]?.set?.repsCompleted).toBe(17);
+    },
+  );
+
+  it('returns and notifies only import rows that ordinary edits did not supersede', async () => {
+    const initial = workout('edited');
+    const f = await fixture({ active: initial });
+    const prepared = f.repository.prepareImport([workout('edited', lunge, 8, 40), workout('untouched')]);
+    f.app.store.dispatch(
+      updateStoredSession({ sessionId: initial.id, update: (session) => session.withName('Latest edit') }),
+    );
+    await f.app.settle();
+    const changed = vi.fn();
+    const unsubscribe = f.repository.subscribe(changed);
+    expect(await prepared.write()).toEqual(['untouched']);
+    unsubscribe();
+    expect(changed).toHaveBeenCalledExactlyOnceWith({ workoutIds: ['untouched'], activeChanged: false });
+    expect((await f.repository.get('edited'))?.blueprint.name).toBe('Latest edit');
+    expect(weighted(await f.repository.get('untouched')).potentialSets[0]?.set?.repsCompleted).toBe(10);
+  });
+
+  it('reports a superseding ordinary write failure instead of acknowledging a skipped import row', async () => {
+    const initial = workout('active');
+    const f = await fixture({ active: initial });
+    const entered = Promise.withResolvers<void>();
+    const release = Promise.withResolvers<void>();
+    let hiddenWrites = 0;
+    vi.spyOn(f.keyValueStore, 'setItem').mockImplementation(async (key, value) => {
+      f.preferences.set(key, String(value));
+      if (key === 'HiddenBuiltInExerciseIdList' && ++hiddenWrites === 2) {
+        entered.resolve();
+        await release.promise;
+      }
+    });
+    const data = { workouts: [workout('active', lunge, 8, 40)], programs: {} };
+    const pending = f.owner.apply({ kind: 'backup', data });
+    await entered.promise;
+    await f.raw.execAsync(
+      "CREATE TRIGGER reject_live_edit BEFORE INSERT ON workout WHEN NEW.id = 'active' BEGIN SELECT RAISE(ABORT, 'live write failed'); END;",
+    );
+    f.app.store.dispatch(
+      updateStoredSession({ sessionId: 'active', update: (session) => session.withName('Newer live edit') }),
+    );
+    await f.app.settle();
+    release.resolve();
+    const outcome = failed(await pending);
+    expect(outcome.stage).toBe('workouts');
+    const cause = outcome.error instanceof Error ? outcome.error.cause : undefined;
+    if (!(cause instanceof Error)) throw new Error('Expected a SQLite error cause');
+    expect(cause.message).toContain('live write failed');
+    expect((await f.repository.get('active'))?.blueprint.name).toBe('Legs');
+    await f.raw.execAsync('DROP TRIGGER reject_live_edit;');
+    expect(await f.owner.apply({ kind: 'backup', data })).toEqual({ kind: 'complete', count: 1 });
+    expect(weighted(await f.repository.get('active')).potentialSets[0]?.set?.repsCompleted).toBe(8);
+  });
+
   it('keeps a later backup identity that reuses a previously merged ID under a distinct name', async () => {
     const f = await splitFixture();
     expect(await f.owner.apply({ kind: 'external', data: emptyData })).toEqual({ kind: 'unchanged' });
@@ -885,11 +1003,17 @@ describe('HistoryImport', () => {
     const b = await fixture();
     const entered = Promise.withResolvers<void>();
     const release = Promise.withResolvers<void>();
-    const actual = a.repository.putMany.bind(a.repository);
-    vi.spyOn(a.repository, 'putMany').mockImplementationOnce(async (workouts) => {
-      entered.resolve();
-      await release.promise;
-      await actual(workouts);
+    const actual = a.repository.prepareImport.bind(a.repository);
+    vi.spyOn(a.repository, 'prepareImport').mockImplementationOnce((workouts) => {
+      const prepared = actual(workouts);
+      return {
+        cancel: prepared.cancel,
+        write: async () => {
+          entered.resolve();
+          await release.promise;
+          return await prepared.write();
+        },
+      };
     });
     const pending = a.owner.apply({
       kind: 'external',

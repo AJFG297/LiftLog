@@ -96,25 +96,30 @@ export class HistoryImport {
             const programs = Object.fromEntries(
               Object.entries(request.data.programs).map(([id, program]) => [id, resolver.linkProgram(program)]),
             );
-            store.dispatch(
-              applyHistoryImport({
-                workouts: linkedWorkouts,
-                programs,
-                exercises: { ...request.data.exercises, ...resolver.stubs },
-              }),
-            );
-            progress.stage = 'descriptors';
-            possibleWrites.push(progress.stage);
-            await flushDescriptors();
-            durableStages.push(progress.stage);
-            progress.stage = 'programs';
-            possibleWrites.push(progress.stage);
-            await flushPrograms();
-            durableStages.push(progress.stage);
-            progress.stage = 'workouts';
-            possibleWrites.push(progress.stage);
-            await services.workoutRepository.putMany(linkedWorkouts);
-            durableStages.push(progress.stage);
+            const prepared = services.workoutRepository.prepareImport(linkedWorkouts);
+            try {
+              store.dispatch(
+                applyHistoryImport({
+                  workouts: linkedWorkouts,
+                  programs,
+                  exercises: { ...request.data.exercises, ...resolver.stubs },
+                }),
+              );
+              progress.stage = 'descriptors';
+              possibleWrites.push(progress.stage);
+              await flushDescriptors();
+              durableStages.push(progress.stage);
+              progress.stage = 'programs';
+              possibleWrites.push(progress.stage);
+              await flushPrograms();
+              durableStages.push(progress.stage);
+              progress.stage = 'workouts';
+              possibleWrites.push(progress.stage);
+              await prepared.write();
+              durableStages.push(progress.stage);
+            } finally {
+              prepared.cancel();
+            }
           }
           progress.stage = 'repair';
           possibleWrites.push(progress.stage);
