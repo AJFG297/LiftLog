@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { describeSpreadsheetForAi, MAX_SPREADSHEET_AI_BYTES } from './describe-spreadsheet-for-ai';
+import { JsonHubProtocol, MessageType } from '@microsoft/signalr';
+import { aiPlanMigrations } from '@/models/storage/versions/migrations';
+import { describeSpreadsheetForAi } from './describe-spreadsheet-for-ai';
 
 const settings = { locale: 'en-GB', preferredWeightUnit: 'kilograms' as const };
 
@@ -70,31 +72,66 @@ describe('describeSpreadsheetForAi', () => {
     expect(text).toBe(INTRO + '\n\n## Sheet: Days\nSquat');
   });
 
-  it('stops at the last whole row that fits the byte cap and says it was cut short', () => {
-    // Each row is 99 characters plus its newline: 100 bytes. The header line is 14 bytes with its
-    // newline, so 239 rows (23,914 bytes) fit under 24,000 and the 240th would not.
-    const rows = Array.from({ length: 300 }, (_, i) => [String(i).padStart(3, '0') + 'x'.repeat(96)]);
-
+  it.each([
+    ['plain text', 'x'.repeat(96)],
+    ['quotes', '"'.repeat(96)],
+    ['backslashes', '\\'.repeat(96)],
+    ['control characters', '\u0000\t\r\n'.repeat(24)],
+    ['multibyte characters', 'é💪'.repeat(24)],
+  ])('keeps complete rows of %s within the SignalR receive limit', (_, cell) => {
+    const rows = Array.from({ length: 1_000 }, (_, i) => [String(i).padStart(4, '0'), cell, 'END']);
     const text = describeSpreadsheetForAi('Program.xlsx', [{ name: 'Big', rows }], settings);
 
-    const body = text.slice(INTRO.length + 2);
-    const lines = body.split('\n');
-    expect(lines[0]).toBe('## Sheet: Big');
-    expect(lines.length).toBe(1 + 239 + 1);
-    expect(lines[239]).toBe('238' + 'x'.repeat(96));
-    expect(lines[240]).toBe('(The spreadsheet was cut short here because it is too long to send in full.)');
-    const sheetBytes = new TextEncoder().encode(lines.slice(0, 240).join('\n') + '\n').length;
-    expect(sheetBytes).toBe(23_914);
-    expect(sheetBytes).toBeLessThanOrEqual(MAX_SPREADSHEET_AI_BYTES);
+    expect(signalRBytes(text)).toBeLessThanOrEqual(32_768);
+    expect(text).toContain(INTRO);
+    expect(text).toContain('## Sheet: Big');
+    expect(text.endsWith(TRUNCATED_NOTE)).toBe(true);
+    const csv = text.slice((INTRO + '\n\n## Sheet: Big\n').length, -(TRUNCATED_NOTE.length + 1));
+    const csvCell = /[",\r\n]/.test(cell) ? `"${cell.replace(/"/g, '""')}"` : cell;
+    const rowCount = csv.match(/,END/g)?.length ?? 0;
+    expect(rowCount).toBeGreaterThan(0);
+    expect(rowCount).toBeLessThan(rows.length);
+    expect(csv).toBe(rows.slice(0, rowCount).map(([id]) => `${id},${csvCell},END`).join('\n'));
   });
 
-  it('counts the cap in UTF-8 bytes, not characters', () => {
-    // 'é' is two bytes, so each row is 200 bytes (100 characters) with its newline: 119 fit after the 14-byte header.
-    const rows = Array.from({ length: 200 }, () => ['x' + 'é'.repeat(99)]);
+  it('includes escaped sheet names and the instructions in the send budget', () => {
+    const text = describeSpreadsheetForAi(
+      'Program.xlsx',
+      [
+        { name: 'Days', rows: [['Squat', '5x5']] },
+        { name: '\u0000'.repeat(6_000), rows: [['Bench', '3x8']] },
+      ],
+      settings,
+    );
 
-    const text = describeSpreadsheetForAi('Program.xlsx', [{ name: 'Big', rows }], settings);
+    expect(signalRBytes(text)).toBeLessThanOrEqual(32_768);
+    expect(text).toContain(INTRO + '\n\n## Sheet: Days\nSquat,5x5');
+    expect(text).not.toContain('Bench');
+    expect(text.endsWith(TRUNCATED_NOTE)).toBe(true);
+  });
 
-    const lines = text.slice(INTRO.length + 2).split('\n');
-    expect(lines.length).toBe(1 + 119 + 1);
+  it('bounds an oversized filename while keeping the instructions and spreadsheet useful', () => {
+    const text = describeSpreadsheetForAi(
+      '\u0000"\\💪'.repeat(6_000) + '.xlsx',
+      [{ name: 'Days', rows: [['Squat', '5x5']] }],
+      settings,
+    );
+
+    expect(signalRBytes(text)).toBeLessThanOrEqual(32_768);
+    expect(text).toContain('Turn it into a plan with the create_workout_plan tool');
+    expect(text).toContain('Reply in my locale, en-GB. My preferred weight unit is kilograms.');
+    expect(text).toContain('## Sheet: Days\nSquat,5x5');
   });
 });
+
+const TRUNCATED_NOTE = '(The spreadsheet was cut short here because it is too long to send in full.)';
+
+function signalRBytes(message: string): number {
+  const wireMessage = new JsonHubProtocol().writeMessage({
+    type: MessageType.Invocation,
+    target: 'SendMessage',
+    invocationId: '0',
+    arguments: [message, aiPlanMigrations.latestVersion],
+  });
+  return new TextEncoder().encode(wireMessage).length;
+}
