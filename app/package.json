@@ -76,6 +76,7 @@
     "expo-sqlite": "~57.0.2",
     "expo-status-bar": "~57.0.1",
     "expo-updates": "~57.0.23",
+    "fflate": "^0.8.2",
     "linq": "^4.0.3",
     "material-symbols-react-native": "^1.0.3",
     "protobufjs": "^7.6.5",
