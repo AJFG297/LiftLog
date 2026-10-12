@@ -1,3 +1,4 @@
+import { createExerciseEntry } from '@/store/stored-sessions/exercise-entry';
 import { ProgramWriter } from '@/services/program-writer';
 import { DescriptorWriter } from '@/services/descriptor-writer';
 import { HistoryImport } from '@/services/history-import';
@@ -37,6 +38,7 @@ export function createServices(store: Store<RootState>, db: ExpoSQLiteDatabase, 
   const workoutRepository = new WorkoutRepository(db, (error) =>
     logger.error('Workout commit subscriber failed', error),
   );
+  const exerciseEntry = createExerciseEntry(store, { workoutRepository, logger });
   const programWriter = new ProgramWriter(db, store.getState);
   const descriptorWriter = new DescriptorWriter(db, store.getState, keyValueStore);
   const historyImport = new HistoryImport(store, { db, workoutRepository, programWriter, descriptorWriter, logger });
@@ -71,6 +73,7 @@ export function createServices(store: Store<RootState>, db: ExpoSQLiteDatabase, 
     programWriter: programPersistence,
     descriptorWriter: descriptorPersistence,
     historyImport,
+    exerciseEntry,
     keyValueStore,
     sessionService,
     notificationService,
