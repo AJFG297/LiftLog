@@ -3,6 +3,7 @@ const { defineConfig, globalIgnores } = require('eslint/config');
 
 const reactCompiler = require('eslint-plugin-react-compiler');
 const tsParser = require('@typescript-eslint/parser');
+const { storageTransactionRule } = require('./lint/storage-transaction-rule.mjs');
 
 module.exports = defineConfig([
   {
@@ -34,6 +35,16 @@ module.exports = defineConfig([
           message: 'Hermes lacks this; copy the array and use the mutating method (or filter/slice) instead.',
         })),
       ],
+    },
+  },
+  {
+    files: ['src/**/*.ts', 'src/**/*.tsx'],
+    ignores: ['src/db/helpers.ts'],
+    plugins: {
+      storage: { rules: { 'atomic-transactions': storageTransactionRule } },
+    },
+    rules: {
+      'storage/atomic-transactions': 'error',
     },
   },
   globalIgnores([
