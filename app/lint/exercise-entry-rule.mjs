@@ -127,3 +127,69 @@ export const exerciseEntryRule = {
     };
   },
 };
+
+/** @type {import('@typescript-eslint/utils').TSESLint.RuleModule<'compositionRoot'>} */
+export const exerciseEntryFactoryRule = {
+  meta: {
+    type: 'problem',
+    schema: [],
+    messages: {
+      compositionRoot:
+        'Create ExerciseEntry only in services/index.ts. Use services.exerciseEntry; import its types with import type.',
+    },
+  },
+  create(context) {
+    const filename = context.filename.replaceAll('\\', '/').slice(context.cwd.replaceAll('\\', '/').length + 1);
+    if (
+      filename === 'src/services/index.ts' ||
+      /\.spec\.tsx?$/.test(filename) ||
+      filename.startsWith('src/utils/__test__/')
+    )
+      return {};
+    /** @param {import('@typescript-eslint/utils').TSESTree.Node} source */
+    function isFactoryModule(source) {
+      const name = staticName(source);
+      if (!name) return false;
+      const path = name.startsWith('@/')
+        ? `src/${name.slice(2)}`
+        : name.startsWith('.')
+          ? `${filename.slice(0, filename.lastIndexOf('/'))}/${name}`
+          : undefined;
+      return (
+        !!path && normalizePath(path).replace(/\.[cm]?[jt]sx?$/, '') === 'src/store/stored-sessions/exercise-entry'
+      );
+    }
+    return {
+      ImportDeclaration(node) {
+        if (node.importKind === 'type' || !isFactoryModule(node.source)) return;
+        for (const specifier of node.specifiers) {
+          if (specifier.type !== AST_NODE_TYPES.ImportSpecifier || specifier.importKind !== 'type')
+            context.report({ node: specifier, messageId: 'compositionRoot' });
+        }
+        if (!node.specifiers.length) context.report({ node, messageId: 'compositionRoot' });
+      },
+      ExportNamedDeclaration(node) {
+        if (node.exportKind === 'type' || !node.source || !isFactoryModule(node.source)) return;
+        for (const specifier of node.specifiers) {
+          if (specifier.exportKind !== 'type') context.report({ node: specifier, messageId: 'compositionRoot' });
+        }
+      },
+      ExportAllDeclaration(node) {
+        if (node.exportKind !== 'type' && isFactoryModule(node.source))
+          context.report({ node, messageId: 'compositionRoot' });
+      },
+      ImportExpression(node) {
+        if (isFactoryModule(node.source)) context.report({ node, messageId: 'compositionRoot' });
+      },
+      CallExpression(node) {
+        if (
+          node.callee.type === AST_NODE_TYPES.Identifier &&
+          node.callee.name === 'require' &&
+          node.arguments[0] &&
+          isFactoryModule(node.arguments[0])
+        )
+          context.report({ node, messageId: 'compositionRoot' });
+      },
+    };
+  },
+};
