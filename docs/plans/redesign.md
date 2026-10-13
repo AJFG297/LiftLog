@@ -126,10 +126,17 @@ tabular figures where a number has letters in it. Type sizes follow the existing
 
 **D5. Rest.**
 
-- The model keeps `Rest {minRest, maxRest, failureRest}`.
-- The UI shows one rest time (`minRest`) with presets.
-- The min/max window and failure rest move to an "Advanced" section in the editor, and still drive the
-  timer phases.
+- `Rest {rest, failedSetRest?}`: one rest, and an optional different rest after a set that missed its
+  target. Absent, a failed set rests the same as any other. The old max rest is gone (its only effects were
+  a second buzz and the notification's end time), so the countdown has one end and buzzes once (PM-46).
+- Stored and shared JSON keeps the old three fields so older app versions still read it: `minRest` is the
+  rest, `maxRest` is written equal to it, `failureRest` is the resolved failed-set rest. Reading an old
+  triple drops the max rest, and makes the failed-set rest the same when the failure rest equals the rest or
+  the triple is one of the old built-in presets (1:00/1:30/3:00, 1:30/3:00/5:00, 3:00/5:00/8:00);
+  otherwise it is kept (`Rest.fromJSON`). Exercises on the old defaults no longer rest longer after a
+  miss unless the lifter sets it.
+- The edit exercise sheet's Rest row, and the routine editor card's (PM-49), open a sheet with minute and
+  second wheels and a "Different rest after a failed set" switch with its own wheels.
 - "Save as this exercise's default" writes the blueprint's rest.
 
 **D6. Set types become `working | warmup | drop | myo | failure`** (extending `SetKind`). What each one

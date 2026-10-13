@@ -166,14 +166,14 @@ describe('routineChanges', () => {
 
   it('lists rest with the shown rest time and a superset with its partner', () => {
     const today = routine(
-      bench.with({ restBetweenSets: { ...Rest.medium, minRest: Duration.ofMinutes(2) }, supersetWithNext: true }),
+      bench.with({ restBetweenSets: { ...Rest.medium, rest: Duration.ofMinutes(2) }, supersetWithNext: true }),
       fly,
     );
 
     const rows = routineChanges(diffSessionBlueprints(routine(bench, fly), today));
 
     expect(rows).toEqual([
-      expect.objectContaining({ kind: 'rest', from: Rest.medium.minRest, to: Duration.ofMinutes(2) }),
+      expect.objectContaining({ kind: 'rest', from: Rest.medium.rest, to: Duration.ofMinutes(2) }),
       expect.objectContaining({ kind: 'superset', exerciseName: 'Bench Press', grouped: true, with: 'Cable Fly' }),
     ]);
   });
@@ -297,8 +297,8 @@ describe('routineUpdateDiff', () => {
 });
 
 describe('routines with two exercises of the same name', () => {
-  const r180 = { ...Rest.medium, minRest: Duration.ofSeconds(180) };
-  const r90 = { ...Rest.medium, minRest: Duration.ofSeconds(90) };
+  const r180 = { ...Rest.medium, rest: Duration.ofSeconds(180) };
+  const r90 = { ...Rest.medium, rest: Duration.ofSeconds(90) };
 
   it.each<[string, SessionBlueprint, SessionBlueprint]>([
     [

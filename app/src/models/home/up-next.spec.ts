@@ -12,7 +12,7 @@ const pushPlan = new SessionBlueprint(
     makeWeightedBlueprint({
       name: 'Bench Press',
       sets: 3,
-      restBetweenSets: { ...Rest.medium, minRest: Duration.ofSeconds(120) },
+      restBetweenSets: { ...Rest.medium, rest: Duration.ofSeconds(120) },
     }),
   ],
   '',

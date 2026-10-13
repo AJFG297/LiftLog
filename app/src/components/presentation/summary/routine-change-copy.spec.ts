@@ -53,7 +53,7 @@ describe('routineChangeCopy', () => {
   });
 
   it('gives rest as the shown rest time', () => {
-    const shorter = bench.with({ restBetweenSets: { ...bench.restBetweenSets, minRest: Duration.ofMinutes(2) } });
+    const shorter = bench.with({ restBetweenSets: { ...bench.restBetweenSets, rest: Duration.ofMinutes(2) } });
 
     expect(copyFor([bench], [shorter])).toEqual([
       { icon: 'timer', title: 'Bench Press rest: 1:30 → 2:00', subtitle: 'You changed it today' },

@@ -1,5 +1,5 @@
 import { useMountEffect } from '@/hooks/useMountEffect';
-import { getExerciseStatsHref } from '@/components/smart/exercise-stats-href';
+import { exerciseProgressHref } from '@/components/smart/exercise-progress-href';
 import {
   ProgressionRule,
   SessionBlueprint,
@@ -27,6 +27,7 @@ import {
   setWelcomeWizardCompleted,
 } from '@/store/settings';
 import { whatsNewEntries } from '@/models/whats-new';
+import { getRoutineExerciseEditorHref } from '@/components/smart/routine-exercise-editor';
 
 export default function ScreenshotCollectionPage() {
   const { type } = useLocalSearchParams<{ type: string }>();
@@ -99,23 +100,14 @@ function PrepareExerciseEditorPage() {
   });
 
   return (
-    <Redirect
-      href={{
-        pathname: '/routines/manage-workouts/[programId]/manage-session/[sessionIndex]/exercise',
-        params: { programId: activePlanId, sessionIndex: 0, exerciseIndex: 0 },
-      }}
-    />
+    <Redirect href={getRoutineExerciseEditorHref({ programId: activePlanId, sessionIndex: 0, exerciseIndex: 0 })} />
   );
 }
 
 function PrepareAiPlannerPage() {
   const dispatch = useDispatch();
   useMountEffect(() => {
-    const rest = {
-      minRest: Duration.ofSeconds(90),
-      maxRest: Duration.ofSeconds(180),
-      failureRest: Duration.ofSeconds(300),
-    };
+    const rest = { rest: Duration.ofSeconds(90), failedSetRest: Duration.ofSeconds(300) };
     const ex = (name: string, sets: number, repsPerSet: number) =>
       WeightedExerciseBlueprint.of({
         name,
@@ -274,7 +266,7 @@ function PrepareStatsPage() {
 function PrepareExerciseStatsPage() {
   const dispatch = useDispatch();
   useMountEffect(() => buildStatsSessionData(dispatch));
-  return <Redirect href={getExerciseStatsHref(stubExerciseId('Bench Press'))} />;
+  return <Redirect href={exerciseProgressHref(stubExerciseId('Bench Press'))} />;
 }
 
 function PrepareHomePage() {

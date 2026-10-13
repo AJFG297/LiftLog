@@ -156,6 +156,76 @@ public class AnthropicChatPlannerV2Tests
         await Assert.That(((AiChatMessageResponseV2)responses[0]).Message).IsEqualTo("hello");
     }
 
+    private static async Task<JsonArray> ExercisesOfGeneratedPlan(string planJson)
+    {
+        var events = new List<RawMessageStreamEvent>
+        {
+            ToolUseStart("toolu_1", "create_workout_plan"),
+            InputJsonDelta(planJson),
+            BlockStop(),
+        };
+
+        var responses = await Run(CreatePlanner(new FakeAnthropicMessageStreamer(events)));
+
+        var plan = responses.OfType<AiChatPlanResponseV2>().Last();
+        return plan.Blueprint!["sessions"]![0]!["exercises"]!.AsArray();
+    }
+
+    private static string PlanWithRests(string weightedRest, string cardioRest) =>
+        """
+            {"name":"Rest Plan","description":"","blueprint":{"name":"Rest Plan","sessions":[{"name":"Day 1","notes":"","exercises":[{"type":"WeightedExerciseBlueprint","name":"Bench Press","sets":3,"repsPerSet":8,"restBetweenSets":WEIGHTED_REST,"supersetWithNext":false,"notes":"","link":""},{"type":"CardioExerciseBlueprint","name":"Rower","sets":[{"target":{"type":"time","value":"PT5M"},"restBetweenSets":CARDIO_REST}],"notes":"","link":""}]}]}}
+            """.Replace("WEIGHTED_REST", weightedRest).Replace("CARDIO_REST", cardioRest);
+
+    private static string WeightedRestOf(JsonArray exercises) =>
+        exercises[0]!["restBetweenSets"]!.ToJsonString();
+
+    private static string CardioRestOf(JsonArray exercises) =>
+        exercises[1]!["sets"]![0]!["restBetweenSets"]!.ToJsonString();
+
+    private static string WireRest(string min, string max, string failure) =>
+        $$"""{"minRest":"{{min}}","maxRest":"{{max}}","failureRest":"{{failure}}"}""";
+
+    [Test]
+    [Category("Unit")]
+    public async Task Plan_WithRestAndFailedSetRest_ReachesTheAppAsTheThreeFieldRest()
+    {
+        var exercises = await ExercisesOfGeneratedPlan(
+            PlanWithRests(
+                weightedRest: """{"rest":"PT2M","failedSetRest":"PT3M"}""",
+                cardioRest: """{"rest":"PT1M","failedSetRest":"PT1M30S"}"""
+            )
+        );
+
+        await Assert.That(WeightedRestOf(exercises)).IsEqualTo(WireRest("PT2M", "PT2M", "PT3M"));
+        await Assert.That(CardioRestOf(exercises)).IsEqualTo(WireRest("PT1M", "PT1M", "PT1M30S"));
+    }
+
+    [Test]
+    [Category("Unit")]
+    public async Task Plan_WithoutFailedSetRest_RestsTheSameAfterAFailedSet()
+    {
+        var exercises = await ExercisesOfGeneratedPlan(
+            PlanWithRests(weightedRest: """{"rest":"PT2M"}""", cardioRest: """{"rest":"PT1M"}""")
+        );
+
+        await Assert.That(WeightedRestOf(exercises)).IsEqualTo(WireRest("PT2M", "PT2M", "PT2M"));
+        await Assert.That(CardioRestOf(exercises)).IsEqualTo(WireRest("PT1M", "PT1M", "PT1M"));
+    }
+
+    [Test]
+    [Category("Unit")]
+    public async Task Plan_WithTheOldThreeFieldRest_IsPassedThroughAsItWas()
+    {
+        var oldRest = WireRest("PT1M30S", "PT3M", "PT5M");
+
+        var exercises = await ExercisesOfGeneratedPlan(
+            PlanWithRests(weightedRest: oldRest, cardioRest: oldRest)
+        );
+
+        await Assert.That(WeightedRestOf(exercises)).IsEqualTo(oldRest);
+        await Assert.That(CardioRestOf(exercises)).IsEqualTo(oldRest);
+    }
+
     [Test]
     [Category("Unit")]
     public async Task AfterToolCall_AssistantAndToolResultAreAppendedToHistory()

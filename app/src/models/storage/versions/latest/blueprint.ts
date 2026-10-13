@@ -178,11 +178,19 @@ export interface RepsTargetJSON {
   max: number;
 }
 
+/**
+ * The rest between sets. The app has one rest and an optional different rest after a failed set (plan
+ * decision D5), but keeps writing the three fields older versions read, so plans, shared items and feed
+ * events stay readable by them. Reading turns an old triple into the new rest (see `Rest.fromJSON`).
+ */
 export interface RestJSON {
+  /** The rest. */
   minRest: DurationJSON;
+  /** No longer used: written equal to `minRest`, ignored on read. */
   maxRest: DurationJSON;
   /**
-   * Rest taken after a set where the user failed to hit their target reps.
+   * Rest taken after a set where the user failed to hit their target reps. Equal to `minRest` means the
+   * same rest as any other set.
    */
   failureRest: DurationJSON;
 }

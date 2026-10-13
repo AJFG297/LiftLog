@@ -19,6 +19,11 @@ interface RoundIconButtonProps {
   size?: keyof typeof SIZES;
   /** Text after the icon, which stretches the circle into a pill: the summary's Share. */
   label?: string;
+  /**
+   * Makes it a toggle, on or off, that screen readers hear as one; on, it fills with the soft accent: the
+   * exercise page's Pin to Progress. Left out, it is a plain button.
+   */
+  selected?: boolean;
   disabled?: boolean;
   style?: StyleProp<ViewStyle>;
   testID?: string;
@@ -35,21 +40,23 @@ export function RoundIconButton({
   onPress,
   size = 'regular',
   label,
+  selected,
   disabled,
   style,
   testID,
 }: RoundIconButtonProps) {
   const { tokens } = useAppTheme();
   const { diameter, icon: iconSize } = SIZES[size];
+  const ink = disabled ? tokens.faint : selected ? tokens.accentSoftInk : tokens.ink;
   return (
     <Pressable
       testID={testID}
       onPress={onPress}
       disabled={disabled}
-      accessibilityRole="button"
+      accessibilityRole={selected === undefined ? 'button' : 'togglebutton'}
       accessibilityLabel={accessibilityLabel}
       accessibilityHint={accessibilityHint}
-      accessibilityState={{ disabled: !!disabled }}
+      accessibilityState={{ disabled: !!disabled, checked: selected }}
       style={[
         { minWidth: MIN_TOUCH_TARGET, minHeight: MIN_TOUCH_TARGET, alignItems: 'center', justifyContent: 'center' },
         style,
@@ -65,15 +72,15 @@ export function RoundIconButton({
             gap: 6,
             borderRadius: diameter / 2,
             borderWidth: 1,
-            borderColor: tokens.line,
+            borderColor: selected ? tokens.accentSoft : tokens.line,
             alignItems: 'center',
             justifyContent: 'center',
-            backgroundColor: pressed ? tokens.track : tokens.card,
+            backgroundColor: selected ? tokens.accentSoft : pressed ? tokens.track : tokens.card,
           }}
         >
-          <MsIconSrc name={icon} size={label ? iconSize - 2 : iconSize} color={disabled ? tokens.faint : tokens.ink} />
+          <MsIconSrc name={icon} size={label ? iconSize - 2 : iconSize} color={ink} />
           {label ? (
-            <SurfaceText font="text-sm" weight="600" style={{ color: disabled ? tokens.faint : tokens.ink }}>
+            <SurfaceText font="text-sm" weight="600" style={{ color: ink }}>
               {label}
             </SurfaceText>
           ) : null}

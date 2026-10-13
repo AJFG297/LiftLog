@@ -38,6 +38,7 @@ export function Pager({
 }: PagerProps) {
   const { colors } = useAppTheme();
   const [pageWidth, setPageWidth] = useState(0);
+  const [pageHeight, setPageHeight] = useState(0);
   const scrollX = useRef(new Animated.Value(0)).current;
   const scrollRef = useRef<ScrollView>(null);
   const pages = Children.toArray(children);
@@ -50,7 +51,11 @@ export function Pager({
 
   const progress = useMemo(() => Animated.divide(scrollX, pageWidth || 1), [scrollX, pageWidth]);
 
-  const onLayout = (e: LayoutChangeEvent) => setPageWidth(e.nativeEvent.layout.width);
+  const onLayout = (e: LayoutChangeEvent) => {
+    setPageWidth(e.nativeEvent.layout.width);
+    setPageHeight(e.nativeEvent.layout.height);
+  };
+  const pagesReady = pageWidth > 0 && (!fill || pageHeight > 0);
   const settleTo = (offsetX: number) => {
     if (pageWidth > 0) {
       onPageChange?.(Math.round(offsetX / pageWidth));
@@ -77,9 +82,9 @@ export function Pager({
         onLayout={onLayout}
         style={fill ? styles.fill : undefined}
       >
-        {pageWidth > 0 &&
+        {pagesReady &&
           pages.map((child, index) => (
-            <View key={index} style={{ width: pageWidth }}>
+            <View key={index} style={{ width: pageWidth, height: fill ? pageHeight : undefined }}>
               {child}
             </View>
           ))}

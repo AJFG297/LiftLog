@@ -188,21 +188,24 @@
       "type": "object",
       "properties": {
         "minRest": {
-          "$ref": "#/definitions/Duration"
+          "$ref": "#/definitions/Duration",
+          "description": "The rest."
         },
         "maxRest": {
-          "$ref": "#/definitions/Duration"
+          "$ref": "#/definitions/Duration",
+          "description": "No longer used: written equal to `minRest`, ignored on read."
         },
         "failureRest": {
           "$ref": "#/definitions/Duration",
-          "description": "Rest taken after a set where the user failed to hit their target reps."
+          "description": "Rest taken after a set where the user failed to hit their target reps. Equal to `minRest` means the same rest as any other set."
         }
       },
       "required": [
         "minRest",
         "maxRest",
         "failureRest"
-      ]
+      ],
+      "description": "The rest between sets. The app has one rest and an optional different rest after a failed set (plan decision D5), but keeps writing the three fields older versions read, so plans, shared items and feed events stay readable by them. Reading turns an old triple into the new rest (see `Rest.fromJSON`)."
     },
     "Duration": {
       "type": "string",

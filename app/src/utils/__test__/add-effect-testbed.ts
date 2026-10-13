@@ -36,6 +36,9 @@ export function createAddEffectTestBed(options?: {
   // When provided, dispatched actions are run through this reducer so `getState`
   // reflects real state transitions instead of only recording the action.
   reducer?: Reducer<any, UnknownAction>;
+  // When true, actions an effect dispatches run their own effects too, as they do in the app, and
+  // `dispatchHandled` waits for all of them.
+  runDispatchedEffects?: boolean;
 }) {
   const effects: EffectEntry[] = [];
   const dispatchedActions: UnknownAction[] = [];
@@ -44,6 +47,7 @@ export function createAddEffectTestBed(options?: {
     ? mergeSlices(reducer(undefined, { type: '@@testbed/INIT' }), options?.initialState ?? {})
     : (options?.initialState ?? {});
   let stateBeforeReduce: DeepPartial<RootState> = state;
+  const pendingEffects: Promise<void>[] = [];
   const logs: { level: string; args: unknown[] }[] = [];
   const mockServices: Services = {
     logger: {
@@ -77,6 +81,9 @@ export function createAddEffectTestBed(options?: {
   async function dispatchHandled(action: UnknownAction): Promise<void> {
     applyReducer(action);
     await runMatchingEffects(action);
+    while (pendingEffects.length) {
+      await pendingEffects.shift();
+    }
   }
   function dispatch(action: UnknownAction): void {
     dispatchedActions.push(action);
@@ -91,6 +98,9 @@ export function createAddEffectTestBed(options?: {
       dispatch: (a: UnknownAction) => {
         dispatchedActions.push(a);
         applyReducer(a);
+        if (options?.runDispatchedEffects) {
+          pendingEffects.push(runMatchingEffects(a));
+        }
       },
       getState: () => state as RootState,
       stateBeforeReduce,

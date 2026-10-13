@@ -115,8 +115,8 @@ export function routineChanges(diff: SessionBlueprintDiff): RoutineChange[] {
             id: change.id,
             kind: 'rest',
             exerciseName: change.exerciseName,
-            from: change.oldValue.minRest,
-            to: change.newValue.minRest,
+            from: change.oldValue.rest,
+            to: change.newValue.rest,
           });
           break;
         case 'exerciseSuperset':

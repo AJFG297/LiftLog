@@ -1,3 +1,4 @@
+import { clamp } from '@/utils/clamp';
 export interface Hsv {
   /** Hue in degrees, [0, 360). */
   h: number;
@@ -12,10 +13,6 @@ export type HexColor = `#${string}`;
 /** Whether two hex strings name the same colour. The seed codec accepts either case. */
 export function sameHex(a: string, b: string): boolean {
   return a.toUpperCase() === b.toUpperCase();
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value));
 }
 
 function toHexByte(value: number): string {

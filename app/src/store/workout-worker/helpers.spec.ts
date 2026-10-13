@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { Instant, LocalDate } from '@js-joda/core';
+import { Duration, Instant, LocalDate } from '@js-joda/core';
 import { PlannedWarmupSet, Rest, SessionBlueprint } from '@/models/blueprint-models';
 import { Weight } from '@/models/weight';
 import { Session } from '@/models/session-models/session';
@@ -97,21 +97,18 @@ describe('getTimerInfo', () => {
     expect(getTimerInfo(session)).toBeUndefined();
   });
 
-  it('returns partial and full rest times after a successful set', () => {
-    const info = getTimerInfo(sessionWithRestTimer(10))!;
-    expect(info.startedAt).toBeDefined();
-    expect(info.partiallyEndAt).toBeDefined();
-    expect(info.endAt).toBeDefined();
-  });
-
-  it('returns equal partial and full rest after a failed set', () => {
-    const info = getTimerInfo(sessionWithRestTimer(3))!;
-    expect(info.partiallyEndAt).toEqual(info.endAt);
+  it('ends the notification at the rest, with no window after it', () => {
+    for (const reps of [10, 3]) {
+      const info = getTimerInfo(sessionWithRestTimer(reps))!;
+      expect(info.startedAt).toBeDefined();
+      expect(info.partiallyEndAt).toEqual(info.endAt);
+    }
   });
 
   function sessionWithPyramidRestTimer(lastSetReps: number) {
     const bp = makeWeightedBlueprint().with({
       sets: 3,
+      restBetweenSets: { rest: Duration.ofSeconds(90), failedSetRest: Duration.ofSeconds(180) },
       repsConfig: {
         type: 'perSet',
         targets: [
@@ -135,17 +132,16 @@ describe('getTimerInfo', () => {
 
   it("judges rest against the last completed set's own pyramid target", () => {
     // Last completed set targets 8; hitting it is a success even though it is below the earlier sets' targets.
-    const success = getTimerInfo(sessionWithPyramidRestTimer(8))!;
-    expect(success.partiallyEndAt).not.toEqual(success.endAt);
-
-    const failure = getTimerInfo(sessionWithPyramidRestTimer(7))!;
-    expect(failure.partiallyEndAt).toEqual(failure.endAt);
+    const restOf = (info: { startedAt: string; endAt: string }) =>
+      Instant.parse(info.endAt).epochSecond() - Instant.parse(info.startedAt).epochSecond();
+    expect(restOf(getTimerInfo(sessionWithPyramidRestTimer(8))!)).toBe(90);
+    expect(restOf(getTimerInfo(sessionWithPyramidRestTimer(7))!)).toBe(180);
   });
 });
 
 describe('warm-ups in the workout worker', () => {
   const warmup = (percent: number, reps: number): PlannedWarmupSet => ({ load: { type: 'percent', percent }, reps });
-  const rest = Rest.short;
+  const rest: Rest = { rest: Duration.ofSeconds(60), failedSetRest: Duration.ofSeconds(180) };
 
   /** 50% × 5 and 70% × 3 in front of 2 × 10 at 100 kg, with `warmupReps` / `workingReps` logged in order. */
   function sessionWith(
@@ -214,27 +210,25 @@ describe('warm-ups in the workout worker', () => {
     expect(slot.weight).toEqual(new Weight(70, 'kilograms').toJSON());
   });
 
-  it('rests only the minimum after a warm-up', () => {
+  it('rests the rest after a warm-up', () => {
     const info = getTimerInfo(sessionWith([5]))!;
-    expect(seconds(info.startedAt, info.partiallyEndAt)).toBe(rest.minRest.seconds());
-    expect(seconds(info.startedAt, info.endAt)).toBe(rest.minRest.seconds());
+    expect(seconds(info.startedAt, info.endAt)).toBe(60);
   });
 
-  it('never gives the failure rest after a short warm-up', () => {
+  it('never gives the failed-set rest after a short warm-up', () => {
     const info = getTimerInfo(sessionWith([1]))!;
-    expect(seconds(info.startedAt, info.endAt)).toBe(rest.minRest.seconds());
+    expect(seconds(info.startedAt, info.endAt)).toBe(60);
   });
 
-  it('still gives the failure rest after a short working set that follows the warm-ups', () => {
+  it('still gives the failed-set rest after a short working set that follows the warm-ups', () => {
     const info = getTimerInfo(sessionWith([5, 3], [3, undefined]))!;
-    expect(seconds(info.startedAt, info.partiallyEndAt)).toBe(rest.failureRest.seconds());
-    expect(seconds(info.startedAt, info.endAt)).toBe(rest.failureRest.seconds());
+    expect(seconds(info.startedAt, info.endAt)).toBe(180);
   });
 
-  it('gives the full rest window after a successful working set', () => {
+  it('rests the rest after a successful working set', () => {
     const info = getTimerInfo(sessionWith([5, 3], [10, undefined]))!;
-    expect(seconds(info.startedAt, info.partiallyEndAt)).toBe(rest.minRest.seconds());
-    expect(seconds(info.startedAt, info.endAt)).toBe(rest.maxRest.seconds());
+    expect(seconds(info.startedAt, info.partiallyEndAt)).toBe(60);
+    expect(seconds(info.startedAt, info.endAt)).toBe(60);
   });
 
   it('carries warm-ups in the workout sent to the worker, outside its volume', () => {

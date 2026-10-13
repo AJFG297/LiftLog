@@ -12,11 +12,8 @@ interface RestFormatProps {
 export default function RestFormat({ rest }: RestFormatProps & TextProps) {
   return (
     <Text style={numberStyle}>
-      {rest.minRest.compareTo(rest.maxRest) >= 0
-        ? formatTimeSpan(rest.minRest)
-        : `${formatTimeSpan(rest.minRest)} - ${formatTimeSpan(rest.maxRest)}`}
-
-      {rest.failureRest.compareTo(rest.maxRest) >= 0 && `, ${formatTimeSpan(rest.failureRest)}`}
+      {formatTimeSpan(rest.rest)}
+      {rest.failedSetRest && `, ${formatTimeSpan(rest.failedSetRest)}`}
     </Text>
   );
 }

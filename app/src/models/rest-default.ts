@@ -36,15 +36,11 @@ export function routineExerciseLocation(
 }
 
 /**
- * `rest` with a new min rest, which is the one rest time the app shows (plan decision D5). The max rest
- * rises with it if it has to, so the window never closes before it opens; the failure rest is untouched.
+ * `rest` with a new rest time. A failed-set rest of its own is untouched; without one, a failed set keeps
+ * resting the same as the rest, so it moves too (plan decision D5).
  */
-export function withMinRest(rest: Rest, minRest: Duration): Rest {
-  return {
-    minRest,
-    maxRest: rest.maxRest.compareTo(minRest) < 0 ? minRest : rest.maxRest,
-    failureRest: rest.failureRest,
-  };
+export function withRest(rest: Rest, duration: Duration): Rest {
+  return { ...rest, rest: duration };
 }
 
 export function routineExerciseRest(program: ProgramBlueprint, location: RoutineExerciseLocation): Rest | undefined {
@@ -112,12 +108,12 @@ export function durationOfRestPick(pick: RestPick): Duration {
 }
 
 /**
- * `rest` with the picked min rest. A pick still at the wheels' starting position keeps `rest` as it was, so
+ * `rest` with the picked rest. A pick still at the wheels' starting position keeps `rest` as it was, so
  * saving without turning a wheel doesn't round a rest like 2:22 to 2:20.
  */
 export function restWithPick(rest: Rest, pick: RestPick): Rest {
-  const opened = restPickOf(rest.minRest);
+  const opened = restPickOf(rest.rest);
   return opened.minutes === pick.minutes && opened.seconds === pick.seconds
     ? rest
-    : withMinRest(rest, durationOfRestPick(pick));
+    : withRest(rest, durationOfRestPick(pick));
 }

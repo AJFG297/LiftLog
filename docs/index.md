@@ -31,6 +31,10 @@ work to find the docs relevant to your area, and update it whenever you add, rem
   Toast), their accessibility rules (roles, labels, 44pt targets via `hitSlopFor`), the native-sheet
   convention (`formSheetOptions` + `SheetHeader`), haptics, and the `liftlog://dev/components` screen.
 
+- [UX.md](./UX.md) - interaction rules every screen follows, read before designing or building a screen,
+  sheet or control. Starts with dismiss the innermost layer first: back and swipe-down close an open pad,
+  menu or popover before the sheet it sits in.
+
 ## Features
 
 - [Home.md](./Home.md) - the four tabs (Home, Routines, Progress, You) and which route folders they hold,
@@ -45,14 +49,15 @@ work to find the docs relevant to your area, and update it whenever you add, rem
 - [Routines.md](./Routines.md) - programs and routines: the Routines screen (active program, routines,
   other programs, the built-in library, and why changing the active program always asks), the program page,
   and the routine editor: its draft with Save and Cancel, the routine's colour, set rows on the number pad,
-  rest with Advanced, the progression presets and how they map to rules, and superset-safe moves.
+  the rest row and its wheel sheet, the progression presets and how they map to rules, and superset-safe moves.
 - [WorkoutDetail.md](./WorkoutDetail.md) - a past workout, opened from history: the header, stats row and set
   tables (e1RM, PR tags, the comparison with last time), Do again, Save as routine (into the active plan), and the
   overflow menu's edit, share and delete with Undo.
 - [ExercisePicker.md](./ExercisePicker.md) - choosing exercises for a routine or a workout: add (many, in
   tap order, optionally as a superset) and swap (one), how the pick comes back through the store, the list
   (Recent, fuzzy matches, muscle and equipment chips), creating a custom exercise, and the catalog's limits.
-- [Progress.md](./Progress.md) - the Progress tab, Records and All exercises, and the model they share:
+- [Progress.md](./Progress.md) - the Progress tab, Records, All exercises and the exercise page (its chart,
+  record dots, Next time, best weight by reps, and where it opens from), pinned lifts, and the model they share:
   `buildProgressHistory`'s one walk over the finished history (points per movement and workout, dated
   records), the `RecordLedger` that is the one implementation of the record rules, `progressSince` for a
   window's change, where `useProgressHistory` loads it from, how a range's weeks and averages are counted,
@@ -66,9 +71,11 @@ work to find the docs relevant to your area, and update it whenever you add, rem
 - [NumberPad.md](./NumberPad.md) - the in-screen number pad for weight and reps: how a field's buffer
   behaves (placeholder, typing, ± steps), the step per equipment and unit, the accessory row (plate
   maths, per dumbbell, on the stack, RPE chips), and the bar and plate preferences behind plate maths.
+  Also the edit exercise sheet's targets pad, for sets and reps and for cardio rounds, minutes and distance.
 - [PlanFileFormat.md](./PlanFileFormat.md) - the `.liftlogplan` file format, how plans are imported and
-  exported (exercises linked by name, `exerciseId` optional), and the Claude skill that authors plan files
-  against the schema.
+  exported (exercises linked by name, `exerciseId` optional), importing a routine from an `.xlsx` or `.csv`
+  spreadsheet (the header aliases and cell grammar the parser reads, and Convert with AI when none is found),
+  and the Claude skill that authors plan files against the schema.
 - [PlaintextExport.md](./PlaintextExport.md) — CSV/JSON export of workout data, including which fields
   are included, their order and how it is read in batches. Explicitly _not_ a backup mechanism; LiftLog
   cannot read these files back.
@@ -93,7 +100,7 @@ work to find the docs relevant to your area, and update it whenever you add, rem
 
 - [adr/0001-own-backend-no-upstream-compatibility.md](./adr/0001-own-backend-no-upstream-compatibility.md)
   - the fork talks only to its own backend and keeps no compatibility with upstream LiftLog (wire
-  formats, backups, hosted service); what that frees up and what still must stay compatible.
+    formats, backups, hosted service); what that frees up and what still must stay compatible.
 - [adr/0002-own-visual-language.md](./adr/0002-own-visual-language.md) - content surfaces are
   our own components on the theme tokens; system chrome (tabs, sheets, menus, switches, pickers) stays
   native via expo-ui; react-native-paper is phased out screen by screen.

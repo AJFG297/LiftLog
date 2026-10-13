@@ -40,11 +40,11 @@ function secondsOf(exercise: ExerciseBlueprint): number {
       (total, set) =>
         total +
         (set.target.type === 'time' ? set.target.value.seconds() : DISTANCE_SET_SECONDS) +
-        (set.restBetweenSets?.minRest.seconds() ?? 0),
+        (set.restBetweenSets?.rest.seconds() ?? 0),
       0,
     );
   }
-  return setCountOf(exercise) * (SECONDS_PER_SET + exercise.restBetweenSets.minRest.seconds());
+  return setCountOf(exercise) * (SECONDS_PER_SET + exercise.restBetweenSets.rest.seconds());
 }
 
 /** How long ago `date` was, in the unit a person would say it in. */

@@ -26,8 +26,8 @@ import { latestWhatsNewId } from '@/models/whats-new';
 import { getDateOnDay } from '@/utils/format-date';
 import { DayOfWeek } from '@js-joda/core';
 import { useTranslate } from '@tolgee/react';
-import { useMemo, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { ReactNode, useMemo, useState } from 'react';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { Portal, Text } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch } from 'react-redux';
@@ -35,6 +35,14 @@ import { openUrl } from '@/utils/open-url';
 import { useFormatDate } from '@/hooks/useFormatDate';
 import { requestPermissionsAsync } from 'expo-notifications';
 import { HealthExportSwitch, useCanExportHealth } from './health-export-switch';
+
+function WizardPage({ children }: { children: ReactNode }) {
+  return (
+    <ScrollView style={styles.pageScroll} contentContainerStyle={styles.pageContent} nestedScrollEnabled>
+      {children}
+    </ScrollView>
+  );
+}
 
 export function WelcomeWizard() {
   const notificationsEnabled = useAppSelector((x) => x.settings.restNotifications);
@@ -110,7 +118,7 @@ export function WelcomeWizard() {
   };
 
   const renderCrashReportsPage = () => (
-    <View style={styles.pageContent}>
+    <WizardPage>
       <View style={styles.headerSection}>
         <Text variant="headlineMedium" style={styles.pageTitle}>
           {t('onboarding.welcome.title')}
@@ -140,11 +148,11 @@ export function WelcomeWizard() {
           />
         </SegmentedGroup>
       </View>
-    </View>
+    </WizardPage>
   );
 
   const renderLocalizationPage = () => (
-    <View style={styles.pageContent}>
+    <WizardPage>
       <View style={styles.headerSection}>
         <Text variant="headlineMedium" style={styles.pageTitle}>
           {t('settings.localisation.title')}
@@ -189,11 +197,11 @@ export function WelcomeWizard() {
           setThemeMode={(m) => dispatch(setThemeMode(m))}
         />
       </View>
-    </View>
+    </WizardPage>
   );
 
   const renderNotificationsAndFeedPage = () => (
-    <View style={styles.pageContent}>
+    <WizardPage>
       <View style={styles.headerSection}>
         <Text variant="headlineMedium" style={styles.pageTitle}>
           {t('onboarding.notifications_and_feed.title')}
@@ -242,7 +250,7 @@ export function WelcomeWizard() {
           {canExportHealth ? <HealthExportSwitch /> : undefined}
         </SegmentedGroup>
       </View>
-    </View>
+    </WizardPage>
   );
 
   return (
@@ -277,9 +285,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  pageContent: {
+  pageScroll: {
     flex: 1,
+  },
+  pageContent: {
     marginTop: spacing.pageHorizontalMargin,
+    paddingBottom: spacing[4],
   },
   headerSection: {
     marginBottom: spacing[8],
@@ -294,7 +305,6 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   settingsSection: {
-    flex: 1,
     paddingHorizontal: spacing.pageHorizontalMargin,
     gap: spacing[4],
   },

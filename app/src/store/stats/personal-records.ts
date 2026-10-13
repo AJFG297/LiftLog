@@ -20,7 +20,9 @@ export interface OneRepMaxSet {
 
 /**
  * The set with the best Epley estimate in `exercise`, over the logged sets that count towards records, with
- * bodyweight folded in. Undefined for a movement that tracks no load, or with no such set logged.
+ * bodyweight folded in. Undefined for a movement that tracks no load, with no such set logged, and when the
+ * best estimate is zero: a bodyweight movement logged without a bodyweight or added weight has no load to
+ * estimate from, and a zero would read as a 0 kg lift and make the next loaded workout a record.
  */
 export function bestOneRepMaxSet(
   exercise: RecordedWeightedExercise,
@@ -40,7 +42,7 @@ export function bestOneRepMaxSet(
       best = { oneRepMax, weight: potentialSet.weight, reps };
     }
   }
-  return best;
+  return best && !best.oneRepMax.value.isZero() ? best : undefined;
 }
 
 function bestOneRepMax(session: Session): Map<MovementKey, BestOneRepMax> {
@@ -229,17 +231,33 @@ function heaviestSets(session: Session): Map<MovementKey, HeaviestSet> {
       continue;
     }
     const key = exercise.movementKey();
-    for (const potentialSet of exercise.setsCountingTowards('countsTowardsPrs')) {
-      if (!potentialSet.set?.repsCompleted) {
-        continue;
-      }
-      const current = heaviest.get(key);
-      const { weight } = potentialSet;
-      const reps = potentialSet.set.repsCompleted;
-      const heavier = !current || weight.isGreaterThan(current.weight);
-      if (heavier || (weight.equals(current.weight, true) && reps > current.reps)) {
-        heaviest.set(key, { exerciseName: exercise.blueprint.name, weight, reps });
-      }
+    const logged = exercise
+      .setsCountingTowards('countsTowardsPrs')
+      .flatMap(({ weight, set }) =>
+        set?.repsCompleted ? [{ exerciseName: exercise.blueprint.name, weight, reps: set.repsCompleted }] : [],
+      );
+    const current = heaviest.get(key);
+    const best = heaviestSetOf(current ? [current, ...logged] : logged);
+    if (best) {
+      heaviest.set(key, best);
+    }
+  }
+  return heaviest;
+}
+
+/**
+ * The heaviest of `sets`, and on a tie on weight the one with more reps; on a full tie the first. The record
+ * ledger's heaviest-weight rule and the exercise page's Heaviest chart both pick by this.
+ */
+export function heaviestSetOf<T extends { weight: Weight; reps: number }>(sets: Iterable<T>): T | undefined {
+  let heaviest: T | undefined;
+  for (const set of sets) {
+    if (
+      !heaviest ||
+      set.weight.isGreaterThan(heaviest.weight) ||
+      (set.weight.equals(heaviest.weight, true) && set.reps > heaviest.reps)
+    ) {
+      heaviest = set;
     }
   }
   return heaviest;

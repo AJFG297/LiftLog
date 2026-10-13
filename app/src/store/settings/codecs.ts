@@ -1,5 +1,6 @@
 import { DayOfWeek, Instant } from '@js-joda/core';
 import { match, P } from 'ts-pattern';
+import type { ExerciseId } from '@/models/blueprint-models';
 import type { PerUnit } from '@/models/weight';
 import { PROGRESS_TABS, type ProgressTab } from '@/store/stats/progress-tab';
 
@@ -108,6 +109,22 @@ export const isBarWeight = (value: unknown): value is number =>
 
 export const isPlateList = (value: unknown): value is number[] =>
   Array.isArray(value) && value.every((plate) => typeof plate === 'number' && Number.isFinite(plate) && plate > 0);
+
+/** A list of exercise ids as a JSON array, in its order. Anything else reads as absent. */
+export const exerciseIdListCodec: Codec<ExerciseId[]> = {
+  deserialize: (raw) => {
+    try {
+      const parsed: unknown = JSON.parse(raw ?? '');
+      return isExerciseIdList(parsed) ? parsed : undefined;
+    } catch {
+      return undefined;
+    }
+  },
+  serialize: (value) => JSON.stringify(value),
+};
+
+const isExerciseIdList = (value: unknown): value is ExerciseId[] =>
+  Array.isArray(value) && value.every((id) => typeof id === 'string');
 
 export const instantCodec: Codec<Instant> = {
   deserialize: (raw) => {

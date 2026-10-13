@@ -12,10 +12,11 @@ import {
   withAddedRule,
 } from '@/models/blueprint-models';
 import { useTranslate } from '@tolgee/react';
-import { ScrollView, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { DecimalEditor } from '@/components/presentation/foundation/editors/decimal-editor';
 import { IntegerEditor } from '@/components/presentation/foundation/editors/integer-editor';
-import { Dialog, Divider, Text } from 'react-native-paper';
+import { Dialog } from 'react-native-paper';
+import { SurfaceText } from '@/components/presentation/foundation/surface-text';
 import { AppThemeColors, spacing, useAppTheme } from '@/hooks/useAppTheme';
 import Button from '@/components/presentation/foundation/button';
 import IconButton from '@/components/presentation/foundation/icon-button';
@@ -35,6 +36,8 @@ interface Props {
   /** The whole blueprint, so the worked example can run the rules against this exercise's own sets. */
   exercise: WeightedExerciseBlueprint;
   onChange: (v: ProgressionRule[]) => void;
+  /** Leaves out the Example button where a preview of the rules is already on screen. */
+  hideExample?: boolean;
 }
 
 /** The scope picker flattens the two shapes into one list, since only `lowestSets` carries a pick. */
@@ -56,7 +59,7 @@ function defaultRule(axis: ProgressionAxis): ProgressionRule {
 
 export function ProgressionRulesEditor(props: Props) {
   const { t } = useTranslate();
-  const { colors } = useAppTheme();
+  const { tokens } = useAppTheme();
   const rules = props.exercise.progression;
   const canMoveLoad = props.exercise.resistance !== 'none';
 
@@ -76,18 +79,18 @@ export function ProgressionRulesEditor(props: Props) {
   return (
     <View style={{ gap: spacing[2] }} testID="progression-rules">
       {rules.length === 0 && (
-        <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
+        <SurfaceText font="text-sm" style={{ color: tokens.muted }}>
           {t('exercise.progression.none.body')}
-        </Text>
+        </SurfaceText>
       )}
       {rules.map((rule, index) => (
         <View key={index} style={deadFrom !== undefined && index >= deadFrom ? { opacity: 0.5 } : undefined}>
-          {index > 0 && <Divider style={{ marginBlock: spacing[2] }} />}
+          {index > 0 && <RuleDivider style={{ marginBlock: spacing[2] }} />}
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <Text variant="labelLarge" style={{ flex: 1, color: colors.onSurfaceVariant }}>
+            <SurfaceText font="text-sm" weight="600" style={{ flex: 1, color: tokens.muted }}>
               {t('exercise.progression.rule.title', { position: index + 1 })}
               {deadFrom !== undefined && index >= deadFrom && ` · ${t('exercise.progression.rule.never_runs.label')}`}
-            </Text>
+            </SurfaceText>
             {rules.length > 1 && (
               <>
                 <IconButton
@@ -122,20 +125,20 @@ export function ProgressionRulesEditor(props: Props) {
             onChange={(next) => replaceRule(index, next)}
           />
           {deadFrom === index + 1 && (
-            <Text variant="bodySmall" style={{ color: colors.error, marginBlockStart: spacing[2] }}>
+            <SurfaceText font="text-sm" style={{ color: tokens.danger, marginBlockStart: spacing[2] }}>
               {rule.axis === 'load'
                 ? t('exercise.progression.blocks_later.load.body')
                 : t('exercise.progression.blocks_later.reps.body')}
-            </Text>
+            </SurfaceText>
           )}
         </View>
       ))}
-      {rules.length > 0 && <Divider style={{ marginBlockStart: spacing[2] }} />}
+      {rules.length > 0 && <RuleDivider style={{ marginBlockStart: spacing[2] }} />}
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[2] }}>
         <Button style={{ flex: 1 }} icon="add" testID="progression-add-rule" onPress={addRule}>
           {t('exercise.progression.add_rule.label')}
         </Button>
-        {rules.length > 0 && <ProgressionExample exercise={props.exercise} />}
+        {rules.length > 0 && !props.hideExample && <ProgressionExample exercise={props.exercise} />}
       </View>
     </View>
   );
@@ -149,7 +152,7 @@ function RuleEditor(props: {
   onChange: (rule: ProgressionRule) => void;
 }) {
   const { t } = useTranslate();
-  const { colors } = useAppTheme();
+  const { colors, tokens } = useAppTheme();
   const { rule } = props;
 
   const axisOptions: SelectPickerOption<ProgressionAxis>[] = [
@@ -182,9 +185,9 @@ function RuleEditor(props: {
         />
       </Row>
       {rule.axis === 'load' && !props.canMoveLoad && (
-        <Text variant="bodySmall" style={{ color: colors.error }}>
+        <SurfaceText font="text-sm" style={{ color: tokens.danger }}>
           {t('exercise.progression.axis.no_load.body')}
-        </Text>
+        </SurfaceText>
       )}
 
       <Row
@@ -260,15 +263,15 @@ function numberInputStyle(colors: AppThemeColors) {
 }
 
 function SwitchRow(props: { label: string; description: string; value: boolean; onValueChange: (v: boolean) => void }) {
-  const { colors } = useAppTheme();
+  const { tokens } = useAppTheme();
   return (
     <TouchableRipple onPress={() => props.onValueChange(!props.value)}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[4], paddingBlock: spacing[2] }}>
         <View style={{ flex: 1, gap: spacing[0.5] }}>
-          <Text>{props.label}</Text>
-          <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
+          <SurfaceText style={{ color: tokens.ink }}>{props.label}</SurfaceText>
+          <SurfaceText font="text-sm" style={{ color: tokens.muted }}>
             {props.description}
-          </Text>
+          </SurfaceText>
         </View>
         <Switch value={props.value} onValueChange={props.onValueChange} />
       </View>
@@ -296,6 +299,7 @@ function axisFor(rule: ProgressionRule, axis: ProgressionAxis, handOverAt: BigNu
 }
 
 function Row(props: { label: string; children: React.ReactNode }) {
+  const { tokens } = useAppTheme();
   return (
     <View
       style={{
@@ -306,7 +310,7 @@ function Row(props: { label: string; children: React.ReactNode }) {
         minHeight: spacing[11],
       }}
     >
-      <Text style={{ flexShrink: 1 }}>{props.label}</Text>
+      <SurfaceText style={{ flexShrink: 1, color: tokens.ink }}>{props.label}</SurfaceText>
       {props.children}
     </View>
   );
@@ -401,4 +405,9 @@ function DummySet(props: { set: PotentialSet; resistance: Resistance; repsTarget
       weightIncrement={BigNumber(0)}
     />
   );
+}
+
+function RuleDivider({ style }: { style: { marginBlock?: number; marginBlockStart?: number } }) {
+  const { tokens } = useAppTheme();
+  return <View style={[{ height: StyleSheet.hairlineWidth, backgroundColor: tokens.line }, style]} />;
 }

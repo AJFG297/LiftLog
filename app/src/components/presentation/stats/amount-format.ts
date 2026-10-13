@@ -1,10 +1,16 @@
 import BigNumber from 'bignumber.js';
+import { shortFormatWeightUnit, Weight } from '@/models/weight';
 import { ChangeTone, toneOf } from '@/store/stats/progress-amounts';
 import { localeFormatBigNumber } from '@/utils/locale-bignumber';
 
 /** A number already rounded for showing, as it is: "80", "82.5", "102.25". */
 export function amountText(value: number | BigNumber): string {
   return localeFormatBigNumber(new BigNumber(value));
+}
+
+/** A weight already rounded for showing, with its unit: "82.5 kg". */
+export function weightText(weight: Weight): string {
+  return `${amountText(weight.value)} ${shortFormatWeightUnit(weight.unit)}`;
 }
 
 /** A number to at most `decimals` places: "80", "82.5". */

@@ -4,6 +4,7 @@ import { AnyVersionAiPlanJSON } from '@/models/storage/versions/any';
 import { aiPlanMigrations } from '@/models/storage/versions/migrations';
 import { CardioExerciseBlueprint, ProgramBlueprint, WeightedExerciseBlueprint } from '@/models/blueprint-models';
 import { DeepPartial } from '@/utils/types';
+import type { Sheet } from '@/services/plan-import/sheet';
 import {
   BigNumberJSON,
   CardioExerciseBlueprintJSON,
@@ -60,6 +61,16 @@ export interface AiChatSharedProgramMessage {
 }
 
 /**
+ * Client-only chat message: a spreadsheet the plan import couldn't read as a routine table, handed to
+ * the AI to turn into a plan. Never received from the hub.
+ */
+export interface AiChatSharedSpreadsheetMessage {
+  type: 'sharedSpreadsheet';
+  fileName: string;
+  sheets: Sheet[];
+}
+
+/**
  * Builds the user-message text sent to the AI when sharing an existing program,
  * embedding it in the same JSON shape the create_workout_plan tool produces.
  */
@@ -105,13 +116,10 @@ const emptyCardioSet = emptyCardioExercise.sets[0]!;
 const defaultIncreaseAmount = '2.5' as BigNumberJSON;
 const defaultRepsTarget = emptyWeightedExercise.plannedSets[0]?.reps ?? { min: 10, max: 10 };
 
+/** A missing max or failure rest is the rest itself: the planner gave no different rest after a failed set. */
 function fillRest(partial: DeepPartial<RestJSON> = {}): RestJSON {
-  const { restBetweenSets } = emptyWeightedExercise;
-  return {
-    minRest: partial.minRest ?? restBetweenSets.minRest,
-    maxRest: partial.maxRest ?? restBetweenSets.maxRest,
-    failureRest: partial.failureRest ?? restBetweenSets.failureRest,
-  };
+  const minRest = partial.minRest ?? emptyWeightedExercise.restBetweenSets.minRest;
+  return { minRest, maxRest: partial.maxRest ?? minRest, failureRest: partial.failureRest ?? minRest };
 }
 
 /**

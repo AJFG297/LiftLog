@@ -10,12 +10,23 @@ import {
 import { LocalDate, OffsetDateTime } from '@js-joda/core';
 import BigNumber from 'bignumber.js';
 import { v4 as uuid } from 'uuid';
-import { PotentialSet, RecordedSet, RecordedWeightedExercise, Session } from '@/models/session-models';
+import {
+  PotentialSet,
+  RecordedCardioExercise,
+  RecordedCardioExerciseSet,
+  RecordedSet,
+  RecordedWeightedExercise,
+  Session,
+} from '@/models/session-models';
 import type { WorkingListKind } from '@/models/session-models/set-kind';
 import { todaysTarget } from '@/models/session-models/todays-target';
 import { nextTargets } from '@/models/workout-summary';
 import { storedSessionsReducer, upsertStoredSessions } from '@/store/stored-sessions';
-import { makeRecordedExercise, makeWeightedBlueprint } from '@/models/session-models/__test__/helpers';
+import {
+  makeCardioBlueprint,
+  makeRecordedExercise,
+  makeWeightedBlueprint,
+} from '@/models/session-models/__test__/helpers';
 import { Weight } from '@/models/weight';
 import type { RootState } from '@/store';
 
@@ -309,11 +320,79 @@ describe('SessionService progressive overload', () => {
     expect(await upcomingWeights(blueprint, lastWeek)).toEqual([12.5, 12.5]);
   });
 
+  it('hands a rep ladder at its limit over to the weight rule, starting the reps over', () => {
+    const blueprint = makeWeightedBlueprint({
+      sets: 2,
+      repsConfig: { type: 'fixed', reps: 8 },
+      progression: [
+        ProgressionRule.of({ axis: 'reps', step: new BigNumber(1), ceiling: new BigNumber(10), onCeiling: 'reset' }),
+        ProgressionRule.load(new BigNumber(2.5)),
+      ],
+    });
+    const lastWeek = makeRecordedExercise(blueprint, [10, 10], new Weight(60, 'kilograms')).withAllSets((s) =>
+      s.with({ target: { min: 10, max: 10 } }),
+    );
+
+    const session = makeService(makeState()).hydrateSessionFromBlueprint(new SessionBlueprint('Day', [blueprint], ''), {
+      [blueprint.progressionKey()]: lastWeek,
+    });
+    const exercise = session.recordedExercises[0] as RecordedWeightedExercise;
+
+    expect(exercise.potentialSets.map((s) => [s.weight.value.toNumber(), s.target.max])).toEqual([
+      [62.5, 8],
+      [62.5, 8],
+    ]);
+  });
+
+  it('climbs the rep ladder while it has room, leaving the weight', () => {
+    const blueprint = makeWeightedBlueprint({
+      sets: 2,
+      repsConfig: { type: 'fixed', reps: 8 },
+      progression: [
+        ProgressionRule.of({ axis: 'reps', step: new BigNumber(1), ceiling: new BigNumber(10), onCeiling: 'reset' }),
+        ProgressionRule.load(new BigNumber(2.5)),
+      ],
+    });
+    const lastWeek = makeRecordedExercise(blueprint, [8, 8], new Weight(60, 'kilograms'));
+
+    const session = makeService(makeState()).hydrateSessionFromBlueprint(new SessionBlueprint('Day', [blueprint], ''), {
+      [blueprint.progressionKey()]: lastWeek,
+    });
+    const exercise = session.recordedExercises[0] as RecordedWeightedExercise;
+
+    expect(exercise.potentialSets.map((s) => [s.weight.value.toNumber(), s.target.max])).toEqual([
+      [60, 9],
+      [60, 9],
+    ]);
+  });
+
   it('leaves the load alone when the plan asks for no progression', async () => {
     const blueprint = makeWeightedBlueprint({ sets: 2, progression: [] });
     const lastWeek = makeRecordedExercise(blueprint, [10, 10], new Weight(60, 'kilograms'));
 
     expect(await upcomingWeights(blueprint, lastWeek)).toEqual([60, 60]);
+  });
+});
+
+describe('SessionService cardio', () => {
+  it('carries each set’s incline and resistance, and nothing logged', () => {
+    const cardio = makeCardioBlueprint(2);
+    const last = RecordedCardioExercise.empty(cardio).with({
+      sets: cardio.sets.map((s, i) =>
+        RecordedCardioExerciseSet.empty(s).with({ incline: new BigNumber(i + 1), resistance: new BigNumber(5) }),
+      ),
+    });
+
+    const session = makeService(makeState()).hydrateSessionFromBlueprint(new SessionBlueprint('Day', [cardio], ''), {
+      [cardio.progressionKey()]: last,
+    });
+    const exercise = session.recordedExercises[0] as RecordedCardioExercise;
+
+    expect(exercise.sets.map((s) => [s.incline?.toNumber(), s.resistance?.toNumber()])).toEqual([
+      [1, 5],
+      [2, 5],
+    ]);
+    expect(exercise.sets.every((s) => s.completionDateTime === undefined)).toBe(true);
   });
 });
 

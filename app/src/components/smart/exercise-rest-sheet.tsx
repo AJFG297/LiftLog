@@ -67,7 +67,7 @@ function SheetContent(props: { session: Session; exerciseIndex: number; exercise
   const { t } = useTranslate();
   const { back } = useRouter();
   const dispatch = useDispatch();
-  const [pick, setPick] = useState<RestPick>(() => restPickOf(exercise.blueprint.restBetweenSets.minRest));
+  const [pick, setPick] = useState<RestPick>(() => restPickOf(exercise.blueprint.restBetweenSets.rest));
   // A second tap while the sheet animates away would go back past the workout.
   const [saved, setSaved] = useState(false);
   const rest = durationOfRestPick(pick);

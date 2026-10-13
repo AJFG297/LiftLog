@@ -26,20 +26,16 @@ import {
 const loggedAt = OffsetDateTime.parse('2026-09-29T10:00:00Z');
 const at = (seconds: number) => loggedAt.plusSeconds(seconds);
 
-// 2:00 min rest, a window to 3:00, and 4:00 after a missed set.
-const rest: Rest = {
-  minRest: Duration.ofSeconds(120),
-  maxRest: Duration.ofSeconds(180),
-  failureRest: Duration.ofSeconds(240),
-};
+// 2:00 rest, and 4:00 after a failed set.
+const rest: Rest = { rest: Duration.ofSeconds(120), failedSetRest: Duration.ofSeconds(240) };
 
-function benchBlueprint(): WeightedExerciseBlueprint {
-  return makeWeightedBlueprint({ name: 'Bench Press', restBetweenSets: rest });
+function benchBlueprint(restBetweenSets: Rest = rest): WeightedExerciseBlueprint {
+  return makeWeightedBlueprint({ name: 'Bench Press', restBetweenSets });
 }
 
 /** Bench Press with one set logged at `loggedAt` (10 reps hits the target, fewer misses it) and one to go. Null: no timer. */
-function resting(reps = 10, timer: RestTimer | null = new RestTimer(loggedAt)): Session {
-  const bp = benchBlueprint();
+function resting(reps = 10, timer: RestTimer | null = new RestTimer(loggedAt), restBetweenSets = rest): Session {
+  const bp = benchBlueprint(restBetweenSets);
   const exercise = new RecordedWeightedExercise(
     bp,
     [filledPotentialSet(reps, loggedAt), emptyPotentialSet()],
@@ -58,23 +54,25 @@ function resting(reps = 10, timer: RestTimer | null = new RestTimer(loggedAt)): 
 const seconds = (d: Duration | undefined) => (d === undefined ? undefined : d.toMillis() / 1000);
 
 describe('restWindowOf', () => {
-  it('runs for the min rest after a set that hit its target, with the window to max rest after it', () => {
+  it('runs for the rest after a set that hit its target', () => {
     const window = restWindowOf(resting())!;
     expect(window.readyAt.toString()).toBe('2026-09-29T10:02Z');
-    expect(window.fullAt.toString()).toBe('2026-09-29T10:03Z');
     expect(seconds(window.length)).toBe(120);
   });
 
-  it('runs for the failure rest after a missed set, with no window after it', () => {
+  it('runs for the failed-set rest after a set that missed its target', () => {
     const window = restWindowOf(resting(7))!;
     expect(window.readyAt.toString()).toBe('2026-09-29T10:04Z');
-    expect(window.fullAt.toString()).toBe('2026-09-29T10:04Z');
   });
 
-  it('runs for a picked length, keeping the window width after it', () => {
+  it('runs for the rest after a missed set when there is no failed-set rest', () => {
+    const window = restWindowOf(resting(7, new RestTimer(loggedAt), { rest: Duration.ofSeconds(120) }))!;
+    expect(window.readyAt.toString()).toBe('2026-09-29T10:02Z');
+  });
+
+  it('runs for a picked length', () => {
     const window = restWindowOf(resting(10, new RestTimer(loggedAt, Duration.ofSeconds(90))))!;
     expect(window.readyAt.toString()).toBe('2026-09-29T10:01:30Z');
-    expect(window.fullAt.toString()).toBe('2026-09-29T10:02:30Z');
   });
 
   it('has nothing to run without a timer, or once the workout has no set left', () => {
@@ -97,7 +95,6 @@ describe('restWindowOf', () => {
     });
     const window = restWindowOf(session)!;
     expect(window.readyAt.toString()).toBe('2026-09-29T10:01Z');
-    expect(window.fullAt.toString()).toBe('2026-09-29T10:01Z');
   });
 });
 
@@ -128,15 +125,15 @@ describe('isRestPreset', () => {
 });
 
 describe('restPhaseAt', () => {
-  it('counts down, then reads Go, then marks the end of the window', () => {
+  it('counts down, then reads Go', () => {
     const session = resting();
     expect(restPhaseAt(session, at(30))).toEqual({
       kind: 'resting',
       remaining: Duration.ofSeconds(90),
       length: Duration.ofSeconds(120),
     });
-    expect(restPhaseAt(session, at(120))).toEqual({ kind: 'ready', pastFull: false });
-    expect(restPhaseAt(session, at(180))).toEqual({ kind: 'ready', pastFull: true });
+    expect(restPhaseAt(session, at(120))).toEqual({ kind: 'ready' });
+    expect(restPhaseAt(session, at(180))).toEqual({ kind: 'ready' });
   });
 
   it('is idle without a timer', () => {
@@ -217,7 +214,7 @@ describe('withRestSkipped', () => {
 });
 
 describe('exerciseRestOf and restOwnerIndexOf', () => {
-  it("reads the exercise's own min rest", () => {
+  it("reads the exercise's own rest", () => {
     expect(seconds(exerciseRestOf(resting().recordedExercises[0]))).toBe(120);
   });
 
@@ -237,10 +234,10 @@ describe('isRestCue', () => {
   const window = restWindowOf(resting())!;
   const restingPhase = restPhaseAt(resting(), at(119));
 
-  it('buzzes when the countdown runs out, and again at the end of the window', () => {
+  it('buzzes once, when the countdown runs out', () => {
     expect(isRestCue(restingPhase, restPhaseAt(resting(), at(120)), window, at(120))).toBe(true);
     const ready = restPhaseAt(resting(), at(179));
-    expect(isRestCue(ready, restPhaseAt(resting(), at(180)), window, at(180))).toBe(true);
+    expect(isRestCue(ready, restPhaseAt(resting(), at(180)), window, at(180))).toBe(false);
   });
 
   it('stays quiet for a crossing noticed late, or a tick that crosses nothing', () => {

@@ -62,9 +62,21 @@ the routine.
 ## Progressive overload
 
 In the routine editor, **Progression** offers Add weight, Reps then weight, or Off, which set these rules for
-you (see [Routines.md](./Routines.md#progression-presets)). **Advanced** there, and **Progressive Overload** in
-an exercise's More options, edit the rules themselves. A new exercise has no rules, so it stays
+you (see [Routines.md](./Routines.md#progression-presets)). **Advanced** there, and **Rules** on the edit
+exercise sheet's Progression sheet, edit the rules themselves. A new exercise has no rules, so it stays
 where you leave it until you add one.
+
+The **Progression sheet** (the Progression row of the edit exercise sheet, `app/exercise-progression.tsx`)
+shows the same three choices as radio cards, each explained with the exercise's numbers. The picked card
+has chips for the weight step (1.25, 2.5, 5, plus the exercise's own step if it is something else) and,
+for Reps then weight, the rep limit (14, 15, 16, 20, only those above the plan's reps). Under them, **If
+you hit every target** plays the next sessions out through `nextRecordedExercise` with every set logged at
+the top of its target (`progression-preview.ts`): three sessions for Add weight and custom rules, and for
+Reps then weight every rung until the weight goes up, with the middle of a long ladder left out. It starts
+from the next workout's carried weight and rep targets, including progression earned last time, or
+counts up from nothing before the exercise has history. **Rules** opens the
+full rule editor; rules that no longer match a preset read as **Custom**. The sheet edits the exercise
+through `exercise-edit-draft.ts`, like the Load sheet.
 
 **Rules only fire after a successful session**, and what counts as successful depends on the rule:
 
@@ -100,7 +112,8 @@ all, so a weight rule always has to be last. The editor dims any rule that can n
 how to fix it, and **Add rule** arranges new rules so this does not happen - adding a rule to a
 weight-only exercise puts the new reps rung _in front_ of the weight rule, not behind it.
 
-Tap **Example** to see four sessions of your actual exercise played out under the rules you have set.
+In the routine editor's Advanced, tap **Example** to see four sessions of your actual exercise played out
+under the rules you have set. The Progression sheet shows its preview instead.
 
 ## Double progression
 
@@ -130,10 +143,13 @@ time (`nextRecordedExercise`, which routine start, add, swap and Do again all go
 (`sessionWithExerciseReplaced`) in `app/src/models/session-models/carry-over.ts`; the cache minus the
 workout's own entries for an add or swap, read from the tables when an entry is the workout's own, in pick
 order inside `createWorkoutExerciseChanges`, in
-`app/src/store/stored-sessions/workout-exercise-changes.ts`, and the hook the screens call it
-through (`useWorkoutExerciseChanges`) in `app/src/hooks/useWorkoutExerciseChanges.ts`;
-Do again's structure (`repeatBlueprint`) in `app/src/models/workout-detail.ts`; session start and Do again (`repeatSession`, which reads the cache from
-the store when tapped) in `app/src/services/session-service.ts`; the editor in
+`app/src/store/stored-sessions/workout-exercise-changes.ts`, and the hook the screens call it through
+(`useWorkoutExerciseChanges`) in `app/src/hooks/useWorkoutExerciseChanges.ts`; Do again's structure
+(`repeatBlueprint`) in `app/src/models/workout-detail.ts`; session start and Do again (`repeatSession`, which
+reads the cache from the store when tapped) in `app/src/services/session-service.ts`. Session start goes through
+`nextSessionExercises` in `app/src/models/session-models/next-exercise.ts`, which opens each exercise through
+`nextRecordedExercise`. The exercise page's Next time card uses that same carry-over function (`nextTimeOf`,
+with `todaysTarget` for the reason), so it says what the next workout will open on; the editor in
 `app/src/components/presentation/workout-editor/progressive-overload.tsx`. The stored
 `workout_exercise.progression_key` column was rewritten to the new key by the
 `REKEY_PROGRESSION_BY_EXERCISE` data migration (`app/src/services/data-migrations/rekey-progression.ts`).
