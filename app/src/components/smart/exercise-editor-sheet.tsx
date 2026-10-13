@@ -9,7 +9,7 @@ import {
 import { showsRestBetweenRounds } from '@/components/presentation/workout-editor/cardio-targets';
 import { CardioTargetsPad, useCardioTargetsPad } from '@/components/presentation/workout-editor/cardio-targets-editor';
 import { ExerciseEditor } from '@/components/presentation/workout-editor/exercise-editor';
-import { blueprintSwappedTo } from '@/components/presentation/workout-editor/exercise-picker';
+import { blueprintSwappedTo } from '@/models/exercise-pick';
 import { useTargetsPad, WeightedTargetsPad } from '@/components/presentation/workout-editor/weighted-targets-editor';
 import { getExerciseLoadHref } from '@/components/smart/exercise-load-sheet';
 import { getExerciseEditRestHref } from '@/components/smart/exercise-edit-rest-sheet';
