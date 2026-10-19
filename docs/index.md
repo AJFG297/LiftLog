@@ -5,6 +5,8 @@ work to find the docs relevant to your area, and update it whenever you add, rem
 
 ## Architecture and patterns
 
+- [GLOSSARY.md](../GLOSSARY.md) - workout exercise change and carry-over terminology.
+
 - [Storage.md](./Storage.md) - the two on-device storage layers: preferences (`PreferenceService`, one
   file per key) and user data (SQLite via Drizzle). Both are injected into Redux effects via `extra`.
   Covers which to use, how to add to each, the relational workout tables behind `WorkoutRepository` and
