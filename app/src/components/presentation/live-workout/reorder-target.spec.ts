@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { reorderShiftFor, reorderTargetIndex } from '@/components/presentation/live-workout/reorder-target';
+import {
+  AUTO_SCROLL_EDGE,
+  AUTO_SCROLL_MAX_SPEED,
+  autoScrollSpeed,
+  reorderShiftFor,
+  reorderTargetIndex,
+} from '@/components/presentation/live-workout/reorder-target';
 
 const heights = [64, 140, 64, 64];
 const gap = 6;
@@ -31,5 +37,32 @@ describe('reorderShiftFor', () => {
 
   it('moves nothing when no row is held', () => {
     expect(reorderShiftFor(1, -1, -1, 64, gap)).toBe(0);
+  });
+});
+
+describe('autoScrollSpeed', () => {
+  const viewport = 600;
+
+  it('stays still away from the edges', () => {
+    expect(autoScrollSpeed(AUTO_SCROLL_EDGE, viewport)).toBe(0);
+    expect(autoScrollSpeed(viewport / 2, viewport)).toBe(0);
+    expect(autoScrollSpeed(viewport - AUTO_SCROLL_EDGE, viewport)).toBe(0);
+  });
+
+  it('scrolls up near the top and down near the bottom, faster the closer the finger', () => {
+    expect(autoScrollSpeed(AUTO_SCROLL_EDGE / 2, viewport)).toBe(-AUTO_SCROLL_MAX_SPEED / 2);
+    expect(autoScrollSpeed(0, viewport)).toBe(-AUTO_SCROLL_MAX_SPEED);
+    expect(autoScrollSpeed(viewport - AUTO_SCROLL_EDGE / 2, viewport)).toBe(AUTO_SCROLL_MAX_SPEED / 2);
+    expect(autoScrollSpeed(viewport, viewport)).toBe(AUTO_SCROLL_MAX_SPEED);
+  });
+
+  it('keeps full speed when the finger goes past the edge', () => {
+    expect(autoScrollSpeed(-40, viewport)).toBe(-AUTO_SCROLL_MAX_SPEED);
+    expect(autoScrollSpeed(viewport + 40, viewport)).toBe(AUTO_SCROLL_MAX_SPEED);
+  });
+
+  it('narrows the bands on a short scroll view so its middle stays still', () => {
+    expect(autoScrollSpeed(90, 180)).toBe(0);
+    expect(autoScrollSpeed(0, 180)).toBe(-AUTO_SCROLL_MAX_SPEED);
   });
 });
