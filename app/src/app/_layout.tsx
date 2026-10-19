@@ -70,7 +70,9 @@ function Layout() {
       <Stack.Screen name="exercise-editor" options={formSheetOptions([0.95])} />
       <Stack.Screen name="routine-exercise-editor" options={formSheetOptions([0.95])} />
       <Stack.Screen name="exercise-load" options={formSheetOptions([0.55, 0.9])} />
-      <Stack.Screen name="exercise-warmups" options={formSheetOptions([0.75, 0.95])} />
+      {/* One detent: content is laid out at the tallest one, so at a lower detent the number pad pinned to
+          the bottom would open half off screen. */}
+      <Stack.Screen name="exercise-warmups" options={formSheetOptions([0.95])} />
       <Stack.Screen name="exercise-progression" options={formSheetOptions([0.9])} />
       {/* Grows when a different rest after a failed set brings its own wheels, so Save stays in view. */}
       <Stack.Screen name="exercise-edit-rest" options={formSheetOptions('fitToContents')} />
