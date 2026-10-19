@@ -70,6 +70,7 @@ export function useReorderScroll(): ReorderScroll {
 }
 
 interface DragState {
+  active: SharedValue<boolean>;
   from: SharedValue<number>;
   target: SharedValue<number>;
   dy: SharedValue<number>;
@@ -87,13 +88,14 @@ interface DragState {
 export function ReorderableList({ items, gap, onMove, onDragChange, scroll }: ReorderableListProps) {
   const heights = useRef(new Map<string, number>());
   const orderedHeights = () => items.map((item) => heights.current.get(item.key) ?? 0);
+  const active = useSharedValue(false);
   const from = useSharedValue(-1);
   const target = useSharedValue(-1);
   const dy = useSharedValue(0);
   const fingerStart = useSharedValue(0);
   const scrolled = useSharedValue(0);
   const draggedHeight = useSharedValue(0);
-  const drag: DragState = { from, target, dy, fingerStart, scrolled, draggedHeight };
+  const drag: DragState = { active, from, target, dy, fingerStart, scrolled, draggedHeight };
   // Copied to the UI thread when a row is picked up, so the frame callback can work out the target.
   const heldHeights = useSharedValue<number[]>([]);
   const startOffset = useSharedValue(0);
@@ -109,7 +111,7 @@ export function ReorderableList({ items, gap, onMove, onDragChange, scroll }: Re
   // the row would land. The scroll view can't be scrolled by hand meanwhile, so its offset is only ever what
   // this sets.
   const frameCallback = useFrameCallback((frame) => {
-    if (drag.from.get() < 0) {
+    if (!drag.active.get() || drag.from.get() < 0) {
       return;
     }
     const view = scrollRef && contentHeight ? measure(scrollRef) : null;
@@ -136,16 +138,15 @@ export function ReorderableList({ items, gap, onMove, onDragChange, scroll }: Re
     startOffset.set(scroll?.offset.get() ?? 0);
     drag.from.set(index);
     drag.target.set(index);
-    drag.scrolled.set(0);
     drag.draggedHeight.set(measured[index] ?? 0);
     frameCallback.setActive(true);
     onDragChange?.(true);
   };
-  const end = () => {
+  const end = (distance: number) => {
     frameCallback.setActive(false);
     const movedFrom = drag.from.get();
     // Not the last frame's target: the finger may have moved since.
-    const movedTo = movedFrom >= 0 ? heldTarget() : -1;
+    const movedTo = movedFrom >= 0 ? reorderTargetIndex(heldHeights.get(), gap, movedFrom, distance) : -1;
     onDragChange?.(false);
     if (movedFrom >= 0 && movedTo >= 0 && movedTo !== movedFrom) {
       onMove(movedFrom, movedTo);
@@ -186,7 +187,7 @@ function ReorderableRow(props: {
   drag: DragState;
   onLayoutHeight: (height: number) => void;
   onBegin: () => void;
-  onEnd: () => void;
+  onEnd: (distance: number) => void;
   onMove: (from: number, to: number) => void;
 }) {
   const { tokens } = useAppTheme();
@@ -222,13 +223,17 @@ function ReorderableRow(props: {
       const handleBox = measure(handleRef);
       drag.fingerStart.set(handleBox ? handleBox.pageY + event.y : event.absoluteY);
       drag.dy.set(0);
+      drag.scrolled.set(0);
+      drag.active.set(true);
       scheduleOnRN(onBegin);
     })
     .onUpdate((event) => {
       drag.dy.set(event.translationY);
     })
     .onFinalize(() => {
-      scheduleOnRN(onEnd);
+      drag.active.set(false);
+      // Freeze the drop before RN handles it, while keeping the row held until its new order is applied.
+      scheduleOnRN(onEnd, drag.dy.get() + drag.scrolled.get());
     });
 
   const handle = (
