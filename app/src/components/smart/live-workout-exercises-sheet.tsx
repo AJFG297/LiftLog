@@ -5,7 +5,11 @@ import { SheetHeader } from '@/components/presentation/foundation/sheet-header';
 import { SurfaceText } from '@/components/presentation/foundation/surface-text';
 import { formatWeightText } from '@/components/presentation/foundation/weight-format';
 import { ExerciseOverviewRow, SupersetGroupHeader } from '@/components/presentation/live-workout/exercise-overview-row';
-import { ReorderableItem, ReorderableList } from '@/components/presentation/live-workout/reorderable-list';
+import {
+  ReorderableItem,
+  ReorderableList,
+  useReorderScroll,
+} from '@/components/presentation/live-workout/reorderable-list';
 import { targetLabel } from '@/components/presentation/live-workout/target-text';
 import { PreviousPerformancesProvider } from '@/components/smart/previous-performances';
 import { getSessionExerciseEditorHref } from '@/components/smart/session-exercise-editor';
@@ -33,10 +37,12 @@ import { useRouter } from 'expo-router';
 import { ReactNode, useEffect, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
+import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDispatch } from 'react-redux';
 
 const ROW_GAP = spacing[2];
+const AnimatedScrollView = Animated.createAnimatedComponent(ScrollView);
 
 /** The "All exercises" sheet over the live workout: every exercise's status, jump, reorder and add. */
 export function LiveWorkoutExercisesSheet() {
@@ -68,6 +74,7 @@ function SheetContent({ session }: { session: Session }) {
   const targetFor = useTodaysTarget(session);
   const { groups, focusedGroup, focusedExerciseIndex } = useLiveWorkoutFocus(session);
   const [dragging, setDragging] = useState(false);
+  const reorderScroll = useReorderScroll();
 
   const updateSession = (update: (session: Session) => Session) =>
     dispatch(updateStoredSession({ sessionId: session.id, update }));
@@ -203,7 +210,9 @@ function SheetContent({ session }: { session: Session }) {
           }}
         />
       </View>
-      <ScrollView
+      <AnimatedScrollView
+        ref={reorderScroll.ref}
+        onContentSizeChange={reorderScroll.onContentSizeChange}
         scrollEnabled={!dragging}
         contentContainerStyle={{ paddingBottom: insets.bottom + spacing[4], gap: spacing[3] }}
       >
@@ -227,7 +236,7 @@ function SheetContent({ session }: { session: Session }) {
             {session.blueprint.notes}
           </SurfaceText>
         ) : null}
-        <ReorderableList items={items} gap={ROW_GAP} onMove={move} onDragChange={setDragging} />
+        <ReorderableList items={items} gap={ROW_GAP} onMove={move} onDragChange={setDragging} scroll={reorderScroll} />
         {showBodyweight ? (
           <View
             testID="bodyweight-card"
@@ -254,7 +263,7 @@ function SheetContent({ session }: { session: Session }) {
             />
           </View>
         ) : null}
-      </ScrollView>
+      </AnimatedScrollView>
     </View>
   );
 }

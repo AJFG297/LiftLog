@@ -102,7 +102,10 @@ Nothing on the screen is stored except which exercise is in focus. The rest come
   finishing a page never moves the screen before the user taps Up next.
 - **Reordering** is `withGroupMoved`: whole groups move, so a superset travels as one unit, and the
   session's exercises and blueprint move together. A `supersetWithNext` left on the last exercise is
-  cleared once something follows it, because it would join that exercise.
+  cleared once something follows it, because it would join that exercise. While a row is held within
+  80pt of the sheet list's top or bottom edge, the list scrolls that way, faster the closer the finger is
+  (`autoScrollSpeed` in `reorder-target.ts`); a Reanimated frame callback in `ReorderableList` scrolls it
+  and adds the scrolled distance to the held row, so it stays under the finger.
 - **Today's target** is `todaysTarget` in `models/session-models/todays-target.ts`. Progression runs once,
   at session start, and keeps no record of what it did, so the card compares today's top set with the
   best set of the performance it was carried from (`carriedFrom`: the latest of the lineage the exercise
