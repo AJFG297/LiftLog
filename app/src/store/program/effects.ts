@@ -1,7 +1,8 @@
+import { applyHistoryImport, reconcileHistoryMerge } from '@/store/history-import-actions';
 import { BuiltInPrograms } from '@/models/built-in-programs';
 import { RemoteData } from '@/models/remote';
 import { ProgramBlueprint } from '@/models/blueprint-models';
-import { AddEffectFn, RootState } from '@/store/store';
+import { AddEffectFn } from '@/store/store';
 import {
   fetchUpcomingSessions,
   initializeProgramStateSlice,
@@ -15,26 +16,19 @@ import {
 } from '@/store/program';
 import { uuid } from '@/utils/uuid';
 import { AsyncStream } from 'data-async-iterators';
-import { Logger } from '@/services/logger';
 import { selectLatestExercises, upsertExercises } from '../stored-sessions';
 import { createExerciseResolver } from '@/store/stored-sessions/exercise-resolver';
 import { programsSchema } from '@/db/schema';
-import { writeAtomically } from '@/db/helpers';
 import { toLocalDateJSON } from '@/models/storage/versions/latest';
 import { programBlueprintMigrations } from '@/models/storage/versions/migrations';
 import { LocalDate } from '@js-joda/core';
 import { toRecord } from '@/utils/reduce';
-import { ExpoSQLiteDatabase } from 'drizzle-orm/expo-sqlite';
-import { TaskAbortError } from '@reduxjs/toolkit';
 
 const builtInProgramsStorageKey = 'hasSavedDefaultPlans2';
 export function applyProgramEffects(addEffect: AddEffectFn) {
   addEffect(
     initializeProgramStateSlice,
-    async (
-      _,
-      { getState, cancelActiveListeners, dispatch, extra: { keyValueStore, logger, db }, throwIfCancelled },
-    ) => {
+    async (_, { getState, cancelActiveListeners, dispatch, extra: { keyValueStore, logger, db, programWriter } }) => {
       const start = performance.now();
       cancelActiveListeners();
 
@@ -62,7 +56,7 @@ export function applyProgramEffects(addEffect: AddEffectFn) {
           dispatch(savePlan({ programId: id, programBlueprint: program }));
           dispatch(linkPlanExercises({ programId: id }));
         }
-        await persistPrograms(getState(), db, logger, throwIfCancelled);
+        await programWriter.flush();
         await keyValueStore.setItem(builtInProgramsStorageKey, 'true');
       }
       if (!activePlanId || !getState().program.savedPrograms[activePlanId]) {
@@ -94,25 +88,23 @@ export function applyProgramEffects(addEffect: AddEffectFn) {
   });
 
   // Persist after changes
-  addEffect(
-    undefined,
-    async (
-      _,
-      { stateBeforeReduce, stateAfterReduce, extra: { db, logger }, throwIfCancelled, cancelActiveListeners },
-    ) => {
-      cancelActiveListeners();
-      const start = performance.now();
-      const shouldPersist =
-        stateAfterReduce.program.isHydrated &&
-        (stateAfterReduce.program.activePlanId !== stateBeforeReduce.program.activePlanId ||
-          stateAfterReduce.program.savedPrograms !== stateBeforeReduce.program.savedPrograms);
-      if (shouldPersist) {
-        await persistPrograms(stateAfterReduce, db, logger, throwIfCancelled);
-        const end = performance.now();
-        logger.info(`Persist program state effect took ${(end - start).toFixed(2)} ms`);
+  addEffect(undefined, async (action, { stateBeforeReduce, stateAfterReduce, extra: { programWriter, logger } }) => {
+    if (applyHistoryImport.match(action) || reconcileHistoryMerge.match(action)) return;
+    const start = performance.now();
+    const shouldPersist =
+      stateAfterReduce.program.isHydrated &&
+      (stateAfterReduce.program.activePlanId !== stateBeforeReduce.program.activePlanId ||
+        stateAfterReduce.program.savedPrograms !== stateBeforeReduce.program.savedPrograms);
+    if (shouldPersist) {
+      try {
+        await programWriter.flush();
+      } catch (error) {
+        logger.error('Failed to persist program state', error);
       }
-    },
-  );
+      const end = performance.now();
+      logger.info(`Persist program state effect took ${(end - start).toFixed(2)} ms`);
+    }
+  });
 
   addEffect(
     fetchUpcomingSessions,
@@ -144,31 +136,6 @@ export function applyProgramEffects(addEffect: AddEffectFn) {
 }
 // Helper function to yield control back to the event loop
 const yieldToEventLoop = () => new Promise((resolve) => setTimeout(resolve, 5));
-
-async function persistPrograms(
-  stateAfterReduce: RootState,
-  db: ExpoSQLiteDatabase,
-  logger: Logger,
-  throwIfCancelled: () => void,
-) {
-  try {
-    const rows = Object.entries(stateAfterReduce.program.savedPrograms).map(([key, program]) => ({
-      id: key,
-      active: key === stateAfterReduce.program.activePlanId,
-      payload: program.toJSON(),
-    }));
-    throwIfCancelled();
-    await writeAtomically(db, (tx) => [
-      tx.delete(programsSchema),
-      ...(rows.length ? [tx.insert(programsSchema).values(rows)] : []),
-    ]);
-  } catch (e) {
-    if (e instanceof TaskAbortError) {
-      return;
-    }
-    logger.error('Failed to persist program state', e);
-  }
-}
 
 function getEmptyInitialProgram(): typeof programsSchema.$inferSelect {
   return {

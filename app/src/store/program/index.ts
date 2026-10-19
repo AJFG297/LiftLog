@@ -1,3 +1,4 @@
+import { applyHistoryImport, reconcileHistoryMerge } from '@/store/history-import-actions';
 import { applySessionBlueprintDiff, PlanDiff } from '@/models/blueprint-diff';
 import { ProgramBlueprint, SessionBlueprint } from '@/models/blueprint-models';
 import { RemoteData } from '@/models/remote';
@@ -240,6 +241,14 @@ const programSlice = createSlice({
     setRoutineUpdateReceipt(state, action: PayloadAction<RoutineUpdateReceipt | undefined>) {
       state.routineUpdateReceipt = action.payload;
     },
+  },
+  extraReducers: (builder) => {
+    builder.addCase(applyHistoryImport, (state, action) => {
+      programSlice.caseReducers.upsertSavedPlans(state, { type: action.type, payload: action.payload.programs });
+    });
+    builder.addCase(reconcileHistoryMerge, (state, action) => {
+      state.savedPrograms = action.payload.programs;
+    });
   },
   selectors: {
     selectActiveProgram: (state: ProgramState) => state.savedPrograms[state.activePlanId]!,

@@ -1,5 +1,6 @@
+import { ProgramWriter } from '@/services/program-writer';
+import { DescriptorWriter } from '@/services/descriptor-writer';
 // oxlint-disable typescript/no-unsafe-assignment typescript/no-unsafe-member-access typescript/no-unsafe-argument
-// test-utils/createAddEffectTestBed.ts
 
 import { expect, onTestFailed, vi } from 'vitest';
 import type { AddEffectFn, RootState } from '@/store/store';
@@ -59,6 +60,15 @@ export function createAddEffectTestBed(options?: {
     ...options?.services,
   } as unknown as Services;
 
+  if (mockServices.db) {
+    mockServices.programWriter ??= new ProgramWriter(mockServices.db, () => state as RootState);
+    if (mockServices.keyValueStore)
+      mockServices.descriptorWriter ??= new DescriptorWriter(
+        mockServices.db,
+        () => state as RootState,
+        mockServices.keyValueStore,
+      );
+  }
   onTestFailed(() => {
     if (logs.length === 0) return;
     console.log('=== Effect logs ===');
@@ -85,9 +95,10 @@ export function createAddEffectTestBed(options?: {
       await pendingEffects.shift();
     }
   }
-  function dispatch(action: UnknownAction): void {
+  function dispatch<T extends UnknownAction>(action: T): T {
     dispatchedActions.push(action);
     applyReducer(action);
+    return action;
   }
 
   async function runMatchingEffects(action: UnknownAction): Promise<void> {

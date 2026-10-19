@@ -41,6 +41,8 @@ export async function upsert<T, K>(db: ExpoSQLiteDatabase, schema: JsonTable<T>,
 
 export type Transaction = Parameters<Parameters<ExpoSQLiteDatabase['transaction']>[0]>[0];
 
+const transactionTails = new WeakMap<ExpoSQLiteDatabase, Promise<unknown>>();
+
 /**
  * Runs the statements `build` returns in one transaction, in order.
  *
@@ -49,25 +51,32 @@ export type Transaction = Parameters<Parameters<ExpoSQLiteDatabase['transaction'
  * executes on the spot instead, inside the transaction. Under Vitest the driver is libsql, which is
  * async; its `run()` returns a promise, so the rest are chained behind it and the transaction awaits them.
  */
-export async function writeAtomically(
+export function writeAtomically(
   db: ExpoSQLiteDatabase,
   build: (tx: Transaction) => { run(): unknown }[],
+  onCommitted: () => void = () => {},
 ): Promise<void> {
-  // Typed as the synchronous driver; `Promise.resolve` also covers the async one.
-  await Promise.resolve(
-    db.transaction((tx) => {
-      let pending: Promise<unknown> | undefined;
-      for (const statement of build(tx)) {
-        if (pending) {
-          pending = pending.then(() => statement.run());
-          continue;
+  const previous = transactionTails.get(db) ?? Promise.resolve();
+  const run = previous.then(async () => {
+    await Promise.resolve(
+      db.transaction((tx) => {
+        let pending: Promise<unknown> | undefined;
+        for (const statement of build(tx)) {
+          if (pending) {
+            pending = pending.then(() => statement.run());
+            continue;
+          }
+          const result = statement.run();
+          if (result instanceof Promise) pending = result;
         }
-        const result = statement.run();
-        if (result instanceof Promise) {
-          pending = result;
-        }
-      }
-      return pending as never;
-    }),
+        return pending as never;
+      }),
+    );
+    onCommitted();
+  });
+  transactionTails.set(
+    db,
+    run.catch(() => undefined),
   );
+  return run;
 }

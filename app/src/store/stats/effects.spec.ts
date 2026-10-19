@@ -1,3 +1,4 @@
+import { importedHistory } from '@/utils/__test__/history-import-action';
 import { describe, expect, it, vi } from 'vitest';
 import { combineReducers } from '@reduxjs/toolkit';
 import { LocalDate } from '@js-joda/core';
@@ -11,7 +12,6 @@ import {
   setIsHydrated,
   storedSessionsReducer,
   updateStoredSession,
-  upsertStoredSessions,
 } from '@/store/stored-sessions';
 import { createAddEffectTestBed } from '@/utils/__test__/add-effect-testbed';
 import { EmptySession, Session } from '@/models/session-models';
@@ -30,7 +30,7 @@ const reducer = combineReducers({
 function setup(stored: Session[], activeSessionId?: string, services?: Partial<Services>) {
   const testBed = createAddEffectTestBed({ reducer, services });
   applyStatsEffects(testBed.addEffect);
-  testBed.dispatch(upsertStoredSessions(stored));
+  testBed.dispatch(importedHistory(stored));
   if (activeSessionId) {
     testBed.dispatch(setActiveSessionId(activeSessionId));
   }
@@ -72,7 +72,7 @@ describe('stats staleness', () => {
   it('importing sessions marks stats stale', async () => {
     const testBed = setup([]);
 
-    await testBed.dispatchHandled(upsertStoredSessions([finished]));
+    await testBed.dispatchHandled(importedHistory([finished]));
 
     expect(testBed.getState().stats.isDirty).toBe(true);
   });

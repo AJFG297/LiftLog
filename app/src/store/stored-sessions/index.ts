@@ -1,3 +1,4 @@
+import { applyHistoryImport, reconcileHistoryMerge } from '@/store/history-import-actions';
 import { RecordedExercise, Session } from '@/models/session-models';
 import { lineageKeys, ProgressionKey } from '@/models/blueprint-models';
 import { OffsetDateTime, ZoneId } from '@js-joda/core';
@@ -5,7 +6,6 @@ import { createAction, createSelector, createSlice, PayloadAction, WritableDraft
 import Enumerable from 'linq';
 import { ExerciseDescriptor, musclesOf } from '@/models/exercise-models';
 import type { LatestPerformance } from '@/services/workout-repository';
-import type { ExerciseMerge } from '@/models/exercise-merge';
 
 interface StoredSessionState {
   isHydrated: boolean;
@@ -115,7 +115,7 @@ const storedSessionsSlice = createSlice({
     },
 
     /** Writes many workouts, for a restore or an import. They are not opened; one already open is updated. */
-    upsertStoredSessions(state, action: PayloadAction<Session[]>) {
+    applyImportedWorkouts(state, action: PayloadAction<Session[]>) {
       action.payload.forEach((session) => {
         storeSession(state, session);
       });
@@ -198,15 +198,6 @@ const storedSessionsSlice = createSlice({
     setExercises(state, action: PayloadAction<Record<string, ExerciseDescriptor>>) {
       state.savedExercises = action.payload;
     },
-    /** What `mergeExerciseNames` already wrote to the exercise table, in its rounds. Writes nothing. */
-    exercisesMerged(state, action: PayloadAction<ExerciseMerge[][]>) {
-      for (const merge of action.payload.flat()) {
-        merge.mergedIds.forEach((id) => delete state.savedExercises[id]);
-        if (merge.survivorDescriptor) {
-          state.savedExercises[merge.survivor.id] = merge.survivorDescriptor;
-        }
-      }
-    },
     setBuiltInExercises(state, action: PayloadAction<Record<string, ExerciseDescriptor>>) {
       state.builtInExercises = action.payload;
     },
@@ -218,6 +209,19 @@ const storedSessionsSlice = createSlice({
     },
   },
 
+  extraReducers: (builder) => {
+    builder.addCase(applyHistoryImport, (state, action) => {
+      storedSessionsSlice.caseReducers.upsertExercises(state, { type: action.type, payload: action.payload.exercises });
+      storedSessionsSlice.caseReducers.applyImportedWorkouts(state, {
+        type: action.type,
+        payload: action.payload.workouts,
+      });
+    });
+    builder.addCase(reconcileHistoryMerge, (state, action) => {
+      state.savedExercises = action.payload.exercises;
+      state.sessions = action.payload.sessions;
+    });
+  },
   selectors: {
     selectLatestExercises: createSelector([(state: StoredSessionState) => state.latestExercises], (exercises) =>
       Object.fromEntries(Object.entries(exercises).map(([key, exercise]) => [key, exercise ? exercise : undefined])),
@@ -379,7 +383,6 @@ export const {
   setSessionNotFound,
   setLatestExercises,
   setLatestExercisesFor,
-  upsertStoredSessions,
   putStoredSession,
   updateStoredSession,
   setActiveSessionId,
@@ -389,7 +392,6 @@ export const {
   deleteExercise,
   restoreExercise,
   setExercises,
-  exercisesMerged,
   setBuiltInExercises,
   setHiddenBuiltInIds,
   setFilteredExerciseIds,

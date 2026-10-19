@@ -1,4 +1,12 @@
-import { importBackupData, importFromExternal, ExternalImportFormat } from '@/store/settings';
+import { applyHistoryImport } from '@/store/history-import-actions';
+import { HistoryImport } from '@/services/history-import';
+import { ProgramWriter } from '@/services/program-writer';
+import { DescriptorWriter } from '@/services/descriptor-writer';
+import { combineReducers } from '@reduxjs/toolkit';
+import { settingsReducer } from '@/store/settings';
+import { storedSessionsReducer } from '@/store/stored-sessions';
+import programReducer from '@/store/program';
+import { importFromExternal, ExternalImportFormat } from '@/store/settings';
 import { addImportExternalEffects } from '@/store/settings/import-external-effects';
 import { getImportForFitNotes, getImportForStrongLifts } from '@/services/csv-import';
 import { csvImportFixtureBytes } from '@/services/csv-import/__test__/fixtures';
@@ -42,11 +50,21 @@ async function makeExternalImportBed({ format: _format, bytes, sessions = [], im
     return key;
   };
 
+  const keyValueStore = { getItem: () => Promise.resolve(null), setItem: () => Promise.resolve() };
   const testBed = createAddEffectTestBed({
+    reducer: combineReducers({
+      settings: settingsReducer,
+      storedSessions: storedSessionsReducer,
+      program: programReducer,
+    }),
     initialState: {
-      settings: { useImperialUnits: imperial },
+      settings: { useImperialUnits: imperial, isHydrated: true },
+      storedSessions: { isHydrated: true },
+      program: { isHydrated: true },
     },
     services: {
+      db,
+      keyValueStore,
       workoutRepository,
       filePickerService: {
         pickFile: vi.fn().mockResolvedValue({
@@ -59,24 +77,34 @@ async function makeExternalImportBed({ format: _format, bytes, sessions = [], im
       },
     },
   });
+  testBed.mockServices.historyImport = new HistoryImport(
+    { getState: testBed.getState, dispatch: testBed.dispatch, subscribe: () => () => {} },
+    {
+      db,
+      workoutRepository,
+      logger: testBed.mockServices.logger,
+      programWriter: new ProgramWriter(db, testBed.getState),
+      descriptorWriter: new DescriptorWriter(db, testBed.getState, keyValueStore as never),
+    },
+  );
   addImportExternalEffects(testBed.addEffect);
   return testBed;
 }
 
 describe('import-external-effects', () => {
-  it('picks a FitNotes CSV and dispatches importBackupData', async () => {
+  it('picks a FitNotes CSV and dispatches applyHistoryImport', async () => {
     const testBed = await makeExternalImportBed({
       format: 'FitNotes',
       bytes: csvImportFixtureBytes('fitnotes-android-export-kgs.csv'),
     });
     await testBed.dispatchHandled(importFromExternal({ format: 'FitNotes' }));
 
-    const imported = testBed.getDispatchedAction(importBackupData);
+    const imported = testBed.getDispatchedAction(applyHistoryImport);
     expect(imported.payload.workouts).toHaveLength(2);
     expect(imported.payload.workouts[0]!.date.toString()).toBe('2026-08-04');
     expect(imported.payload.workouts[0]!.recordedExercises).toHaveLength(5);
     expect(imported.payload.programs).toEqual({});
-    expect(imported.payload.successMessage).toBe('Imported 2 workout(s)');
+    expect(testBed.getDispatchedAction(showSnackbar).payload.text).toBe('Imported 2 workout(s)');
     expect(testBed.getDispatchedAction(setStatsIsDirty).payload).toBe(true);
   });
 
@@ -98,7 +126,7 @@ describe('import-external-effects', () => {
     const testBed = await makeExternalImportBed({ format, bytes: bytes(), sessions: existing });
     await testBed.dispatchHandled(importFromExternal({ format }));
 
-    expect(() => testBed.getDispatchedAction(importBackupData)).toThrow();
+    expect(() => testBed.getDispatchedAction(applyHistoryImport)).toThrow();
     expect(() => testBed.getDispatchedAction(setStatsIsDirty)).toThrow();
     expect(testBed.getDispatchedAction(showSnackbar).payload.text).toBe('Those workouts are already in History');
   });
@@ -118,7 +146,7 @@ describe('import-external-effects', () => {
     });
     await testBed.dispatchHandled(importFromExternal({ format: 'FitNotes' }));
 
-    expect(() => testBed.getDispatchedAction(importBackupData)).toThrow();
+    expect(() => testBed.getDispatchedAction(applyHistoryImport)).toThrow();
     expect(testBed.getDispatchedAction(showSnackbar).payload.text).toBe('Those workouts are already in History');
   });
 
@@ -133,11 +161,11 @@ describe('import-external-effects', () => {
     });
     await testBed.dispatchHandled(importFromExternal({ format: 'FitNotes' }));
 
-    const imported = testBed.getDispatchedAction(importBackupData);
+    const imported = testBed.getDispatchedAction(applyHistoryImport);
     expect(imported.payload.workouts).toHaveLength(1);
     expect(imported.payload.workouts[0]!.id).toBe(all.workouts[1]!.id);
     expect(imported.payload.workouts[0]!.date.toString()).toBe('2026-08-05');
-    expect(imported.payload.successMessage).toBe('Imported 1 workout(s)');
+    expect(testBed.getDispatchedAction(showSnackbar).payload.text).toBe('Imported 1 workout(s)');
   });
 
   it('shows an error snackbar for invalid CSV and does not import', async () => {
@@ -147,12 +175,17 @@ describe('import-external-effects', () => {
     });
     await testBed.dispatchHandled(importFromExternal({ format: 'FitNotes' }));
 
-    expect(() => testBed.getDispatchedAction(importBackupData)).toThrow();
+    expect(() => testBed.getDispatchedAction(applyHistoryImport)).toThrow();
     expect(testBed.getDispatchedAction(showSnackbar).payload.text).toMatch(/Could not import:/);
   });
 
   it('no-ops when the user cancels the picker', async () => {
     const testBed = createAddEffectTestBed({
+      reducer: combineReducers({
+        settings: settingsReducer,
+        storedSessions: storedSessionsReducer,
+        program: programReducer,
+      }),
       services: {
         filePickerService: {
           pickFile: vi.fn().mockResolvedValue(undefined),
@@ -164,23 +197,23 @@ describe('import-external-effects', () => {
     addImportExternalEffects(testBed.addEffect);
     await testBed.dispatchHandled(importFromExternal({ format: 'FitNotes' }));
 
-    expect(() => testBed.getDispatchedAction(importBackupData)).toThrow();
+    expect(() => testBed.getDispatchedAction(applyHistoryImport)).toThrow();
     expect(() => testBed.getDispatchedAction(showSnackbar)).toThrow();
   });
 
-  it('picks a StrongLifts CSV and dispatches importBackupData', async () => {
+  it('picks a StrongLifts CSV and dispatches applyHistoryImport', async () => {
     const testBed = await makeExternalImportBed({
       format: 'StrongLifts',
       bytes: csvImportFixtureBytes('stronglifts-export-kg.csv'),
     });
     await testBed.dispatchHandled(importFromExternal({ format: 'StrongLifts' }));
 
-    const imported = testBed.getDispatchedAction(importBackupData);
+    const imported = testBed.getDispatchedAction(applyHistoryImport);
     expect(imported.payload.workouts).toHaveLength(5);
     expect(imported.payload.workouts[0]!.blueprint.name).toBe('Workout A');
     expect(imported.payload.workouts[0]!.recordedExercises).toHaveLength(3);
     expect(imported.payload.programs).toEqual({});
-    expect(imported.payload.successMessage).toBe('Imported 5 workout(s)');
+    expect(testBed.getDispatchedAction(showSnackbar).payload.text).toBe('Imported 5 workout(s)');
     expect(testBed.getDispatchedAction(setStatsIsDirty).payload).toBe(true);
   });
 });

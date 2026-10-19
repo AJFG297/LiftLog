@@ -1,3 +1,4 @@
+import { importedHistory } from '@/utils/__test__/history-import-action';
 import { describe, expect, it } from 'vitest';
 import { LocalDate, OffsetDateTime, ZoneOffset } from '@js-joda/core';
 import { v4 as uuid } from 'uuid';
@@ -12,7 +13,6 @@ import {
   putStoredSession,
   updateStoredSession,
   setActiveSessionId,
-  upsertStoredSessions,
   setActiveSession,
   openSession,
   deleteStoredSession,
@@ -117,7 +117,7 @@ describe('storedSessions reducer', () => {
     expect(Object.keys(state.latestExercises).length).toBe(1);
   });
 
-  it('upsertStoredSessions moves the carry-over cache but holds none of the workouts in memory', () => {
+  it('importedHistory moves the carry-over cache but holds none of the workouts in memory', () => {
     const early = createSessionWithCompletionTime(
       LocalDate.of(2026, 1, 1),
       OffsetDateTime.of(2026, 1, 1, 10, 0, 0, 0, ZoneOffset.UTC),
@@ -129,13 +129,13 @@ describe('storedSessions reducer', () => {
       'B',
     );
 
-    const state = reduce(upsertStoredSessions([late, early]));
+    const state = reduce(importedHistory([late, early]));
 
     expect(state.sessions).toEqual({});
     expect(Object.keys(state.latestExercises)).toHaveLength(2);
   });
 
-  it('upsertStoredSessions updates a workout that is open', () => {
+  it('importedHistory updates a workout that is open', () => {
     const open = createSessionWithCompletionTime(
       LocalDate.of(2026, 4, 1),
       OffsetDateTime.of(2026, 4, 1, 10, 0, 0, 0, ZoneOffset.UTC),
@@ -143,7 +143,7 @@ describe('storedSessions reducer', () => {
     );
     const restored = open.withUpdatedDate(LocalDate.of(2026, 4, 2));
 
-    const state = reduce(putStoredSession(open), upsertStoredSessions([restored]));
+    const state = reduce(putStoredSession(open), importedHistory([restored]));
 
     expect(state.sessions).toEqual({ [open.id]: restored });
   });
@@ -299,7 +299,7 @@ describe('storedSessions reducer', () => {
     const clearedToWarmups = createWarmupsOnlySession(LocalDate.of(2026, 4, 10), at(10), 'Squat');
 
     const state = reduce(
-      upsertStoredSessions([earlier, latest]),
+      importedHistory([earlier, latest]),
       openSession({ session: latest, slot: 'editing' }),
       updateStoredSession({
         sessionId: latest.id,
@@ -347,7 +347,7 @@ describe('storedSessions reducer', () => {
       const earlier = twice(3, 100, 60);
       const later = twice(10, 105, 62.5);
 
-      const state = reduce(upsertStoredSessions([earlier, later]), deleteStoredSession(later.id));
+      const state = reduce(importedHistory([earlier, later]), deleteStoredSession(later.id));
 
       expect(staleLineages(state, later.id)).toEqual([key, `${key}#2`]);
     });
@@ -441,7 +441,7 @@ describe('storedSessions reducer', () => {
       const key = later.recordedExercises[0]!.progressionKey();
 
       const state = reduce(
-        upsertStoredSessions([earlier, later]),
+        importedHistory([earlier, later]),
         openSession({ session: later, slot: 'editing' }),
         updateStoredSession({ sessionId: later.id, update: () => squatOn(1, 8).with({ id: later.id }) }),
       );
@@ -455,7 +455,7 @@ describe('storedSessions reducer', () => {
       const key = later.recordedExercises[0]!.progressionKey();
 
       const state = reduce(
-        upsertStoredSessions([earlier, later]),
+        importedHistory([earlier, later]),
         openSession({ session: later, slot: 'editing' }),
         updateStoredSession({ sessionId: later.id, update: (s) => s.with({ recordedExercises: [] }) }),
       );
@@ -469,7 +469,7 @@ describe('storedSessions reducer', () => {
       const logged = squatOn(5, 11).with({ id: today.id });
 
       const state = reduce(
-        upsertStoredSessions([earlier, today]),
+        importedHistory([earlier, today]),
         openSession({ session: today, slot: 'editing' }),
         updateStoredSession({ sessionId: today.id, update: () => logged }),
       );
@@ -505,7 +505,7 @@ describe('storedSessions reducer', () => {
       const replacement = squatOn(3);
 
       const state = reduce(
-        upsertStoredSessions([squat, bench]),
+        importedHistory([squat, bench]),
         setLatestExercisesFor({
           keys: [squatKey],
           latest: { [squatKey]: { workoutId: replacement.id, exercise: replacement.recordedExercises[0]! } },

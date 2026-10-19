@@ -1,3 +1,5 @@
+import { mapSessionExercises } from '@/models/map-exercise-blueprints';
+import type { ExerciseBlueprint } from '@/models/blueprint-models';
 import { ExpoSQLiteDatabase } from 'drizzle-orm/expo-sqlite';
 import { SQL, and, asc, count, desc, eq, getTableColumns, gte, inArray, isNotNull, lte, sql } from 'drizzle-orm';
 import { SQLiteColumn, SQLiteTable } from 'drizzle-orm/sqlite-core';
@@ -147,6 +149,12 @@ function refKey({ workoutId, position }: ExerciseRef): string {
  * {@link loadAll} include it.
  * {@link subscribe} tells screens when any write has landed, so what they show can be re-queried.
  */
+type OrdinaryWriteOutcome = { kind: 'complete' } | { kind: 'failed'; error: unknown };
+type ImportWorkoutIntent = Map<
+  string,
+  { kind: 'unchanged' } | { kind: 'superseded'; sequence: number; completion: Promise<OrdinaryWriteOutcome> }
+>;
+
 export class WorkoutRepository {
   private readonly listeners = new Set<(write: WorkoutWrite) => void>();
   // Writes and the reads the store builds on ({@link latestPerLineage}, {@link latestPlanned}, the point
@@ -154,8 +162,14 @@ export class WorkoutRepository {
   // it, awaited or not. The device driver queues statements that way itself; the async driver under test
   // does not.
   private queue: Promise<unknown> = Promise.resolve();
+  private readonly exerciseRepoints: ReadonlyMap<ExerciseId, ExerciseId>[] = [];
+  private readonly importIntents = new Set<ImportWorkoutIntent>();
+  private ordinaryWriteSequence = 0;
 
-  constructor(private readonly db: ExpoSQLiteDatabase) {}
+  constructor(
+    private readonly db: ExpoSQLiteDatabase,
+    private readonly onNotificationError: (error: unknown) => void = () => {},
+  ) {}
 
   /**
    * Calls `listener` after each write has landed, with what it touched. Returns the unsubscribe. A listener
@@ -687,6 +701,7 @@ export class WorkoutRepository {
   async repointExercises(
     survivorOf: ReadonlyMap<ExerciseId, ExerciseId>,
     alsoWrite: (tx: Transaction) => Statement[] = () => [],
+    onCommitted: () => void = () => {},
   ): Promise<void> {
     const workoutIds = await this.workoutIdsLogging([...survivorOf.keys()]);
     const { blueprint, movementKey, progressionKey } = workoutExercisesSchema;
@@ -717,12 +732,51 @@ export class WorkoutRepository {
         ...alsoWrite(tx),
       ],
       { workoutIds, activeChanged: false },
+      () => {
+        this.exerciseRepoints.push(new Map(survivorOf));
+        onCommitted();
+      },
     );
   }
 
   /** Writes one workout's content. */
   put(session: Session): Promise<void> {
     return this.putMany([session]);
+  }
+
+  putCurrent(read: () => Session | undefined, closedFallback?: Session): Promise<Session | undefined> {
+    const afterRound = this.exerciseRepoints.length;
+    const sequence = ++this.ordinaryWriteSequence;
+    const run = this.inOrder(async () => {
+      let session: Session | undefined;
+      await writeAtomically(this.db, (tx) => {
+        session = read() ?? (closedFallback ? this.repointFallback(closedFallback, afterRound) : undefined);
+        if (session && session.id !== closedFallback?.id) this.supersedeImports([session.id], run, sequence);
+        return session ? writeContent(tx, [toWorkoutRows(session)], { activate: false }) : [];
+      });
+      if (session) this.notify({ workoutIds: [session.id], activeChanged: false });
+      return session;
+    });
+    if (closedFallback) this.supersedeImports([closedFallback.id], run, sequence);
+    return run;
+  }
+
+  setActiveCurrent(read: () => Session | undefined, targetWorkoutId: string | undefined): Promise<void> {
+    const sequence = ++this.ordinaryWriteSequence;
+    const run = this.inOrder(async () => {
+      let session: Session | undefined;
+      await writeAtomically(this.db, (tx) => {
+        session = read();
+        if (session && session.id !== targetWorkoutId) this.supersedeImports([session.id], run, sequence);
+        return [
+          tx.update(workoutsSchema).set({ active: false }).where(eq(workoutsSchema.active, true)),
+          ...(session ? writeContent(tx, [toWorkoutRows(session)], { activate: true }) : []),
+        ];
+      });
+      this.notify({ workoutIds: session ? [session.id] : [], activeChanged: true });
+    });
+    if (targetWorkoutId !== undefined) this.supersedeImports([targetWorkoutId], run, sequence);
+    return run;
   }
 
   /**
@@ -734,17 +788,21 @@ export class WorkoutRepository {
       return Promise.resolve();
     }
     const rows = sessions.map(toWorkoutRows);
-    return this.write((tx) => writeContent(tx, rows, { activate: false }), {
-      workoutIds: sessions.map((x) => x.id),
-      activeChanged: false,
-    });
+    const sequence = ++this.ordinaryWriteSequence;
+    const workoutIds = sessions.map((x) => x.id);
+    const run = this.write((tx) => writeContent(tx, rows, { activate: false }), { workoutIds, activeChanged: false });
+    this.supersedeImports(workoutIds, run, sequence);
+    return run;
   }
 
   delete(workoutId: string): Promise<void> {
-    return this.write(
+    const sequence = ++this.ordinaryWriteSequence;
+    const run = this.write(
       (tx) => [...deleteChildren(tx, [workoutId]), tx.delete(workoutsSchema).where(eq(workoutsSchema.id, workoutId))],
       { workoutIds: [workoutId], activeChanged: false },
     );
+    this.supersedeImports([workoutId], run, sequence);
+    return run;
   }
 
   /**
@@ -753,18 +811,102 @@ export class WorkoutRepository {
    * dispatched together and race.
    */
   setActive(session: Session | undefined): Promise<void> {
-    return this.write(
+    const sequence = ++this.ordinaryWriteSequence;
+    const run = this.write(
       (tx) => [
         tx.update(workoutsSchema).set({ active: false }).where(eq(workoutsSchema.active, true)),
         ...(session ? writeContent(tx, [toWorkoutRows(session)], { activate: true }) : []),
       ],
       { workoutIds: session ? [session.id] : [], activeChanged: true },
     );
+    if (session) this.supersedeImports([session.id], run, sequence);
+    return run;
   }
 
-  private async write(build: (tx: Transaction) => Statement[], write: WorkoutWrite): Promise<void> {
-    await this.inOrder(() => writeAtomically(this.db, build));
-    this.listeners.forEach((listener) => listener(write));
+  prepareImport(sessions: Session[]): { write: () => Promise<string[]>; cancel: () => void } {
+    const intent: ImportWorkoutIntent = new Map(sessions.map((session) => [session.id, { kind: 'unchanged' }]));
+    this.importIntents.add(intent);
+    const cancel = () => {
+      this.importIntents.delete(intent);
+    };
+    return {
+      cancel,
+      write: async () => {
+        try {
+          const superseding = new Set<Promise<OrdinaryWriteOutcome>>();
+          let workoutIds: string[] = [];
+          await this.inOrder(async () => {
+            await writeAtomically(this.db, (tx) => {
+              const current = sessions.filter((session) => {
+                const status = intent.get(session.id);
+                if (status?.kind === 'superseded') {
+                  superseding.add(status.completion);
+                  return false;
+                }
+                return true;
+              });
+              workoutIds = current.map((session) => session.id);
+              return current.length ? writeContent(tx, current.map(toWorkoutRows), { activate: false }) : [];
+            });
+            if (workoutIds.length) this.notify({ workoutIds, activeChanged: false });
+          });
+          for (const completion of superseding) {
+            const outcome = await completion;
+            if (outcome.kind === 'failed') throw outcome.error;
+          }
+          return workoutIds;
+        } finally {
+          cancel();
+        }
+      },
+    };
+  }
+
+  private supersedeImports(workoutIds: readonly string[], write: Promise<unknown>, sequence: number): void {
+    const completion: Promise<OrdinaryWriteOutcome> = write.then(
+      () => ({ kind: 'complete' }),
+      (error: unknown) => ({ kind: 'failed', error }),
+    );
+    for (const intent of this.importIntents) {
+      for (const id of workoutIds) {
+        const previous = intent.get(id);
+        if (previous && (previous.kind === 'unchanged' || sequence > previous.sequence)) {
+          intent.set(id, { kind: 'superseded', sequence, completion });
+        }
+      }
+    }
+  }
+
+  private async write(
+    build: (tx: Transaction) => Statement[],
+    write: WorkoutWrite,
+    onCommitted: () => void = () => {},
+  ): Promise<void> {
+    await this.inOrder(async () => {
+      await writeAtomically(this.db, build, onCommitted);
+      this.notify(write);
+    });
+  }
+
+  private repointFallback(session: Session, afterRound: number): Session {
+    return this.exerciseRepoints.slice(afterRound).reduce(
+      (result, survivors) =>
+        mapSessionExercises(result, <T extends ExerciseBlueprint>(blueprint: T): T => {
+          const id = survivors.get(blueprint.exerciseId);
+          return id === undefined ? blueprint : (blueprint.with({ exerciseId: id }) as T);
+        }),
+      session,
+    );
+  }
+
+  private notify(write: WorkoutWrite): void {
+    for (const listener of this.listeners) {
+      try {
+        listener(write);
+      } catch (error) {
+        this.onNotificationError(error);
+      }
+    }
   }
 
   /** Runs `task` after everything queued before it, and makes what follows wait for it. */
