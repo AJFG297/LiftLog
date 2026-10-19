@@ -21,7 +21,7 @@ frustrations: extra taps, manual entry, screens to dig through. This one removes
 When you scope or design a feature, look for steps you can remove and manual work an AI shortcut could
 take on, and propose both.
 
-These are judgment calls, not a checklist (and also mostly for you to get the vision). When a design trades one kind of friction for another, name the tradeoff in your proposal so it can be decided together. 
+These are judgment calls, not a checklist (and also mostly for you to get the vision). When a design trades one kind of friction for another, name the tradeoff in your proposal so it can be decided together.
 
 ## Where work happens
 
@@ -77,6 +77,12 @@ Regenerate with `npm run json-schema`; don't hand-edit.
 - **E2E:** `npm run e2e` (Maestro; flows live in `app/.maestro/`).
 
 Run typecheck and lint before considering a change done.
+
+For the mapped shared workout slice, the experimental browser path is `npm run verify:browser`.
+Read [the browser verification skill](.agents/skills/verify-liftlog-browser/SKILL.md) for setup,
+evidence, and its feature map. It uses Chromium and disk SQLite without an emulator. Its coverage
+excludes native navigation, system controls, and services. The Android checks and UI PR screenshot
+requirements below still apply. See [the prototype's boundaries](docs/BrowserVerification.md).
 
 ## Screenshots on UI pull requests
 
