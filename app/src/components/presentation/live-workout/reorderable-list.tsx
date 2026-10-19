@@ -8,7 +8,7 @@ import {
 import { useAppTheme } from '@/hooks/useAppTheme';
 import { useTranslate } from '@tolgee/react';
 import { ReactNode, useRef } from 'react';
-import { ScrollView, View } from 'react-native';
+import { ScrollView, useWindowDimensions, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   AnimatedRef,
@@ -22,6 +22,8 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export interface ReorderableItem {
   key: string;
@@ -45,6 +47,8 @@ export interface ReorderScroll {
   ref: AnimatedRef<ScrollView>;
   offset: SharedValue<number>;
   contentHeight: SharedValue<number>;
+  /** The lowest point on screen the user can see, in `measure`'s space: a sheet's scroll view can run past it. */
+  visibleBottom: number;
   /** Pass to the scroll view's `onContentSizeChange`. */
   onContentSizeChange: (width: number, height: number) => void;
 }
@@ -54,10 +58,13 @@ export function useReorderScroll(): ReorderScroll {
   const ref = useAnimatedRef<ScrollView>();
   const offset = useScrollOffset(ref);
   const contentHeight = useSharedValue(0);
+  const window = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   return {
     ref,
     offset,
     contentHeight,
+    visibleBottom: window.height - insets.bottom,
     onContentSizeChange: (_width, height) => contentHeight.set(height),
   };
 }
@@ -66,6 +73,8 @@ interface DragState {
   from: SharedValue<number>;
   target: SharedValue<number>;
   dy: SharedValue<number>;
+  /** Where the finger went down, in the same space as `measure`'s `pageY`. */
+  fingerStart: SharedValue<number>;
   /** How far the scroll view has scrolled under the held row since it was picked up. */
   scrolled: SharedValue<number>;
   draggedHeight: SharedValue<number>;
@@ -81,58 +90,62 @@ export function ReorderableList({ items, gap, onMove, onDragChange, scroll }: Re
   const from = useSharedValue(-1);
   const target = useSharedValue(-1);
   const dy = useSharedValue(0);
+  const fingerStart = useSharedValue(0);
   const scrolled = useSharedValue(0);
   const draggedHeight = useSharedValue(0);
-  const drag: DragState = { from, target, dy, scrolled, draggedHeight };
+  const drag: DragState = { from, target, dy, fingerStart, scrolled, draggedHeight };
   // Copied to the UI thread when a row is picked up, so the frame callback can work out the target.
   const heldHeights = useSharedValue<number[]>([]);
-  const fingerY = useSharedValue(0);
   const startOffset = useSharedValue(0);
+  const scrollRef = scroll?.ref;
+  const contentHeight = scroll?.contentHeight;
+  const visibleBottom = scroll?.visibleBottom ?? Number.POSITIVE_INFINITY;
+  const heldTarget = () => {
+    'worklet';
+    return reorderTargetIndex(heldHeights.get(), gap, drag.from.get(), drag.dy.get() + drag.scrolled.get());
+  };
 
-  // Each frame a row is held, scroll when the finger is near an edge of the scroll view. The scroll view
-  // can't be scrolled by hand meanwhile, so the offset is only ever what this sets.
-  const autoScroll = useFrameCallback((frame) => {
-    if (!scroll || drag.from.get() < 0) {
+  // Each frame a row is held: scroll when the finger is near an edge of the scroll view, then work out where
+  // the row would land. The scroll view can't be scrolled by hand meanwhile, so its offset is only ever what
+  // this sets.
+  const frameCallback = useFrameCallback((frame) => {
+    if (drag.from.get() < 0) {
       return;
     }
-    const view = measure(scroll.ref);
-    if (view) {
-      const speed = autoScrollSpeed(fingerY.get() - view.pageY, view.height);
-      const maxOffset = Math.max(0, scroll.contentHeight.get() - view.height);
+    const view = scrollRef && contentHeight ? measure(scrollRef) : null;
+    if (scrollRef && contentHeight && view) {
+      // At a sheet's lower detent the scroll view runs off the bottom of the screen, so the bottom band sits
+      // above the screen's edge instead of the scroll view's.
+      const visibleHeight = Math.min(view.height, visibleBottom - view.pageY);
+      const speed = autoScrollSpeed(drag.fingerStart.get() + drag.dy.get() - view.pageY, visibleHeight);
+      const maxOffset = Math.max(0, contentHeight.get() - view.height);
       const offset = startOffset.get() + drag.scrolled.get();
       const next = Math.min(maxOffset, Math.max(0, offset + (speed * (frame.timeSincePreviousFrame ?? 0)) / 1000));
       if (next !== offset) {
-        scrollTo(scroll.ref, 0, next, false);
+        scrollTo(scrollRef, 0, next, false);
         drag.scrolled.set(next - startOffset.get());
       }
     }
-    drag.target.set(reorderTargetIndex(heldHeights.get(), gap, drag.from.get(), drag.dy.get() + drag.scrolled.get()));
+    drag.target.set(heldTarget());
   }, false);
 
-  const begin = (index: number, absoluteY: number) => {
+  // The row has already put the finger's start and `dy` on the UI thread.
+  const begin = (index: number) => {
     const measured = orderedHeights();
     heldHeights.set(measured);
-    fingerY.set(absoluteY);
     startOffset.set(scroll?.offset.get() ?? 0);
     drag.from.set(index);
     drag.target.set(index);
-    drag.dy.set(0);
     drag.scrolled.set(0);
     drag.draggedHeight.set(measured[index] ?? 0);
-    autoScroll.setActive(!!scroll);
+    frameCallback.setActive(true);
     onDragChange?.(true);
   };
-  const update = (translationY: number, absoluteY: number) => {
-    drag.dy.set(translationY);
-    fingerY.set(absoluteY);
-    if (!scroll) {
-      drag.target.set(reorderTargetIndex(orderedHeights(), gap, drag.from.get(), translationY));
-    }
-  };
   const end = () => {
-    autoScroll.setActive(false);
+    frameCallback.setActive(false);
     const movedFrom = drag.from.get();
-    const movedTo = drag.target.get();
+    // Not the last frame's target: the finger may have moved since.
+    const movedTo = movedFrom >= 0 ? heldTarget() : -1;
     onDragChange?.(false);
     if (movedFrom >= 0 && movedTo >= 0 && movedTo !== movedFrom) {
       onMove(movedFrom, movedTo);
@@ -155,8 +168,7 @@ export function ReorderableList({ items, gap, onMove, onDragChange, scroll }: Re
           onLayoutHeight={(height) => {
             heights.current.set(item.key, height);
           }}
-          onBegin={(absoluteY) => begin(index, absoluteY)}
-          onUpdate={update}
+          onBegin={() => begin(index)}
           onEnd={end}
           onMove={onMove}
           item={item}
@@ -173,8 +185,7 @@ function ReorderableRow(props: {
   gap: number;
   drag: DragState;
   onLayoutHeight: (height: number) => void;
-  onBegin: (absoluteY: number) => void;
-  onUpdate: (dy: number, absoluteY: number) => void;
+  onBegin: () => void;
   onEnd: () => void;
   onMove: (from: number, to: number) => void;
 }) {
@@ -202,17 +213,28 @@ function ReorderableRow(props: {
     };
   });
 
-  // Callbacks run on the JS thread: the rows are few, and the maths lives in plain functions.
+  const handleRef = useAnimatedRef<View>();
+  const { onBegin, onEnd } = props;
+  // On the UI thread, so the finger's start can be measured in the same space as the scroll view.
   const pan = Gesture.Pan()
-    .runOnJS(true)
     .minDistance(0)
-    .onBegin((event) => props.onBegin(event.absoluteY))
-    .onUpdate((event) => props.onUpdate(event.translationY, event.absoluteY))
-    .onFinalize(props.onEnd);
+    .onBegin((event) => {
+      const handleBox = measure(handleRef);
+      drag.fingerStart.set(handleBox ? handleBox.pageY + event.y : event.absoluteY);
+      drag.dy.set(0);
+      scheduleOnRN(onBegin);
+    })
+    .onUpdate((event) => {
+      drag.dy.set(event.translationY);
+    })
+    .onFinalize(() => {
+      scheduleOnRN(onEnd);
+    });
 
   const handle = (
     <GestureDetector gesture={pan}>
-      <View
+      <Animated.View
+        ref={handleRef}
         accessible
         accessibilityLabel={props.item.handleLabel}
         accessibilityActions={[
@@ -229,7 +251,7 @@ function ReorderableRow(props: {
         style={{ width: MIN_TOUCH_TARGET, minHeight: MIN_TOUCH_TARGET, alignItems: 'center', justifyContent: 'center' }}
       >
         <MsIconSrc name="dragIndicator" size={20} color={tokens.faint} />
-      </View>
+      </Animated.View>
     </GestureDetector>
   );
 
