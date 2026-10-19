@@ -1,4 +1,4 @@
-import { useWorkoutExerciseChanges } from '@/hooks/useWorkoutExerciseChanges';
+import { useServices } from '@/components/smart/services-provider';
 import { useExercisePicker } from '@/hooks/useExerciseSearch';
 import { useAppSelectorWithArg } from '@/store';
 import { selectSession } from '@/store/stored-sessions';
@@ -13,16 +13,14 @@ import { selectSession } from '@/store/stored-sessions';
  */
 export function useAddExercise(sessionId: string | undefined, options?: { onAdded?: (firstIndex: number) => void }) {
   const session = useAppSelectorWithArg(selectSession, sessionId ?? '');
-  const { add } = useWorkoutExerciseChanges();
+  const { exerciseEntry } = useServices();
   const onAdded = options?.onAdded;
 
   const open = useExercisePicker(
     (pick) => {
-      if (!sessionId) {
-        return;
-      }
-      void add({
-        sessionId,
+      if (!sessionId) return;
+      void exerciseEntry.add({
+        workoutId: sessionId,
         picked: pick.exercises.map((exercise) => ({ id: exercise.id, name: exercise.descriptor.name })),
         asSuperset: pick.asSuperset,
         onAdded,

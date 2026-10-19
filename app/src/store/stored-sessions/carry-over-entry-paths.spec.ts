@@ -1,3 +1,7 @@
+import { act, renderHook } from '@testing-library/react';
+import { useSessionExerciseDraft } from '@/components/smart/session-exercise-draft';
+import type { ExerciseEntry } from '@/store/stored-sessions/exercise-entry';
+import { sql } from 'drizzle-orm';
 import { describe, expect, it, vi } from 'vitest';
 import { drizzle } from 'drizzle-orm/expo-sqlite';
 import { openDatabaseAsync } from 'expo-sqlite';
@@ -23,12 +27,14 @@ import {
 } from '@/models/session-models';
 import { Weight } from '@/models/weight';
 import { makeRecordedExercise, makeWeightedBlueprint } from '@/models/session-models/__test__/helpers';
-import { PickedExerciseRef } from '@/models/exercise-pick';
+import type { PickedExerciseRef } from '@/models/exercise-pick';
+import { createExerciseEntry } from '@/store/stored-sessions/exercise-entry';
 import { createEffectStore } from '@/utils/__test__/effect-store';
 import { applyStoredSessionsEffects } from '@/store/stored-sessions/effects';
 import {
   deleteStoredSession,
   initializeStoredSessionsStateSlice,
+  openSession,
   putStoredSession,
   selectLatestExercises,
   setActiveSessionId,
@@ -39,13 +45,14 @@ import { SessionService } from '@/services/session-service';
 import { withAddedSet } from '@/models/session-models/set-entry';
 import { carriedFrom, todaysTarget } from '@/models/session-models/todays-target';
 import { repeatBlueprint } from '@/models/workout-detail';
-import { createWorkoutExerciseChanges } from '@/store/stored-sessions/workout-exercise-changes';
 
 /**
  * Every way an exercise enters a workout opens it on the numbers a routine would: the latest performance
  * of its lineage, carried over and progressed. Driven through the store, over real SQLite, as the app does.
  */
 vi.stubEnv('TZ', 'UTC');
+const hookOwner = vi.hoisted((): { current: ExerciseEntry | undefined } => ({ current: undefined }));
+vi.mock('@/components/smart/services-provider', () => ({ useServices: () => ({ exerciseEntry: hookOwner.current }) }));
 
 const logger = {
   info: vi.fn(),
@@ -94,17 +101,21 @@ async function startApp(sessions: Session[]) {
   harness.store.dispatch(setSettingsIsHydrated(true));
   harness.store.dispatch(initializeStoredSessionsStateSlice());
   await harness.settle();
-  return { ...harness, workoutRepository, logger };
+  return {
+    ...harness,
+    workoutRepository,
+    logger,
+    db,
+    exerciseEntry: createExerciseEntry(
+      { getState: harness.getState, dispatch: harness.store.dispatch },
+      { workoutRepository, logger },
+    ),
+  };
 }
 
 type App = Awaited<ReturnType<typeof startApp>>;
 
 const serviceOf = (app: App) => new SessionService(app.workoutRepository, app.getState);
-const changesOf = (app: App) =>
-  createWorkoutExerciseChanges({
-    store: { getState: app.getState, dispatch: app.store.dispatch },
-    services: app,
-  });
 
 /** Starts a freeform workout, as the Home screen's empty workout does. */
 async function startFreeform(app: App): Promise<string> {
@@ -119,13 +130,8 @@ async function startFreeform(app: App): Promise<string> {
  * What `useAddExercise` dispatches when the picker hands back a pick. The app does not wait for it before
  * the next tap; the promise is for a test to wait on.
  */
-function startAdding(
-  app: App,
-  sessionId: string,
-  picked: PickedExerciseRef[],
-  onAdded?: (firstIndex: number) => void,
-): Promise<void> {
-  return changesOf(app).add({ sessionId, picked, asSuperset: false, onAdded });
+function startAdding(app: App, sessionId: string, picked: PickedExerciseRef[], onAdded?: (firstIndex: number) => void) {
+  return app.exerciseEntry.add({ workoutId: sessionId, picked, asSuperset: false, onAdded });
 }
 
 async function addThroughPicker(app: App, sessionId: string, picked: PickedExerciseRef[]) {
@@ -332,16 +338,12 @@ describe('adding an exercise through the picker (PM-41)', () => {
       const failure = new Error('database is locked');
       const failingRepository = { latestPerLineage: () => Promise.reject(failure) };
       logger.error.mockClear();
-      const changes = createWorkoutExerciseChanges({
-        store: { getState: app.getState, dispatch: app.store.dispatch },
-        services: { workoutRepository: failingRepository, logger },
-      });
 
-      await changes.add({
-        sessionId,
-        picked: [{ id: 'Lunge', name: 'Lunge' }],
-        asSuperset: false,
-      });
+      const exerciseEntry = createExerciseEntry(
+        { getState: app.getState, dispatch: app.store.dispatch },
+        { workoutRepository: failingRepository, logger },
+      );
+      await exerciseEntry.add({ workoutId: sessionId, picked: [{ id: 'Lunge', name: 'Lunge' }], asSuperset: false });
       await app.settle();
 
       expect(setsOf(app, sessionId, 1)).toEqual(opened(60, 10));
@@ -410,8 +412,10 @@ describe('adding an exercise through the picker (PM-41)', () => {
  * What the live exercise card's Swap dispatches when the picker hands back an exercise. The app does not
  * wait for it; the promise is for a test to wait on.
  */
-function startSwapping(app: App, sessionId: string, index: number, picked: PickedExerciseRef): Promise<void> {
-  return changesOf(app).swap({ sessionId, index, picked });
+function startSwapping(app: App, sessionId: string, index: number, picked: PickedExerciseRef) {
+  const target = app.exerciseEntry.target({ workoutId: sessionId, index });
+  if (!target) throw new Error('Expected an open exercise');
+  return app.exerciseEntry.swap({ target, picked });
 }
 
 async function swapThroughPicker(app: App, sessionId: string, index: number, picked: PickedExerciseRef) {
@@ -419,8 +423,10 @@ async function swapThroughPicker(app: App, sessionId: string, index: number, pic
   await app.settle();
 }
 
-function startEditing(app: App, sessionId: string, index: number, updated: ExerciseBlueprint): Promise<void> {
-  return changesOf(app).edit({ sessionId, index, updated });
+function startEditing(app: App, sessionId: string, index: number, updated: ExerciseBlueprint) {
+  const target = app.exerciseEntry.target({ workoutId: sessionId, index });
+  if (!target) throw new Error('Expected an open exercise');
+  return app.exerciseEntry.edit({ target, blueprint: updated });
 }
 
 async function editThroughEditor(app: App, sessionId: string, index: number, updated: ExerciseBlueprint) {
@@ -824,5 +830,286 @@ describe('every entry path opens what the routine path opens', () => {
     expect(todaysTarget(first.exercise, first.previous, true)?.reason.kind).toBe('repsUp');
     expect(second.previous?.bestSet?.weight).toEqual(new Weight(62.5, 'kilograms'));
     expect(todaysTarget(second.exercise, second.previous, true)?.reason.kind).toBe('repeatAfterSuccess');
+  });
+});
+
+function deferred() {
+  let release = () => {};
+  const promise = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  return { promise, release };
+}
+
+async function ownWorkout() {
+  const app = await startApp([
+    pastWorkout('previous', LocalDate.of(2026, 9, 28), [{ blueprint: lunge, kg: 45, reps: [10, 10, 10] }]),
+  ]);
+  const sessionId = 'same-live-id';
+  const live = new Session(
+    sessionId,
+    new SessionBlueprint('Live', [lunge, bench], ''),
+    [
+      makeRecordedExercise(lunge, [10, undefined, undefined], new Weight(60, 'kilograms'), () =>
+        OffsetDateTime.parse('2026-10-04T09:00:00Z'),
+      ),
+      RecordedWeightedExercise.empty(bench, 'kilograms'),
+    ],
+    LocalDate.of(2026, 10, 4),
+    undefined,
+    undefined,
+  );
+  app.store.dispatch(putStoredSession(live));
+  app.store.dispatch(setActiveSessionId(sessionId));
+  await app.settle();
+  return { app, sessionId };
+}
+
+function blockRead(app: App) {
+  const gate = deferred();
+  const read = app.workoutRepository.latestPerLineage.bind(app.workoutRepository);
+  const spy = vi.spyOn(app.workoutRepository, 'latestPerLineage').mockImplementationOnce(async (options) => {
+    await gate.promise;
+    return read(options);
+  });
+  return { ...gate, spy };
+}
+
+function targetOf(app: App, workoutId: string, index: number) {
+  const target = app.exerciseEntry.target({ workoutId, index });
+  if (!target) throw new Error('Expected an open exercise');
+  return target;
+}
+
+const pickLunge = [{ id: 'Lunge', name: 'Lunge' }];
+
+describe('exercise entry owner boundaries', () => {
+  it('dispatches and calls onAdded synchronously on the cache path', async () => {
+    const app = await startApp([]);
+    const sessionId = await startFreeform(app);
+    const onAdded = vi.fn();
+    const adding = app.exerciseEntry.add({ workoutId: sessionId, picked: pickLunge, asSuperset: false, onAdded });
+    expect(app.getState().storedSessions.sessions[sessionId]!.recordedExercises.map((x) => x.blueprint.name)).toEqual([
+      'Lunge',
+    ]);
+    expect(onAdded.mock.calls).toEqual([[0]]);
+    expect(await adding).toEqual({ kind: 'added', firstIndex: 0 });
+  });
+
+  it('keeps stores independent when their workout ids match', async () => {
+    const first = await ownWorkout();
+    const second = await ownWorkout();
+    const gate = blockRead(first.app);
+    const pending = startAdding(first.app, first.sessionId, pickLunge);
+    expect(await startAdding(second.app, second.sessionId, [{ id: 'Row', name: 'Row' }])).toEqual({
+      kind: 'added',
+      firstIndex: 2,
+    });
+    expect(first.app.getState().storedSessions.sessions[first.sessionId]!.recordedExercises).toHaveLength(2);
+    expect(
+      second.app.getState().storedSessions.sessions[second.sessionId]!.recordedExercises.map((x) => x.blueprint.name),
+    ).toEqual(['Lunge', 'Bench Press', 'Row']);
+    gate.release();
+    await pending;
+  });
+
+  it('lets another workout enter while the first waits on a read', async () => {
+    const { app, sessionId } = await ownWorkout();
+    const other = Session.freeformSession(LocalDate.of(2026, 10, 4), undefined);
+    app.store.dispatch(openSession({ session: other, slot: 'editing' }));
+    const gate = blockRead(app);
+    const pending = startAdding(app, sessionId, pickLunge);
+    expect(await startAdding(app, other.id, [{ id: 'Row', name: 'Row' }])).toEqual({ kind: 'added', firstIndex: 0 });
+    expect(app.getState().storedSessions.sessions[sessionId]!.recordedExercises).toHaveLength(2);
+    gate.release();
+    await pending;
+  });
+
+  it('rejects a target from a different owner without mutating either store', async () => {
+    const first = await ownWorkout();
+    const second = await ownWorkout();
+    const target = targetOf(first.app, first.sessionId, 1);
+    expect(await second.app.exerciseEntry.swap({ target, picked: pickLunge[0]! })).toEqual({ kind: 'foreign-target' });
+    expect(await second.app.exerciseEntry.edit({ target, blueprint: lunge })).toEqual({ kind: 'foreign-target' });
+    expect(first.app.getState().storedSessions.sessions[first.sessionId]!.recordedExercises[1]!.blueprint.name).toBe(
+      'Bench Press',
+    );
+    expect(second.app.getState().storedSessions.sessions[second.sessionId]!.recordedExercises[1]!.blueprint.name).toBe(
+      'Bench Press',
+    );
+  });
+
+  it('keeps a replacement movement when a delayed swap target becomes obsolete', async () => {
+    const { app, sessionId } = await ownWorkout();
+    const target = targetOf(app, sessionId, 1);
+    const gate = blockRead(app);
+    const swapping = app.exerciseEntry.swap({ target, picked: pickLunge[0]! });
+    app.store.dispatch(updateStoredSession({ sessionId, update: (s) => s.withEditedExercise(1, row, false) }));
+    gate.release();
+    expect(await swapping).toEqual({ kind: 'obsolete' });
+    expect(app.getState().storedSessions.sessions[sessionId]!.recordedExercises[1]!.blueprint.name).toBe('Row');
+  });
+
+  it('keeps a newer blueprint when the editor movement read is delayed', async () => {
+    const { app, sessionId } = await ownWorkout();
+    const target = targetOf(app, sessionId, 1);
+    const gate = blockRead(app);
+    const editing = app.exerciseEntry.edit({ target, blueprint: lunge });
+    app.store.dispatch(
+      updateStoredSession({ sessionId, update: (s) => s.withEditedExercise(1, bench.with({ sets: 4 }), false) }),
+    );
+    gate.release();
+    expect(await editing).toEqual({ kind: 'obsolete' });
+    expect(app.getState().storedSessions.sessions[sessionId]!.recordedExercises[1]!.blueprint).toEqual(
+      bench.with({ sets: 4 }),
+    );
+  });
+
+  it('captures the editor blueprint at dismissal rather than at sheet mount', async () => {
+    const { app, sessionId } = await ownWorkout();
+    hookOwner.current = app.exerciseEntry;
+    const editor = renderHook(() => useSessionExerciseDraft(sessionId, 1));
+    act(() => editor.result.current(bench.with({ sets: 5 })));
+    app.store.dispatch(
+      updateStoredSession({ sessionId, update: (s) => s.withEditedExercise(1, bench.with({ sets: 4 }), false) }),
+    );
+    act(() => editor.unmount());
+    expect(setsOf(app, sessionId, 1)).toEqual(opened(0, 10, 5));
+    await app.settle();
+  });
+
+  it("applies a later entry after a failed read opens on today's cached numbers", async () => {
+    const { app, sessionId } = await ownWorkout();
+    const failure = new Error('read rejected');
+    vi.spyOn(app.workoutRepository, 'latestPerLineage').mockRejectedValueOnce(failure);
+    const adding = startAdding(app, sessionId, pickLunge);
+    const next = startAdding(app, sessionId, [{ id: 'Row', name: 'Row' }]);
+    expect(await adding).toEqual({ kind: 'added', firstIndex: 2 });
+    expect(await next).toEqual({ kind: 'added', firstIndex: 3 });
+    expect(setsOf(app, sessionId, 2)).toEqual(opened(60, 10));
+    expect(app.getState().storedSessions.sessions[sessionId]!.recordedExercises.map((x) => x.blueprint.name)).toEqual([
+      'Lunge',
+      'Bench Press',
+      'Lunge',
+      'Row',
+    ]);
+    expect(logger.error).toHaveBeenCalledWith(
+      `Couldn't read last time for ${lunge.progressionKey()}; opening on the cache`,
+      failure,
+    );
+  });
+
+  it('does not reopen a closed target or displace the protected history editor', async () => {
+    const { app, sessionId } = await ownWorkout();
+    const protectedHistory = pastWorkout('editing-history', LocalDate.of(2026, 9, 20), [
+      { blueprint: row, kg: 50, reps: [8, 8, 8] },
+    ]);
+    app.store.dispatch(openSession({ session: protectedHistory, slot: 'editing' }));
+    const target = targetOf(app, sessionId, 1);
+    const gate = blockRead(app);
+    const swapping = app.exerciseEntry.swap({ target, picked: pickLunge[0]! });
+    const editing = app.exerciseEntry.edit({ target, blueprint: lunge });
+    const adding = app.exerciseEntry.add({ workoutId: sessionId, picked: pickLunge, asSuperset: false });
+    const next = Session.freeformSession(LocalDate.of(2026, 10, 4), undefined);
+    app.store.dispatch(putStoredSession(next));
+    app.store.dispatch(setActiveSessionId(next.id));
+    app.store.dispatch(putStoredSession(Session.freeformSession(LocalDate.of(2026, 10, 5), undefined)));
+    expect(app.getState().storedSessions.sessions[sessionId]).toBeUndefined();
+    gate.release();
+    expect(await Promise.all([swapping, editing, adding])).toEqual([
+      { kind: 'closed' },
+      { kind: 'closed' },
+      { kind: 'closed' },
+    ]);
+    expect(app.getState().storedSessions.editingSessionId).toBe('editing-history');
+    expect(app.getState().storedSessions.sessions['editing-history']).toBe(protectedHistory);
+    expect(app.getState().storedSessions.sessions[sessionId]).toBeUndefined();
+  });
+
+  it('recovers FIFO after a queued application rejects', async () => {
+    const { app, sessionId } = await ownWorkout();
+    const gate = blockRead(app);
+    const failure = new Error('consumer callback failed');
+    const adding = app.exerciseEntry.add({
+      workoutId: sessionId,
+      picked: pickLunge,
+      asSuperset: false,
+      onAdded: () => {
+        throw failure;
+      },
+    });
+    const rejected = expect(adding).rejects.toBe(failure);
+    const next = startAdding(app, sessionId, [{ id: 'Row', name: 'Row' }]);
+    gate.release();
+    await rejected;
+    expect(await next).toEqual({ kind: 'added', firstIndex: 3 });
+    expect(app.getState().storedSessions.sessions[sessionId]!.recordedExercises.map((x) => x.blueprint.name)).toEqual([
+      'Lunge',
+      'Bench Press',
+      'Lunge',
+      'Row',
+    ]);
+  });
+
+  it('keeps the queue usable after a rejected dispatch', async () => {
+    const { app, sessionId } = await ownWorkout();
+    const failure = new Error('dispatch rejected');
+    let fail = true;
+    const owner = createExerciseEntry(
+      {
+        getState: app.getState,
+        dispatch: (action) => {
+          if (fail) {
+            fail = false;
+            throw failure;
+          }
+          return app.store.dispatch(action);
+        },
+      },
+      app,
+    );
+    const gate = blockRead(app);
+    const rejected = expect(owner.add({ workoutId: sessionId, picked: pickLunge, asSuperset: false })).rejects.toBe(
+      failure,
+    );
+    const next = owner.add({ workoutId: sessionId, picked: [{ id: 'Row', name: 'Row' }], asSuperset: false });
+    gate.release();
+    await rejected;
+    expect(await next).toEqual({ kind: 'added', firstIndex: 2 });
+  });
+
+  it('persists literal exercise order, carried loads and logged-set values through listeners', async () => {
+    const { app, sessionId } = await ownWorkout();
+    await app.exerciseEntry.swap({ target: targetOf(app, sessionId, 1), picked: pickLunge[0]! });
+    await app.exerciseEntry.add({
+      workoutId: sessionId,
+      picked: [{ id: 'Row', name: 'Row' }, ...pickLunge],
+      asSuperset: true,
+    });
+    await app.settle();
+    expect(
+      await Promise.resolve(
+        app.db.all(
+          sql`select position, json_extract(blueprint, '$.exerciseId') as exercise_id, json_extract(blueprint, '$.supersetWithNext') as linked from workout_exercise where workout_id = ${sessionId} order by position`,
+        ),
+      ),
+    ).toEqual([
+      { position: 0, exercise_id: 'Lunge', linked: 0 },
+      { position: 1, exercise_id: 'Lunge', linked: 0 },
+      { position: 2, exercise_id: 'Row', linked: 1 },
+      { position: 3, exercise_id: 'Lunge', linked: 0 },
+    ]);
+    expect(
+      await Promise.resolve(
+        app.db.all(
+          sql`select exercise_position, position, weight_value, reps from weighted_set where workout_id = ${sessionId} and position = 0 order by exercise_position`,
+        ),
+      ),
+    ).toEqual([
+      { exercise_position: 0, position: 0, weight_value: '60', reps: 10 },
+      { exercise_position: 1, position: 0, weight_value: '45', reps: null },
+      { exercise_position: 2, position: 0, weight_value: '0', reps: null },
+      { exercise_position: 3, position: 0, weight_value: '45', reps: null },
+    ]);
   });
 });

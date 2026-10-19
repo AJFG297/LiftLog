@@ -9,7 +9,7 @@ import { LiveSetTable } from '@/components/smart/live-set-table';
 import { RecordedExerciseView } from '@/components/smart/recorded-exercise-view';
 import { getSessionExerciseEditorHref } from '@/components/smart/session-exercise-editor';
 import { getSessionWarmupsHref } from '@/components/smart/exercise-warmups-sheet';
-import { useWorkoutExerciseChanges } from '@/hooks/useWorkoutExerciseChanges';
+import { useServices } from '@/components/smart/services-provider';
 import { useExerciseSearch } from '@/hooks/useExerciseSearch';
 import { LiveSetEntry } from '@/hooks/useLiveSetEntry';
 import { usesBodyweight, useTodaysTarget } from '@/hooks/useTodaysTarget';
@@ -43,7 +43,7 @@ export function LiveExerciseCard(props: LiveExerciseCardProps) {
   const { t } = useTranslate();
   const { push } = useRouter();
   const openExerciseProgress = useOpenExerciseProgress();
-  const { swap } = useWorkoutExerciseChanges();
+  const { exerciseEntry } = useServices();
   const exercises = useAppSelector(selectExercises);
   const restTimersEnabled = useAppSelector((x) => x.settings.restTimersEnabled);
   const targetFor = useTodaysTarget(session);
@@ -53,11 +53,10 @@ export function LiveExerciseCard(props: LiveExerciseCardProps) {
 
   const openSearch = useExerciseSearch(
     (picked) => {
-      void swap({
-        sessionId: session.id,
-        index: exerciseIndex,
-        picked: { id: picked.id, name: picked.descriptor.name },
-      });
+      const target = exerciseEntry.target({ workoutId: session.id, index: exerciseIndex });
+      if (target) {
+        void exerciseEntry.swap({ target, picked: { id: picked.id, name: picked.descriptor.name } });
+      }
     },
     {
       name: session.blueprint.name,

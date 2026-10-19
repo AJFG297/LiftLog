@@ -1,6 +1,6 @@
 import { ExerciseBlueprint } from '@/models/blueprint-models';
+import { useServices } from '@/components/smart/services-provider';
 import { useOnDismiss } from '@/hooks/useOnDismiss';
-import { useWorkoutExerciseChanges } from '@/hooks/useWorkoutExerciseChanges';
 import { useRef } from 'react';
 
 /**
@@ -11,7 +11,7 @@ export function useSessionExerciseDraft(
   sessionId: string,
   exerciseIndex: number,
 ): (exercise: ExerciseBlueprint) => void {
-  const { edit } = useWorkoutExerciseChanges();
+  const { exerciseEntry } = useServices();
   const draftRef = useRef<ExerciseBlueprint | undefined>(undefined);
 
   useOnDismiss(() => {
@@ -19,7 +19,8 @@ export function useSessionExerciseDraft(
     if (!updated) {
       return;
     }
-    void edit({ sessionId, index: exerciseIndex, updated });
+    const target = exerciseEntry.target({ workoutId: sessionId, index: exerciseIndex });
+    if (target) void exerciseEntry.edit({ target, blueprint: updated });
   });
 
   return (exercise) => {

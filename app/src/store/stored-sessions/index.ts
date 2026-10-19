@@ -6,6 +6,8 @@ import { createAction, createSelector, createSlice, PayloadAction, WritableDraft
 import Enumerable from 'linq';
 import { ExerciseDescriptor, musclesOf } from '@/models/exercise-models';
 import type { LatestPerformance } from '@/services/workout-repository';
+import type { CarryOver } from '@/models/session-models/carry-over';
+import type { RootState } from '@/store/store';
 
 interface StoredSessionState {
   isHydrated: boolean;
@@ -399,6 +401,18 @@ export const {
 
 export const { selectSession, selectActiveSession, selectActiveSessionId, selectExercises, selectLatestExercises } =
   storedSessionsSlice.selectors;
+
+/**
+ * The carry-over cache as workout `sessionId` sees it: without the entries that came from that workout,
+ * since a workout is not its own last time.
+ */
+export function selectCarryOver(state: RootState, sessionId: string): CarryOver {
+  const { latestExercises, latestExerciseWorkoutIds } = state.storedSessions;
+  const latest = Object.fromEntries(
+    Object.entries(latestExercises).filter(([key]) => latestExerciseWorkoutIds[key as ProgressionKey] !== sessionId),
+  );
+  return { latest, unit: state.settings.useImperialUnits ? 'pounds' : 'kilograms' };
+}
 
 /** Fired when a session is done being edited: publish it, export it, and re-derive what depends on it. */
 export const sessionFinished = createAction<string>('sessionFinished');

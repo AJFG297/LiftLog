@@ -29,6 +29,10 @@ export function blueprintsForPick(
   );
 }
 
+/**
+ * The exercises with a pick added to the end. A superset flag left on the old last exercise linked nothing
+ * there; with exercises after it, it would join them, so it's cleared.
+ */
 export function withPickAppended(
   exercises: readonly ExerciseBlueprint[],
   picked: readonly PickedExerciseRef[],
@@ -45,6 +49,10 @@ export function withPickAppended(
   return [...kept, ...blueprintsForPick(picked, asSuperset)];
 }
 
+/**
+ * The workout with a pick added to the end, clearing a stranded superset flag as {@link withPickAppended} does.
+ * Each exercise opens on what its place would carry over in a routine (see {@link nextRecordedExercise}).
+ */
 export function sessionWithPickAdded(
   session: Session,
   picked: readonly PickedExerciseRef[],
@@ -75,6 +83,12 @@ export function sessionWithPickAdded(
   );
 }
 
+/**
+ * The workout with the exercise at `index`, `swappedOut`, swapped for `picked`: its plan as it is now, under
+ * the picked exercise's name and id, so its history follows it (see {@link sessionWithExerciseReplaced}).
+ * Unchanged if that place no longer holds `swappedOut`, which a swap waiting on a read can find; an edit of
+ * its plan meanwhile is kept.
+ */
 export function sessionWithExerciseSwapped(
   session: Session,
   index: number,
