@@ -1,0 +1,296 @@
+{
+  "scenario": "reorder",
+  "viewport": {
+    "id": "large",
+    "label": "Large",
+    "width": 430,
+    "height": 932
+  },
+  "checkout": "/workspace/LiftLog-strip",
+  "source": "43b5fc71d618fb596fabdadf7a568dd9ece6c0d356c0a8fc841e0418dbe6892a",
+  "runId": "2026-10-22T11-43-24-091Z-8b65bc19",
+  "actions": [
+    {
+      "setup": "reorder fixture",
+      "featureProof": false
+    },
+    {
+      "screenshot": "initial-light"
+    },
+    {
+      "action": "click",
+      "name": "Dark"
+    },
+    {
+      "screenshot": "initial-dark"
+    },
+    {
+      "action": "click",
+      "name": "Blue accent"
+    },
+    {
+      "screenshot": "initial-dark-blue"
+    },
+    {
+      "action": "click",
+      "name": "Light"
+    },
+    {
+      "screenshot": "initial-light-blue"
+    },
+    {
+      "action": "click",
+      "name": "/^Back Squat,/"
+    },
+    {
+      "action": "click",
+      "name": "/^Barbell Bench Press,/"
+    },
+    {
+      "action": "ordinary touch swipe before hold",
+      "offset": 252,
+      "orderUnchanged": true
+    },
+    {
+      "setup": "viewport placement",
+      "left": 0,
+      "featureProof": false
+    },
+    {
+      "action": "tiny jitter then early release",
+      "orderUnchanged": true
+    },
+    {
+      "action": "click",
+      "name": "/^Reps for Set 1:/"
+    },
+    {
+      "action": "click",
+      "name": "7"
+    },
+    {
+      "action": "long press",
+      "input": "touch",
+      "x": 260,
+      "y": 416.53125
+    },
+    {
+      "screenshot": "activated-touch"
+    },
+    {
+      "screenshot": "right-edge-held"
+    },
+    {
+      "action": "stationary edge scroll",
+      "edge": "right",
+      "heldTileTracksPointer": true
+    },
+    {
+      "action": "drop",
+      "input": "touch"
+    },
+    {
+      "screenshot": "far-drop-focus-and-draft"
+    },
+    {
+      "action": "click",
+      "name": "Log Set 1"
+    },
+    {
+      "action": "long press",
+      "input": "touch",
+      "x": 476,
+      "y": 416.53125
+    },
+    {
+      "screenshot": "left-edge-held"
+    },
+    {
+      "action": "stationary edge scroll",
+      "edge": "left",
+      "heldTileTracksPointer": true
+    },
+    {
+      "action": "drop",
+      "input": "touch"
+    },
+    {
+      "action": "long press",
+      "input": "touch",
+      "x": 260,
+      "y": 416.53125
+    },
+    {
+      "action": "cancel drag",
+      "input": "touch"
+    },
+    {
+      "screenshot": "cancelled"
+    },
+    {
+      "setup": "viewport placement",
+      "left": 0,
+      "featureProof": false
+    },
+    {
+      "action": "long press",
+      "input": "touch",
+      "x": 260,
+      "y": 416.53125
+    },
+    {
+      "action": "drop",
+      "input": "touch"
+    },
+    {
+      "setup": "viewport placement",
+      "left": 600,
+      "featureProof": false
+    },
+    {
+      "action": "long press",
+      "input": "touch",
+      "x": 416,
+      "y": 416.53125
+    },
+    {
+      "screenshot": "left-edge-held"
+    },
+    {
+      "action": "stationary edge scroll",
+      "edge": "left",
+      "heldTileTracksPointer": true
+    },
+    {
+      "action": "drop",
+      "input": "touch"
+    },
+    {
+      "screenshot": "superset-drop"
+    },
+    {
+      "action": "long press",
+      "input": "mouse",
+      "x": 386,
+      "y": 416.53125
+    },
+    {
+      "action": "drop",
+      "input": "mouse"
+    },
+    {
+      "screenshot": "mouse-drop"
+    },
+    {
+      "action": "click",
+      "name": "Dark"
+    },
+    {
+      "action": "long press",
+      "input": "touch",
+      "x": 260,
+      "y": 416.53125
+    },
+    {
+      "screenshot": "activated-dark"
+    },
+    {
+      "action": "drop",
+      "input": "touch"
+    },
+    {
+      "screenshot": "reloaded"
+    },
+    {
+      "screenshot": "server-restarted"
+    }
+  ],
+  "errors": [],
+  "geometry": [
+    {
+      "edge": "right",
+      "maxOffsetBeforeHold": 918,
+      "stationaryOffset": 0,
+      "samples": [
+        {
+          "left": 505.875,
+          "width": 120.95001220703125,
+          "offset": 67,
+          "pointerX": 575,
+          "grabbedOffset": 59
+        },
+        {
+          "left": 506.175048828125,
+          "width": 120.95001220703125,
+          "offset": 200,
+          "pointerX": 575,
+          "grabbedOffset": 59
+        },
+        {
+          "left": 506.47503662109375,
+          "width": 120.95001220703125,
+          "offset": 333,
+          "pointerX": 575,
+          "grabbedOffset": 59
+        }
+      ]
+    },
+    {
+      "edge": "left",
+      "maxOffsetBeforeHold": 918,
+      "stationaryOffset": 918,
+      "samples": [
+        {
+          "left": 172.875,
+          "width": 120.95001220703125,
+          "offset": 843,
+          "pointerX": 225,
+          "grabbedOffset": 59
+        },
+        {
+          "left": 180.875,
+          "width": 120.95001220703125,
+          "offset": 735,
+          "pointerX": 225,
+          "grabbedOffset": 59
+        },
+        {
+          "left": 180.875,
+          "width": 120.95001220703125,
+          "offset": 585,
+          "pointerX": 225,
+          "grabbedOffset": 59
+        }
+      ]
+    },
+    {
+      "edge": "left",
+      "maxOffsetBeforeHold": 918,
+      "stationaryOffset": 600,
+      "samples": [
+        {
+          "left": 191.0999755859375,
+          "width": 120.95001220703125,
+          "offset": 525,
+          "pointerX": 225,
+          "grabbedOffset": 59
+        },
+        {
+          "left": 183.10000610351562,
+          "width": 120.94998168945312,
+          "offset": 408,
+          "pointerX": 225,
+          "grabbedOffset": 59
+        },
+        {
+          "left": 182.45001220703125,
+          "width": 120.95001220703125,
+          "offset": 292,
+          "pointerX": 225,
+          "grabbedOffset": 59
+        }
+      ]
+    }
+  ],
+  "result": "pass"
+}

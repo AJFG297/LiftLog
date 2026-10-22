@@ -1,0 +1,1501 @@
+{
+  "scenario": "all",
+  "browser": {
+    "version": "151.0.7922.173",
+    "executable": "/home/agent/.cache/ms-playwright/chromium-1243/chrome-linux64/chrome"
+  },
+  "viewport": {
+    "id": "large",
+    "label": "Large",
+    "width": 430,
+    "height": 932
+  },
+  "checkout": "/workspace/LiftLog-strip",
+  "source": "43b5fc71d618fb596fabdadf7a568dd9ece6c0d356c0a8fc841e0418dbe6892a",
+  "runId": "2026-10-22T11-41-14-320Z-1a4464d1",
+  "actions": [
+    {
+      "action": "layout",
+      "viewport": {
+        "id": "regular",
+        "label": "Regular",
+        "width": 390,
+        "height": 844
+      },
+      "geometry": {
+        "shell": {
+          "top": 0,
+          "bottom": 844,
+          "left": 0,
+          "right": 390,
+          "height": 844
+        },
+        "content": {
+          "top": 206.53125,
+          "bottom": 844,
+          "left": 0,
+          "right": 390,
+          "height": 637.46875
+        },
+        "pad": {
+          "top": 844,
+          "bottom": 844,
+          "left": 0,
+          "right": 390,
+          "height": 0
+        },
+        "documentHeight": 844
+      }
+    },
+    {
+      "action": "layout",
+      "viewport": {
+        "id": "large",
+        "label": "Large",
+        "width": 430,
+        "height": 932
+      },
+      "geometry": {
+        "shell": {
+          "top": 0,
+          "bottom": 932,
+          "left": 0,
+          "right": 430,
+          "height": 932
+        },
+        "content": {
+          "top": 206.53125,
+          "bottom": 932,
+          "left": 0,
+          "right": 430,
+          "height": 725.46875
+        },
+        "pad": {
+          "top": 932,
+          "bottom": 932,
+          "left": 0,
+          "right": 430,
+          "height": 0
+        },
+        "documentHeight": 932
+      }
+    },
+    {
+      "action": "layout",
+      "viewport": {
+        "id": "large",
+        "label": "Large",
+        "width": 430,
+        "height": 932
+      },
+      "geometry": {
+        "shell": {
+          "top": 0,
+          "bottom": 932,
+          "left": 0,
+          "right": 430,
+          "height": 932
+        },
+        "content": {
+          "top": 206.53125,
+          "bottom": 932,
+          "left": 0,
+          "right": 430,
+          "height": 725.46875
+        },
+        "pad": {
+          "top": 932,
+          "bottom": 932,
+          "left": 0,
+          "right": 430,
+          "height": 0
+        },
+        "documentHeight": 932
+      }
+    },
+    {
+      "screenshot": "initial.png",
+      "url": "http://127.0.0.1:34935/?viewport=large"
+    },
+    {
+      "action": "click",
+      "role": "button",
+      "name": "/^Weight for Set 1:/"
+    },
+    {
+      "action": "click",
+      "role": "button",
+      "name": "8"
+    },
+    {
+      "action": "click",
+      "role": "button",
+      "name": "2"
+    },
+    {
+      "action": "click",
+      "role": "button",
+      "name": "Decimal point"
+    },
+    {
+      "action": "click",
+      "role": "button",
+      "name": "5"
+    },
+    {
+      "action": "layout",
+      "viewport": {
+        "id": "large",
+        "label": "Large",
+        "width": 430,
+        "height": 932
+      },
+      "geometry": {
+        "shell": {
+          "top": 0,
+          "bottom": 932,
+          "left": 0,
+          "right": 430,
+          "height": 932
+        },
+        "content": {
+          "top": 206.53125,
+          "bottom": 640,
+          "left": 0,
+          "right": 430,
+          "height": 433.46875
+        },
+        "pad": {
+          "top": 640,
+          "bottom": 932,
+          "left": 0,
+          "right": 430,
+          "height": 292
+        },
+        "documentHeight": 932
+      }
+    },
+    {
+      "screenshot": "weight-input.png",
+      "url": "http://127.0.0.1:34935/?viewport=large"
+    },
+    {
+      "action": "click",
+      "role": "button",
+      "name": "Hide keypad"
+    },
+    {
+      "action": "click",
+      "role": "button",
+      "name": "/^Reps for Set 1:/"
+    },
+    {
+      "action": "click",
+      "role": "button",
+      "name": "7"
+    },
+    {
+      "action": "layout",
+      "viewport": {
+        "id": "large",
+        "label": "Large",
+        "width": 430,
+        "height": 932
+      },
+      "geometry": {
+        "shell": {
+          "top": 0,
+          "bottom": 932,
+          "left": 0,
+          "right": 430,
+          "height": 932
+        },
+        "content": {
+          "top": 206.53125,
+          "bottom": 640,
+          "left": 0,
+          "right": 430,
+          "height": 433.46875
+        },
+        "pad": {
+          "top": 640,
+          "bottom": 932,
+          "left": 0,
+          "right": 430,
+          "height": 292
+        },
+        "documentHeight": 932
+      }
+    },
+    {
+      "screenshot": "reps-input.png",
+      "url": "http://127.0.0.1:34935/?viewport=large"
+    },
+    {
+      "action": "click",
+      "role": "button",
+      "name": "Log set"
+    },
+    {
+      "action": "layout",
+      "viewport": {
+        "id": "large",
+        "label": "Large",
+        "width": 430,
+        "height": 932
+      },
+      "geometry": {
+        "shell": {
+          "top": 0,
+          "bottom": 932,
+          "left": 0,
+          "right": 430,
+          "height": 932
+        },
+        "content": {
+          "top": 206.53125,
+          "bottom": 932,
+          "left": 0,
+          "right": 430,
+          "height": 725.46875
+        },
+        "pad": {
+          "top": 932,
+          "bottom": 932,
+          "left": 0,
+          "right": 430,
+          "height": 0
+        },
+        "documentHeight": 932
+      }
+    },
+    {
+      "screenshot": "logged.png",
+      "url": "http://127.0.0.1:34935/?viewport=large"
+    },
+    {
+      "action": "layout",
+      "viewport": {
+        "id": "large",
+        "label": "Large",
+        "width": 430,
+        "height": 932
+      },
+      "geometry": {
+        "shell": {
+          "top": 0,
+          "bottom": 932,
+          "left": 0,
+          "right": 430,
+          "height": 932
+        },
+        "content": {
+          "top": 206.53125,
+          "bottom": 932,
+          "left": 0,
+          "right": 430,
+          "height": 725.46875
+        },
+        "pad": {
+          "top": 932,
+          "bottom": 932,
+          "left": 0,
+          "right": 430,
+          "height": 0
+        },
+        "documentHeight": 932
+      }
+    },
+    {
+      "screenshot": "reloaded.png",
+      "url": "http://127.0.0.1:34935/?viewport=large"
+    },
+    {
+      "action": "layout",
+      "viewport": {
+        "id": "large",
+        "label": "Large",
+        "width": 430,
+        "height": 932
+      },
+      "geometry": {
+        "shell": {
+          "top": 0,
+          "bottom": 932,
+          "left": 0,
+          "right": 430,
+          "height": 932
+        },
+        "content": {
+          "top": 206.53125,
+          "bottom": 932,
+          "left": 0,
+          "right": 430,
+          "height": 725.46875
+        },
+        "pad": {
+          "top": 932,
+          "bottom": 932,
+          "left": 0,
+          "right": 430,
+          "height": 0
+        },
+        "documentHeight": 932
+      }
+    },
+    {
+      "screenshot": "server-restarted.png",
+      "url": "http://127.0.0.1:45313/?viewport=large"
+    },
+    {
+      "action": "click",
+      "role": "button",
+      "name": "Undo Set 1"
+    },
+    {
+      "action": "layout",
+      "viewport": {
+        "id": "large",
+        "label": "Large",
+        "width": 430,
+        "height": 932
+      },
+      "geometry": {
+        "shell": {
+          "top": 0,
+          "bottom": 932,
+          "left": 0,
+          "right": 430,
+          "height": 932
+        },
+        "content": {
+          "top": 206.53125,
+          "bottom": 932,
+          "left": 0,
+          "right": 430,
+          "height": 725.46875
+        },
+        "pad": {
+          "top": 932,
+          "bottom": 932,
+          "left": 0,
+          "right": 430,
+          "height": 0
+        },
+        "documentHeight": 932
+      }
+    },
+    {
+      "screenshot": "undone.png",
+      "url": "http://127.0.0.1:45313/?viewport=large"
+    },
+    {
+      "action": "click",
+      "role": "button",
+      "name": "/^Weight for Set 1:/"
+    },
+    {
+      "action": "click",
+      "role": "button",
+      "name": "8"
+    },
+    {
+      "action": "click",
+      "role": "button",
+      "name": "2"
+    },
+    {
+      "action": "click",
+      "role": "button",
+      "name": "Decimal point"
+    },
+    {
+      "action": "click",
+      "role": "button",
+      "name": "5"
+    },
+    {
+      "action": "click",
+      "role": "button",
+      "name": "Next field"
+    },
+    {
+      "action": "click",
+      "role": "button",
+      "name": "1"
+    },
+    {
+      "action": "click",
+      "role": "button",
+      "name": "0"
+    },
+    {
+      "action": "layout",
+      "viewport": {
+        "id": "large",
+        "label": "Large",
+        "width": 430,
+        "height": 932
+      },
+      "geometry": {
+        "shell": {
+          "top": 0,
+          "bottom": 932,
+          "left": 0,
+          "right": 430,
+          "height": 932
+        },
+        "content": {
+          "top": 206.53125,
+          "bottom": 640,
+          "left": 0,
+          "right": 430,
+          "height": 433.46875
+        },
+        "pad": {
+          "top": 640,
+          "bottom": 932,
+          "left": 0,
+          "right": 430,
+          "height": 292
+        },
+        "documentHeight": 932
+      }
+    },
+    {
+      "screenshot": "full-reps.png",
+      "url": "http://127.0.0.1:45313/?viewport=large"
+    },
+    {
+      "action": "click",
+      "role": "button",
+      "name": "Edit partial reps"
+    },
+    {
+      "action": "layout",
+      "viewport": {
+        "id": "large",
+        "label": "Large",
+        "width": 430,
+        "height": 932
+      },
+      "geometry": {
+        "shell": {
+          "top": 0,
+          "bottom": 932,
+          "left": 0,
+          "right": 430,
+          "height": 932
+        },
+        "content": {
+          "top": 206.53125,
+          "bottom": 640,
+          "left": 0,
+          "right": 430,
+          "height": 433.46875
+        },
+        "pad": {
+          "top": 640,
+          "bottom": 932,
+          "left": 0,
+          "right": 430,
+          "height": 292
+        },
+        "documentHeight": 932
+      }
+    },
+    {
+      "screenshot": "partials-open.png",
+      "url": "http://127.0.0.1:45313/?viewport=large"
+    },
+    {
+      "action": "click",
+      "role": "button",
+      "name": "2"
+    },
+    {
+      "action": "click",
+      "role": "button",
+      "name": "Edit partial reps"
+    },
+    {
+      "action": "click",
+      "role": "button",
+      "name": "Edit partial reps"
+    },
+    {
+      "action": "click",
+      "role": "button",
+      "name": "Light"
+    },
+    {
+      "action": "layout",
+      "viewport": {
+        "id": "large",
+        "label": "Large",
+        "width": 430,
+        "height": 932
+      },
+      "geometry": {
+        "shell": {
+          "top": 0,
+          "bottom": 932,
+          "left": 0,
+          "right": 430,
+          "height": 932
+        },
+        "content": {
+          "top": 206.53125,
+          "bottom": 640,
+          "left": 0,
+          "right": 430,
+          "height": 433.46875
+        },
+        "pad": {
+          "top": 640,
+          "bottom": 932,
+          "left": 0,
+          "right": 430,
+          "height": 292
+        },
+        "documentHeight": 932
+      }
+    },
+    {
+      "screenshot": "partials-light.png",
+      "url": "http://127.0.0.1:45313/?viewport=large"
+    },
+    {
+      "action": "click",
+      "role": "button",
+      "name": "Dark"
+    },
+    {
+      "action": "layout",
+      "viewport": {
+        "id": "large",
+        "label": "Large",
+        "width": 430,
+        "height": 932
+      },
+      "geometry": {
+        "shell": {
+          "top": 0,
+          "bottom": 932,
+          "left": 0,
+          "right": 430,
+          "height": 932
+        },
+        "content": {
+          "top": 206.53125,
+          "bottom": 640,
+          "left": 0,
+          "right": 430,
+          "height": 433.46875
+        },
+        "pad": {
+          "top": 640,
+          "bottom": 932,
+          "left": 0,
+          "right": 430,
+          "height": 292
+        },
+        "documentHeight": 932
+      }
+    },
+    {
+      "screenshot": "partials-dark.png",
+      "url": "http://127.0.0.1:45313/?viewport=large"
+    },
+    {
+      "action": "click",
+      "role": "button",
+      "name": "Blue accent"
+    },
+    {
+      "action": "layout",
+      "viewport": {
+        "id": "large",
+        "label": "Large",
+        "width": 430,
+        "height": 932
+      },
+      "geometry": {
+        "shell": {
+          "top": 0,
+          "bottom": 932,
+          "left": 0,
+          "right": 430,
+          "height": 932
+        },
+        "content": {
+          "top": 206.53125,
+          "bottom": 640,
+          "left": 0,
+          "right": 430,
+          "height": 433.46875
+        },
+        "pad": {
+          "top": 640,
+          "bottom": 932,
+          "left": 0,
+          "right": 430,
+          "height": 292
+        },
+        "documentHeight": 932
+      }
+    },
+    {
+      "screenshot": "partials-dark-blue.png",
+      "url": "http://127.0.0.1:45313/?viewport=large"
+    },
+    {
+      "action": "click",
+      "role": "button",
+      "name": "Light"
+    },
+    {
+      "action": "layout",
+      "viewport": {
+        "id": "large",
+        "label": "Large",
+        "width": 430,
+        "height": 932
+      },
+      "geometry": {
+        "shell": {
+          "top": 0,
+          "bottom": 932,
+          "left": 0,
+          "right": 430,
+          "height": 932
+        },
+        "content": {
+          "top": 206.53125,
+          "bottom": 640,
+          "left": 0,
+          "right": 430,
+          "height": 433.46875
+        },
+        "pad": {
+          "top": 640,
+          "bottom": 932,
+          "left": 0,
+          "right": 430,
+          "height": 292
+        },
+        "documentHeight": 932
+      }
+    },
+    {
+      "screenshot": "partials-light-blue.png",
+      "url": "http://127.0.0.1:45313/?viewport=large"
+    },
+    {
+      "action": "click",
+      "role": "button",
+      "name": "Log set"
+    },
+    {
+      "action": "click",
+      "role": "button",
+      "name": "Dark"
+    },
+    {
+      "action": "layout",
+      "viewport": {
+        "id": "large",
+        "label": "Large",
+        "width": 430,
+        "height": 932
+      },
+      "geometry": {
+        "shell": {
+          "top": 0,
+          "bottom": 932,
+          "left": 0,
+          "right": 430,
+          "height": 932
+        },
+        "content": {
+          "top": 206.53125,
+          "bottom": 932,
+          "left": 0,
+          "right": 430,
+          "height": 725.46875
+        },
+        "pad": {
+          "top": 932,
+          "bottom": 932,
+          "left": 0,
+          "right": 430,
+          "height": 0
+        },
+        "documentHeight": 932
+      }
+    },
+    {
+      "screenshot": "partials-reloaded-dark.png",
+      "url": "http://127.0.0.1:45313/?viewport=large"
+    },
+    {
+      "action": "click",
+      "role": "button",
+      "name": "Light"
+    },
+    {
+      "action": "layout",
+      "viewport": {
+        "id": "large",
+        "label": "Large",
+        "width": 430,
+        "height": 932
+      },
+      "geometry": {
+        "shell": {
+          "top": 0,
+          "bottom": 932,
+          "left": 0,
+          "right": 430,
+          "height": 932
+        },
+        "content": {
+          "top": 206.53125,
+          "bottom": 932,
+          "left": 0,
+          "right": 430,
+          "height": 725.46875
+        },
+        "pad": {
+          "top": 932,
+          "bottom": 932,
+          "left": 0,
+          "right": 430,
+          "height": 0
+        },
+        "documentHeight": 932
+      }
+    },
+    {
+      "screenshot": "partials-reloaded.png",
+      "url": "http://127.0.0.1:45313/?viewport=large"
+    },
+    {
+      "action": "click",
+      "role": "button",
+      "name": "Undo Set 1"
+    },
+    {
+      "action": "click",
+      "role": "button",
+      "name": "Log Set 1"
+    },
+    {
+      "action": "click",
+      "role": "button",
+      "name": "/^Reps for Set 1:/"
+    },
+    {
+      "action": "click",
+      "role": "button",
+      "name": "8"
+    },
+    {
+      "action": "click",
+      "role": "button",
+      "name": "Hide keypad"
+    },
+    {
+      "action": "click",
+      "role": "button",
+      "name": "/^Reps for Set 1:/"
+    },
+    {
+      "action": "click",
+      "role": "button",
+      "name": "Edit partial reps"
+    },
+    {
+      "action": "click",
+      "role": "button",
+      "name": "0"
+    },
+    {
+      "action": "click",
+      "role": "button",
+      "name": "Hide keypad"
+    },
+    {
+      "action": "click",
+      "role": "button",
+      "name": "/^Reps for Set 1:/"
+    },
+    {
+      "action": "click",
+      "role": "button",
+      "name": "0"
+    },
+    {
+      "action": "click",
+      "role": "button",
+      "name": "Edit partial reps"
+    },
+    {
+      "action": "click",
+      "role": "button",
+      "name": "3"
+    },
+    {
+      "action": "click",
+      "role": "button",
+      "name": "Log set"
+    },
+    {
+      "action": "layout",
+      "viewport": {
+        "id": "large",
+        "label": "Large",
+        "width": 430,
+        "height": 932
+      },
+      "geometry": {
+        "shell": {
+          "top": 0,
+          "bottom": 932,
+          "left": 0,
+          "right": 430,
+          "height": 932
+        },
+        "content": {
+          "top": 206.53125,
+          "bottom": 932,
+          "left": 0,
+          "right": 430,
+          "height": 725.46875
+        },
+        "pad": {
+          "top": 932,
+          "bottom": 932,
+          "left": 0,
+          "right": 430,
+          "height": 0
+        },
+        "documentHeight": 932
+      }
+    },
+    {
+      "screenshot": "partials-only.png",
+      "url": "http://127.0.0.1:41555/?viewport=large"
+    },
+    {
+      "action": "click",
+      "role": "button",
+      "name": "/^Weight for Set 1:/"
+    },
+    {
+      "action": "click",
+      "role": "button",
+      "name": "Light"
+    },
+    {
+      "action": "layout",
+      "viewport": {
+        "id": "large",
+        "label": "Large",
+        "width": 430,
+        "height": 932
+      },
+      "geometry": {
+        "shell": {
+          "top": 0,
+          "bottom": 932,
+          "left": 0,
+          "right": 430,
+          "height": 932
+        },
+        "content": {
+          "top": 206.53125,
+          "bottom": 640,
+          "left": 0,
+          "right": 430,
+          "height": 433.46875
+        },
+        "pad": {
+          "top": 640,
+          "bottom": 932,
+          "left": 0,
+          "right": 430,
+          "height": 292
+        },
+        "documentHeight": 932
+      }
+    },
+    {
+      "screenshot": "light.png",
+      "url": "http://127.0.0.1:41555/?viewport=large"
+    },
+    {
+      "action": "click",
+      "role": "button",
+      "name": "Dark"
+    },
+    {
+      "action": "layout",
+      "viewport": {
+        "id": "large",
+        "label": "Large",
+        "width": 430,
+        "height": 932
+      },
+      "geometry": {
+        "shell": {
+          "top": 0,
+          "bottom": 932,
+          "left": 0,
+          "right": 430,
+          "height": 932
+        },
+        "content": {
+          "top": 206.53125,
+          "bottom": 640,
+          "left": 0,
+          "right": 430,
+          "height": 433.46875
+        },
+        "pad": {
+          "top": 640,
+          "bottom": 932,
+          "left": 0,
+          "right": 430,
+          "height": 292
+        },
+        "documentHeight": 932
+      }
+    },
+    {
+      "screenshot": "dark.png",
+      "url": "http://127.0.0.1:41555/?viewport=large"
+    },
+    {
+      "action": "click",
+      "role": "button",
+      "name": "Blue accent"
+    },
+    {
+      "action": "layout",
+      "viewport": {
+        "id": "large",
+        "label": "Large",
+        "width": 430,
+        "height": 932
+      },
+      "geometry": {
+        "shell": {
+          "top": 0,
+          "bottom": 932,
+          "left": 0,
+          "right": 430,
+          "height": 932
+        },
+        "content": {
+          "top": 206.53125,
+          "bottom": 640,
+          "left": 0,
+          "right": 430,
+          "height": 433.46875
+        },
+        "pad": {
+          "top": 640,
+          "bottom": 932,
+          "left": 0,
+          "right": 430,
+          "height": 292
+        },
+        "documentHeight": 932
+      }
+    },
+    {
+      "screenshot": "dark-blue.png",
+      "url": "http://127.0.0.1:41555/?viewport=large"
+    },
+    {
+      "action": "click",
+      "role": "button",
+      "name": "Light"
+    },
+    {
+      "action": "layout",
+      "viewport": {
+        "id": "large",
+        "label": "Large",
+        "width": 430,
+        "height": 932
+      },
+      "geometry": {
+        "shell": {
+          "top": 0,
+          "bottom": 932,
+          "left": 0,
+          "right": 430,
+          "height": 932
+        },
+        "content": {
+          "top": 206.53125,
+          "bottom": 640,
+          "left": 0,
+          "right": 430,
+          "height": 433.46875
+        },
+        "pad": {
+          "top": 640,
+          "bottom": 932,
+          "left": 0,
+          "right": 430,
+          "height": 292
+        },
+        "documentHeight": 932
+      }
+    },
+    {
+      "screenshot": "light-blue.png",
+      "url": "http://127.0.0.1:41555/?viewport=large"
+    },
+    {
+      "action": "click",
+      "role": "button",
+      "name": "Hide keypad"
+    },
+    {
+      "action": "click",
+      "role": "button",
+      "name": "Add set"
+    },
+    {
+      "action": "layout",
+      "viewport": {
+        "id": "large",
+        "label": "Large",
+        "width": 430,
+        "height": 932
+      },
+      "geometry": {
+        "shell": {
+          "top": 0,
+          "bottom": 932,
+          "left": 0,
+          "right": 430,
+          "height": 932
+        },
+        "content": {
+          "top": 206.53125,
+          "bottom": 932,
+          "left": 0,
+          "right": 430,
+          "height": 725.46875
+        },
+        "pad": {
+          "top": 932,
+          "bottom": 932,
+          "left": 0,
+          "right": 430,
+          "height": 0
+        },
+        "documentHeight": 932
+      }
+    },
+    {
+      "screenshot": "added-set.png",
+      "url": "http://127.0.0.1:41555/?viewport=large"
+    },
+    {
+      "action": "click",
+      "role": "button",
+      "name": "/^Reps for Set 2:/"
+    },
+    {
+      "action": "click",
+      "role": "button",
+      "name": "6"
+    },
+    {
+      "action": "click",
+      "role": "button",
+      "name": "Hide keypad"
+    },
+    {
+      "action": "click",
+      "role": "button",
+      "name": "/^Weight for Set 1:/"
+    },
+    {
+      "action": "click",
+      "role": "button",
+      "name": "8"
+    },
+    {
+      "action": "click",
+      "role": "button",
+      "name": "2"
+    },
+    {
+      "action": "click",
+      "role": "button",
+      "name": "Decimal point"
+    },
+    {
+      "action": "click",
+      "role": "button",
+      "name": "Dark"
+    },
+    {
+      "action": "click",
+      "role": "button",
+      "name": "Blue accent"
+    },
+    {
+      "action": "viewport",
+      "viewport": {
+        "id": "regular",
+        "label": "Regular",
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "action": "layout",
+      "viewport": {
+        "id": "regular",
+        "label": "Regular",
+        "width": 390,
+        "height": 844
+      },
+      "geometry": {
+        "shell": {
+          "top": 0,
+          "bottom": 844,
+          "left": 0,
+          "right": 390,
+          "height": 844
+        },
+        "content": {
+          "top": 206.53125,
+          "bottom": 552,
+          "left": 0,
+          "right": 390,
+          "height": 345.46875
+        },
+        "pad": {
+          "top": 552,
+          "bottom": 844,
+          "left": 0,
+          "right": 390,
+          "height": 292
+        },
+        "documentHeight": 844
+      }
+    },
+    {
+      "action": "viewport",
+      "viewport": {
+        "id": "large",
+        "label": "Large",
+        "width": 430,
+        "height": 932
+      }
+    },
+    {
+      "action": "layout",
+      "viewport": {
+        "id": "large",
+        "label": "Large",
+        "width": 430,
+        "height": 932
+      },
+      "geometry": {
+        "shell": {
+          "top": 0,
+          "bottom": 932,
+          "left": 0,
+          "right": 430,
+          "height": 932
+        },
+        "content": {
+          "top": 206.53125,
+          "bottom": 640,
+          "left": 0,
+          "right": 430,
+          "height": 433.46875
+        },
+        "pad": {
+          "top": 640,
+          "bottom": 932,
+          "left": 0,
+          "right": 430,
+          "height": 292
+        },
+        "documentHeight": 932
+      }
+    },
+    {
+      "action": "layout",
+      "viewport": {
+        "id": "large",
+        "label": "Large",
+        "width": 430,
+        "height": 932
+      },
+      "geometry": {
+        "shell": {
+          "top": 0,
+          "bottom": 932,
+          "left": 0,
+          "right": 430,
+          "height": 932
+        },
+        "content": {
+          "top": 206.53125,
+          "bottom": 640,
+          "left": 0,
+          "right": 430,
+          "height": 433.46875
+        },
+        "pad": {
+          "top": 640,
+          "bottom": 932,
+          "left": 0,
+          "right": 430,
+          "height": 292
+        },
+        "documentHeight": 932
+      }
+    },
+    {
+      "screenshot": "resize-preserved.png",
+      "url": "http://127.0.0.1:41555/?viewport=large"
+    },
+    {
+      "action": "click",
+      "role": "button",
+      "name": "5"
+    },
+    {
+      "action": "click",
+      "role": "button",
+      "name": "Hide keypad"
+    },
+    {
+      "action": "click",
+      "role": "button",
+      "name": "/^Reps for Set 2: 6$/"
+    },
+    {
+      "action": "click",
+      "role": "button",
+      "name": "7"
+    },
+    {
+      "action": "click",
+      "role": "button",
+      "name": "Log set"
+    },
+    {
+      "action": "layout",
+      "viewport": {
+        "id": "large",
+        "label": "Large",
+        "width": 430,
+        "height": 932
+      },
+      "geometry": {
+        "shell": {
+          "top": 0,
+          "bottom": 932,
+          "left": 0,
+          "right": 430,
+          "height": 932
+        },
+        "content": {
+          "top": 206.53125,
+          "bottom": 932,
+          "left": 0,
+          "right": 430,
+          "height": 725.46875
+        },
+        "pad": {
+          "top": 932,
+          "bottom": 932,
+          "left": 0,
+          "right": 430,
+          "height": 0
+        },
+        "documentHeight": 932
+      }
+    },
+    {
+      "screenshot": "resize-logged.png",
+      "url": "http://127.0.0.1:41555/?viewport=large"
+    },
+    {
+      "action": "click",
+      "role": "button",
+      "name": "Add set"
+    },
+    {
+      "action": "click",
+      "role": "button",
+      "name": "Add set"
+    },
+    {
+      "action": "click",
+      "role": "button",
+      "name": "Add set"
+    },
+    {
+      "action": "click",
+      "role": "button",
+      "name": "Add set"
+    },
+    {
+      "action": "click",
+      "role": "button",
+      "name": "Add set"
+    },
+    {
+      "action": "click",
+      "role": "button",
+      "name": "Add set"
+    },
+    {
+      "action": "click",
+      "role": "button",
+      "name": "Add set"
+    },
+    {
+      "action": "click",
+      "role": "button",
+      "name": "Add set"
+    },
+    {
+      "action": "click",
+      "role": "button",
+      "name": "Add set"
+    },
+    {
+      "action": "click",
+      "role": "button",
+      "name": "Add set"
+    },
+    {
+      "action": "click",
+      "role": "button",
+      "name": "Add set"
+    },
+    {
+      "action": "click",
+      "role": "button",
+      "name": "Add set"
+    },
+    {
+      "action": "click",
+      "role": "button",
+      "name": "Add set"
+    },
+    {
+      "action": "click",
+      "role": "button",
+      "name": "/^Weight for Set 16:/"
+    },
+    {
+      "action": "layout",
+      "viewport": {
+        "id": "large",
+        "label": "Large",
+        "width": 430,
+        "height": 932
+      },
+      "geometry": {
+        "shell": {
+          "top": 0,
+          "bottom": 932,
+          "left": 0,
+          "right": 430,
+          "height": 932
+        },
+        "content": {
+          "top": 206.53125,
+          "bottom": 640,
+          "left": 0,
+          "right": 430,
+          "height": 433.46875
+        },
+        "pad": {
+          "top": 640,
+          "bottom": 932,
+          "left": 0,
+          "right": 430,
+          "height": 292
+        },
+        "documentHeight": 932
+      }
+    },
+    {
+      "action": "overflow",
+      "viewport": {
+        "id": "large",
+        "label": "Large",
+        "width": 430,
+        "height": 932
+      },
+      "geometry": {
+        "scrollHeight": 1097,
+        "clientHeight": 433,
+        "scrollTop": 569,
+        "overflowY": "auto"
+      }
+    },
+    {
+      "action": "layout",
+      "viewport": {
+        "id": "large",
+        "label": "Large",
+        "width": 430,
+        "height": 932
+      },
+      "geometry": {
+        "shell": {
+          "top": 0,
+          "bottom": 932,
+          "left": 0,
+          "right": 430,
+          "height": 932
+        },
+        "content": {
+          "top": 206.53125,
+          "bottom": 640,
+          "left": 0,
+          "right": 430,
+          "height": 433.46875
+        },
+        "pad": {
+          "top": 640,
+          "bottom": 932,
+          "left": 0,
+          "right": 430,
+          "height": 292
+        },
+        "documentHeight": 932
+      }
+    },
+    {
+      "screenshot": "overflow-keypad.png",
+      "url": "http://127.0.0.1:41555/?viewport=large"
+    },
+    {
+      "action": "click",
+      "role": "button",
+      "name": "Hide keypad"
+    }
+  ],
+  "errors": [],
+  "result": "pass"
+}
