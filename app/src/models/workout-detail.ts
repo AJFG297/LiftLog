@@ -89,6 +89,7 @@ export interface DetailSetRow {
   /** What was entered, before any bodyweight, as the workout screen shows it. */
   weight: Weight;
   reps: number;
+  partialReps?: number;
   /** As rated during the workout. Warm-ups aren't rated. */
   rpe: Rpe | undefined;
   /** Undefined where a set can't set a record (warm-up, drop, myo) or the exercise carries no load. */
@@ -127,6 +128,7 @@ function setRows(
         label: { kind: 'warmup' },
         weight: slot.weight,
         reps: slot.set.repsCompleted,
+        partialReps: slot.loggedPartialReps,
         rpe: undefined,
         oneRepMax: undefined,
         pr: false,
@@ -156,6 +158,7 @@ function setRows(
       label: slot.kind === 'working' ? { kind: 'working', number: working } : { kind: slot.kind },
       weight: slot.weight,
       reps: slot.set.repsCompleted,
+      partialReps: slot.loggedPartialReps,
       rpe: slot.rpe,
       oneRepMax,
       pr,

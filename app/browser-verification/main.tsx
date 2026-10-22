@@ -1,3 +1,9 @@
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { ExerciseStrip } from '@/components/presentation/live-workout/exercise-strip';
+import { exerciseGroupsOf, exerciseLabelOf, setProgressOf } from '@/models/session-models/exercise-groups';
+import { liveExerciseKey } from '@/models/session-models/live-exercise-key';
+import { setLiveWorkoutDrafts, setLiveWorkoutFocus } from '@/store/app';
+import { moveLiveWorkoutGroup } from '@/store/app/move-live-workout-group';
 import './adapters/appearance';
 import { FormatSimple, Tolgee, TolgeeProvider } from '@tolgee/react';
 import { OffsetDateTime } from '@js-joda/core';
@@ -25,6 +31,7 @@ import {
   type SetField,
   withAddedSet,
   withSetRpe,
+  withSetLogged,
   withSetToggled,
   withTypedValue,
 } from '@/models/session-models/set-entry';
@@ -157,21 +164,25 @@ function WorkoutPrototype(props: { session: Session; saveState: SaveState }) {
   const { session, saveState } = props;
   const { tokens, colorScheme } = useAppTheme();
   const colorSchemeSeed = useAppSelector((state) => state.settings.colorSchemeSeed);
-  const [drafts, setDrafts] = useState<SetDrafts>(NO_DRAFTS);
+  const focus = useAppSelector((state) => state.app.liveWorkoutFocus);
+  const exerciseIndex = focus?.sessionId === session.id ? focus.exerciseIndex : 0;
+  const storedDrafts = useAppSelector((state) => state.app.liveWorkoutDrafts);
+  const exercise = session.recordedExercises[exerciseIndex];
+  const draftKey = liveExerciseKey(exerciseIndex, exercise!.blueprint.name);
+  const drafts = storedDrafts?.sessionId === session.id ? (storedDrafts.exercises[draftKey] ?? NO_DRAFTS) : NO_DRAFTS;
   const [editing, setEditing] = useState<Editing | undefined>(undefined);
   const [buffer, sendToPad] = useReducer(
     numberPadReducer,
     { placeholder: 0, allowDecimal: false, step: 1 },
     openNumberPad,
   );
-  const exercise = session.recordedExercises[0];
   const editingRow =
     editing && exercise instanceof RecordedWeightedExercise
       ? setRowsOf({ exercise, drafts }).find((row) => samePosition(row.position, editing.position))
       : undefined;
   const editingLabel =
     editing && editingRow
-      ? `${editing.field === 'weight' ? 'Weight' : 'Reps'} for Set ${editingRow.label}:`
+      ? `${editing.field === 'weight' ? 'Weight' : editing.field === 'partialReps' ? 'Partial reps' : 'Reps'} for Set ${editingRow.label}:`
       : undefined;
 
   useEffect(() => {
@@ -194,12 +205,12 @@ function WorkoutPrototype(props: { session: Session; saveState: SaveState }) {
   const rows = setRowsOf(entry);
 
   const applyEntry = (next: SetEntryState) => {
-    setDrafts(next.drafts);
+    browserStore.dispatch(setLiveWorkoutDrafts({ sessionId: session.id, exerciseKey: draftKey, drafts: next.drafts }));
     const sessionId = session.id;
     browserStore.dispatch(
       updateStoredSession({
         sessionId,
-        update: (stored) => stored.withExercise(0, next.exercise),
+        update: (stored) => stored.withExercise(exerciseIndex, next.exercise),
       }),
     );
     return next;
@@ -228,7 +239,11 @@ function WorkoutPrototype(props: { session: Session; saveState: SaveState }) {
       field:
         field === 'weight'
           ? { placeholder: row.weight.value.value, allowDecimal: true, step: 2.5 }
-          : { placeholder: row.reps.value, allowDecimal: false, step: 1 },
+          : {
+              placeholder: field === 'partialReps' ? (row.slot.partialReps ?? 0) : row.reps.value,
+              allowDecimal: false,
+              step: 1,
+            },
     });
   };
 
@@ -252,7 +267,8 @@ function WorkoutPrototype(props: { session: Session; saveState: SaveState }) {
       openField(editing.position, 'reps', committed);
       return;
     }
-    toggleSet(editing.position);
+    applyEntry(withSetLogged(withTypedBuffer(entry, editing), editing.position, OffsetDateTime.now()));
+    setEditing(undefined);
   };
 
   const setRpe = (rpe: Rpe | undefined) => {
@@ -292,6 +308,19 @@ function WorkoutPrototype(props: { session: Session; saveState: SaveState }) {
       previous: '-',
       weight,
       reps,
+      partialReps:
+        row.slot.partialReps || (editing?.field === 'partialReps' && samePosition(editing.position, row.position))
+          ? cellFor({
+              row,
+              field: 'partialReps',
+              text: String(row.slot.partialReps ?? 0),
+              entered: !!row.slot.partialReps,
+              editing,
+              typed: buffer.typed,
+              accessibilityLabel: `Partial reps for ${setLabel}: ${row.slot.partialReps ?? 0}`,
+              onPress: () => openField(row.position, 'partialReps'),
+            })
+          : undefined,
       rpe: row.slot.rpe === undefined ? undefined : formatRpe(row.slot.rpe),
       logged: row.logged,
       isNext: !editing && firstUnlogged !== undefined && samePosition(firstUnlogged, row.position),
@@ -308,7 +337,7 @@ function WorkoutPrototype(props: { session: Session; saveState: SaveState }) {
           bar: 20,
           plates: [25, 20, 15, 10, 5, 2.5, 1.25],
         })
-      : editing?.field === 'reps'
+      : editing
         ? { kind: 'rpe' as const, value: currentRow?.slot.rpe, onChange: setRpe }
         : undefined;
   const saveLabel =
@@ -335,13 +364,40 @@ function WorkoutPrototype(props: { session: Session; saveState: SaveState }) {
           <ThemeControls colorScheme={colorScheme} blueAccent={colorSchemeSeed === BLUE_ACCENT} />
         </header>
 
+        {session.recordedExercises.length > 1 ? (
+          <ExerciseStrip
+            groups={exerciseGroupsOf(session.recordedExercises).map((group) => ({
+              key: JSON.stringify(group.indices.map((index) => session.recordedExercises[index]!.blueprint.name)),
+              tiles: group.indices.map((index) => {
+                const item = session.recordedExercises[index]!;
+                const allGroups = exerciseGroupsOf(session.recordedExercises);
+                return {
+                  key: item.blueprint.name,
+                  label: exerciseLabelOf(allGroups, index),
+                  name: item.blueprint.name,
+                  ...setProgressOf(item),
+                  isCurrent: group.indices.includes(exerciseIndex),
+                  isComplete: item.isComplete,
+                  isSuperset: group.indices.length > 1,
+                  onPress: () => {
+                    closePad();
+                    browserStore.dispatch(setLiveWorkoutFocus({ sessionId: session.id, exerciseIndex: index }));
+                  },
+                };
+              }),
+            }))}
+            onReorderStart={closePad}
+            onMove={(from, to) => browserStore.dispatch(moveLiveWorkoutGroup(session.id, from, to))}
+            onAddExercise={() => undefined}
+          />
+        ) : null}
         <div className="workout-content">
           <div className="exercise-heading">
             <div>
               <p className="exercise-meta" style={{ color: tokens.muted }}>
                 Barbell · {rows.length} working sets
               </p>
-              <h2>Barbell Bench Press</h2>
+              <h2>{exercise.blueprint.name}</h2>
             </div>
             <span
               className="exercise-count"
@@ -367,6 +423,15 @@ function WorkoutPrototype(props: { session: Session; saveState: SaveState }) {
             onAction={sendToPad}
             unit={editing?.field === 'weight' ? 'kilograms' : undefined}
             accessory={padAccessory}
+            partialReps={
+              editing && editing.field !== 'weight'
+                ? {
+                    active: editing.field === 'partialReps',
+                    onToggle: () =>
+                      openField(editing.position, editing.field === 'partialReps' ? 'reps' : 'partialReps'),
+                  }
+                : undefined
+            }
             primary={editing?.field === 'weight' ? 'next' : 'log'}
             onPrimary={primaryAction}
             onHide={closePad}
@@ -450,13 +515,15 @@ if (!root) {
 }
 
 createRoot(root).render(
-  <Provider store={browserStore}>
-    <SafeAreaProvider>
-      <TolgeeProvider tolgee={tolgee}>
-        <AppThemeProvider>
-          <BrowserVerificationApp />
-        </AppThemeProvider>
-      </TolgeeProvider>
-    </SafeAreaProvider>
-  </Provider>,
+  <GestureHandlerRootView style={{ flex: 1 }}>
+    <Provider store={browserStore}>
+      <SafeAreaProvider>
+        <TolgeeProvider tolgee={tolgee}>
+          <AppThemeProvider>
+            <BrowserVerificationApp />
+          </AppThemeProvider>
+        </TolgeeProvider>
+      </SafeAreaProvider>
+    </Provider>
+  </GestureHandlerRootView>,
 );

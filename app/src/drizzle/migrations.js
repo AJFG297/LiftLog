@@ -15,7 +15,8 @@ import m0010 from './0010_warmup_sets.sql';
 import m0011 from './0011_set_kinds.sql';
 import m0012 from './0012_workout_reflection.sql';
 import m0013 from './0013_exercise_lineage.sql';
-import m0014 from './0014_routine_id.sql';
+import m0014 from './0014_partial_reps.sql';
+import m0015 from './0015_routine_id.sql';
 
   export default {
     journal,
@@ -34,7 +35,8 @@ m0010,
 m0011,
 m0012,
 m0013,
-m0014
+m0014,
+m0015
     }
   }
   

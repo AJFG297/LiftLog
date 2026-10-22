@@ -4,7 +4,7 @@
   "properties": {
     "version": {
       "type": "number",
-      "const": 10
+      "const": 11
     },
     "id": {
       "type": "string"
@@ -19,10 +19,7 @@
           "type": "string"
         }
       },
-      "required": [
-        "name",
-        "notes"
-      ]
+      "required": ["name", "notes"]
     },
     "recordedExercises": {
       "type": "array",
@@ -37,11 +34,5 @@
       "$ref": "./Weight.json"
     }
   },
-  "required": [
-    "version",
-    "id",
-    "blueprint",
-    "recordedExercises",
-    "date"
-  ]
+  "required": ["version", "id", "blueprint", "recordedExercises", "date"]
 }

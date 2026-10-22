@@ -292,10 +292,10 @@ export class Session {
     });
   }
 
-  /** See {@link RecordedWeightedExercise.withoutUnloggedRpe}. Returns `this` when there is nothing to drop. */
-  withoutUnloggedRpe(): Session {
+  /** See {@link RecordedWeightedExercise.withoutUnloggedSetMetadata}. Returns `this` when there is nothing to drop. */
+  withoutUnloggedSetMetadata(): Session {
     const recordedExercises = this.recordedExercises.map((re) =>
-      re.type === 'RecordedWeightedExercise' ? re.withoutUnloggedRpe() : re,
+      re.type === 'RecordedWeightedExercise' ? re.withoutUnloggedSetMetadata() : re,
     );
     if (recordedExercises.every((re, index) => re === this.recordedExercises[index])) {
       return this;
@@ -345,7 +345,7 @@ export class Session {
 
   toJSON(): SessionJSON {
     return {
-      version: 10,
+      version: 11,
       blueprint: this.blueprint.toJSON(),
       bodyweight: this.bodyweight?.toJSON(),
       date: toLocalDateJSON(this.date),

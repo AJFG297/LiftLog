@@ -12,6 +12,8 @@ launch, doctor, drive, evidence, and cleanup. Codex discovers the same skill thr
 
 From `app/`, install dependencies with `npm ci` and Chromium with `npm run verify:browser:install`.
 On Linux use `npx playwright install --with-deps chromium` to install the browser's system dependencies.
+If Chromium is already installed, set `LIFTLOG_BROWSER_EXECUTABLE` to its absolute path. This skips the bundled browser download. The run manifest records the browser version and executable.
+
 Then run:
 
 ```bash
@@ -32,17 +34,19 @@ manual drives default to Regular.
 
 ## What the prototype proves
 
-| Scenario    | User action                                             | Observable result                                                                                                          |
-| ----------- | ------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| Workout     | Type 82.5 kg and 7 reps on the real NumberPad, then log | SetTable shows the logged set and SQLite stores the numbers and completion time                                            |
-| Persistence | Reload the page and restart the server                  | The logged set returns from the same disk database                                                                         |
-| Undo        | Press Undo Set 1 and reload                             | Completion and recorded reps are cleared; weight remains 82.5 kg                                                           |
-| Sets        | Press Add set and reload                                | A third working set is visible and persisted                                                                               |
-| Viewport    | Switch sizes with a partial number and unlogged reps | The iframe changes its actual layout viewport, retains editing and appearance, makes no workout write, and leaves SQLite rows unchanged |
-| Overflow    | Add sets until there are 16 and open the last weight field | The workout area scrolls, the active field remains visible, and the keypad stays within the selected viewport |
-| Appearance  | Select light, dark, and blue accent                     | Selected controls and computed colors change; screenshots include the shared keypad and table; workout rows stay unchanged |
+| Scenario    | User action                                                | Observable result                                                                                                                       |
+| ----------- | ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| Workout     | Type 82.5 kg and 7 reps on the real NumberPad, then log    | SetTable shows the logged set and SQLite stores the numbers and completion time                                                         |
+| Persistence | Reload the page and restart the server                     | The logged set returns from the same disk database                                                                                      |
+| Undo        | Press Undo Set 1 and reload                                | Completion and recorded reps are cleared; weight remains 82.5 kg                                                                        |
+| Sets        | Press Add set and reload                                   | A third working set is visible and persisted                                                                                            |
+| Viewport    | Switch sizes with a partial number and unlogged reps       | The iframe changes its actual layout viewport, retains editing and appearance, makes no workout write, and leaves SQLite rows unchanged |
+| Overflow    | Add sets until there are 16 and open the last weight field | The workout area scrolls, the active field remains visible, and the keypad stays within the selected viewport                           |
+| Reorder     | Hold and drag the real exercise strip with touch and mouse | Both edges scroll under a stationary pointer; supersets, focus, and drafts follow the move; SQLite order survives reload and restart    |
+| Appearance  | Select light, dark, and blue accent                        | Selected controls and computed colors change; screenshots include the shared keypad and table; workout rows stay unchanged              |
+| Partials    | Use P to enter, edit, clear, undo, and relog partial reps  | Full and partial counts stay separate through SQLite, reload, and server restart                                                        |
 
-It imports production `SetTable`, `NumberPad`, `set-entry`, domain models, `storedSessionsReducer`,
+It imports production `ExerciseStrip`, `moveLiveWorkoutGroup`, `SetTable`, `NumberPad`, `set-entry`, domain models, `storedSessionsReducer`,
 `AppThemeProvider`, `WorkoutRepository`, and Drizzle migrations. Browser actions drive the controls.
 The evidence API only reads rows. The save API writes through the repository rather than storing a
 parallel fixture JSON document.
@@ -55,7 +59,7 @@ The iframe source stays fixed during size switches. Its bounded flex layout leav
 workout area and keeps the keypad in flow at the bottom. Screenshots capture the iframe at its selected
 size, rather than expanding the document to include overflowing content.
 
-Every drive finishes with resize checks, logs Set 2, and adds sets for overflow checks. A later manual
+Classic drives finish with resize checks, log Set 2, and add sets for overflow checks. A later manual
 workout drive requires a fresh fixture. Page reload and server restart retain committed workout data;
 unlogged drafts and theme preferences reset on reload.
 
@@ -124,3 +128,9 @@ shared workout logic. Model the Domain uses separate loading and saving state va
 Discipline checks session, lifecycle, identity, and evidence JSON at their boundaries. Prove It Works
 requires visible user actions, stored rows, reload, and process restart. Comment Sicko's accepted lint
 finding was resolved with checked helper contracts and removal of the blanket exclusion.
+
+## Strip reorder verification
+
+`npm run verify:browser -- reorder` checks both sizes with its own ten-exercise fixture. `all` runs the classic and reorder scenarios on separate databases. The real Gesture Handler and Reanimated web implementations handle touch and mouse input. The Vite transform explicitly applies the Worklets Babel plugin to production source so animated styles subscribe to shared values.
+
+The reorder driver records continuous edge-scroll offsets, the held tile's position under the stationary pointer, cancellation, superset movement from its second member, and focus and draft preservation. SQL snapshots include the ordered workout exercise rows and superset flags. A video accompanies screenshots and the Playwright trace. Media stays in ignored verification runs and belongs only on the separate PR assets branch when published.

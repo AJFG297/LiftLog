@@ -223,12 +223,14 @@ export class RecordedWeightedExercise {
     return this.withSet(setIndex, (s) => s.with({ rpe }));
   }
 
-  /** An RPE only means something alongside reps, so a finished exercise drops it from unlogged sets. */
-  withoutUnloggedRpe(): RecordedWeightedExercise {
-    if (!this.potentialSets.some((s) => !s.set && s.rpe !== undefined)) {
+  /** A finished or shared exercise keeps performance metadata only on logged sets. */
+  withoutUnloggedSetMetadata(): RecordedWeightedExercise {
+    const slots = [...this.potentialSets, ...this.warmupSets];
+    if (!slots.some((s) => !s.set && (s.rpe !== undefined || s.partialReps !== undefined))) {
       return this;
     }
-    return this.withAllSets((s) => (s.set ? s : s.with({ rpe: undefined })));
+    const clean = (s: PotentialSet) => (s.set ? s : s.with({ rpe: undefined, partialReps: undefined }));
+    return this.with({ potentialSets: this.potentialSets.map(clean), warmupSets: this.warmupSets.map(clean) });
   }
 
   withCycledRepCount(setIndex: number, time: OffsetDateTime): RecordedWeightedExercise {
@@ -672,6 +674,7 @@ export class PotentialSet {
     readonly rpe?: Rpe,
     /** Always `warmup` for a slot in `warmupSets`: the exercise makes it so. */
     readonly kind: SetKind = 'working',
+    readonly partialReps?: number,
   ) {}
 
   /** Build a set from named fields; preferred over the constructor, which leads with the absent one. */
@@ -681,8 +684,9 @@ export class PotentialSet {
     target?: RepsTarget;
     rpe?: Rpe | undefined;
     kind?: SetKind;
+    partialReps?: number | undefined;
   }): PotentialSet {
-    return new PotentialSet(init.set, init.weight, init.target, init.rpe, init.kind);
+    return new PotentialSet(init.set, init.weight, init.target, init.rpe, init.kind, init.partialReps);
   }
 
   static fromJSON(json: PotentialSetJSON): PotentialSet {
@@ -695,6 +699,7 @@ export class PotentialSet {
       },
       isRpe(json.rpe) ? json.rpe : undefined,
       json.kind,
+      json.partialReps,
     );
   }
 
@@ -711,6 +716,11 @@ export class PotentialSet {
     const weight = keepsLastWeight(this.kind, kind) ? this.weight : new Weight(0, unit);
     const target = continuesProgression(this.kind, kind) && next.repsAreProgressed ? this.target : next.planTarget;
     return PotentialSet.of({ weight, target, kind });
+  }
+
+  /** Only completed sets contribute partials to performance displays and exports. */
+  get loggedPartialReps(): number | undefined {
+    return this.set ? this.partialReps : undefined;
   }
 
   /** The RPE to show anywhere but the live workout: one left on a set that was never logged means nothing. */
@@ -731,7 +741,8 @@ export class PotentialSet {
       this.target.min === other.target.min &&
       this.target.max === other.target.max &&
       this.rpe === other.rpe &&
-      this.kind === other.kind
+      this.kind === other.kind &&
+      this.partialReps === other.partialReps
     );
   }
 
@@ -742,6 +753,7 @@ export class PotentialSet {
       other.target ?? this.target,
       'rpe' in other ? other.rpe : this.rpe,
       other.kind ?? this.kind,
+      'partialReps' in other ? other.partialReps : this.partialReps,
     );
   }
 
@@ -752,6 +764,7 @@ export class PotentialSet {
       set: this.set?.toJSON(),
       weight: this.weight.toJSON(),
       rpe: this.rpe,
+      partialReps: this.partialReps,
     };
   }
 }

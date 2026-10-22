@@ -256,12 +256,12 @@ describe('export-plaintext-effects', () => {
 
       const [, bytes] = fileExportService.exportBytes.mock.calls[0]!;
       const [header, rated, unrated] = new TextDecoder().decode(bytes).trim().split('\n');
-      expect(header!.trim().split(',').at(-2)).toBe('RPE');
-      expect(rated!.trim().split(',').at(-2)).toBe('8.5');
-      expect(unrated!.trim().split(',').at(-2)).toBe('');
+      expect(header!.trim().split(',').at(-3)).toBe('RPE');
+      expect(rated!.trim().split(',').at(-3)).toBe('8.5');
+      expect(unrated!.trim().split(',').at(-3)).toBe('');
     });
 
-    it('exports logged warm-ups before the working sets, marked by a trailing SetType column', async () => {
+    it('exports logged warm-ups before the working sets, marked by the SetType column', async () => {
       const fileExportService = makeFileExportService();
       const exercise = makeWeightedExercise('Bench Press', 2, 100, 10).with({
         warmupSets: [
@@ -286,7 +286,7 @@ describe('export-plaintext-effects', () => {
         .trim()
         .split('\n')
         .map((line) => line.trim().split(','));
-      expect(header!.slice(-2)).toEqual(['RPE', 'SetType']);
+      expect(header!.slice(-3)).toEqual(['RPE', 'SetType', 'PartialReps']);
       const column = (name: string) => rows.map((row) => row[header!.indexOf(name)]);
       expect(column('SetType')).toEqual(['warmup', 'working', 'working']);
       expect(column('Weight')).toEqual(['50', '100', '100']);
@@ -315,7 +315,7 @@ describe('export-plaintext-effects', () => {
         .trim()
         .split('\n')
         .map((line) => line.trim().split(','));
-      expect(rows.slice(1).map((row) => row.at(-1))).toEqual(['warmup', 'working', 'failure', 'drop', 'myo']);
+      expect(rows.slice(1).map((row) => row.at(-2))).toEqual(['warmup', 'working', 'failure', 'drop', 'myo']);
     });
 
     it('exports rows across multiple sessions', async () => {
@@ -542,7 +542,7 @@ describe('export-plaintext-effects', () => {
       const json = new TextDecoder().decode(await exportToJson(batchesOf(history.length)));
 
       expect(csv.split('\r\n')[0]).toBe(
-        'SessionId,Timestamp,Exercise,Weight,WeightUnit,Reps,TargetReps,Notes,RPE,SetType',
+        'SessionId,Timestamp,Exercise,Weight,WeightUnit,Reps,TargetReps,Notes,RPE,SetType,PartialReps',
       );
       expect(fromJsonBytes<SessionJSON[]>(new TextEncoder().encode(json))).toHaveLength(60);
       for (const batches of [batchesOf(7), batchesOf(1), oneEach()]) {

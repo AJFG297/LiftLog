@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "2feb4a36-3130-4961-aa14-ca33bea9856c",
+  "id": "55bba17b-34f0-45fe-b22e-f84d6a5d161b",
   "prevId": "8d3d4e35-a723-4614-9e4f-514e1696c2e5",
   "tables": {
     "backend_assignment": {
@@ -616,6 +616,13 @@
           "notNull": true,
           "autoincrement": false
         },
+        "partial_reps": {
+          "name": "partial_reps",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
         "reps": {
           "name": "reps",
           "type": "integer",
@@ -739,6 +746,13 @@
         "rpe": {
           "name": "rpe",
           "type": "real",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "partial_reps": {
+          "name": "partial_reps",
+          "type": "integer",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
@@ -956,13 +970,6 @@
           "notNull": true,
           "autoincrement": false
         },
-        "routine_id": {
-          "name": "routine_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
         "notes": {
           "name": "notes",
           "type": "text",
@@ -1033,13 +1040,6 @@
           "name": "workout_reference_time",
           "columns": [
             "reference_time_ms"
-          ],
-          "isUnique": false
-        },
-        "workout_routine": {
-          "name": "workout_routine",
-          "columns": [
-            "routine_id"
           ],
           "isUnique": false
         }

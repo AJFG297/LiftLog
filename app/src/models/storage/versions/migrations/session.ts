@@ -99,4 +99,5 @@ export const sessionMigrations = createMigrations<InitialSessionJSON>()
       ex.type === 'RecordedCardioExercise' ? ex : addSlotKinds(ex),
     ),
   }))
+  .add((session) => ({ ...session, version: 11 }))
   .build<SessionJSON>();

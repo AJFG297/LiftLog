@@ -1,3 +1,4 @@
+import { liveExerciseKey } from '@/models/session-models/live-exercise-key';
 import { haptics } from '@/components/presentation/foundation/haptics';
 import { useToast } from '@/components/presentation/foundation/toast';
 import {
@@ -11,7 +12,7 @@ import {
 } from '@/components/presentation/foundation/number-pad';
 import { withRestTimerAt } from '@/components/smart/recorded-exercise-view';
 import { equipmentClassOf, weightStepFor } from '@/models/equipment';
-import { RecordedExercise, RecordedWeightedExercise, Session } from '@/models/session-models';
+import { RecordedWeightedExercise, Session } from '@/models/session-models';
 import { SetPosition } from '@/models/session-models/recorded-weighted-exercise';
 import { Rpe } from '@/models/session-models/rpe';
 import {
@@ -59,10 +60,6 @@ export interface SetEditing {
 
 const NO_DRAFTS: SetDrafts = {};
 
-function liveExerciseKey(exerciseIndex: number, exercise: RecordedExercise): string {
-  return `${exerciseIndex}:${exercise.blueprint.name}`;
-}
-
 function loggedCount(exercise: RecordedWeightedExercise): number {
   return [...exercise.warmupSets, ...exercise.potentialSets].filter((slot) => slot.set).length;
 }
@@ -81,7 +78,9 @@ export function useSetEntryStore(session: Session, updateSession: UpdateSession)
       return undefined;
     }
     const drafts =
-      stored?.sessionId === session.id ? stored.exercises[liveExerciseKey(exerciseIndex, exercise)] : undefined;
+      stored?.sessionId === session.id
+        ? stored.exercises[liveExerciseKey(exerciseIndex, exercise.blueprint.name)]
+        : undefined;
     return { exercise, drafts: drafts ?? NO_DRAFTS };
   };
 
@@ -119,7 +118,7 @@ export function useSetEntryStore(session: Session, updateSession: UpdateSession)
       dispatch(
         setLiveWorkoutDrafts({
           sessionId: session.id,
-          exerciseKey: liveExerciseKey(exerciseIndex, current.exercise),
+          exerciseKey: liveExerciseKey(exerciseIndex, current.exercise.blueprint.name),
           drafts: next.drafts,
         }),
       );
@@ -150,7 +149,7 @@ export function useLiveSetEntry(session: Session, updateSession: UpdateSession, 
 
   const storedState = stored && stateFor(stored.exerciseIndex);
   const editedState =
-    storedState && liveExerciseKey(stored.exerciseIndex, storedState.exercise) === stored.exerciseKey
+    storedState && liveExerciseKey(stored.exerciseIndex, storedState.exercise.blueprint.name) === stored.exerciseKey
       ? storedState
       : undefined;
   const editedRow = stored && editedState ? setRowAt(editedState, stored.position) : undefined;
@@ -205,7 +204,12 @@ export function useLiveSetEntry(session: Session, updateSession: UpdateSession, 
     if (!state || !row) {
       return;
     }
-    setEditing({ exerciseIndex, exerciseKey: liveExerciseKey(exerciseIndex, state.exercise), position, field });
+    setEditing({
+      exerciseIndex,
+      exerciseKey: liveExerciseKey(exerciseIndex, state.exercise.blueprint.name),
+      position,
+      field,
+    });
     send({ type: 'reset', field: padFieldFor(state.exercise, row, field) });
   };
 
@@ -220,7 +224,11 @@ export function useLiveSetEntry(session: Session, updateSession: UpdateSession, 
             exercise.blueprint.weightIncrement,
           ),
         }
-      : { placeholder: row.reps.value, allowDecimal: false, step: 1 };
+      : {
+          placeholder: field === 'partialReps' ? (row.slot.partialReps ?? 0) : row.reps.value,
+          allowDecimal: false,
+          step: 1,
+        };
 
   const toggle = (exerciseIndex: number, position: SetPosition) => {
     const now = OffsetDateTime.now();
@@ -316,6 +324,14 @@ export function useLiveSetEntry(session: Session, updateSession: UpdateSession, 
       primary: isWeight ? 'next' : 'log',
       onPrimary: primary,
       onHide: close,
+      partialReps:
+        editing && !isWeight
+          ? {
+              active: editing.field === 'partialReps',
+              onToggle: () =>
+                open(editing.exerciseIndex, editing.position, editing.field === 'partialReps' ? 'reps' : 'partialReps'),
+            }
+          : undefined,
     };
   })();
 

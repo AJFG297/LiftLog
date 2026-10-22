@@ -1,3 +1,4 @@
+import { formatCompletedReps } from '@/models/session-models/partial-reps';
 import { PotentialSet } from '@/models/session-models';
 import { formatRepsTarget, Resistance, RepsTarget } from '@/models/blueprint-models';
 import { ReactNode } from 'react';
@@ -128,7 +129,9 @@ export function PotentialSetDisplay(props: PotentialSetDisplayProps) {
                 ...numberStyle,
               }}
             >
-              <Text style={{ fontWeight: 'bold' }}>{repCountValue ?? '-'}</Text>
+              <Text style={{ fontWeight: 'bold' }}>
+                {repCountValue === undefined ? '-' : formatCompletedReps(repCountValue, props.set.loggedPartialReps)}
+              </Text>
               <Text style={{ ...size.targetFont, verticalAlign: 'top' }}>/{formatRepsTarget(props.repsTarget)}</Text>
             </Text>
             {!isFilled && previousHint !== undefined && (

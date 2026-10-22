@@ -120,6 +120,7 @@ export const weightedSetsSchema = sqliteTable(
     // The load actually moved: bodyweight folded in for bodyweight movements, zero for unloaded ones.
     effectiveWeightKg: real('effective_weight_kg').notNull(),
     rpe: real(),
+    partialReps: integer('partial_reps'),
     reps: integer(),
     // Exact, offset included. `completed_at_ms` is the same instant, for ordering across offsets.
     completedAt: text('completed_at').$type<OffsetDateTimeJSON>(),
@@ -149,6 +150,7 @@ export const warmupSetsSchema = sqliteTable(
     targetRepsMax: integer('target_reps_max').notNull(),
     weightValue: text('weight_value').$type<BigNumberJSON>().notNull(),
     weightUnit: text('weight_unit').$type<WeightUnitJSON>().notNull(),
+    partialReps: integer('partial_reps'),
     reps: integer(),
     completedAt: text('completed_at').$type<OffsetDateTimeJSON>(),
   },

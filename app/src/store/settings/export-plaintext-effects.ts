@@ -39,7 +39,7 @@ export async function exportToJson(batches: AsyncIterable<Session[]>): Promise<U
   for await (const sessions of batches) {
     for (const session of sessions) {
       // The workout in progress is exported too, and may still hold an RPE picked ahead of an unlogged set.
-      const exported = session.withoutUnloggedRpe();
+      const exported = session.withoutUnloggedSetMetadata();
       workouts.push(
         JSON.stringify({
           // oxlint-disable-next-line typescript/no-misused-spread
@@ -77,9 +77,9 @@ class ExportedSetCsvRow {
     public Reps: number,
     public TargetReps: number,
     public Notes: string,
-    // RPE and SetType stay last, so tools reading the file by column position keep working.
     public RPE: number | '',
     public SetType: SetKind,
+    public PartialReps: number | '',
   ) {}
   static fromModel(session: Session, exercise: RecordedExercise): ExportedSetCsvRow[] {
     // TODO: What do we do about cardio?
@@ -99,6 +99,7 @@ class ExportedSetCsvRow {
         exercise.notes ?? '',
         set.loggedRpe ?? '',
         set.kind,
+        set.loggedPartialReps ?? '',
       );
     // Warm-ups come first, in the order they are done.
     const warmups = exercise.warmupSets.filter((set) => set.set).map((set) => row(set, set.target.max));

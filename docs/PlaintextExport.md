@@ -10,17 +10,17 @@ Here, you can export a CSV or JSON file which contains your workout data. Sets w
 An example of the produced CSV:
 
 ```csv
-SessionId,Timestamp,Exercise,Weight,WeightUnit,Reps,TargetReps,Notes,RPE,SetType
-b59ab47f-8955-4a23-afa3-5d472dacc575,2024-10-16T10:45:06,Incline Dumbbell Bench Press,60,kg,8,8,,,working
-8b929966-2426-4cbf-b678-ac8e811c8b2b,2024-10-16T10:42:10,Bench Press,32.5,kg,5,5,,,warmup
-8b929966-2426-4cbf-b678-ac8e811c8b2b,2024-10-16T10:43:05,Bench Press,47.5,kg,3,3,,,warmup
-8b929966-2426-4cbf-b678-ac8e811c8b2b,2024-10-16T10:44:39,Bench Press,67.5,kg,12,12,,,working
-8b929966-2426-4cbf-b678-ac8e811c8b2b,2024-10-16T10:44:38,Bench Press,67.5,kg,12,12,,,working
-8b929966-2426-4cbf-b678-ac8e811c8b2b,2024-10-16T10:44:38,Bench Press,67.5,kg,12,12,,,working
-95bf84cb-1f11-4d51-ba6e-a4c3f1e40b08,2024-10-16T10:43:50,Pull-ups,84,kg,8,8,,,working
-95bf84cb-1f11-4d51-ba6e-a4c3f1e40b08,2024-10-16T10:43:50,Pull-ups,84,kg,7,8,,,working
-9c67f65a-3099-4d6b-b04d-428ce386f61d,2024-10-16T10:43:41,Squats,97.5,kg,8,8,,,working
-9c67f65a-3099-4d6b-b04d-428ce386f61d,2024-10-16T10:43:41,Squats,97.5,kg,8,8,,8.5,working
+SessionId,Timestamp,Exercise,Weight,WeightUnit,Reps,TargetReps,Notes,RPE,SetType,PartialReps
+b59ab47f-8955-4a23-afa3-5d472dacc575,2024-10-16T10:45:06,Incline Dumbbell Bench Press,60,kg,8,8,,,working,
+8b929966-2426-4cbf-b678-ac8e811c8b2b,2024-10-16T10:42:10,Bench Press,32.5,kg,5,5,,,warmup,
+8b929966-2426-4cbf-b678-ac8e811c8b2b,2024-10-16T10:43:05,Bench Press,47.5,kg,3,3,,,warmup,
+8b929966-2426-4cbf-b678-ac8e811c8b2b,2024-10-16T10:44:39,Bench Press,67.5,kg,12,12,,,working,
+8b929966-2426-4cbf-b678-ac8e811c8b2b,2024-10-16T10:44:38,Bench Press,67.5,kg,12,12,,,working,
+8b929966-2426-4cbf-b678-ac8e811c8b2b,2024-10-16T10:44:38,Bench Press,67.5,kg,12,12,,,working,
+95bf84cb-1f11-4d51-ba6e-a4c3f1e40b08,2024-10-16T10:43:50,Pull-ups,84,kg,8,8,,,working,
+95bf84cb-1f11-4d51-ba6e-a4c3f1e40b08,2024-10-16T10:43:50,Pull-ups,84,kg,7,8,,,working,
+9c67f65a-3099-4d6b-b04d-428ce386f61d,2024-10-16T10:43:41,Squats,97.5,kg,8,8,,,working,
+9c67f65a-3099-4d6b-b04d-428ce386f61d,2024-10-16T10:43:41,Squats,97.5,kg,8,8,,8.5,working,
 ```
 
 `RPE` is the rate of perceived exertion logged for the set (6-10, in half steps), and is blank when none was
@@ -29,10 +29,14 @@ present. The JSON export carries the same value as `rpe` on each set.
 
 `SetType` is what the set was for: `working`, `warmup`, `failure` (taken to failure), `drop` (a drop set) or
 `myo` (a myo-rep set). An exercise's warm-ups come before its other sets, and their `TargetReps` is the warm-up's
-planned reps. Warm-ups never have an RPE. The column is last, after `RPE`, so tools that read the older columns by
+planned reps. Warm-ups never have an RPE. The column follows `RPE`, so tools that read the older columns by
 position keep working. In the JSON export every set carries the same value as `kind`; warm-ups are in each
 weighted exercise's `warmupSets`, apart from the other sets in `potentialSets`, and each planned set in the
 exercise's `blueprint.plannedSets` has a `kind` too.
+
+`PartialReps` is the separately logged partial count, blank when none was recorded. It is appended after
+`SetType` to preserve existing column positions. `Reps` still contains only full repetitions. The JSON
+export carries `partialReps` on logged sets and removes it from unlogged slots.
 
 Workouts come latest first, the one in progress included. The export reads them from the workout tables
 200 at a time (`WorkoutRepository.inExportOrder`) and writes each batch as it arrives, so it never holds the

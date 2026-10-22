@@ -1,3 +1,4 @@
+import { transformAsync } from '@babel/core';
 import { transform } from 'esbuild';
 import { defineConfig, transformWithOxc } from 'vite';
 import react from '@vitejs/plugin-react';
@@ -12,13 +13,22 @@ export default defineConfig({
       name: 'native-package-web-transforms',
       enforce: 'pre',
       async transform(code, id) {
-        if (id.startsWith(resolve(directory, '../src')) && /\.tsx?$/.test(id))
-          return await transform(code, {
+        if (id.startsWith(resolve(directory, '../src')) && /\.tsx?$/.test(id)) {
+          const compiled = await transform(code, {
             loader: id.endsWith('.tsx') ? 'tsx' : 'ts',
             jsx: 'automatic',
             sourcemap: 'inline',
             target: 'esnext',
           });
+          const worklets = await transformAsync(compiled.code, {
+            filename: id,
+            configFile: false,
+            babelrc: false,
+            plugins: ['react-native-worklets/plugin'],
+            sourceMaps: true,
+          });
+          return { code: worklets.code, map: worklets.map };
+        }
         if (id.endsWith('/expo-modules-core/src/ts-declarations/global.ts'))
           return { code: 'export {};', moduleType: 'js' };
         if (id.includes('/react-native-vector-icons/') && id.endsWith('.js')) {
@@ -26,7 +36,7 @@ export default defineConfig({
         }
       },
     },
-    react({ babel: { plugins: ['react-native-worklets/plugin'] } }),
+    react(),
   ],
   optimizeDeps: {
     rolldownOptions: {

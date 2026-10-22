@@ -20,10 +20,12 @@ Playwright opens headless Chromium with `en-US` and reduced motion. The outer pa
 workout iframe. Regular uses a genuine 390 × 844 viewport and Large uses 430 × 932. The default test
 command checks both on separate fresh databases. Manual `drive` checks Regular unless passed `large`.
 The driver uses outer button roles for viewport selection and frame-scoped accessible names for workout
-actions. Screenshots capture the selected iframe size. Every drive also checks viewport dimensions,
+actions. Screenshots capture the selected iframe size. Every classic workout, sets, or themes drive also checks viewport dimensions,
 partial input and theme preservation, unchanged SQL during switches, and scrolling with the keypad open.
-Every drive ends with at least 16 sets, so a later manual workout drive requires a fresh fixture.
+Every classic workout, sets, or themes drive ends with at least 16 sets, so a later manual workout drive requires a fresh fixture.
 The prototype URL opens directly into the workout preview. Mobile Home, routines, and resume-workout entry points are outside this map.
+
+The reorder scenario uses its own multi-exercise fixture and genuine touch input. It retains a video as well as the shared evidence artifacts.
 
 Each feature page names the scenario command and the exact selectors it drives. Run the command rather
 than pasting individual `page` calls into a shell. Those calls describe the steps in `drive.mjs`.
@@ -40,7 +42,9 @@ not verify its native counterpart. See [Evidence](../SKILL.md#evidence) for reta
 - [Resize the workout preview](viewports.md) covers genuine viewport sizes, draft and appearance
   preservation, and keypad containment with an overflowing workout. Every scenario.
 - [Log and undo a workout set](workout.md) covers decimal weight entry, reps, logging, browser reload,
-  server restart, and persisted undo. Scenario `workout`.
+  server restart, and persisted undo. Scenarios `workout` and `partials`.
 - [Add a workout set](sets.md) covers the Add set control and the new row after reload. Scenario `sets`.
 - [Change workout appearance](themes.md) covers light, dark, and blue accent screenshots without changing
   stored workout rows. Scenario `themes`.
+
+- [Reorder exercises in the workout strip](reorder.md) covers long-press activation, ordinary swipes, both autoscroll edges, supersets, cancellation, focus, drafts, and persisted order. Scenario `reorder`.
