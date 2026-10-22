@@ -443,6 +443,14 @@ describe('WorkoutRepository', () => {
           routinesDoneThisRound: 0,
         });
       });
+
+      it('still finds last performed after the routine is renamed', async () => {
+        await repository.put(lifted('Push', april(5)));
+
+        const renamed = await repository.routineHistory(['Press']);
+
+        expect(renamed.lastDone.get('Press')?.toString()).toBe('2026-04-05');
+      });
     });
 
     describe('inExportOrder', () => {
