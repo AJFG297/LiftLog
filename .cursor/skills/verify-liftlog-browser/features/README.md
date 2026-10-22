@@ -40,7 +40,7 @@ not verify its native counterpart. See [Evidence](../SKILL.md#evidence) for reta
 - [Resize the workout preview](viewports.md) covers genuine viewport sizes, draft and appearance
   preservation, and keypad containment with an overflowing workout. Every scenario.
 - [Log and undo a workout set](workout.md) covers decimal weight entry, reps, logging, browser reload,
-  server restart, and persisted undo. Scenario `workout`.
+  server restart, and persisted undo. Scenarios `workout` and `partials`.
 - [Add a workout set](sets.md) covers the Add set control and the new row after reload. Scenario `sets`.
 - [Change workout appearance](themes.md) covers light, dark, and blue accent screenshots without changing
   stored workout rows. Scenario `themes`.

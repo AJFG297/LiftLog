@@ -11,7 +11,7 @@ import { WorkoutRepository } from '@/services/workout-repository';
 import { createFixture } from './fixture';
 
 const WEIGHTED_SETS_QUERY = `
-  SELECT position, reps, weight_value, weight_unit, completed_at
+  SELECT position, reps, partial_reps, weight_value, weight_unit, completed_at
   FROM weighted_set
   WHERE workout_id = 'browser-workout'
   ORDER BY exercise_position, position

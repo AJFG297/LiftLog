@@ -376,24 +376,24 @@ describe('RecordedWeightedExercise RPE', () => {
     expect(rated.withCycledRepCount(0, tick()).getSet(0).loggedRpe).toBe(8);
   });
 
-  it('withoutUnloggedRpe drops the RPE from sets never logged and keeps it on logged ones', () => {
+  it('withoutUnloggedSetMetadata drops the RPE from sets never logged and keeps it on logged ones', () => {
     const exercise = new RecordedWeightedExercise(
       makeWeightedBlueprint(),
       [filledPotentialSet(10, tick()).with({ rpe: 8 }), emptyPotentialSet().with({ rpe: 9 })],
       undefined,
     );
-    const result = exercise.withoutUnloggedRpe();
+    const result = exercise.withoutUnloggedSetMetadata();
     expect(result.getSet(0).rpe).toBe(8);
     expect(result.getSet(1).rpe).toBeUndefined();
   });
 
-  it('withoutUnloggedRpe returns the same exercise when there is nothing to drop', () => {
+  it('withoutUnloggedSetMetadata returns the same exercise when there is nothing to drop', () => {
     const exercise = new RecordedWeightedExercise(
       makeWeightedBlueprint(),
       [filledPotentialSet(10, tick()).with({ rpe: 8 }), emptyPotentialSet()],
       undefined,
     );
-    expect(exercise.withoutUnloggedRpe()).toBe(exercise);
+    expect(exercise.withoutUnloggedSetMetadata()).toBe(exercise);
   });
 
   it('round-trips RPE through JSON', () => {

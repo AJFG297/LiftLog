@@ -114,6 +114,28 @@ describe('WorkoutRepository', () => {
     );
   });
 
+  it('stores partial counts on working and warm-up slots separately from full reps', async () => {
+    const session = workout();
+    const exercise = session.recordedExercises[0] as RecordedWeightedExercise;
+    const changed = exercise
+      .withSet(0, (s) => s.with({ partialReps: 2 }))
+      .with({
+        warmupSets: [
+          filledPotentialSet(3, OffsetDateTime.parse('2026-10-22T10:00:00Z'), new Weight(50, 'kilograms')).with({
+            partialReps: 1,
+          }),
+        ],
+      });
+    const stored = session.withExercise(0, changed);
+    await repository.put(stored);
+    const restored = await repository.get(stored.id);
+    expect(restored!.toJSON()).toEqual(stored.toJSON());
+    const weighted = await db.select().from(weightedSetsSchema);
+    const warmups = await db.select().from(warmupSetsSchema);
+    expect(weighted[0]!.partialReps).toBe(2);
+    expect(warmups[0]).toMatchObject({ reps: 3, partialReps: 1 });
+  });
+
   it('round-trips any session through SQLite', async () => {
     await fc.assert(
       fc.asyncProperty(SessionGenerator, async (session) => {

@@ -7,7 +7,7 @@
       "properties": {
         "version": {
           "type": "number",
-          "const": 10
+          "const": 11
         },
         "id": {
           "type": "string"
@@ -258,17 +258,20 @@
       "type": "object",
       "properties": {
         "minRest": {
-          "$ref": "#/definitions/DurationJSON"
+          "$ref": "#/definitions/DurationJSON",
+          "description": "The rest."
         },
         "maxRest": {
-          "$ref": "#/definitions/DurationJSON"
+          "$ref": "#/definitions/DurationJSON",
+          "description": "No longer used: written equal to `minRest`, ignored on read."
         },
         "failureRest": {
           "$ref": "#/definitions/DurationJSON",
-          "description": "Rest taken after a set where the user failed to hit their target reps."
+          "description": "Rest taken after a set where the user failed to hit their target reps. Equal to `minRest` means the same rest as any other set."
         }
       },
-      "required": ["minRest", "maxRest", "failureRest"]
+      "required": ["minRest", "maxRest", "failureRest"],
+      "description": "The rest between sets. The app has one rest and an optional different rest after a failed set (plan decision D5), but keeps writing the three fields older versions read, so plans, shared items and feed events stay readable by them. Reading turns an old triple into the new rest (see `Rest.fromJSON`)."
     },
     "RecordedCardioExerciseSetJSON": {
       "type": "object",
@@ -636,6 +639,11 @@
     "PotentialSetJSON": {
       "type": "object",
       "properties": {
+        "partialReps": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9999
+        },
         "target": {
           "$ref": "#/definitions/SetTargetJSON",
           "description": "The target this session is chasing for the set, seeded from the blueprint and then its own."

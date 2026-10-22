@@ -142,6 +142,10 @@ performance Today's target compares against, by position, so a set past last tim
 - **Undo.** The check on a logged set undoes it and keeps its values: the draft still holds what was typed,
   and reps that missed the target are kept even without one. Logging or undoing restarts rest from the
   latest set, as the old set tiles did, and logging plays `haptics.setLogged()`.
+- **Partial reps.** The reps pad's **P** key opens a separate partial count beside full reps. Logged and
+  previous sets show both, such as `10+2P`. Partials persist with the slot and survive undo, set-type
+  changes, and delete Undo. They do not count toward full-rep targets, progression, volume, PRs, or
+  estimated 1RM, and are not copied into added sets or the next workout.
 - **RPE.** With Log RPE on, the reps pad of a working set has the RPE chips; they set `PotentialSet.rpe`
   straight away, and tapping the picked chip clears it. The reps show it as a small `@9`. Warm-ups have
   none.
