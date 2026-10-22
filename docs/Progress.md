@@ -110,6 +110,40 @@ three trials per variant. That measures retained models, not native views, trans
 or total app memory. Compare results only on the same machine. These are Node/libsql benchmarks,
 not Hermes/expo-sqlite or measured screen-navigation latency on a phone.
 
+### Recorded Node results (2026-10-22)
+
+Measured on Linux x64, Node v24.19.0, Vitest 4.1.12, Drizzle 0.45.4 and libsql client 0.17.4.
+The same final branch contains both the original loader algorithm and the cached loader.
+`LIFTLOG_BENCH_RUNS=3 npm run bench:progress` ran alone after the full test suite completed: one
+warm-up and three measured trials per variant, with nine warm-route samples per variant. Negative
+latency changes are faster. “Uncached” means an empty model cache with modules/JIT already warmed;
+it does not mean a cold application or an uncached OS/database page cache.
+
+| Workouts | Data operation                | Before (ms) | After (ms) | After − before (ms) | Latency change |
+| -------- | ----------------------------- | ----------: | ---------: | ------------------: | -------------: |
+| 500      | First uncached load           |     259.580 |    280.159 |             +20.579 |         +7.93% |
+| 500      | Subsequent route load         |     231.645 |      0.002 |            -231.643 |       <−99.99% |
+| 500      | Refresh after committed write |     237.194 |    242.959 |              +5.765 |         +2.43% |
+| 5,000    | First uncached load           |   2,411.404 |  2,363.117 |             -48.287 |         -2.00% |
+| 5,000    | Subsequent route load         |   2,470.714 |      0.002 |          -2,470.712 |       <−99.99% |
+| 5,000    | Refresh after committed write |   2,390.181 |  2,361.815 |             -28.366 |         -1.19% |
+
+A warm route goes from 6 SELECTs (500 workouts) or 26 SELECTs (5,000 workouts) and one model build to
+zero of either. First loads and post-write refreshes retain those same SELECT/build counts. The timing
+variation in those paths does not establish an optimization: both still hydrate and rebuild the entire
+history. Warm data-loading times exclude React effects, rendering and native navigation.
+
+Estimated retained JS heap for four consumers of the same unchanged history:
+
+| Workouts | Before (MiB) | After (MiB) | Saved (MiB) | Reduction |
+| -------- | -----------: | ----------: | ----------: | --------: |
+| 500      |       14.330 |       3.603 |      10.727 |    74.86% |
+| 5,000    |      134.576 |      33.683 |     100.893 |    74.97% |
+
+One shared model replaces four copies in this scenario. A single screen does not gain this four-to-one
+saving, and the cache retains that model after the last Progress screen unmounts until invalidation or
+repository collection. No device performance or native-memory improvement was measured.
+
 ### Why one walk
 
 Every screen here needs the same three things over the whole history: each movement's points, its records
