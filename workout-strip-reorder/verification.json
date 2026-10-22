@@ -1,0 +1,62 @@
+{
+  "head": "32e6f662ac2288c6beec03fdd917e28df029ee4f",
+  "runs": [
+    {
+      "scenario": "all",
+      "viewport": {
+        "id": "regular",
+        "label": "Regular",
+        "width": 390,
+        "height": 844
+      },
+      "runId": "2026-10-22T10-52-57-687Z-e82c1db3",
+      "result": "pass",
+      "source": "e65dcd6ceb298a39d4dffffeb5337a89f6886c8519af210b1caa11c15fccabf5",
+      "evidence": "/workspace/LiftLog-strip/.verify-runs/browser/2026-10-22T10-52-57-687Z-e82c1db3/drive-regular-1792666380593"
+    },
+    {
+      "scenario": "all",
+      "viewport": {
+        "id": "large",
+        "label": "Large",
+        "width": 430,
+        "height": 932
+      },
+      "runId": "2026-10-22T10-53-29-379Z-cfb33bc8",
+      "result": "pass",
+      "source": "e65dcd6ceb298a39d4dffffeb5337a89f6886c8519af210b1caa11c15fccabf5",
+      "evidence": "/workspace/LiftLog-strip/.verify-runs/browser/2026-10-22T10-53-29-379Z-cfb33bc8/drive-large-1792666411758"
+    },
+    {
+      "scenario": "reorder",
+      "viewport": {
+        "id": "regular",
+        "label": "Regular",
+        "width": 390,
+        "height": 844
+      },
+      "runId": "2026-10-22T10-54-01-460Z-67ba2f83",
+      "result": "pass",
+      "source": "e65dcd6ceb298a39d4dffffeb5337a89f6886c8519af210b1caa11c15fccabf5",
+      "evidence": "/workspace/LiftLog-strip/.verify-runs/browser/2026-10-22T10-54-01-460Z-67ba2f83/drive-reorder-regular-1792666443572"
+    },
+    {
+      "scenario": "reorder",
+      "viewport": {
+        "id": "large",
+        "label": "Large",
+        "width": 430,
+        "height": 932
+      },
+      "runId": "2026-10-22T10-54-38-752Z-402586ce",
+      "result": "pass",
+      "source": "e65dcd6ceb298a39d4dffffeb5337a89f6886c8519af210b1caa11c15fccabf5",
+      "evidence": "/workspace/LiftLog-strip/.verify-runs/browser/2026-10-22T10-54-38-752Z-402586ce/drive-reorder-large-1792666481147"
+    }
+  ],
+  "limitations": [
+    "Native navigation, haptics, services and Android gesture arbitration were not run.",
+    "Active browser samples prove pointer remains inside grabbed tile. Exact grabbed offset is checked after scrolling stops.",
+    "Fixture superset has two members."
+  ]
+}
