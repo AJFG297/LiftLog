@@ -17,6 +17,10 @@ const WEIGHTED_SETS_QUERY = `
   ORDER BY exercise_position, position
 `.trim();
 
+const EXERCISES_QUERY = `SELECT position, json_extract(blueprint, '$.name') AS name,
+  COALESCE(json_extract(blueprint, '$.supersetWithNext'), 0) AS superset
+  FROM workout_exercise WHERE workout_id = 'browser-workout' ORDER BY position`;
+
 const ACTIVE_WORKOUT_QUERY = `
   SELECT *
   FROM workout
@@ -60,9 +64,10 @@ export async function openVerificationDatabase(databasePath: string): Promise<Ve
     },
 
     async evidence() {
-      const [weightedSets, activeWorkout] = await Promise.all([
+      const [weightedSets, activeWorkout, exercises] = await Promise.all([
         client.execute(WEIGHTED_SETS_QUERY),
         client.execute(ACTIVE_WORKOUT_QUERY),
+        client.execute(EXERCISES_QUERY),
       ]);
 
       return {
@@ -70,8 +75,10 @@ export async function openVerificationDatabase(databasePath: string): Promise<Ve
         query: {
           weightedSets: WEIGHTED_SETS_QUERY,
           activeWorkout: ACTIVE_WORKOUT_QUERY,
+          exercises: EXERCISES_QUERY,
         },
         weightedSets: weightedSets.rows,
+        exercises: exercises.rows,
         activeWorkout: activeWorkout.rows[0] ?? null,
       };
     },

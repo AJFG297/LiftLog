@@ -42,7 +42,7 @@ work to find the docs relevant to your area, and update it whenever you add, rem
   and where their numbers come from, derived routine colours, the history cards, and the
   workout-in-progress bar above the tab bar.
 - [LiveWorkout.md](./LiveWorkout.md) - the workout in progress: focus mode one exercise or superset at a
-  time, the exercise strip, the Up next bar and the All exercises sheet, the rest pill and rest sheet
+  time, the exercise strip with long-press reordering, the Up next bar and the All exercises sheet, the rest pill and rest sheet
   (steps, presets, saving a rest to the routine), and how pages, the next set, focus, reordering and the
   Today target are worked out from the session. Also logging a set: the set table's placeholders, typing
   on the number pad, drafts, undo, RPE, Add set and the set-type sheet.
@@ -87,7 +87,7 @@ work to find the docs relevant to your area, and update it whenever you add, rem
 ## Running it yourself
 
 - [BrowserVerification.md](./BrowserVerification.md) - the emulator-free shared workout prototype for
-  Codex cloud agents: Regular and Large viewport checks, commands, evidence, adapters, coverage, and native exclusions.
+  Codex cloud agents: Regular and Large viewport checks, commands, evidence, adapters, coverage, long-press strip reordering, and native exclusions.
 
 - [PhoneBuilds.md](./PhoneBuilds.md) - getting a change onto the two Android phones: when a change needs a
   new build and when an EAS Update is enough (the fingerprint runtime version), the commands for each,

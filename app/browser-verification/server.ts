@@ -1,3 +1,4 @@
+import { createReorderFixture } from './fixture';
 import { createServer as createHttpServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { createServer as createViteServer } from 'vite';
 import { resolve } from 'node:path';
@@ -37,7 +38,10 @@ export async function startVerificationServer() {
       return;
     }
     if (request.url === '/api/identity' && request.method === 'GET') response.end(JSON.stringify(identity));
-    else if (request.url === '/api/workout' && request.method === 'GET')
+    else if (request.url === '/api/fixture/reorder' && request.method === 'POST') {
+      await database.save(createReorderFixture());
+      response.end(JSON.stringify({ ready: true }));
+    } else if (request.url === '/api/workout' && request.method === 'GET')
       response.end(JSON.stringify((await database.load()).toJSON()));
     else if (request.url === '/api/workout' && request.method === 'PUT') {
       const session = parseSession(await readJson(request));

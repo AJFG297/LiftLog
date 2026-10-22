@@ -13,7 +13,9 @@ and the number pad, and PM-30 moved rest into the header.
 - **Exercise strip** (`ExerciseStrip`): one tile per exercise with its label, name, sets done out of
   planned and a progress bar. The tiles of the page on screen are drawn inverted, and the strip scrolls to
   keep them in view. The last tile adds exercises from the [exercise picker](./ExercisePicker.md), and the
-  screen moves to the first one added.
+  screen moves to the first one added. Hold any tile for 350ms to lift its exercise group, then drag
+  left or right to reorder. A superset moves together, even when held by its second member. Holding near
+  either edge scrolls the strip continuously. Taps still focus an exercise and short swipes scroll normally.
 - **Focus page**: a card per exercise (`LiveExerciseCard`) with a meta line (equipment, its place in a
   superset, and how many working sets), the History, Rest, Warm-up, Note and Swap shortcuts, the Today
   target card, and the set table (see below). Its menu (⋯) has Edit, View progress (a weighted exercise's
@@ -101,7 +103,9 @@ Nothing on the screen is stored except which exercise is in focus. The rest come
   (`store/app/live-workout-focus-storage.ts`), so a relaunch reopens the page left open. When nothing is stored the screen opens on the page of the next set and pins it, so
   finishing a page never moves the screen before the user taps Up next.
 - **Reordering** is `withGroupMoved`: whole groups move, so a superset travels as one unit, and the
-  session's exercises and blueprint move together. A `supersetWithNext` left on the last exercise is
+  session's exercises and blueprint move together. Both reorder entry points call `moveLiveWorkoutGroup`,
+  which also remaps focus and unlogged set drafts through the same permutation. The number pad commits
+  before a strip hold begins. Cancelling the hold leaves the order unchanged. A `supersetWithNext` left on the last exercise is
   cleared once something follows it, because it would join that exercise. While a row is held within
   80pt of the sheet list's top or bottom edge, the list scrolls that way, faster the closer the finger is
   (`autoScrollSpeed` in `reorder-target.ts`); a Reanimated frame callback in `ReorderableList` scrolls it

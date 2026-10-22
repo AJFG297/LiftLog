@@ -4,7 +4,7 @@ import Ajv from 'ajv';
 /** @typedef {PendingState & {pid: number, url: string}} ActiveState */
 /** @typedef {{runId: string, checkout: string, pid: number, url: string, source: string, databasePath: string}} Identity */
 /** @typedef {{position: number, reps: number|null, weight_value: string, weight_unit: string, completed_at: string|null}} WeightedRow */
-/** @typedef {{databasePath: string, query: {weightedSets: string, activeWorkout: string}, weightedSets: WeightedRow[], activeWorkout: object|null}} SqlEvidence */
+/** @typedef {{databasePath: string, query: {weightedSets: string, activeWorkout: string, exercises: string}, exercises: {position: number, name: string, superset: number}[], weightedSets: WeightedRow[], activeWorkout: object|null}} SqlEvidence */
 
 const validator = new Ajv();
 const stateProperties = {
@@ -45,17 +45,30 @@ const identity = validator.compile({
 /** @type {import('ajv').ValidateFunction<SqlEvidence>} */
 const evidence = validator.compile({
   type: 'object',
-  required: ['databasePath', 'query', 'weightedSets', 'activeWorkout'],
+  required: ['databasePath', 'query', 'weightedSets', 'activeWorkout', 'exercises'],
   additionalProperties: false,
   properties: {
     databasePath: { type: 'string' },
     query: {
       type: 'object',
-      required: ['weightedSets', 'activeWorkout'],
-      properties: { weightedSets: { type: 'string' }, activeWorkout: { type: 'string' } },
+      required: ['weightedSets', 'activeWorkout', 'exercises'],
+      properties: {
+        weightedSets: { type: 'string' },
+        activeWorkout: { type: 'string' },
+        exercises: { type: 'string' },
+      },
       additionalProperties: false,
     },
     activeWorkout: { type: ['object', 'null'] },
+    exercises: {
+      type: 'array',
+      items: {
+        type: 'object',
+        required: ['position', 'name', 'superset'],
+        additionalProperties: false,
+        properties: { position: { type: 'integer' }, name: { type: 'string' }, superset: { type: 'integer' } },
+      },
+    },
     weightedSets: {
       type: 'array',
       items: {
@@ -96,4 +109,27 @@ export function parseEvidence(value) {
 /** @param {unknown} error @param {string} code */
 export function hasCode(error, code) {
   return typeof error === 'object' && error !== null && 'code' in error && error.code === code;
+}
+
+/** @type {import('ajv').ValidateFunction<{recordedExercises: {blueprint: {name: string}}[]}>} */
+const workoutNames = validator.compile({
+  type: 'object',
+  required: ['recordedExercises'],
+  properties: {
+    recordedExercises: {
+      type: 'array',
+      items: {
+        type: 'object',
+        required: ['blueprint'],
+        properties: {
+          blueprint: { type: 'object', required: ['name'], properties: { name: { type: 'string' } } },
+        },
+      },
+    },
+  },
+});
+/** @param {unknown} value @returns {string[]} */
+export function parseWorkoutNames(value) {
+  if (!workoutNames(value)) throw new Error('Invalid workout exercise names');
+  return value.recordedExercises.map((exercise) => exercise.blueprint.name);
 }

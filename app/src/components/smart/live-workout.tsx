@@ -1,3 +1,4 @@
+import { moveLiveWorkoutGroup, type LiveWorkoutMoveDispatch } from '@/store/app/move-live-workout-group';
 import FullHeightScrollView from '@/components/layout/full-height-scroll-view';
 import { MsIconSrc } from '@/components/presentation/foundation/ms-icon-source';
 import { NumberPad } from '@/components/presentation/foundation/number-pad';
@@ -55,7 +56,7 @@ export function LiveWorkout({ session, updateSession, onFinish }: LiveWorkoutPro
   const { tokens } = useAppTheme();
   const { t } = useTranslate();
   const { push, dismissTo } = useRouter();
-  const dispatch = useDispatch();
+  const dispatch = useDispatch<LiveWorkoutMoveDispatch>();
   const { groups, focusedGroupIndex, focusedGroup, focusedExerciseIndex, isPinned, focusExercise } =
     useLiveWorkoutFocus(session);
   // An exercise added mid-workout is usually the one to do now, so the screen moves to it.
@@ -78,10 +79,13 @@ export function LiveWorkout({ session, updateSession, onFinish }: LiveWorkoutPro
     scrollRef.current?.scrollTo({ y: 0, animated: false });
   }, [focusedGroupIndex]);
 
+  const seen = new Map<string, number>();
   const tiles: ExerciseStripTile[] = session.recordedExercises.map((exercise, index) => {
     const progress = setProgressOf(exercise);
+    const occurrence = seen.get(exercise.blueprint.name) ?? 0;
+    seen.set(exercise.blueprint.name, occurrence + 1);
     return {
-      key: `${index}-${exercise.blueprint.name}`,
+      key: JSON.stringify([exercise.blueprint.name, occurrence]),
       label: exerciseLabelOf(groups, index),
       name: exercise.blueprint.name,
       done: progress.done,
@@ -146,7 +150,15 @@ export function LiveWorkout({ session, updateSession, onFinish }: LiveWorkoutPro
         restSlot={<LiveRestPill session={session} />}
         restProgressSlot={<LiveRestProgressLine session={session} />}
       />
-      <ExerciseStrip tiles={tiles} onAddExercise={addExercise} />
+      <ExerciseStrip
+        groups={groups.map((group) => ({
+          key: JSON.stringify(group.indices.map((index) => tiles[index]!.key)),
+          tiles: group.indices.map((index) => tiles[index]!),
+        }))}
+        onAddExercise={addExercise}
+        onReorderStart={entry.close}
+        onMove={(from, to) => dispatch(moveLiveWorkoutGroup(session.id, from, to))}
+      />
       <FullHeightScrollView
         scrollRef={scrollRef}
         scrollStyle={{ backgroundColor: tokens.bg }}
