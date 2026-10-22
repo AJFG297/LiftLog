@@ -1,3 +1,4 @@
+import { liveExerciseKey } from '@/models/session-models/live-exercise-key';
 import { ExerciseDescriptor } from '@/models/exercise-models';
 import type { SetDrafts } from '@/models/session-models/set-entry';
 import { createAction, createSlice, PayloadAction, UnknownAction } from '@reduxjs/toolkit';
@@ -73,6 +74,19 @@ const appSlice = createSlice({
       state.liveWorkoutFocus = action.payload;
     },
 
+    remapLiveWorkoutDrafts(state, action: PayloadAction<{ sessionId: string; names: string[]; order: number[] }>) {
+      const { sessionId, names, order } = action.payload;
+      if (state.liveWorkoutDrafts?.sessionId !== sessionId) return;
+      const previous = state.liveWorkoutDrafts.exercises;
+      state.liveWorkoutDrafts.exercises = Object.fromEntries(
+        order.flatMap((oldIndex, newIndex) => {
+          const name = names[oldIndex]!;
+          const drafts = previous[liveExerciseKey(oldIndex, name)];
+          return drafts ? [[liveExerciseKey(newIndex, name), drafts]] : [];
+        }),
+      );
+    },
+
     setLiveWorkoutDrafts(state, action: PayloadAction<{ sessionId: string; exerciseKey: string; drafts: SetDrafts }>) {
       const { sessionId, exerciseKey, drafts } = action.payload;
       const exercises = state.liveWorkoutDrafts?.sessionId === sessionId ? state.liveWorkoutDrafts.exercises : {};
@@ -114,6 +128,7 @@ export const {
   clearExerciseSearchResult,
   setLiveWorkoutFocus,
   setLiveWorkoutDrafts,
+  remapLiveWorkoutDrafts,
 } = appSlice.actions;
 
 export default appSlice.reducer;

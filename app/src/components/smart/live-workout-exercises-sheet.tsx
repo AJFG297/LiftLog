@@ -1,3 +1,4 @@
+import { moveLiveWorkoutGroup, type LiveWorkoutMoveDispatch } from '@/store/app/move-live-workout-group';
 import WeightDisplay from '@/components/presentation/foundation/editors/weight-display';
 import { ListRow } from '@/components/presentation/foundation/list-row';
 import { MsIconSrc } from '@/components/presentation/foundation/ms-icon-source';
@@ -23,9 +24,7 @@ import {
   ExerciseGroup,
   exerciseLabelOf,
   exerciseStatusOf,
-  groupMoveOrder,
   setProgressOf,
-  withGroupMoved,
 } from '@/models/session-models/exercise-groups';
 import { useAppSelector } from '@/store';
 import { setLiveWorkoutFocus } from '@/store/app';
@@ -67,7 +66,7 @@ function SheetContent({ session }: { session: Session }) {
   const { tokens } = useAppTheme();
   const { t } = useTranslate();
   const { back, push } = useRouter();
-  const dispatch = useDispatch();
+  const dispatch = useDispatch<LiveWorkoutMoveDispatch>();
   const insets = useSafeAreaInsets();
   const showBodyweight = useAppSelector((x) => x.settings.showBodyweight);
   const addExercise = useAddExercise(session.id);
@@ -98,14 +97,7 @@ function SheetContent({ session }: { session: Session }) {
     back();
   };
 
-  const move = (from: number, to: number) => {
-    const order = groupMoveOrder(groups, from, to);
-    updateSession((s) => withGroupMoved(s, from, to));
-    // The page on screen follows its exercise to wherever it moved.
-    if (focusedExerciseIndex !== undefined) {
-      dispatch(setLiveWorkoutFocus({ sessionId: session.id, exerciseIndex: order.indexOf(focusedExerciseIndex) }));
-    }
-  };
+  const move = (from: number, to: number) => dispatch(moveLiveWorkoutGroup(session.id, from, to));
 
   // The flag lives on the first of the pair, so the superset is made with the exercise after this one;
   // on the last exercise, with the one before it.
