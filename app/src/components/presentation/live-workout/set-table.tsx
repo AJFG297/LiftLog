@@ -43,6 +43,7 @@ export interface SetTableRow {
   /** Undefined for a movement that tracks no load. */
   weight: SetTableCell | undefined;
   reps: SetTableCell;
+  partialReps?: SetTableCell;
   /** "@9", shown on the reps. */
   rpe: string | undefined;
   logged: boolean;
@@ -71,6 +72,8 @@ export function SetTable(props: SetTableProps) {
   // Rows are keyed by position, so a delete or a set moving between the warm-ups and the working list
   // gives a row another set. Any change to the list of keys snaps every row shut.
   const rowKeys = props.rows.map((row) => row.key).join(',');
+  const hasPartials = props.rows.some((row) => row.partialReps);
+  const repsWidth = hasPartials ? 2 * MIN_TOUCH_TARGET + COLUMN_GAP : COLUMN.reps;
   return (
     <View style={{ gap: spacing[3] }}>
       <View style={{ gap: spacing[1] }}>
@@ -82,13 +85,15 @@ export function SetTable(props: SetTableProps) {
           <HeaderText width={COLUMN.badge} align="center">
             {t('live_workout.set_table.set.label')}
           </HeaderText>
-          <HeaderText flex>{t('live_workout.set_table.previous.label')}</HeaderText>
+          <HeaderText flex>
+            {t(hasPartials ? 'live_workout.set_table.previous_short.label' : 'live_workout.set_table.previous.label')}
+          </HeaderText>
           {props.showsWeight ? (
             <HeaderText width={COLUMN.weight} align="center">
               {props.weightHeader}
             </HeaderText>
           ) : null}
-          <HeaderText width={COLUMN.reps} align="center">
+          <HeaderText width={repsWidth} align="center">
             {t('live_workout.set_table.reps.label')}
           </HeaderText>
           <View style={{ width: COLUMN.check }} />
@@ -103,9 +108,13 @@ export function SetTable(props: SetTableProps) {
           >
             <SetTableRowView
               row={row}
+              repsWidth={repsWidth}
+              showsPartials={hasPartials}
               showsWeight={props.showsWeight}
               outlined={row.isNext}
-              rowRef={row.weight?.editing || row.reps.editing ? props.editingRowRef : undefined}
+              rowRef={
+                row.weight?.editing || row.reps.editing || row.partialReps?.editing ? props.editingRowRef : undefined
+              }
             />
           </SwipeToDelete>
         ))}
@@ -159,6 +168,8 @@ function HeaderText(props: { children: string; width?: number; flex?: boolean; a
 
 function SetTableRowView(props: {
   row: SetTableRow;
+  repsWidth: number;
+  showsPartials: boolean;
   showsWeight: boolean;
   outlined: boolean;
   rowRef: Ref<View> | undefined;
@@ -205,9 +216,9 @@ function SetTableRowView(props: {
       <SurfaceText
         numeric
         font="text-sm"
-        numberOfLines={1}
+        numberOfLines={props.showsPartials ? 2 : 1}
         adjustsFontSizeToFit
-        style={{ flex: 1, color: tokens.muted }}
+        style={{ flex: 1, minWidth: 0, color: tokens.muted }}
       >
         {row.previous}
       </SurfaceText>
@@ -222,14 +233,27 @@ function SetTableRowView(props: {
       ) : props.showsWeight ? (
         <View style={{ width: COLUMN.weight }} />
       ) : null}
-      <EntryCell
-        testID="set-reps"
-        cell={row.reps}
-        width={COLUMN.reps}
-        logged={row.logged}
-        outlined={props.outlined}
-        rpe={row.rpe}
-      />
+      <View style={{ flexDirection: 'row', gap: COLUMN_GAP, width: props.repsWidth }}>
+        <EntryCell
+          testID="set-reps"
+          cell={row.reps}
+          width={row.partialReps ? MIN_TOUCH_TARGET : props.repsWidth}
+          logged={row.logged}
+          outlined={props.outlined}
+          rpe={row.rpe}
+        />
+        {row.partialReps ? (
+          <EntryCell
+            testID="set-partial-reps"
+            cell={row.partialReps}
+            width={MIN_TOUCH_TARGET}
+            logged={row.logged}
+            outlined={props.outlined}
+            suffix="P"
+            prefix="+"
+          />
+        ) : null}
+      </View>
       <CheckButton logged={row.logged} accessibilityLabel={row.checkAccessibilityLabel} onPress={row.onToggle} />
     </View>
   );
@@ -242,6 +266,8 @@ function EntryCell(props: {
   logged: boolean;
   outlined: boolean;
   rpe?: string;
+  prefix?: string;
+  suffix?: string;
 }) {
   const { tokens } = useAppTheme();
   const { cell } = props;
@@ -276,13 +302,15 @@ function EntryCell(props: {
         adjustsFontSizeToFit
         maxFontSizeMultiplier={1.4}
         style={{
-          ...font['text-lg'],
+          ...font[props.suffix && !cell.editing ? 'text-sm' : 'text-lg'],
           flexShrink: 1,
           color: cell.entered ? tokens.ink : tokens.placeholder,
           fontWeight: cell.entered ? '600' : '500',
         }}
       >
+        {cell.editing ? undefined : props.prefix}
         {cell.text}
+        {cell.editing ? undefined : props.suffix}
       </SurfaceText>
       {cell.caret === 'after' ? <Caret /> : null}
       {props.rpe ? <RpeBadge text={props.rpe} /> : null}

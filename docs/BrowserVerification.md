@@ -12,6 +12,8 @@ launch, doctor, drive, evidence, and cleanup. Codex discovers the same skill thr
 
 From `app/`, install dependencies with `npm ci` and Chromium with `npm run verify:browser:install`.
 On Linux use `npx playwright install --with-deps chromium` to install the browser's system dependencies.
+If Chromium is already installed, set `LIFTLOG_BROWSER_EXECUTABLE` to its absolute path. This skips the bundled browser download. The run manifest records the browser version and executable.
+
 Then run:
 
 ```bash
@@ -32,15 +34,16 @@ manual drives default to Regular.
 
 ## What the prototype proves
 
-| Scenario    | User action                                             | Observable result                                                                                                          |
-| ----------- | ------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| Workout     | Type 82.5 kg and 7 reps on the real NumberPad, then log | SetTable shows the logged set and SQLite stores the numbers and completion time                                            |
-| Persistence | Reload the page and restart the server                  | The logged set returns from the same disk database                                                                         |
-| Undo        | Press Undo Set 1 and reload                             | Completion and recorded reps are cleared; weight remains 82.5 kg                                                           |
-| Sets        | Press Add set and reload                                | A third working set is visible and persisted                                                                               |
-| Viewport    | Switch sizes with a partial number and unlogged reps | The iframe changes its actual layout viewport, retains editing and appearance, makes no workout write, and leaves SQLite rows unchanged |
-| Overflow    | Add sets until there are 16 and open the last weight field | The workout area scrolls, the active field remains visible, and the keypad stays within the selected viewport |
-| Appearance  | Select light, dark, and blue accent                     | Selected controls and computed colors change; screenshots include the shared keypad and table; workout rows stay unchanged |
+| Scenario    | User action                                                | Observable result                                                                                                                       |
+| ----------- | ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| Workout     | Type 82.5 kg and 7 reps on the real NumberPad, then log    | SetTable shows the logged set and SQLite stores the numbers and completion time                                                         |
+| Persistence | Reload the page and restart the server                     | The logged set returns from the same disk database                                                                                      |
+| Undo        | Press Undo Set 1 and reload                                | Completion and recorded reps are cleared; weight remains 82.5 kg                                                                        |
+| Sets        | Press Add set and reload                                   | A third working set is visible and persisted                                                                                            |
+| Viewport    | Switch sizes with a partial number and unlogged reps       | The iframe changes its actual layout viewport, retains editing and appearance, makes no workout write, and leaves SQLite rows unchanged |
+| Overflow    | Add sets until there are 16 and open the last weight field | The workout area scrolls, the active field remains visible, and the keypad stays within the selected viewport                           |
+| Partials    | Use P to enter, edit, clear, undo, and relog partial reps  | Full and partial counts stay separate through SQLite, reload, and server restart                                                        |
+| Appearance  | Select light, dark, and blue accent                        | Selected controls and computed colors change; screenshots include the shared keypad and table; workout rows stay unchanged              |
 
 It imports production `SetTable`, `NumberPad`, `set-entry`, domain models, `storedSessionsReducer`,
 `AppThemeProvider`, `WorkoutRepository`, and Drizzle migrations. Browser actions drive the controls.

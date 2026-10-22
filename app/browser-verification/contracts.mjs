@@ -3,7 +3,7 @@ import Ajv from 'ajv';
 /** @typedef {{runId: string, runDirectory: string, checkout: string, pid?: number, url?: string}} PendingState */
 /** @typedef {PendingState & {pid: number, url: string}} ActiveState */
 /** @typedef {{runId: string, checkout: string, pid: number, url: string, source: string, databasePath: string}} Identity */
-/** @typedef {{position: number, reps: number|null, weight_value: string, weight_unit: string, completed_at: string|null}} WeightedRow */
+/** @typedef {{position: number, reps: number|null, partial_reps: number|null, weight_value: string, weight_unit: string, completed_at: string|null}} WeightedRow */
 /** @typedef {{databasePath: string, query: {weightedSets: string, activeWorkout: string}, weightedSets: WeightedRow[], activeWorkout: object|null}} SqlEvidence */
 
 const validator = new Ajv();
@@ -60,11 +60,12 @@ const evidence = validator.compile({
       type: 'array',
       items: {
         type: 'object',
-        required: ['position', 'reps', 'weight_value', 'weight_unit', 'completed_at'],
+        required: ['position', 'reps', 'partial_reps', 'weight_value', 'weight_unit', 'completed_at'],
         additionalProperties: false,
         properties: {
           position: { type: 'integer' },
           reps: { type: ['integer', 'null'] },
+          partial_reps: { type: ['integer', 'null'] },
           weight_value: { type: 'string' },
           weight_unit: { type: 'string' },
           completed_at: { type: ['string', 'null'] },

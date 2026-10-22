@@ -264,7 +264,7 @@ describe('real migrations', () => {
       const current = makeSession([blueprint]).withExercise(0, makeRecordedExercise(blueprint, [5, undefined]));
       const v7 = { ...current.toJSON(), version: 7 } as never;
       const result = sessionMigrations.migrate(v7);
-      expect(result.version).toBe(10);
+      expect(result.version).toBe(11);
       expect(Session.fromJSON(result).equals(current)).toBe(true);
       expect(JSON.stringify(result)).not.toContain('"rpe"');
     });
@@ -296,7 +296,7 @@ describe('real migrations', () => {
 
       const result = sessionMigrations.migrate(v8);
 
-      expect(result.version).toBe(10);
+      expect(result.version).toBe(11);
       const recorded = result.recordedExercises[0];
       expect(recorded).toMatchObject({ warmupSets: [], blueprint: { warmupSets: [] } });
       expect(Session.fromJSON(result).equals(current)).toBe(true);
@@ -373,7 +373,7 @@ describe('real migrations', () => {
 
       const result = sessionMigrations.migrate(v9);
 
-      expect(result.version).toBe(10);
+      expect(result.version).toBe(11);
       expect(result.recordedExercises[0]).toMatchObject({
         potentialSets: [{ kind: 'working' }, { kind: 'working' }, { kind: 'working' }],
         warmupSets: [{ kind: 'warmup' }, { kind: 'warmup' }],
@@ -412,7 +412,7 @@ describe('real migrations', () => {
   describe('sessionMigrations (started with an embedded blueprint, then moved away from it)', () => {
     it('strips the exercises off the stored blueprint', () => {
       const result = sessionMigrations.migrate(initialSession());
-      expect(result.version).toBe(10);
+      expect(result.version).toBe(11);
       expect(result.blueprint).toEqual({ name: 'Push Day', notes: 'session notes' });
       expect('exercises' in result.blueprint).toBe(false);
     });
@@ -489,7 +489,7 @@ describe('real migrations', () => {
     it('sessionUserEvent brings its embedded session to latest', () => {
       const result = sessionUserEventMigrations.migrate(initialSessionUserEvent());
       expect(result.version).toBe(3);
-      expect(result.session.version).toBe(10);
+      expect(result.session.version).toBe(11);
       expect(result.session.blueprint).toEqual({ name: 'Push Day', notes: 'session notes' });
     });
 
@@ -497,7 +497,7 @@ describe('real migrations', () => {
       const shared: InitialSharedSessionJSON = { type: 'SharedSession', session: initialSession() };
       const result = sharedSessionMigrations.migrate(shared);
       expect(result.version).toBe(3);
-      expect(result.session.version).toBe(10);
+      expect(result.session.version).toBe(11);
     });
 
     it('sharedProgramBlueprint brings its embedded program to latest', () => {
@@ -548,7 +548,7 @@ describe('real migrations', () => {
 
   describe('untrusted / future-version data', () => {
     it('rejects a session from a newer app version', () => {
-      expect(() => sessionMigrations.migrate({ ...initialSession(), version: 11 } as never)).toThrow();
+      expect(() => sessionMigrations.migrate({ ...initialSession(), version: 12 } as never)).toThrow();
     });
 
     it('rejects a feed event whose own version is from the future', () => {
@@ -557,7 +557,7 @@ describe('real migrations', () => {
 
     it('rejects a feed event whose embedded session is from the future', () => {
       const event = initialSessionUserEvent();
-      const poisoned = { ...event, session: { ...event.session, version: 11 } };
+      const poisoned = { ...event, session: { ...event.session, version: 12 } };
       expect(() => sessionUserEventMigrations.migrate(poisoned as never)).toThrow();
     });
   });
@@ -567,7 +567,7 @@ describe('real migrations', () => {
       const result = userEventMigrations.migrate(initialSessionUserEvent());
       expect(result.type).toBe('SessionUserEvent');
       if (result.type === 'SessionUserEvent') {
-        expect(result.session.version).toBe(10);
+        expect(result.session.version).toBe(11);
       }
     });
 
@@ -597,7 +597,7 @@ describe('real migrations', () => {
 
     it('migrates a session with no recorded exercises', () => {
       const result = sessionMigrations.migrate({ ...initialSession(), recordedExercises: [] });
-      expect(result.version).toBe(10);
+      expect(result.version).toBe(11);
       expect(result.recordedExercises).toEqual([]);
       expect(result.blueprint).toEqual({ name: 'Push Day', notes: 'session notes' });
     });

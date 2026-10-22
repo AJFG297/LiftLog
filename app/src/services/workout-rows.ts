@@ -171,7 +171,7 @@ export function fromWorkoutRows(rows: StoredWorkoutRows): Session {
   } as AnyVersionSessionBlueprintJSON);
 
   const json: SessionJSON = {
-    version: 10,
+    version: 11,
     id: workout.id,
     blueprint: { name: workout.name, notes: workout.notes },
     date: workout.date,
@@ -264,6 +264,7 @@ function slotRow(
     targetRepsMax: setJson.target.reps.max,
     weightValue: setJson.weight.value,
     weightUnit: setJson.weight.unit,
+    partialReps: setJson.partialReps ?? null,
     reps: setJson.set?.repsCompleted ?? null,
     completedAt: setJson.set?.completionDateTime ?? null,
   };
@@ -275,6 +276,7 @@ function slotFromRow(
   return {
     target: { reps: { min: row.targetRepsMin, max: row.targetRepsMax } },
     weight: { value: row.weightValue, unit: row.weightUnit },
+    partialReps: row.partialReps ?? undefined,
     set:
       row.reps !== null && row.completedAt !== null
         ? { repsCompleted: row.reps, completionDateTime: row.completedAt }

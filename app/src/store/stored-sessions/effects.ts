@@ -107,8 +107,8 @@ export function applyStoredSessionsEffects(addEffect: AddEffectFn) {
     if (!workout) {
       return;
     }
-    if (workout.withoutUnloggedRpe() !== workout) {
-      dispatch(updateStoredSession({ sessionId: workout.id, update: (s) => s.withoutUnloggedRpe() }));
+    if (workout.withoutUnloggedSetMetadata() !== workout) {
+      dispatch(updateStoredSession({ sessionId: workout.id, update: (s) => s.withoutUnloggedSetMetadata() }));
     }
 
     if (state.storedSessions.activeSessionId === workout.id) {

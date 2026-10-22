@@ -17,6 +17,7 @@ import { MovementKey } from '@/models/blueprint-models';
 import { SharedSession } from '@/models/feed-models';
 import { RecordedWeightedExercise } from '@/models/session-models';
 import { formatRpe } from '@/models/session-models/rpe';
+import { formatCompletedReps } from '@/models/session-models/partial-reps';
 import { shortFormatWeightUnit, Weight, WeightUnit } from '@/models/weight';
 import { BestSetChange, bestSetComparisons, minutesOf, setCounts } from '@/models/workout-summary';
 import { DetailSetRow, routineFromSession, sessionSetRows, uniqueRoutineName } from '@/models/workout-detail';
@@ -314,6 +315,7 @@ function rowCopy(row: DetailSetRow, unit: WeightUnit, t: Translate): SetRowCopy 
       weight: `${weight} ${shortFormatWeightUnit(unit)}`,
       reps: row.reps,
     }),
+    row.partialReps ? t('workout_detail.partial_reps.spoken', { reps: row.partialReps }) : undefined,
     row.rpe === undefined ? undefined : t('workout_detail.set_row_rpe.spoken', { rpe: row.rpe }),
     oneRepMax ? t('workout_detail.set_row_e1rm.spoken', { value: oneRepMax }) : undefined,
     row.pr ? t('workout_detail.set_row_pr.spoken') : undefined,
@@ -325,7 +327,7 @@ function rowCopy(row: DetailSetRow, unit: WeightUnit, t: Translate): SetRowCopy 
     label: row.label,
     labelText: text,
     weight,
-    reps: String(row.reps),
+    reps: formatCompletedReps(row.reps, row.partialReps),
     rpe: row.rpe === undefined ? undefined : formatRpe(row.rpe),
     oneRepMax: oneRepMax ?? '–',
     pr: row.pr,

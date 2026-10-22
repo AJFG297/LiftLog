@@ -50,3 +50,12 @@ checks their results:
 - Button `Log set` belongs to the pad. Button `Log Set 1` belongs to the row. Keep their exact names distinct.
 - A restart may change the port. The driver follows the new URL while retaining the same database.
 - RPE, set type changes, deletion, and the native live-workout navigation are outside this recipe.
+
+## Partial reps
+
+Run `npm run verify:browser -- partials` for the optional P key and partial-count field.
+The scenario enters 10 full reps and 2 partials, checks both counts after reload and
+server restart, undoes and relogs the set, edits full reps without changing partials,
+clears partials with zero, then records a partial-only set as `0+3P`. It captures light,
+dark, and blue-accent screenshots at both phone sizes. SQLite evidence includes
+`partial_reps`. The native workout route and history screens still need Android checks.

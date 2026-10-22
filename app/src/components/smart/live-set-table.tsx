@@ -21,6 +21,8 @@ import BigNumber from 'bignumber.js';
 import { type Ref } from 'react';
 import { View } from 'react-native';
 
+import { formatCompletedReps } from '@/models/session-models/partial-reps';
+
 const NO_PREVIOUS = '-';
 
 interface LiveSetTableProps {
@@ -114,6 +116,16 @@ export function LiveSetTable(props: LiveSetTableProps) {
           ? repsLabel
           : `${repsLabel}, ${t('live_workout.set_table.rpe.label', { rpe: localeFormatBigNumber(new BigNumber(rpe)) })}`,
       ),
+      partialReps:
+        row.slot.partialReps || (editing?.field === 'partialReps' && samePosition(editing.position, row.position))
+          ? cellFor(
+              row,
+              'partialReps',
+              String(row.slot.partialReps ?? 0),
+              !!row.slot.partialReps,
+              t('live_workout.set_table.partial_reps.label', { set, reps: row.slot.partialReps ?? 0 }),
+            )
+          : undefined,
       rpe: rpe === undefined ? undefined : formatRpe(rpe),
       logged: row.logged,
       // The outline gives way to the edited field's while anything is being typed.
@@ -175,7 +187,7 @@ function previousText(slot: PotentialSet | undefined, resistance: Resistance, un
   if (!slot?.set) {
     return NO_PREVIOUS;
   }
-  const reps = slot.set.repsCompleted;
+  const reps = formatCompletedReps(slot.set.repsCompleted, slot.loggedPartialReps);
   if (resistance === 'none') {
     return String(reps);
   }

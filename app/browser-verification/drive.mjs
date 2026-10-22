@@ -7,10 +7,11 @@ import registry from './viewports.json' with { type: 'json' };
 
 /** @param {{state: import('./contracts.mjs').ActiveState, restart: () => Promise<import('./contracts.mjs').ActiveState>, scenario: string, preset: typeof registry.default}} options */
 export async function drive({ state, restart, scenario, preset }) {
-  if (!['workout', 'themes', 'sets', 'all'].includes(scenario)) throw new Error(`Unknown scenario: ${scenario}`);
+  if (!['workout', 'themes', 'sets', 'partials', 'all'].includes(scenario))
+    throw new Error(`Unknown scenario: ${scenario}`);
   const evidence = resolve(state.runDirectory, `drive-${preset.id}-${Date.now()}`);
   await mkdir(evidence);
-  const browser = await chromium.launch({ headless: true });
+  const browser = await chromium.launch({ headless: true, executablePath: process.env.LIFTLOG_BROWSER_EXECUTABLE });
   const context = await browser.newContext({
     viewport: {
       width: 800,
@@ -37,6 +38,10 @@ export async function drive({ state, restart, scenario, preset }) {
   const errors = [];
   const manifest = {
     scenario,
+    browser: {
+      version: browser.version(),
+      executable: process.env.LIFTLOG_BROWSER_EXECUTABLE ?? chromium.executablePath(),
+    },
     viewport: preset,
     checkout: state.checkout,
     source: parseIdentity(await (await fetch(`${state.url}/api/identity`)).json()).source,
@@ -199,6 +204,82 @@ export async function drive({ state, restart, scenario, preset }) {
         weight_value: '82.5',
       });
       await shot('undone');
+    }
+    if (scenario === 'partials' || scenario === 'all') {
+      await press(/^Weight for Set 1:/);
+      for (const key of ['8', '2', 'Decimal point', '5']) await press(key);
+      await press('Next field');
+      await press('1');
+      await press('0');
+      await shot('full-reps');
+      await press('Edit partial reps');
+      await expect(app.getByRole('button', { name: 'Edit partial reps', exact: true })).toHaveAttribute(
+        'aria-selected',
+        'true',
+      );
+      await shot('partials-open');
+      await press('2');
+      await press('Edit partial reps');
+      await expect(app.getByRole('button', { name: /^Reps for Set 1: 10$/ })).toHaveText('10');
+      await expect(app.getByRole('button', { name: /^Partial reps for Set 1: 2$/ })).toContainText('2');
+      await press('Edit partial reps');
+      for (const mode of ['Light', 'Dark']) {
+        await press(mode);
+        await shot(`partials-${mode.toLowerCase()}`);
+      }
+      await press('Blue accent');
+      await shot('partials-dark-blue');
+      await press('Light');
+      await shot('partials-light-blue');
+      await press('Log set');
+      await saved();
+      const logged = await sql('partials-logged');
+      expect(logged.weightedSets[0]).toMatchObject({ reps: 10, partial_reps: 2, weight_value: '82.5' });
+      expect(logged.weightedSets[0].completed_at).toBeTruthy();
+      await page.reload();
+      await saved();
+      await expect(app.getByRole('button', { name: /^Partial reps for Set 1: 2$/ })).toBeVisible();
+      await shot('partials-reloaded');
+      await page.goto('about:blank');
+      state = await restart();
+      await page.goto(url());
+      await saved();
+      expect((await sql('partials-restarted')).weightedSets[0]).toMatchObject({ reps: 10, partial_reps: 2 });
+      await press('Undo Set 1');
+      await saved();
+      expect((await sql('partials-undone')).weightedSets[0]).toMatchObject({
+        reps: null,
+        partial_reps: 2,
+        completed_at: null,
+      });
+      await press('Log Set 1');
+      await saved();
+      expect((await sql('partials-relogged')).weightedSets[0]).toMatchObject({ reps: 10, partial_reps: 2 });
+      const beforeEdit = await sql('partials-before-edit');
+      await press(/^Reps for Set 1:/);
+      await press('8');
+      await press('Hide keypad');
+      await saved();
+      const edited = await sql('partials-full-edited');
+      expect(edited.weightedSets[0]).toMatchObject({
+        reps: 8,
+        partial_reps: 2,
+        completed_at: beforeEdit.weightedSets[0].completed_at,
+      });
+      await press(/^Partial reps for Set 1:/);
+      await press('0');
+      await press('Hide keypad');
+      await saved();
+      await expect(app.getByRole('button', { name: /^Partial reps for Set 1:/ })).toHaveCount(0);
+      expect((await sql('partials-cleared')).weightedSets[0]).toMatchObject({ reps: 8, partial_reps: null });
+      await press(/^Reps for Set 1:/);
+      await press('0');
+      await press('Edit partial reps');
+      await press('3');
+      await press('Log set');
+      await saved();
+      expect((await sql('partials-only')).weightedSets[0]).toMatchObject({ reps: 0, partial_reps: 3 });
+      await shot('partials-only');
     }
     if (scenario === 'themes' || scenario === 'all') {
       const before = await sql('before-themes');

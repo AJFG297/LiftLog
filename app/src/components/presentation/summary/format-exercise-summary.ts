@@ -7,6 +7,7 @@ import { formatTimeSpan } from '@/utils/format-time-span';
 import { localeFormatBigNumber } from '@/utils/locale-bignumber';
 import { formatRpe, Rpe } from '@/models/session-models/rpe';
 import { setLabels } from '@/models/session-models/set-kind';
+import { formatCompletedReps } from '@/models/session-models/partial-reps';
 
 /**
  * A text rendering of an exercise, for surfaces that summarise a session rather than let you work through it.
@@ -83,7 +84,7 @@ function filledRuns(
   return runsOf(
     exercise.potentialSets.flatMap((potentialSet, index) => {
       if (!potentialSet.set) return [];
-      const reps = potentialSet.set.repsCompleted.toString();
+      const reps = formatCompletedReps(potentialSet.set.repsCompleted, potentialSet.loggedPartialReps);
       return [
         {
           label: potentialSet.kind === 'working' ? reps : `${kindLabels[index]}\u00A0${reps}`,

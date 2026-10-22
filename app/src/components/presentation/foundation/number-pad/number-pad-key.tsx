@@ -9,6 +9,7 @@ export function NumberPadKey(props: {
   label: string;
   onPress: () => void;
   primary?: boolean;
+  selected?: boolean;
   testID?: string;
   children: ReactNode;
 }) {
@@ -18,6 +19,7 @@ export function NumberPadKey(props: {
       testID={props.testID}
       accessibilityRole="button"
       accessibilityLabel={props.label}
+      aria-selected={props.selected}
       onPress={props.onPress}
       style={({ pressed }) => ({
         flex: 1,
@@ -25,7 +27,7 @@ export function NumberPadKey(props: {
         borderRadius: rounding.roundedRectangleRadius,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: props.primary ? tokens.accent : tokens.keypadKey,
+        backgroundColor: props.primary || props.selected ? tokens.accent : tokens.keypadKey,
         opacity: pressed ? 0.7 : 1,
       })}
     >

@@ -22,15 +22,22 @@ actions to it.
   replaces the placeholder; backspace edits it.
 - `numberPadValue` is what logging the field would record: what was typed, or else the placeholder.
 
+## Partial reps
+
+While editing live workout reps, tap **P** in the number pad to edit a separate partial count to the
+right of full reps. Tap **P** again or tap the full-rep field to return to full reps. The check logs both
+counts. Enter 0 partials to clear the extra field when you leave it. A partial-only set uses 0 full reps.
+Partials stay with the set through edits and undo, but start empty on added sets and future workouts.
+
 ## Steps
 
 The ± step depends on the exercise's equipment (`models/equipment.ts`):
 
-| Equipment | kg | lb |
-| --- | --- | --- |
-| barbell | 2.5 | 5 |
-| dumbbell | 2 | 5 |
-| cable, machine | 2.5 | 5 |
+| Equipment      | kg  | lb  |
+| -------------- | --- | --- |
+| barbell        | 2.5 | 5   |
+| dumbbell       | 2   | 5   |
+| cable, machine | 2.5 | 5   |
 
 Anything else (kettlebells, bands, an e-z curl bar, a custom exercise with no equipment) uses the
 blueprint's weight increment and shows nothing in the accessory row. An e-z curl bar is plate-loaded, but

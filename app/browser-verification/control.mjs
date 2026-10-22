@@ -200,7 +200,7 @@ try {
     }
   } else if (command === 'help')
     console.log(
-      'control.mjs up | doctor | drive [workout|themes|sets|all] [regular|large] | restart | down | test [workout|themes|sets|all] [regular|large]',
+      'control.mjs up | doctor | drive [workout|themes|sets|partials|all] [regular|large] | restart | down | test [workout|themes|sets|partials|all] [regular|large]',
     );
   else throw new Error(`Unknown command: ${command}`);
 } catch (/** @type {unknown} */ error) {
