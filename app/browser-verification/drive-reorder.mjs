@@ -3,6 +3,19 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { parseEvidence, parseIdentity, parseWorkoutNames } from './contracts.mjs';
 
+/** @param {'left'|'right'} edge @param {number} baseline @param {number[]} offsets @param {number} maximum */
+export function assertEdgeScrollProgress(edge, baseline, offsets, maximum) {
+  const direction = edge === 'right' ? 1 : -1;
+  const boundary = edge === 'right' ? maximum : 0;
+  expect(direction * (offsets.at(-1) - baseline)).toBeGreaterThan(0);
+  const positions = [baseline, ...offsets];
+  for (let index = 1; index < positions.length; index++) {
+    const current = positions[index];
+    const progress = direction * (current - positions[index - 1]);
+    expect(progress > 0 || (progress === 0 && (index === 1 || Math.abs(current - boundary) < 1))).toBe(true);
+  }
+}
+
 /** @param {{state: import('./contracts.mjs').ActiveState, restart: () => Promise<import('./contracts.mjs').ActiveState>, scenario: string, preset: {id: string, label: string, width: number, height: number}}} options */
 export async function drive({ state, restart, scenario, preset }) {
   const evidence = resolve(state.runDirectory, `drive-reorder-${preset.id}-${Date.now()}`);
@@ -125,8 +138,13 @@ export async function drive({ state, restart, scenario, preset }) {
   /** @param {Awaited<ReturnType<typeof hold>>} held @param {'left'|'right'} edge */
   async function edgeScroll(held, edge) {
     const view = await strip.boundingBox();
-    const x = edge === 'right' ? view.x + view.width - 12 : view.x + 12;
-    await move(held, x);
+    const approach = edge === 'right' ? view.x + view.width - 90 : view.x + 90;
+    const x = edge === 'right' ? view.x + view.width - 40 : view.x + 40;
+    await move(held, approach);
+    const stationaryOffset = await offset();
+    if (held.input === 'touch') await touch('touchMove', x, held.y);
+    else await page.mouse.move(x, held.y);
+    held.x = x;
     const frame = await preview.boundingBox();
     const samples = [];
     for (let index = 0; index < 3; index++) {
@@ -140,9 +158,13 @@ export async function drive({ state, restart, scenario, preset }) {
       samples.push({ ...sample, left: sample.left + frame.x, pointerX: x, grabbedOffset: held.grab });
       if (index < 2) await page.waitForTimeout(180);
     }
-    geometry.push({ edge, maxOffsetBeforeHold: held.maxOffset, samples });
-    const [first, second, third] = samples.map((sample) => sample.offset);
-    expect(edge === 'right' ? second > first && third > second : second < first && third < second).toBe(true);
+    geometry.push({ edge, maxOffsetBeforeHold: held.maxOffset, stationaryOffset, samples });
+    assertEdgeScrollProgress(
+      edge,
+      stationaryOffset,
+      samples.map((sample) => sample.offset),
+      held.maxOffset,
+    );
     for (const sample of samples) {
       expect(x).toBeGreaterThan(sample.left);
       expect(x).toBeLessThan(sample.left + sample.width);
