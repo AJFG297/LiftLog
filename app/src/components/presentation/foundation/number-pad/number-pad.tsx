@@ -24,6 +24,7 @@ export interface NumberPadProps {
   onHide: () => void;
   /** Space kept clear under the keys. Defaults to the bottom safe-area inset. */
   bottomInset?: number;
+  partialReps?: { active: boolean; onToggle: () => void };
 }
 
 const DIGIT_ROWS: Digit[][] = [
@@ -76,6 +77,21 @@ export function NumberPad(props: NumberPadProps) {
               <NumberPadKey label={t('number_pad.decimal.button')} onPress={() => onAction({ type: 'decimal' })}>
                 <SurfaceText numeric font="text-2xl" style={{ color: tokens.ink }}>
                   {localeDecimalSeparator()}
+                </SurfaceText>
+              </NumberPadKey>
+            ) : props.partialReps ? (
+              <NumberPadKey
+                label={t('number_pad.partial_reps.button')}
+                selected={props.partialReps.active}
+                onPress={props.partialReps.onToggle}
+              >
+                <SurfaceText
+                  numeric
+                  font="text-lg"
+                  weight="600"
+                  style={{ color: props.partialReps.active ? tokens.onAccent : tokens.ink }}
+                >
+                  P
                 </SurfaceText>
               </NumberPadKey>
             ) : (

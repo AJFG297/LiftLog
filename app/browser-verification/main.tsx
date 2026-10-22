@@ -31,6 +31,7 @@ import {
   type SetField,
   withAddedSet,
   withSetRpe,
+  withSetLogged,
   withSetToggled,
   withTypedValue,
 } from '@/models/session-models/set-entry';
@@ -181,7 +182,7 @@ function WorkoutPrototype(props: { session: Session; saveState: SaveState }) {
       : undefined;
   const editingLabel =
     editing && editingRow
-      ? `${editing.field === 'weight' ? 'Weight' : 'Reps'} for Set ${editingRow.label}:`
+      ? `${editing.field === 'weight' ? 'Weight' : editing.field === 'partialReps' ? 'Partial reps' : 'Reps'} for Set ${editingRow.label}:`
       : undefined;
 
   useEffect(() => {
@@ -238,7 +239,11 @@ function WorkoutPrototype(props: { session: Session; saveState: SaveState }) {
       field:
         field === 'weight'
           ? { placeholder: row.weight.value.value, allowDecimal: true, step: 2.5 }
-          : { placeholder: row.reps.value, allowDecimal: false, step: 1 },
+          : {
+              placeholder: field === 'partialReps' ? (row.slot.partialReps ?? 0) : row.reps.value,
+              allowDecimal: false,
+              step: 1,
+            },
     });
   };
 
@@ -262,7 +267,8 @@ function WorkoutPrototype(props: { session: Session; saveState: SaveState }) {
       openField(editing.position, 'reps', committed);
       return;
     }
-    toggleSet(editing.position);
+    applyEntry(withSetLogged(withTypedBuffer(entry, editing), editing.position, OffsetDateTime.now()));
+    setEditing(undefined);
   };
 
   const setRpe = (rpe: Rpe | undefined) => {
@@ -302,6 +308,19 @@ function WorkoutPrototype(props: { session: Session; saveState: SaveState }) {
       previous: '-',
       weight,
       reps,
+      partialReps:
+        row.slot.partialReps || (editing?.field === 'partialReps' && samePosition(editing.position, row.position))
+          ? cellFor({
+              row,
+              field: 'partialReps',
+              text: String(row.slot.partialReps ?? 0),
+              entered: !!row.slot.partialReps,
+              editing,
+              typed: buffer.typed,
+              accessibilityLabel: `Partial reps for ${setLabel}: ${row.slot.partialReps ?? 0}`,
+              onPress: () => openField(row.position, 'partialReps'),
+            })
+          : undefined,
       rpe: row.slot.rpe === undefined ? undefined : formatRpe(row.slot.rpe),
       logged: row.logged,
       isNext: !editing && firstUnlogged !== undefined && samePosition(firstUnlogged, row.position),
@@ -318,7 +337,7 @@ function WorkoutPrototype(props: { session: Session; saveState: SaveState }) {
           bar: 20,
           plates: [25, 20, 15, 10, 5, 2.5, 1.25],
         })
-      : editing?.field === 'reps'
+      : editing
         ? { kind: 'rpe' as const, value: currentRow?.slot.rpe, onChange: setRpe }
         : undefined;
   const saveLabel =
@@ -404,6 +423,15 @@ function WorkoutPrototype(props: { session: Session; saveState: SaveState }) {
             onAction={sendToPad}
             unit={editing?.field === 'weight' ? 'kilograms' : undefined}
             accessory={padAccessory}
+            partialReps={
+              editing && editing.field !== 'weight'
+                ? {
+                    active: editing.field === 'partialReps',
+                    onToggle: () =>
+                      openField(editing.position, editing.field === 'partialReps' ? 'reps' : 'partialReps'),
+                  }
+                : undefined
+            }
             primary={editing?.field === 'weight' ? 'next' : 'log'}
             onPrimary={primaryAction}
             onHide={closePad}

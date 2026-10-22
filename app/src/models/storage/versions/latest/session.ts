@@ -9,7 +9,7 @@ import type {
 import type { WeightJSON } from '@/models/storage/versions/libs/weight';
 
 export interface SessionJSON {
-  version: 10;
+  version: 11;
   id: string;
   blueprint: { name: string; notes: string };
   recordedExercises: RecordedExerciseJSON[];
@@ -54,6 +54,12 @@ export interface RecordedWeightedExerciseJSON {
 }
 
 export interface PotentialSetJSON {
+  /**
+   * @asType integer
+   * @minimum 0
+   * @maximum 9999
+   */
+  partialReps?: number | undefined;
   /** The target this session is chasing for the set, seeded from the blueprint and then its own. */
   target: SetTargetJSON;
   /** Always `warmup` in `warmupSets`. */

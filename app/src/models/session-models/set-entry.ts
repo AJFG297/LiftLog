@@ -33,7 +33,7 @@ export interface SetEntryState {
   drafts: SetDrafts;
 }
 
-export type SetField = 'weight' | 'reps';
+export type SetField = 'weight' | 'reps' | 'partialReps';
 
 /** A field as the set table shows it. `entered` is the lifter's own value (typed or logged), not today's target. */
 export interface SetFieldValue<T> {
@@ -100,6 +100,19 @@ export function withTypedValue(
   const slot = state.exercise.slotAt(position);
   if (!slot) {
     return state;
+  }
+  if (field === 'partialReps') {
+    const count = Math.max(0, Math.min(9999, value.integerValue(BigNumber.ROUND_DOWN).toNumber()));
+    const update = (s: PotentialSet) => s.with({ partialReps: count || undefined });
+    return {
+      ...state,
+      exercise:
+        position.list === 'working'
+          ? state.exercise.withSet(position.index, update)
+          : state.exercise.with({
+              warmupSets: state.exercise.warmupSets.map((s, i) => (i === position.index ? update(s) : s)),
+            }),
+    };
   }
   if (field === 'reps') {
     const reps = value.integerValue(BigNumber.ROUND_DOWN).toNumber();

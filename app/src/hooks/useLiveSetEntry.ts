@@ -224,7 +224,11 @@ export function useLiveSetEntry(session: Session, updateSession: UpdateSession, 
             exercise.blueprint.weightIncrement,
           ),
         }
-      : { placeholder: row.reps.value, allowDecimal: false, step: 1 };
+      : {
+          placeholder: field === 'partialReps' ? (row.slot.partialReps ?? 0) : row.reps.value,
+          allowDecimal: false,
+          step: 1,
+        };
 
   const toggle = (exerciseIndex: number, position: SetPosition) => {
     const now = OffsetDateTime.now();
@@ -320,6 +324,14 @@ export function useLiveSetEntry(session: Session, updateSession: UpdateSession, 
       primary: isWeight ? 'next' : 'log',
       onPrimary: primary,
       onHide: close,
+      partialReps:
+        editing && !isWeight
+          ? {
+              active: editing.field === 'partialReps',
+              onToggle: () =>
+                open(editing.exerciseIndex, editing.position, editing.field === 'partialReps' ? 'reps' : 'partialReps'),
+            }
+          : undefined,
     };
   })();
 
