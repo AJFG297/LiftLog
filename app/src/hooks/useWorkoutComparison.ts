@@ -1,6 +1,8 @@
-import { useWorkoutQuery } from '@/hooks/useWorkoutQuery';
+import { listDep, useWorkoutQuery } from '@/hooks/useWorkoutQuery';
+import { liveRoutineIdsOf } from '@/models/routine-identity';
 import { Session } from '@/models/session-models';
 import { USUAL_DURATION_SAMPLE } from '@/models/workout-summary';
+import { useAppSelector } from '@/store';
 import { SessionRecord, sessionRecords } from '@/store/stats/personal-records';
 import { getSessionReferenceTime } from '@/store/stored-sessions';
 
@@ -21,19 +23,22 @@ export interface WorkoutComparison {
  */
 export function useWorkoutComparison(session: Session | undefined): WorkoutComparison | undefined {
   const referenceMs = session ? getSessionReferenceTime(session).toInstant().toEpochMilli() : undefined;
+  const liveRoutineIds = liveRoutineIdsOf(Object.values(useAppSelector((state) => state.program.savedPrograms)));
+  const routineId = session?.blueprint.id;
   return useWorkoutQuery(
     async (repository) => {
       if (!session) {
         return undefined;
       }
       const name = session.blueprint.name;
+      const match = { routineId, liveRoutineIds };
       const [[previous], usual, bests] = await Promise.all([
-        repository.latestNamed(name, 1, { before: session, includeUnstarted: true }),
-        repository.latestNamed(name, USUAL_DURATION_SAMPLE, { before: session }),
+        repository.latestNamed(name, 1, { before: session, includeUnstarted: true, ...match }),
+        repository.latestNamed(name, USUAL_DURATION_SAMPLE, { before: session, ...match }),
         repository.bestsBefore(session),
       ]);
       return { previous, usual, records: sessionRecords(session, bests) };
     },
-    [session?.id, session?.blueprint.name, referenceMs],
+    [session?.id, session?.blueprint.name, routineId, listDep(liveRoutineIds), referenceMs],
   );
 }

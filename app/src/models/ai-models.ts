@@ -224,7 +224,7 @@ function fillExercise(partial: DeepPartial<ExerciseBlueprintJSON> = {}): Exercis
 
 function fillSession(partial: DeepPartial<SessionBlueprintJSON> = {}): SessionBlueprintJSON {
   return {
-    version: 10,
+    version: 11,
     name: partial.name ?? emptySessionBlueprint.name,
     exercises: (partial.exercises ?? []).map(fillExercise),
     notes: partial.notes ?? emptySessionBlueprint.notes,

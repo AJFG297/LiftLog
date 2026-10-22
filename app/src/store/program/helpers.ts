@@ -1,5 +1,6 @@
 import { diffSessionBlueprints, PlanDiff } from '@/models/blueprint-diff';
 import { ProgramBlueprint } from '@/models/blueprint-models';
+import { findRoutineIndex } from '@/models/routine-identity';
 import { EmptySession, Session } from '@/models/session-models';
 import { routineChanges } from '@/models/routine-update';
 
@@ -19,13 +20,20 @@ export function getPlanDiff(program: ProgramBlueprint, session: Session, program
 }
 
 function planDiffFor(program: ProgramBlueprint, session: Session, programId: string): PlanDiff {
-  const sessionWithSameNameInPlan = program.sessions.find((x) => x.name === session.blueprint.name);
-  return sessionWithSameNameInPlan
+  const index = findRoutineIndex(program.sessions, session.blueprint);
+  const matched = index >= 0 ? program.sessions[index] : undefined;
+  // The workout still carries the name it was started under. Compare it with the routine as that
+  // name, so a rename is not a change to write back onto the routine.
+  const comparable =
+    matched?.id && matched.id === session.blueprint.id && matched.name !== session.blueprint.name
+      ? matched.withName(session.blueprint.name)
+      : matched;
+  return comparable
     ? {
         type: 'diff',
         programId,
-        diff: diffSessionBlueprints(sessionWithSameNameInPlan, session.blueprint),
-        sessionIndex: program.sessions.indexOf(sessionWithSameNameInPlan),
+        diff: diffSessionBlueprints(comparable, session.blueprint),
+        sessionIndex: index,
       }
     : {
         type: 'add',

@@ -1,4 +1,5 @@
 import { MovementKey, RepsTarget } from '@/models/blueprint-models';
+import { sameRoutine } from '@/models/routine-identity';
 import { RecordedCardioExercise, RecordedWeightedExercise, Session } from '@/models/session-models';
 import { setKindHas } from '@/models/session-models/set-kind';
 import { Weight } from '@/models/weight';
@@ -10,7 +11,7 @@ export type DurationComparison = { type: 'none' } | { type: 'same' } | { type: '
 
 /**
  * How long this workout took against the usual for its routine: the median length of the last five
- * earlier workouts with the same name. Whole minutes on both sides, so a few seconds either way reads
+ * earlier workouts of the same routine. Whole minutes on both sides, so a few seconds either way reads
  * as the same.
  */
 export function durationVsUsual(session: Session, history: readonly Session[]): DurationComparison {
@@ -20,7 +21,9 @@ export function durationVsUsual(session: Session, history: readonly Session[]): 
     return { type: 'none' };
   }
   const earlier = history
-    .filter((s) => s.id !== session.id && s.blueprint.name === session.blueprint.name)
+    .filter(
+      (s) => s.id !== session.id && sameRoutine(session.blueprint, { id: s.blueprint.id, name: s.blueprint.name }),
+    )
     .filter((s) => s.endTime?.isBefore(start) && minutesOf(s) !== undefined)
     .sort((a, b) => b.endTime!.compareTo(a.endTime!))
     .slice(0, USUAL_DURATION_SAMPLE)

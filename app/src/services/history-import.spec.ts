@@ -431,10 +431,13 @@ describe('HistoryImport', () => {
         data: { workouts: [restored], programs: { restored: restoredProgram }, exercises: {} },
       }),
     ).toEqual({ kind: 'complete', count: 1 });
-    expect((await f.repository.get('restored'))?.toJSON()).toEqual(restored.toJSON());
+    const saved = f.app.getState().program.savedPrograms.restored;
+    const got = await f.repository.get('restored');
+    expect(got?.equals(restored)).toBe(true);
+    expect(got?.blueprint.id).toBe(saved?.sessions[0]?.id);
     expect((await f.repository.active())?.id).toBe('current');
     expect(f.app.getState().storedSessions.activeSessionId).toBe('current');
-    expect(f.app.getState().program.savedPrograms.restored?.toJSON()).toEqual(restoredProgram.toJSON());
+    expect(saved?.equals(restoredProgram)).toBe(true);
     expect((await f.db.select().from(workoutsSchema)).map((row) => [row.id, row.active])).toEqual([
       ['current', true],
       ['restored', false],

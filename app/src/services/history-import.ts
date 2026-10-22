@@ -6,6 +6,7 @@ import type { ExerciseDescriptor } from '@/models/exercise-models';
 import { ExerciseResolver, logAmbiguousInDev } from '@/models/exercise-resolver';
 import { applyHistoryImport, reconcileHistoryMerge } from '@/store/history-import-actions';
 import { loadBuiltInExerciseNames } from '@/services/exercise-catalog';
+import { linkRoutineIds } from '@/services/data-migrations/link-routine-ids';
 import { mergeExerciseNames, repointProgram, repointSession } from '@/services/data-migrations/merge-exercise-names';
 import { setLatestExercisesFor } from '@/store/stored-sessions';
 import type { ProgramWriter } from '@/services/program-writer';
@@ -148,6 +149,11 @@ export class HistoryImport {
           await flushPrograms();
           await flushDescriptors();
           durableStages.push(progress.stage);
+          // The device may already have run LINK_ROUTINE_IDS, so a restored backup is not stamped on
+          // the next launch. Stamp it here, after the programs have been written with their ids.
+          if (request.kind === 'backup' || workouts.length) {
+            await linkRoutineIds(services.db);
+          }
           progress.stage = 'cache';
           const snapshot = store.getState().storedSessions.latestExercises;
           const latest = await services.workoutRepository.latestPerLineage();
