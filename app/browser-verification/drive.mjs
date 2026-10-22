@@ -238,7 +238,11 @@ export async function drive({ state, restart, scenario, preset }) {
       expect(logged.weightedSets[0].completed_at).toBeTruthy();
       await page.reload();
       await saved();
-      await expect(app.getByRole('button', { name: /^Partial reps for Set 1: 2$/ })).toBeVisible();
+      await expect(app.getByTestId('set-reps').first()).toHaveText('10+2P');
+      await expect(app.getByTestId('set-partial-reps')).toHaveCount(0);
+      await press('Dark');
+      await shot('partials-reloaded-dark');
+      await press('Light');
       await shot('partials-reloaded');
       await page.goto('about:blank');
       state = await restart();
@@ -266,7 +270,10 @@ export async function drive({ state, restart, scenario, preset }) {
         partial_reps: 2,
         completed_at: beforeEdit.weightedSets[0].completed_at,
       });
-      await press(/^Partial reps for Set 1:/);
+      await expect(app.getByTestId('set-reps').first()).toHaveText('8+2P');
+      await press(/^Reps for Set 1:/);
+      await expect(app.getByRole('button', { name: /^Partial reps for Set 1:/ })).toBeVisible();
+      await press('Edit partial reps');
       await press('0');
       await press('Hide keypad');
       await saved();

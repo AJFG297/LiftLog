@@ -27,6 +27,7 @@ actions to it.
 While editing live workout reps, tap **P** in the number pad to edit a separate partial count to the
 right of full reps. Tap **P** again or tap the full-rep field to return to full reps. The check logs both
 counts. Enter 0 partials to clear the extra field when you leave it. A partial-only set uses 0 full reps.
+Logged counts read as one compact value, such as `10+2P`. Tap it to reopen the separate fields.
 Partials stay with the set through edits and undo, but start empty on added sets and future workouts.
 
 ## Steps

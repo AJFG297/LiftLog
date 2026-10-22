@@ -55,7 +55,8 @@ checks their results:
 
 Run `npm run verify:browser -- partials` for the optional P key and partial-count field.
 The scenario enters 10 full reps and 2 partials, checks both counts after reload and
-server restart, undoes and relogs the set, edits full reps without changing partials,
+server restart, verifies the compact `10+2P` logged count, undoes and relogs the set,
+reopens separate fields to edit full reps without changing partials,
 clears partials with zero, then records a partial-only set as `0+3P`. It captures light,
 dark, and blue-accent screenshots at both phone sizes. SQLite evidence includes
 `partial_reps`. The native workout route and history screens still need Android checks.

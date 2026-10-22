@@ -176,6 +176,7 @@ function SetTableRowView(props: {
 }) {
   const { tokens } = useAppTheme();
   const { row } = props;
+  const compactReps = row.logged && !row.reps.editing && !row.partialReps?.editing ? row.partialReps : undefined;
   return (
     <View
       ref={props.rowRef}
@@ -236,13 +237,21 @@ function SetTableRowView(props: {
       <View style={{ flexDirection: 'row', gap: COLUMN_GAP, width: props.repsWidth }}>
         <EntryCell
           testID="set-reps"
-          cell={row.reps}
-          width={row.partialReps ? MIN_TOUCH_TARGET : props.repsWidth}
+          cell={
+            compactReps
+              ? {
+                  ...row.reps,
+                  text: `${row.reps.text}+${compactReps.text}P`,
+                  accessibilityLabel: `${row.reps.accessibilityLabel}, ${compactReps.accessibilityLabel}`,
+                }
+              : row.reps
+          }
+          width={row.partialReps && !compactReps ? MIN_TOUCH_TARGET : props.repsWidth}
           logged={row.logged}
           outlined={props.outlined}
           rpe={row.rpe}
         />
-        {row.partialReps ? (
+        {row.partialReps && !compactReps ? (
           <EntryCell
             testID="set-partial-reps"
             cell={row.partialReps}
