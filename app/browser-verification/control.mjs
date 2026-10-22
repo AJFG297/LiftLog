@@ -187,20 +187,25 @@ try {
     if (presetId !== undefined && !selected) throw new Error(`Unknown viewport: ${presetId}`);
     const owned = command === 'test';
     const targets = selected ? [selected] : owned ? presets : [registry.default];
-    const { drive } = await import('./drive.mjs');
-    for (const preset of targets) {
-      let state;
-      try {
-        state = owned ? await up() : parseActiveState(await readState());
-        await doctor();
-        await drive({ state, restart, scenario: process.argv[3] ?? 'all', preset });
-      } finally {
-        if (owned && state) await down();
+    const requested = process.argv[3] ?? 'all';
+    const scenarios = requested === 'all' ? ['all', 'reorder'] : [requested];
+    for (const scenario of scenarios) {
+      const drive =
+        scenario === 'reorder' ? (await import('./drive-reorder.mjs')).drive : (await import('./drive.mjs')).drive;
+      for (const preset of targets) {
+        let state;
+        try {
+          state = owned ? await up() : parseActiveState(await readState());
+          await doctor();
+          await drive({ state, restart, scenario, preset });
+        } finally {
+          if (owned && state) await down();
+        }
       }
     }
   } else if (command === 'help')
     console.log(
-      'control.mjs up | doctor | drive [workout|themes|sets|partials|all] [regular|large] | restart | down | test [workout|themes|sets|partials|all] [regular|large]',
+      'control.mjs up | doctor | drive [workout|themes|sets|partials|reorder|all] [regular|large] | restart | down | test [workout|themes|sets|partials|reorder|all] [regular|large]',
     );
   else throw new Error(`Unknown command: ${command}`);
 } catch (/** @type {unknown} */ error) {

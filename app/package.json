@@ -122,6 +122,7 @@
     "@libsql/client": "^0.17.3",
     "@playwright/test": "^1.63.0",
     "@react-native-community/cli": "^20.1.2",
+    "@types/babel__core": "^7.20.5",
     "@types/node": "^24.3.3",
     "@types/react": "~19.2.10",
     "@types/react-dom": "~19.2.3",

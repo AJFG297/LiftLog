@@ -8,7 +8,7 @@ description: Verify LiftLog's shared workout components in headless Chromium wit
 Use this skill to drive the browser prototype in `app/browser-verification/`. Read the
 [feature map](features/README.md) before choosing a scenario. Commands below run from `app/`.
 
-The prototype renders the actual shared `SetTable` and `NumberPad` through React Native Web. Set edits use
+The prototype renders the actual shared `ExerciseStrip`, `SetTable`, and `NumberPad` through React Native Web. Set edits use
 production `set-entry` functions and `storedSessionsReducer`. Saves use `WorkoutRepository`, production
 Drizzle migrations, and a real libSQL SQLite file on disk. The prototype supplies its own page and save
 queue. It adapts localization to `en-US`, theme scheme generation, CSS appearance, haptics to a no-op, and navigation to
@@ -48,10 +48,10 @@ npx playwright install --with-deps chromium
 npm run verify:browser
 ```
 
-The default command runs every mapped scenario at Regular 390 × 844 and Large 430 × 932, with a fresh
+The default command runs the classic scenarios and the reorder scenario in separate fresh instances at Regular 390 × 844 and Large 430 × 932, with a fresh
 run and database for each size. Each drive prints JSON with `result: "pass"`, `scenario`, `viewport`, and
-`evidence`. The command exits with code 0 only when both drives pass.
-A failure exits with a nonzero code. Both retain proof artifacts.
+`evidence`. The command exits with code 0 only when all drives pass.
+A failure exits with a nonzero code. Every drive retains proof artifacts.
 
 To keep an instance available for diagnosis or several drives, launch it explicitly.
 
@@ -93,6 +93,7 @@ Run one scenario at both sizes, each with a fresh fixture and automatic cleanup.
 npm run verify:browser -- workout
 npm run verify:browser -- sets
 npm run verify:browser -- themes
+npm run verify:browser -- reorder
 ```
 
 The [feature map](features/README.md) gives each scenario's user actions and observable results. The
@@ -107,10 +108,10 @@ node browser-verification/control.mjs drive workout
 node browser-verification/control.mjs drive workout large
 ```
 
-Replace `workout` with `sets`, `themes`, or `all` as needed. An optional `regular` or `large` selects one
+Replace `workout` with `sets`, `themes`, `reorder`, or `all` as needed. The reorder scenario seeds its separate ten-exercise fixture before loading the page. An optional `regular` or `large` selects one
 size. Manual `drive` defaults to Regular, runs doctor first, and leaves the instance up. `test` defaults
 to both sizes and also accepts one size for diagnosis. Unknown size IDs fail before an instance starts.
-Every drive then verifies a partial number, unlogged reps, and dark blue appearance across size switches,
+Every classic workout, sets, or themes drive then verifies a partial number, unlogged reps, and dark blue appearance across size switches,
 logs Set 2, and adds sets for scrolling checks. Start a new run before a later manual `workout` drive to
 restore the two-set, unlogged fixture.
 
@@ -132,7 +133,7 @@ Proof survives teardown under `.verify-runs/browser/<run-id>/` at the repository
 
 The run directory also retains `workout.sqlite`, `identity.json`, the compiled `server.mjs`, and
 `server.log`. Use the manifest and trace to connect the user action to the resulting screen, then compare
-SQL snapshots for persistence. A final screenshot alone does not prove the preceding actions occurred.
+SQL snapshots for persistence. The reorder scenario also retains a video, stationary-pointer geometry samples, and SQL exercise-order rows. A final screenshot alone does not prove the preceding actions occurred.
 The theme scenario records computed colors in `palettes.json` and checks selected modes, background
 changes, and accent changes. Review the screenshots for layout and contrast. Its database check proves
 that appearance changes leave workout rows unchanged.
