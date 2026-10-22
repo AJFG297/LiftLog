@@ -324,7 +324,7 @@ Every read below covers _finished_ workouts only: the one in progress (`active =
   set as `effective_weight_kg * (30 + reps)` (Epley without the division), keeps the best per exercise
   and then per movement and workout with `GROUP BY ... MAX()` (SQLite takes the other columns from the
   winning row, so nothing is sorted), and runs `MAX() OVER (PARTITION BY movement_key ORDER BY
-  reference_time_ms ROWS ... 1 PRECEDING)`; only the rows that beat the running max come back, with the
+reference_time_ms ROWS ... 1 PRECEDING)`; only the rows that beat the running max come back, with the
   set that did, and the exact 1RM is rebuilt in JS (`effectiveLoad`, `oneRepMaxOf`) so it reads in the
   unit it was lifted in. A `personal_record` table was not needed: about 130 ms under Node over 5,000
   workouts (75k sets), off the render path and only re-run after a write.
@@ -338,10 +338,14 @@ one queue inside the repository, so these reads see every write before them: the
 carry-over cache after a write, the plan position that finishing a workout asks for as soon as it has
 dispatched the write, and the editor or the feed reading a workout just written.
 
-`subscribe(listener)` is the one write notification: every `put`, `putMany`, `delete` and `setActive`
+`subscribe(listener)` is the general write notification: every `put`, `putMany`, `delete` and `setActive`
 calls the listeners after its transaction has committed, so a listener that re-queries sees the rows. It
 carries a `WorkoutWrite`: the ids touched, and whether the active flag changed (`setActive`). Screens
-ignore it and re-run their query, which is cheap; the stats effect uses it to skip the workout in progress.
+ignore it and re-run their query, which is cheap; the stats effect uses it to skip the workout in progress. The Progress
+cache additionally uses `subscribeFinishedHistory(listener)`: active-flag changes always notify; other
+writes check the committed active id inside the write queue and notify unless all touched ids are active.
+That classification query runs only while there is a finished-history subscriber. See
+[Progress.md](./Progress.md#where-it-loads) for the cache and invalidation contract.
 
 #### Reading from a screen: `useWorkoutQuery`
 

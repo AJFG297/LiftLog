@@ -1,23 +1,16 @@
 import { LocalDate } from '@js-joda/core';
 import { useWorkoutQuery } from '@/hooks/useWorkoutQuery';
 import { WorkoutRepository } from '@/services/workout-repository';
-import { buildProgressHistory, ProgressHistory } from '@/store/stats/progress-history';
+import type { ProgressHistory } from '@/store/stats/progress-history';
+import { progressHistoryCacheFor } from '@/services/progress-history-cache';
+import { useToday } from '@/hooks/useToday';
 
-/**
- * The whole finished history as the Progress screens read it, from the workout tables, and kept current
- * after each write. Undefined while loading. It rebuilds every workout, so call it once per screen and hand
- * the result down.
- */
+/** Finished history shared by all Progress routes, refreshed after relevant committed writes. */
 export function useProgressHistory(): ProgressHistory | undefined {
-  return useWorkoutQuery(loadProgressHistory, []);
+  const today = useToday();
+  return useWorkoutQuery((repository) => loadProgressHistory(repository, today), [today.toString()]);
 }
 
-export async function loadProgressHistory(repository: WorkoutRepository): Promise<ProgressHistory> {
-  const earliest = await repository.earliestDate();
-  if (!earliest) {
-    return buildProgressHistory([]);
-  }
-  // Latest first from the repository; the walk needs the order the workouts happened in.
-  const sessions = await repository.finishedBetween(earliest, LocalDate.now());
-  return buildProgressHistory(sessions.reverse());
+export function loadProgressHistory(repository: WorkoutRepository, today = LocalDate.now()): Promise<ProgressHistory> {
+  return progressHistoryCacheFor(repository).read(today);
 }

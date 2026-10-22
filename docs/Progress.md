@@ -66,11 +66,49 @@ screen.
 
 ### Where it loads
 
-`hooks/useProgressHistory.ts`: `useProgressHistory()` runs `loadProgressHistory` through `useWorkoutQuery`
-(see [Storage.md](./Storage.md#reading-from-a-screen-useworkoutquery)). It reads `earliestDate()`, then
-`finishedBetween(earliest, today)`, which comes back latest first, and reverses it for the walk. It is
-undefined while loading and re-runs after each write. Every workout is rebuilt from its rows, so call it once
-per screen and hand the result down.
+`hooks/useProgressHistory.ts` runs `loadProgressHistory` through `useWorkoutQuery`
+(see [Storage.md](./Storage.md#reading-from-a-screen-useworkoutquery)). The loader uses
+`services/progress-history-cache.ts`: one lazy cache per `WorkoutRepository`, shared by the Progress tab,
+Records, All exercises and exercise details. The first read queries `earliestDate()` and
+`finishedBetween(earliest, today)`, then reverses and builds the model as before. Subsequent reads return
+the same model, and concurrent readers await one promise. The cache retains the derived model, not the
+hydrated `Session[]`.
+
+`WorkoutRepository.subscribeFinishedHistory` invalidates it after committed history changes: inserts,
+edits, deletes, imports, exercise repoints and active-flag changes (including workout completion). While
+the cache exists, content writes use one small active-id query inside the repository's write queue to
+classify the write against SQLite's committed flag, rather than Redux state that may already have moved
+on. Content writes touching only the active workout do not invalidate it. Classification failure
+conservatively invalidates; a rolled-back transaction sends no notification. No classification query is
+added before the cache is first requested.
+
+A generation check discards a read interrupted by invalidation and retries before resolving any waiting
+reader. A failed read releases the pending promise so a later request can retry. The cache also expires
+when the requested date changes; the hook uses `useToday` to refresh mounted screens after returning to
+the foreground on a later day.
+
+The hook is undefined on first mount until its query resolves (even for a warm cache). It keeps the old
+answer visible while refreshing and defers work while unfocused, as `useWorkoutQuery` already does.
+Invalidation itself does not rebuild anything. One model remains cached for the repository's lifetime or
+until invalidated; this trades longer retention after leaving Progress for avoiding multiple copies
+across mounted screens. The first uncached load and a relevant-write refresh still rebuild the full
+history; this change does not optimize their SQL or model-building algorithm.
+
+### Measuring the cache
+
+From `app/`, run `npm run bench:progress`; `LIFTLOG_BENCH_RUNS` sets the measured trial count (default 5).
+The opt-in benchmark uses deterministic 500- and 5,000-workout histories. It alternates the original
+uncached loader and the cached loader against the same seeded database, discards a warm-up trial, and
+reports median first-load, subsequent-route and post-write-refresh times, SQL SELECT counts and model
+build counts. Each trial models four route consumers; warm-route medians pool the three subsequent
+reads per trial. Refresh is timed after inserting a finished workout has committed, so it excludes write
+time and the cache's classification query. Assertions check fresh results and zero warm-cache SQL reads
+or model builds. The reference is the pre-cache algorithm, kept inline for repeatable comparison.
+
+With exposed GC it also estimates retained JS heap for four mounted consumers, taking the median of
+three trials per variant. That measures retained models, not native views, transient peak allocations,
+or total app memory. Compare results only on the same machine. These are Node/libsql benchmarks,
+not Hermes/expo-sqlite or measured screen-navigation latency on a phone.
 
 ### Why one walk
 
@@ -94,13 +132,13 @@ and `ListEmptyState`), `amount-format.ts` (`amountText`, `weightText`, `signedTe
 `record-text.ts` (`recordKindLabel`) and `amount-text.tsx` (`AmountText`). A change's direction is one `ChangeTone` (`gain`, `fall`, `none`, from `toneOf` in
 `progress-amounts.ts`) on every screen.
 
-| File | Gives |
-| --- | --- |
-| `progress-tab.ts` | The tabs, the range table, and `progressPeriod`: the weeks a range covers. |
+| File                   | Gives                                                                            |
+| ---------------------- | -------------------------------------------------------------------------------- |
+| `progress-tab.ts`      | The tabs, the range table, and `progressPeriod`: the weeks a range covers.       |
 | `progress-strength.ts` | `strengthLifts` (pinned lifts first, then the most trained) and `recentRecords`. |
-| `progress-training.ts` | `buildWeeklyTable`, then `trainingView` over it. |
-| `progress-body.ts` | `weighInsOf` and `bodyView`. |
-| `progress-amounts.ts` | How a weight reads: `shownWeight` and `shownChange` (below). |
+| `progress-training.ts` | `buildWeeklyTable`, then `trainingView` over it.                                 |
+| `progress-body.ts`     | `weighInsOf` and `bodyView`.                                                     |
+| `progress-amounts.ts`  | How a weight reads: `shownWeight` and `shownChange` (below).                     |
 
 ### How amounts read
 
