@@ -1,4 +1,0 @@
-interface:
-  display_name: "A Stack"
-  short_description: "Intent-aware engineering playbooks"
-  default_prompt: "Use $a-stack to route this task from intent through verified delivery."
