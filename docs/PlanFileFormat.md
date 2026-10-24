@@ -90,7 +90,7 @@ Nothing about the format is Claude-specific. To use ChatGPT, Gemini, or anything
 > Rules that are easy to get wrong:
 >
 > - Treat every field in the schema as required, apart from the handful marked optional. Empty strings for `notes` and `link`.
-> - `"version": 3` on the root object, `"version": 10` on every session.
+> - `"version": 3` on the root object, `"version": 11` on every session. Leave `id` off a session: the app assigns one on import.
 > - Weights, distances and progression steps are decimal **strings**: `"2.5"`, not `2.5`. Rep counts are plain integers.
 > - Rests and cardio times are ISO-8601 durations: `"PT3M"`, `"PT90S"`.
 > - A weighted exercise has no set count: one entry in `plannedSets` is one set, and each has a `kind` (`"working"` for a plain set). Cardio uses `sets`, an array of set objects.
@@ -112,7 +112,7 @@ A plan file is one JSON object: a name, a date, and a list of sessions. Each ses
   "lastEdited": "2026-07-12",
   "sessions": [
     {
-      "version": 10,
+      "version": 11,
       "name": "Push",
       "notes": "Chest, shoulders and triceps.",
       "exercises": [

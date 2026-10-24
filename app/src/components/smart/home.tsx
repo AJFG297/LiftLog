@@ -16,7 +16,7 @@ import { useOwnActivity, usePersonalRecords, useStreakStats } from '@/hooks/useO
 import { usePreferredWeightSuffix } from '@/hooks/usePreferredWeightUnit';
 import { useStartWorkoutWithConfirmation } from '@/hooks/useStartWorkoutWithConfirmation';
 import { useToday } from '@/hooks/useToday';
-import { useWorkoutQuery } from '@/hooks/useWorkoutQuery';
+import { listDep, useWorkoutQuery } from '@/hooks/useWorkoutQuery';
 import {
   HistoryDay,
   HistoryRange,
@@ -28,6 +28,7 @@ import {
 } from '@/models/home/history-range';
 import { routineColorOf } from '@/models/home/routine-colors';
 import { ProgramBlueprint } from '@/models/blueprint-models';
+import { liveRoutineIdsOf } from '@/models/routine-identity';
 import { Session } from '@/models/session-models';
 import { Weight } from '@/models/weight';
 import { useAppSelector } from '@/store';
@@ -83,13 +84,19 @@ export function Home() {
   // Undefined while the plans load, or once the active plan has been deleted.
   const plan: ProgramBlueprint | undefined = useAppSelector(selectActiveProgram);
   const nextSession = upcoming.map((x) => x.at(0)).unwrapOr(undefined);
+  const savedPrograms = useAppSelector((x) => x.program.savedPrograms);
+  const liveRoutineIds = liveRoutineIdsOf(Object.values(savedPrograms));
   const nextSessionName = nextSession?.blueprint.name;
+  const nextRoutineId = nextSession?.blueprint.id;
   const pastRunsOfNext = useWorkoutQuery(
     (repository) =>
       nextSessionName === undefined
         ? Promise.resolve([])
-        : repository.latestNamed(nextSessionName, UP_NEXT_PAST_WORKOUTS),
-    [nextSessionName],
+        : repository.latestNamed(nextSessionName, UP_NEXT_PAST_WORKOUTS, {
+            routineId: nextRoutineId,
+            liveRoutineIds,
+          }),
+    [nextSessionName, nextRoutineId, listDep(liveRoutineIds)],
   );
 
   useFocusEffect(() => {

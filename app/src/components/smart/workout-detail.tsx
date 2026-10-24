@@ -14,6 +14,7 @@ import { useOpenExerciseProgress } from '@/hooks/useOpenExerciseProgress';
 import { useStartWorkoutWithConfirmation } from '@/hooks/useStartWorkoutWithConfirmation';
 import { useWorkoutComparison } from '@/hooks/useWorkoutComparison';
 import { MovementKey } from '@/models/blueprint-models';
+import { findRoutineIndex } from '@/models/routine-identity';
 import { SharedSession } from '@/models/feed-models';
 import { RecordedWeightedExercise } from '@/models/session-models';
 import { formatRpe } from '@/models/session-models/rpe';
@@ -39,6 +40,7 @@ import {
   selectActiveProgram,
 } from '@/store/program';
 import { deleteStoredSession, putStoredSession, sessionFinished } from '@/store/stored-sessions';
+import { uuid } from '@/utils/uuid';
 import { useServices } from '@/components/smart/services-provider';
 import { formatTimeRange } from '@/utils/format-time-range';
 import { localeFormatBigNumber } from '@/utils/locale-bignumber';
@@ -105,7 +107,7 @@ export function WorkoutDetail({ sessionId }: { sessionId: string }) {
       session.blueprint.name,
       program.sessions.map((s) => s.name),
     );
-    const routine = routineFromSession(session, name);
+    const routine = routineFromSession(session, name).with({ id: uuid() });
     dispatch(addProgramSession({ programId, sessionBlueprint: routine }));
     dispatch(fetchUpcomingSessions());
     toast.show({
@@ -151,7 +153,7 @@ export function WorkoutDetail({ sessionId }: { sessionId: string }) {
     });
   };
 
-  const routineIndex = program.sessions.findIndex((s) => s.name === session.blueprint.name);
+  const routineIndex = findRoutineIndex(program.sessions, session.blueprint);
   const routineLine =
     routineIndex === -1
       ? undefined

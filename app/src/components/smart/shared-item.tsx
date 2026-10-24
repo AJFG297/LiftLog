@@ -136,7 +136,7 @@ function SharedSessionContent({ sharedItem }: { sharedItem: SharedSession }) {
             dispatch(
               addProgramSession({
                 programId: activeProgramId,
-                sessionBlueprint: session.blueprint,
+                sessionBlueprint: session.blueprint.with({ id: uuid() }),
               }),
             );
             push(programHref(activeProgramId), { withAnchor: true });

@@ -430,7 +430,12 @@ describe('WorkoutRepository', () => {
         ]);
         await repository.setActive(lifted('Pull', april(10)));
 
-        const history = await repository.routineHistory(['Push', 'Pull', 'Legs', FREEFORM_WORKOUT_NAME]);
+        const history = await repository.routineHistory([
+          { name: 'Push' },
+          { name: 'Pull' },
+          { name: 'Legs' },
+          { name: FREEFORM_WORKOUT_NAME },
+        ]);
 
         expect(history.workoutsDone).toBe(4);
         expect([...history.lastDone].map(([name, date]) => `${name} ${date.toString()}`).sort()).toEqual([
@@ -451,9 +456,9 @@ describe('WorkoutRepository', () => {
 
         // A, B closes a round, then A starts the next. By day alone, in the order stored, it would read
         // A, A, B and close the round on B.
-        expect((await repository.routineHistory(['A', 'B'])).routinesDoneThisRound).toBe(1);
+        expect((await repository.routineHistory([{ name: 'A' }, { name: 'B' }])).routinesDoneThisRound).toBe(1);
         await repository.put(lifted('B', april(4)));
-        expect((await repository.routineHistory(['A', 'B'])).routinesDoneThisRound).toBe(0);
+        expect((await repository.routineHistory([{ name: 'A' }, { name: 'B' }])).routinesDoneThisRound).toBe(0);
       });
 
       it('is empty for no routines', async () => {
@@ -464,6 +469,23 @@ describe('WorkoutRepository', () => {
           workoutsDone: 0,
           routinesDoneThisRound: 0,
         });
+      });
+
+      it('still finds last performed after the routine is renamed', async () => {
+        const done = lifted('Push', april(5));
+        await repository.put(done.with({ blueprint: done.blueprint.with({ id: 'push' }) }));
+
+        const renamed = await repository.routineHistory([{ id: 'push', name: 'Press' }]);
+
+        expect(renamed.lastDone.get('push')?.toString()).toBe('2026-04-05');
+      });
+
+      it('matches a workout logged before routines had ids by its name', async () => {
+        await repository.put(lifted('Push', april(5)));
+
+        const history = await repository.routineHistory([{ id: 'push', name: 'Push' }]);
+
+        expect(history.lastDone.get('push')?.toString()).toBe('2026-04-05');
       });
     });
 

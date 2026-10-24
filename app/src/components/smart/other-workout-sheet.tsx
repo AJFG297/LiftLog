@@ -7,6 +7,7 @@ import { useFormatDate } from '@/hooks/useFormatDate';
 import { useStartWorkoutWithConfirmation } from '@/hooks/useStartWorkoutWithConfirmation';
 import { useToday } from '@/hooks/useToday';
 import { routineColorOf } from '@/models/home/routine-colors';
+import { liveRoutineIdsOf } from '@/models/routine-identity';
 import { useAppSelector } from '@/store';
 import { selectActiveProgram } from '@/store/program';
 import { listDep, useWorkoutQuery } from '@/hooks/useWorkoutQuery';
@@ -35,15 +36,25 @@ export function OtherWorkoutSheet() {
   const others = useAppSelector((x) => x.program.upcomingSessions)
     .map((x) => x.slice(1))
     .unwrapOr([]);
-  const names = [...new Set(others.map((x) => x.blueprint.name))];
+  const savedPrograms = useAppSelector((x) => x.program.savedPrograms);
+  const liveRoutineIds = liveRoutineIdsOf(Object.values(savedPrograms));
   const pastRuns = useWorkoutQuery(
     async (repository) =>
       new Map(
         await Promise.all(
-          names.map(async (name) => [name, await repository.latestNamed(name, UP_NEXT_PAST_WORKOUTS)] as const),
+          others.map(async (session) => {
+            const runs = await repository.latestNamed(session.blueprint.name, UP_NEXT_PAST_WORKOUTS, {
+              routineId: session.blueprint.id,
+              liveRoutineIds,
+            });
+            return [session.id, runs] as const;
+          }),
         ),
       ),
-    [listDep(names)],
+    [
+      listDep(others.map((session) => `${session.id}:${session.blueprint.id ?? ''}:${session.blueprint.name}`)),
+      listDep(liveRoutineIds),
+    ],
   );
   const { start, confirmationDialog } = useStartWorkoutWithConfirmation({ onStarted: () => back() });
   const planWorkoutNames = plan?.sessions.map((x) => x.name) ?? [];
@@ -60,7 +71,7 @@ export function OtherWorkoutSheet() {
             key={session.id}
             testID={`other-workout-${index}`}
             title={session.blueprint.name}
-            subtitle={upNextDetailText(t, session, pastRuns?.get(session.blueprint.name) ?? [], today, formatDate)}
+            subtitle={upNextDetailText(t, session, pastRuns?.get(session.id) ?? [], today, formatDate)}
             accessibilityLabel={t('home.up_next.start.button', { name: session.blueprint.name })}
             leading={
               <View
