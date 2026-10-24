@@ -60,7 +60,7 @@ work to find the docs relevant to your area, and update it whenever you add, rem
   record dots, Next time, best weight by reps, and where it opens from), pinned lifts, and the model they share:
   `buildProgressHistory`'s one walk over the finished history (points per movement and workout, dated
   records), the `RecordLedger` that is the one implementation of the record rules, `progressSince` for a
-  window's change, where `useProgressHistory` loads it from, how a range's weeks and averages are counted,
+  window's change, where `useProgressHistory` loads and caches it, commit invalidation and the cache benchmark, how a range's weeks and averages are counted,
   and how amounts are rounded (`progress-amounts.ts`).
 - [FeedProcess.md](./FeedProcess.md) - the opt-in social feed: the follow/accept flow, what is and isn't
   visible to the server, and the end-to-end encryption model (AES-CBC payloads, RSA-PSS signatures).

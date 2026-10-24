@@ -11,8 +11,12 @@ import { Weight } from '@/models/weight';
 import { filledPotentialSet, makeWeightedBlueprint } from '@/models/session-models/__test__/helpers';
 import { useProgressHistory } from '@/hooks/useProgressHistory';
 
-const { services } = vi.hoisted(() => ({ services: { workoutRepository: undefined as unknown } }));
-vi.mock('expo-router', () => ({ useIsFocused: () => true }));
+const { services, screen } = vi.hoisted(() => ({
+  services: { workoutRepository: undefined as unknown },
+  screen: { focused: true, day: undefined as string | undefined },
+}));
+vi.mock('expo-router', () => ({ useIsFocused: () => screen.focused }));
+vi.mock('@/hooks/useToday', () => ({ useToday: () => (screen.day ? LocalDate.parse(screen.day) : LocalDate.now()) }));
 vi.mock('@/components/smart/services-provider', () => ({ useServices: () => services }));
 
 const logger = { info: vi.fn(), error: vi.fn(), warn: vi.fn(), debug: vi.fn() };
@@ -34,6 +38,8 @@ describe('useProgressHistory', () => {
   let repository: WorkoutRepository;
 
   beforeEach(async () => {
+    screen.focused = true;
+    screen.day = undefined;
     const db = drizzle(await openDatabaseAsync(':memory:'));
     await new DatabaseMigrationService(db, logger as never, { importOldData: async () => {} }).migrate();
     repository = new WorkoutRepository(db);
@@ -76,5 +82,48 @@ describe('useProgressHistory', () => {
     await act(() => repository.put(workout('b', LocalDate.of(2026, 3, 8), 105)));
 
     await waitFor(() => expect(result.current?.records).toHaveLength(1));
+  });
+
+  it('shares one model across concurrent consumers and later route mounts', async () => {
+    await repository.put(workout('a', LocalDate.of(2026, 3, 1), 100));
+    const reads = vi.spyOn(repository, 'finishedBetween');
+    const first = renderHook(() => useProgressHistory());
+    const second = renderHook(() => useProgressHistory());
+    await waitFor(() => expect(first.result.current).toBeDefined());
+    await waitFor(() => expect(second.result.current).toBe(first.result.current));
+    first.unmount();
+    second.unmount();
+    const next = renderHook(() => useProgressHistory());
+    expect(next.result.current).toBeUndefined();
+    await waitFor(() => expect(next.result.current).toBe(first.result.current));
+    expect(reads).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the previous result during refresh and defers reads while offscreen', async () => {
+    await repository.put(workout('a', LocalDate.of(2026, 3, 1), 100));
+    const reads = vi.spyOn(repository, 'finishedBetween');
+    const view = renderHook(() => useProgressHistory());
+    await waitFor(() => expect(view.result.current).toBeDefined());
+    const previous = view.result.current;
+    screen.focused = false;
+    view.rerender();
+    await act(() => repository.put(workout('b', LocalDate.of(2026, 3, 8), 105)));
+    expect(view.result.current).toBe(previous);
+    expect(reads).toHaveBeenCalledTimes(1);
+    screen.focused = true;
+    view.rerender();
+    expect(view.result.current).toBe(previous);
+    await waitFor(() => expect(view.result.current?.workouts).toHaveLength(2));
+    expect(reads).toHaveBeenCalledTimes(2);
+  });
+
+  it('refreshes a mounted screen when today changes', async () => {
+    screen.day = '2026-03-01';
+    await repository.put(workout('future', LocalDate.of(2026, 3, 2), 100));
+    const view = renderHook(() => useProgressHistory());
+    await waitFor(() => expect(view.result.current?.workouts).toHaveLength(0));
+    screen.day = '2026-03-02';
+    view.rerender();
+    await waitFor(() => expect(view.result.current?.workouts).toHaveLength(1));
   });
 });

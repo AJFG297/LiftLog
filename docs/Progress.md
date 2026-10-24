@@ -66,11 +66,83 @@ screen.
 
 ### Where it loads
 
-`hooks/useProgressHistory.ts`: `useProgressHistory()` runs `loadProgressHistory` through `useWorkoutQuery`
-(see [Storage.md](./Storage.md#reading-from-a-screen-useworkoutquery)). It reads `earliestDate()`, then
-`finishedBetween(earliest, today)`, which comes back latest first, and reverses it for the walk. It is
-undefined while loading and re-runs after each write. Every workout is rebuilt from its rows, so call it once
-per screen and hand the result down.
+`hooks/useProgressHistory.ts` runs `loadProgressHistory` through `useWorkoutQuery`
+(see [Storage.md](./Storage.md#reading-from-a-screen-useworkoutquery)). The loader uses
+`services/progress-history-cache.ts`: one lazy cache per `WorkoutRepository`, shared by the Progress tab,
+Records, All exercises and exercise details. The first read queries `earliestDate()` and
+`finishedBetween(earliest, today)`, then reverses and builds the model as before. Subsequent reads return
+the same model, and concurrent readers await one promise. The cache retains the derived model, not the
+hydrated `Session[]`.
+
+`WorkoutRepository.subscribeFinishedHistory` invalidates it after committed history changes: inserts,
+edits, deletes, imports, exercise repoints and active-flag changes (including workout completion). While
+the cache exists, content writes use one small active-id query inside the repository's write queue to
+classify the write against SQLite's committed flag, rather than Redux state that may already have moved
+on. Content writes touching only the active workout do not invalidate it. Classification failure
+conservatively invalidates; a rolled-back transaction sends no notification. No classification query is
+added before the cache is first requested.
+
+A generation check discards a read interrupted by invalidation and retries before resolving any waiting
+reader. A failed read releases the pending promise so a later request can retry. The cache also expires
+when the requested date changes; the hook uses `useToday` to refresh mounted screens after returning to
+the foreground on a later day.
+
+The hook is undefined on first mount until its query resolves (even for a warm cache). It keeps the old
+answer visible while refreshing and defers work while unfocused, as `useWorkoutQuery` already does.
+Invalidation itself does not rebuild anything. One model remains cached for the repository's lifetime or
+until invalidated; this trades longer retention after leaving Progress for avoiding multiple copies
+across mounted screens. The first uncached load and a relevant-write refresh still rebuild the full
+history; this change does not optimize their SQL or model-building algorithm.
+
+### Measuring the cache
+
+From `app/`, run `npm run bench:progress`; `LIFTLOG_BENCH_RUNS` sets the measured trial count (default 5).
+The opt-in benchmark uses deterministic 500- and 5,000-workout histories. It alternates the original
+uncached loader and the cached loader against the same seeded database, discards a warm-up trial, and
+reports median first-load, subsequent-route and post-write-refresh times, SQL SELECT counts and model
+build counts. Each trial models four route consumers; warm-route medians pool the three subsequent
+reads per trial. Refresh is timed after inserting a finished workout has committed, so it excludes write
+time and the cache's classification query. Assertions check fresh results and zero warm-cache SQL reads
+or model builds. The reference is the pre-cache algorithm, kept inline for repeatable comparison.
+
+With exposed GC it also estimates retained JS heap for four mounted consumers, taking the median of
+three trials per variant. That measures retained models, not native views, transient peak allocations,
+or total app memory. Compare results only on the same machine. These are Node/libsql benchmarks,
+not Hermes/expo-sqlite or measured screen-navigation latency on a phone.
+
+### Recorded Node results (2026-10-22)
+
+Measured on Linux x64, Node v24.19.0, Vitest 4.1.12, Drizzle 0.45.4 and libsql client 0.17.4.
+The same final branch contains both the original loader algorithm and the cached loader.
+`LIFTLOG_BENCH_RUNS=3 npm run bench:progress` ran alone after the full test suite completed: one
+warm-up and three measured trials per variant, with nine warm-route samples per variant. Negative
+latency changes are faster. “Uncached” means an empty model cache with modules/JIT already warmed;
+it does not mean a cold application or an uncached OS/database page cache.
+
+| Workouts | Data operation                | Before (ms) | After (ms) | After − before (ms) | Latency change |
+| -------- | ----------------------------- | ----------: | ---------: | ------------------: | -------------: |
+| 500      | First uncached load           |     259.580 |    280.159 |             +20.579 |         +7.93% |
+| 500      | Subsequent route load         |     231.645 |      0.002 |            -231.643 |       <−99.99% |
+| 500      | Refresh after committed write |     237.194 |    242.959 |              +5.765 |         +2.43% |
+| 5,000    | First uncached load           |   2,411.404 |  2,363.117 |             -48.287 |         -2.00% |
+| 5,000    | Subsequent route load         |   2,470.714 |      0.002 |          -2,470.712 |       <−99.99% |
+| 5,000    | Refresh after committed write |   2,390.181 |  2,361.815 |             -28.366 |         -1.19% |
+
+A warm route goes from 6 SELECTs (500 workouts) or 26 SELECTs (5,000 workouts) and one model build to
+zero of either. First loads and post-write refreshes retain those same SELECT/build counts. The timing
+variation in those paths does not establish an optimization: both still hydrate and rebuild the entire
+history. Warm data-loading times exclude React effects, rendering and native navigation.
+
+Estimated retained JS heap for four consumers of the same unchanged history:
+
+| Workouts | Before (MiB) | After (MiB) | Saved (MiB) | Reduction |
+| -------- | -----------: | ----------: | ----------: | --------: |
+| 500      |       14.330 |       3.603 |      10.727 |    74.86% |
+| 5,000    |      134.576 |      33.683 |     100.893 |    74.97% |
+
+One shared model replaces four copies in this scenario. A single screen does not gain this four-to-one
+saving, and the cache retains that model after the last Progress screen unmounts until invalidation or
+repository collection. No device performance or native-memory improvement was measured.
 
 ### Why one walk
 
@@ -94,13 +166,13 @@ and `ListEmptyState`), `amount-format.ts` (`amountText`, `weightText`, `signedTe
 `record-text.ts` (`recordKindLabel`) and `amount-text.tsx` (`AmountText`). A change's direction is one `ChangeTone` (`gain`, `fall`, `none`, from `toneOf` in
 `progress-amounts.ts`) on every screen.
 
-| File | Gives |
-| --- | --- |
-| `progress-tab.ts` | The tabs, the range table, and `progressPeriod`: the weeks a range covers. |
+| File                   | Gives                                                                            |
+| ---------------------- | -------------------------------------------------------------------------------- |
+| `progress-tab.ts`      | The tabs, the range table, and `progressPeriod`: the weeks a range covers.       |
 | `progress-strength.ts` | `strengthLifts` (pinned lifts first, then the most trained) and `recentRecords`. |
-| `progress-training.ts` | `buildWeeklyTable`, then `trainingView` over it. |
-| `progress-body.ts` | `weighInsOf` and `bodyView`. |
-| `progress-amounts.ts` | How a weight reads: `shownWeight` and `shownChange` (below). |
+| `progress-training.ts` | `buildWeeklyTable`, then `trainingView` over it.                                 |
+| `progress-body.ts`     | `weighInsOf` and `bodyView`.                                                     |
+| `progress-amounts.ts`  | How a weight reads: `shownWeight` and `shownChange` (below).                     |
 
 ### How amounts read
 
