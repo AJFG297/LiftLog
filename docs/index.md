@@ -90,8 +90,8 @@ work to find the docs relevant to your area, and update it whenever you add, rem
   Codex cloud agents: Regular and Large viewport checks, commands, evidence, adapters, coverage, long-press strip reordering, and native exclusions.
 
 - [PhoneBuilds.md](./PhoneBuilds.md) - getting a change onto the two Android phones: when a change needs a
-  new build and when an EAS Update is enough (the fingerprint runtime version), the commands for each,
-  rollback, and keeping both phones on the same version.
+  new build and when an EAS Update is enough (including tooling-only fingerprint mismatches), the
+  commands for each, rollback, and keeping both phones on the same version.
 - [SelfHosting.md](./SelfHosting.md) — quickstart for running your own backend: a copy-paste Docker
   Compose file, how to point the app at it, and the environment variables that switch on the feed,
   remote backup, and AI planner. Pairs with the [backend README](../backend/README.md).
