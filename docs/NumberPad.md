@@ -13,8 +13,9 @@ actions to it.
 
 - Opening a field (`openNumberPad`, or the `reset` action for the next field) starts it empty, showing
   the placeholder: today's target.
-- Typing replaces the placeholder. Backspacing the last character shows the placeholder again, and so does
-  backspacing to the 0 that a leading `.` puts in front of itself.
+- Typing replaces the placeholder. Backspace edits the displayed value, including a reopened field.
+  Deleting the last digit leaves the field blank while editing; leaving or logging a cleared workout field records
+  zero. Further backspaces keep it blank, and typing or ± starts from zero.
 - `.` is offered only when the field allows decimals (weight, not reps). A field takes up to four whole
   digits and two decimals.
 - ± steps from what was typed, or from the placeholder if nothing was typed. It stays within what typing
@@ -26,7 +27,8 @@ actions to it.
 
 While editing live workout reps, tap **P** in the number pad to edit a separate partial count to the
 right of full reps. Tap **P** again or tap the full-rep field to return to full reps. The check logs both
-counts. Enter 0 partials to clear the extra field when you leave it. A partial-only set uses 0 full reps.
+counts. Backspace away the partial count (or enter 0) to clear the extra field when you leave it.
+A partial-only set uses 0 full reps.
 Logged counts read as one compact value, such as `10+2P`. Tap it to reopen the separate fields.
 Partials stay with the set through edits and undo, but start empty on added sets and future workouts.
 

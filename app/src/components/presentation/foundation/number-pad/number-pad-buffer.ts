@@ -9,7 +9,7 @@ export interface NumberPadField {
 }
 
 export interface NumberPadBuffer {
-  /** `null` while the field still shows its placeholder. The decimal separator is always `.`. */
+  /** `null` shows the placeholder; `''` means explicitly cleared. The decimal separator is always `.`. */
   typed: string | null;
   /** Set by ±, so the next digit or decimal starts a new value, as it does over the placeholder. */
   stepped: boolean;
@@ -50,9 +50,9 @@ export function numberPadReducer(state: NumberPadBuffer, action: NumberPadAction
       return withTyped(state, `${typed || '0'}.`);
     }
     case 'backspace': {
-      const typed = state.typed?.slice(0, -1) ?? '';
+      const typed = (state.typed ?? state.placeholder?.toFixed() ?? '').slice(0, -1);
       // Only a leading decimal leaves a lone 0 to delete back to, and that 0 wasn't typed.
-      return withTyped(state, typed === '' || typed === '0' ? null : typed);
+      return withTyped(state, typed === '0' ? '' : typed);
     }
     case 'step': {
       const decimals = state.allowDecimal ? MAX_DECIMAL_DIGITS : 0;
@@ -68,7 +68,7 @@ export function numberPadReducer(state: NumberPadBuffer, action: NumberPadAction
 }
 
 export function numberPadValue(state: NumberPadBuffer): BigNumber | undefined {
-  return state.typed === null ? state.placeholder : new BigNumber(state.typed);
+  return state.typed === null ? state.placeholder : new BigNumber(state.typed || 0);
 }
 
 function appendDigit(typed: string, digit: Digit): string {

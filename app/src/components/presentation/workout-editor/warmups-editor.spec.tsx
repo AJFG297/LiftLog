@@ -149,14 +149,14 @@ describe('warm-up sheet dismissal', () => {
     expect(editor.draft().warmupSets[0]?.load).toEqual({ type: 'absolute', weight: new Weight(8, 'kilograms') });
   });
 
-  it('restores the displayed opening value when the typed buffer is erased', () => {
+  it('keeps the minimum planned reps when the typed buffer is cleared', () => {
     const editor = openEditor(makeWeightedBlueprint({ warmupSets: [{ load: undefined, reps: 10 }] }));
     fireEvent.click(editor.view.getByTestId('warmups-reps-0'));
     fireEvent.click(editor.view.getByText('8'));
     expect(editor.draft().warmupSets[0]?.reps).toBe(8);
     fireEvent.click(editor.view.getByText('Backspace'));
     fireEvent.click(editor.view.getByTestId('warmups-done'));
-    expect(editor.saved().warmupSets[0]?.reps).toBe(10);
+    expect(editor.saved().warmupSets[0]?.reps).toBe(1);
   });
 
   it('clears a typed load when it had no opening weight', () => {
