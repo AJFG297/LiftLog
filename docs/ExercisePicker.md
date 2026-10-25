@@ -4,7 +4,7 @@ The screen for choosing exercises (PM-32, step 13 of the [redesign plan](./plans
 route, `app/exercise-search.tsx`, drawn by `components/smart/exercise-search.tsx` (`ExerciseSearch`), with
 its list logic in `components/presentation/workout-editor/exercise-picker.ts`, with pick construction in
 `models/exercise-pick.ts`. The parts All exercises
-shares live outside the picker: the fuzzy match (`models/exercise-fuzzy-match.ts`), the muscle groups
+shares live outside the picker: the search (`models/exercise-search.ts`, see [Search](#search)), the muscle groups
 (`models/muscle-groups.ts`: `MUSCLE_GROUPS`, `muscleGroupOf`, `musclesForGroup`), and the search field and
 chip row (`foundation/search-field.tsx`, `foundation/chip-row.tsx`).
 
@@ -64,7 +64,7 @@ The routine or workout's name and exercise ids travel as route params, so a row 
 
 - With no search: **Recent**, then every other exercise by name. Recent is the five exercises logged most
   recently, newest first (`recentExerciseIds`, from `storedSessions.latestExercises`).
-- With a search: the fuzzy matches (`models/exercise-fuzzy-match.ts`), best first, and Recent has no section of
+- With a search: the matches (see [Search](#search)), best first, and Recent has no section of
   its own. If no exercise in the whole catalog is named exactly what was typed, a **Create "X"** row ends
   the list. If one is but the filters hide it, the row offers to clear the filters instead, so a filter never
   leads to a duplicate. If nothing the filters allow matches, the screen says so and offers Create "X", or
@@ -80,6 +80,26 @@ The routine or workout's name and exercise ids travel as route params, so a row 
   and anything outside the list (foam roll, medicine ball, none) as Other.
 - **The count** sits beside the pill: how many exercises the list shows ("94 exercises"), so a filter's
   effect is visible before scrolling (`PickerList.count`).
+
+## Search
+
+One matcher, `searchScores` in `models/exercise-search.ts`, serves the picker, Settings > Exercises
+(`filterExercises`) and Progress > All exercises (`exercisesListOf`). Each list keeps its own filters and its
+own order for ties.
+
+- **Words, not letters.** Names and queries are split into words the same way: accents, case and apostrophes
+  are dropped, and spaces and `- / ( ) , . + : ; & _` all break words. Every word is made singular with the
+  resolver's plural rules (`singularWord` in `exercise-name.ts`), so "squats" meets Squat and "flies" meets
+  Flyes. `db`, `bb` and `kb` are spelled out as dumbbell, barbell and kettlebell.
+- **Every query word must match** a word of the name, in any order. A word matches exactly, as the start of
+  a name word ("sq" for Squat), or inside one (three letters or more, scored low). Two query words may stand
+  for one name word ("pull up" for Pullups) and one for two ("chinup" for Chin-Up).
+- **Ranking.** The words' average match, plus a bonus for covering more of a short name, a small one for
+  keeping the name's word order, and a large one when the query is the whole name.
+- **Fallback.** When no exercise matches word by word, the old in-order letter match
+  (`models/exercise-fuzzy-match.ts`) stands in, so an odd abbreviation still finds something.
+- The catalog's search entries are built once per catalog object (a `WeakMap` cache), as the list is rebuilt
+  on every keystroke.
 
 ## New exercises
 

@@ -125,13 +125,12 @@ describe('pickerListOf', () => {
   });
 
   it('ranks matches for a query, drops the Recent section, and offers the query as a new exercise', () => {
-    expect(ids(pickerListOf(exercises, ['curl'], { ...noFilters, query: 'cr' }))).toEqual([
+    // Both start a word with "c"; the shorter name ranks first, the recent Hammer Curl in no section of its own.
+    expect(ids(pickerListOf(exercises, ['curl'], { ...noFilters, query: 'c' }))).toEqual([
       '# matches',
-      'skull',
       'curl',
-      'bench',
-      'neck',
-      '+ cr',
+      'skull',
+      '+ c',
     ]);
   });
 
@@ -177,7 +176,7 @@ describe('pickerListOf', () => {
     expect(pickerListOf(exercises, [], noFilters).count).toBe(7);
     expect(pickerListOf(exercises, ['raise', 'bench'], noFilters).count).toBe(7);
     expect(pickerListOf(exercises, ['curl'], { ...noFilters, muscle: 'arms' }).count).toBe(2);
-    expect(pickerListOf(exercises, ['curl'], { ...noFilters, query: 'cr' }).count).toBe(4);
+    expect(pickerListOf(exercises, ['curl'], { ...noFilters, query: 'c' }).count).toBe(2);
     expect(pickerListOf(exercises, [], { ...noFilters, query: 'zercher' }).count).toBe(0);
   });
 });

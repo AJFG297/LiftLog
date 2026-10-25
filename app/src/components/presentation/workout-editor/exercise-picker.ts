@@ -1,5 +1,5 @@
-import { fuzzyMatchScore } from '@/models/exercise-fuzzy-match';
 import { ExerciseDescriptor } from '@/models/exercise-models';
+import { searchEntriesOf, searchScores } from '@/models/exercise-search';
 import { MuscleGroup, muscleGroupOf } from '@/models/muscle-groups';
 import type { OffsetDateTime } from '@js-joda/core';
 
@@ -91,7 +91,7 @@ export interface PickerList {
 
 /**
  * The picker's list. With no query: Recent, then every other exercise by name. With a query: the matches,
- * best first, and recents lose their own section. The chips narrow both.
+ * best first (`searchScores`), and recents lose their own section. The chips narrow both.
  */
 export function pickerListOf(
   exercises: Record<string, ExerciseDescriptor>,
@@ -122,9 +122,10 @@ export function pickerListOf(
   }
 
   // Scored across the whole catalog: an exact name the chips hide must not be offered as a new exercise.
-  const matches = Object.entries(exercises).flatMap(([id, exercise]) => {
-    const score = fuzzyMatchScore(query, exercise.name);
-    return score === null ? [] : [{ id, name: exercise.name, score, shown: passes(exercise) }];
+  const scores = searchScores(searchEntriesOf(exercises), query);
+  const matches = [...scores].flatMap(([id, score]) => {
+    const exercise = exercises[id]!;
+    return [{ id, name: exercise.name, score, shown: passes(exercise) }];
   });
   const isExact = ({ name }: { name: string }) => name.trim().toLowerCase() === query.toLowerCase();
   const shown = matches.filter((match) => match.shown);

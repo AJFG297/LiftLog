@@ -228,7 +228,7 @@ movement in `history.exercises`: only what the user has logged.
 
 - **Order**: most recently done first; exercises last done on the same day keep the order they were first
   done in.
-- **Search**: the exercise picker's `fuzzyMatchScore` (`models/exercise-fuzzy-match.ts`) on the name, best
+- **Search**: the picker's word matcher (`searchScores` in `models/exercise-search.ts`) on the name, best
   match first as in the picker, then the most recently done. The field is foundation's `SearchField`.
 - **Muscle chips**: All · Chest · Back · Legs · Shoulders · Arms, and Core only when something logged files
   under it, in foundation's `ChipRow` and labelled as the picker's chips are (`muscleGroupLabel` in

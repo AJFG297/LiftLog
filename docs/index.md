@@ -55,7 +55,7 @@ work to find the docs relevant to your area, and update it whenever you add, rem
   overflow menu's edit, share and delete with Undo.
 - [ExercisePicker.md](./ExercisePicker.md) - choosing exercises for a routine or a workout: add (many, in
   tap order, optionally as a superset) and swap (one), how the pick comes back through the store, the list
-  (Recent, fuzzy matches, muscle and equipment chips), creating a custom exercise, and the catalog's limits.
+  (Recent, how search matches and ranks, muscle and equipment chips), creating a custom exercise, and the catalog's limits.
 - [Progress.md](./Progress.md) - the Progress tab, Records, All exercises and the exercise page (its chart,
   record dots, Next time, best weight by reps, and where it opens from), pinned lifts, and the model they share:
   `buildProgressHistory`'s one walk over the finished history (points per movement and workout, dated
