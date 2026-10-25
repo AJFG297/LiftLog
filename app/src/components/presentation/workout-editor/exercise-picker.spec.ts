@@ -5,7 +5,7 @@ import { WeightedExerciseBlueprint } from '@/models/blueprint-models';
 import { ExerciseDescriptor } from '@/models/exercise-models';
 import { exerciseGroupsOf } from '@/models/session-models/exercise-groups';
 import { makeSession, makeWeightedBlueprint } from '@/models/session-models/__test__/helpers';
-import { customExerciseOf, equipmentChoiceOf, pickerListOf, recentExerciseIds, toggledPick } from './exercise-picker';
+import { customExerciseOf, equipmentChoiceOf, pickerListOf, loggedExerciseIds, toggledPick } from './exercise-picker';
 import { CarryOver } from '@/models/session-models/carry-over';
 
 const noHistory: CarryOver = { latest: {}, unit: 'kilograms' };
@@ -62,7 +62,7 @@ describe('equipmentChoiceOf', () => {
   });
 });
 
-describe('recentExerciseIds', () => {
+describe('loggedExerciseIds', () => {
   const at = (minute: number) => OffsetDateTime.parse(`2026-09-01T10:${String(minute).padStart(2, '0')}:00Z`);
   const done = (id: string, minute: number | undefined) => ({
     blueprint: { exerciseId: id },
@@ -71,18 +71,11 @@ describe('recentExerciseIds', () => {
 
   it('lists newest first, once each, skipping unfinished and deleted exercises', () => {
     expect(
-      recentExerciseIds(
+      loggedExerciseIds(
         [done('bench', 1), done('curl', 5), done('bench', 9), done('gone', 10), done('raise', undefined), undefined],
         exercises,
       ),
     ).toEqual(['bench', 'curl']);
-  });
-
-  it('stops at the limit', () => {
-    expect(recentExerciseIds([done('bench', 1), done('curl', 2), done('raise', 3)], exercises, 2)).toEqual([
-      'raise',
-      'curl',
-    ]);
   });
 });
 
@@ -180,14 +173,14 @@ describe('pickerListOf', () => {
       kickback: exercise('Kickback', ['triceps'], 'dumbbell'),
     };
 
-    it('opens on Similar (same muscle group: main muscle, equipment, recent, name), then Recent, then the rest', () => {
+    it('opens on Similar (same muscle group: main muscle, recent, equipment, name), then Recent, then the rest', () => {
       const list = pickerListOf(withCurls, ['skull', 'bench'], noFilters, { swapping: 'curl' });
       expect(ids(list)).toEqual([
         '# similar',
         'bbCurl',
         'cableCurl',
-        'kickback',
         'skull',
+        'kickback',
         '# recent',
         'bench',
         '# all',
@@ -223,7 +216,46 @@ describe('pickerListOf', () => {
       expect(list.count).toBe(12);
     });
 
-    it('has no Similar for an exercise with no muscle group, or once a search is typed', () => {
+    it('ranks a recent exercise into Similar ahead of more on the same equipment', () => {
+      const legs = {
+        squat: exercise('Squat', ['quadriceps'], 'barbell'),
+        legPress: exercise('Leg Press', ['quadriceps'], 'machine'),
+        ...Object.fromEntries(
+          Array.from({ length: 9 }, (_, i) => [
+            `squat${i}`,
+            exercise(`Squat ${'ABCDEFGHI'[i]}`, ['quadriceps'], 'barbell'),
+          ]),
+        ),
+      };
+      expect(ids(pickerListOf(legs, ['legPress'], noFilters, { swapping: 'squat' })).slice(0, 3)).toEqual([
+        '# similar',
+        'legPress',
+        'squat0',
+      ]);
+    });
+
+    it('leaves the swapped exercise out of Recent', () => {
+      const list = pickerListOf(withCurls, ['curl', 'bench'], noFilters, { swapping: 'curl' });
+      expect(ids(list).filter((id) => id === 'curl' || id.startsWith('#'))).toEqual([
+        '# similar',
+        '# recent',
+        '# all',
+        'curl',
+      ]);
+    });
+
+    it('opens an exercise with no muscle group on the ones its name finds, logged first', () => {
+      const withStub = { ...withCurls, stub: exercise('Curl', []) };
+      expect(ids(pickerListOf(withStub, ['curl'], noFilters, { swapping: 'stub' })).slice(0, 5)).toEqual([
+        '# similar',
+        'curl',
+        'bbCurl',
+        'cableCurl',
+        '# all',
+      ]);
+    });
+
+    it('has no Similar when nothing else shares the name of an exercise with no muscle group, or once a search is typed', () => {
       expect(ids(pickerListOf(exercises, [], noFilters, { swapping: 'neck' }))[0]).toBe('# all');
       expect(ids(pickerListOf(withCurls, [], { ...noFilters, query: 'curl' }, { swapping: 'curl' }))[0]).toBe(
         '# matches',
@@ -242,7 +274,19 @@ describe('pickerListOf', () => {
       ids(pickerListOf(presses, recent, { ...noFilters, query })).filter((id) => !/^[#+~] /.test(id));
     expect(search('cline press', [])).toEqual(['decline', 'incline']);
     expect(search('cline press', ['incline'])).toEqual(['incline', 'decline']);
+    expect(search('cline press', ['bench', 'machine', 'a', 'b', 'c', 'incline'])).toEqual(['incline', 'decline']);
     expect(search('bench press', ['machine'])).toEqual(['bench', 'machine']);
+  });
+
+  it('lists the five newest logged exercises under Recent', () => {
+    const list = pickerListOf(exercises, ['bench', 'row', 'curl', 'skull', 'raise', 'pullup'], noFilters);
+    expect(ids(list).slice(0, 8)).toEqual(['# recent', 'bench', 'row', 'curl', 'skull', 'raise', '# all', 'neck']);
+  });
+
+  it('treats a query with no words, such as "(", as no query', () => {
+    expect(pickerListOf(exercises, ['curl'], { ...noFilters, query: ' ( ' })).toEqual(
+      pickerListOf(exercises, ['curl'], noFilters),
+    );
   });
 
   it('counts the exercises it lists, a recent one once', () => {

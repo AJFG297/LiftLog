@@ -136,14 +136,12 @@ describe('searchScores', () => {
     const scores = searchScores(entries, 'bench press');
     expect(scores.get('a')!).toBeGreaterThan(scores.get('b')!);
   });
-
-  it('boosts a favoured id once, even when it is listed twice', () => {
-    expect(searchScores(entries, 'bench', ['a', 'a']).get('a')).toBe(searchScores(entries, 'bench', ['a']).get('a'));
-  });
 });
 
 describe('a custom exercise on the built-in catalog', () => {
   const own = 'custom-bench-press';
+  const bbBench = 'Barbell Bench Press - Medium Grip';
+  // A stub as the AI planner or an import makes it: a name and nothing else.
   const withOwn = {
     ...catalog,
     [own]: {
@@ -154,19 +152,36 @@ describe('a custom exercise on the built-in catalog', () => {
       equipment: null,
     },
   };
-  const rankedWithOwn = (query: string, recent: string[] = []) =>
-    pickerListOf(withOwn, recent, { query, muscle: undefined, equipment: undefined }, { ownIds: [own] }).rows.flatMap(
-      (row) => (row.kind === 'exercise' ? [row.id] : []),
+  const rankedWithOwn = (query: string, logged: string[]) =>
+    pickerListOf(withOwn, logged, { query, muscle: undefined, equipment: undefined }).rows.flatMap((row) =>
+      row.kind === 'exercise' ? [row.id] : [],
     );
 
   it.each([
-    ['bench', ['Barbell Bench Press - Medium Grip', own]],
-    ['bench press', [own, 'Barbell Bench Press - Medium Grip']],
-  ])('ranks the user\'s own "Bench Press" with the alias for "%s"', (query, top) => {
-    expect(rankedWithOwn(query).slice(0, 2)).toEqual(top);
+    ['bench', [bbBench, own]],
+    ['bench press', [own, bbBench]],
+  ])('ranks a logged custom "Bench Press" with the alias for "%s"', (query, top) => {
+    expect(rankedWithOwn(query, [own]).slice(0, 2)).toEqual(top);
   });
 
-  it('keeps an own exercise that is also recent behind the alias for "bench"', () => {
-    expect(rankedWithOwn('bench', [own]).slice(0, 2)).toEqual(['Barbell Bench Press - Medium Grip', own]);
+  it('gives a custom exercise that was never logged no boost', () => {
+    expect(rankedWithOwn('bench', []).indexOf(own)).toBeGreaterThan(1);
+    expect(rankedWithOwn('bench press', []).slice(0, 2)).toEqual([bbBench, own]);
+  });
+
+  it('boosts a logged built-in past its near-ties', () => {
+    expect(rankedWithOwn('bench', []).indexOf('Bench Jump')).toBe(3);
+    expect(rankedWithOwn('bench', ['Bench Jump']).indexOf('Bench Jump')).toBe(1);
+  });
+
+  it('opens a swap of the stub on the exercises its name finds, the barbell bench press first', () => {
+    const similar = pickerListOf(
+      withOwn,
+      [],
+      { query: '', muscle: undefined, equipment: undefined },
+      { swapping: own },
+    ).rows.flatMap((row) => (row.kind === 'exercise' && row.key.startsWith('similar-') ? [row.id] : []));
+    expect(similar[0]).toBe(bbBench);
+    expect(similar).not.toContain(own);
   });
 });

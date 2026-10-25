@@ -90,11 +90,15 @@ export function searchEntriesOf(exercises: Record<string, ExerciseDescriptor>): 
   return entries;
 }
 
+/** A query with no words to match, such as "(": search treats it as no query at all. */
+export function isBlankQuery(query: string): boolean {
+  return wordsOf(query).length === 0;
+}
+
 /**
  * The entries matching `query`, by id, higher scoring better. Every query word must match some word of one of
  * the entry's names, in any order. When no entry matches that way, a loose in-order letter match stands in,
- * so an odd abbreviation still finds something. The `favoured` ids get a small boost, once each even when
- * listed twice. Empty for a blank query.
+ * so an odd abbreviation still finds something. The `favoured` ids get a small boost. Empty for a blank query.
  */
 export function searchScores(
   entries: readonly SearchEntry[],
@@ -138,7 +142,7 @@ export function searchScores(
       }
     }
   }
-  for (const id of new Set(favoured)) {
+  for (const id of favoured) {
     const score = scores.get(id);
     if (score !== undefined) {
       scores.set(id, score + FAVOURED_BOOST);

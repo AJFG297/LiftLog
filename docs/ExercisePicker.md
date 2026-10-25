@@ -61,19 +61,24 @@ The routine or workout's name and exercise ids travel as route params, so a row 
 
 ## The list
 
-`pickerListOf` builds it from the catalog (`selectExercises`), the recent exercises and the filters.
+`pickerListOf` builds it from the catalog (`selectExercises`), the exercises the user has logged and the
+filters. The logged exercises are every one with history, newest first (`loggedExerciseIds`, from
+`storedSessions.latestExercises`).
 
-- With no search: **Recent**, then every other exercise by name. Recent is the five exercises logged most
-  recently, newest first (`recentExerciseIds`, from `storedSessions.latestExercises`).
+- With no search: **Recent**, then every other exercise by name. Recent is the first five logged exercises.
 - Swapping, with no search, **Similar** comes first: up to eight exercises filed under the swapped one's
   muscle group (`muscleGroupOf`). Those with its main muscle (the first primary one) come first, so a squat
-  lists squats and lunges before calf raises. Then those on the same equipment (`equipmentChoiceOf`), then
-  the recent ones, then by name, without the swapped exercise itself. Each exercise is listed once: one in Similar is
-  left out of Recent and of the rest. `pickerListOf` takes the swapped id as its optional fourth argument
-  (`{ swapping }`).
-- With a search: the matches (see [Search](#search)), best first, and Recent has no section of
-  its own, but a recent exercise gets a small boost: it moves ahead of an otherwise equal match, never ahead
-  of a better-matched word or a whole name. If no exercise in the whole catalog is named exactly what was typed, a **Create "X"** row ends
+  lists squats and lunges before calf raises. Then the recent ones, so a recent leg press makes it when
+  swapping a squat, then those on the same equipment (`equipmentChoiceOf`), then by name. An exercise with no
+  muscle group, such as a stub the AI planner or an import made, has nothing to file under, so Similar lists
+  what a search for its name finds instead: a stub "Bench Press" opens on Barbell Bench Press. The swapped
+  exercise is never in Similar or Recent. Each exercise is listed once: one in Similar is left out of Recent
+  and of the rest. `pickerListOf` takes the swapped id as its optional fourth argument (`{ swapping }`).
+- With a search: the matches (see [Search](#search)), best first, and Recent has no section of its own, but
+  every exercise with history gets a small boost: it moves ahead of an otherwise equal match, never ahead of
+  a better-matched word or a whole name. History is the signal, not who made the exercise: a built-in done
+  every week is boosted, and a stub that was never done isn't, so it doesn't pull picks away from the
+  built-in it stands for. A query with no words, such as "(", counts as no search. If no exercise in the whole catalog is named exactly what was typed, a **Create "X"** row ends
   the list. If one is but the filters hide it, the row offers to clear the filters instead, so a filter never
   leads to a duplicate. If nothing the filters allow matches, the screen says so and offers Create "X", or
   Clear filters when the filters hide a match.

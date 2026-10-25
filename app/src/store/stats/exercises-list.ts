@@ -1,7 +1,7 @@
 import { LocalDate } from '@js-joda/core';
 import { ExerciseId, MovementKey } from '@/models/blueprint-models';
 import { ExerciseDescriptor } from '@/models/exercise-models';
-import { searchEntryOf, searchScores } from '@/models/exercise-search';
+import { isBlankQuery, searchEntryOf, searchScores } from '@/models/exercise-search';
 import { MuscleGroup, muscleGroupOf } from '@/models/muscle-groups';
 import { LastDoneLabel, lastDoneLabelOf } from '@/models/home/up-next';
 import { Weight, WeightUnit } from '@/models/weight';
@@ -77,7 +77,7 @@ export function exercisesListOf(
   const all = [...history.exercises.values()].filter((exercise) => exercise.points.length > 0);
 
   const scores =
-    query &&
+    !isBlankQuery(query) &&
     searchScores(
       all.map((exercise) => searchEntryOf(exercise.key, exercise.name, exercise.blueprint.exerciseId)),
       query,

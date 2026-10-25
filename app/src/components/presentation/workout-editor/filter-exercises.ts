@@ -1,5 +1,5 @@
 import { ExerciseDescriptor, musclesOf } from '@/models/exercise-models';
-import { searchEntriesOf, searchScores } from '@/models/exercise-search';
+import { isBlankQuery, searchEntriesOf, searchScores } from '@/models/exercise-search';
 import Enumerable from 'linq';
 
 export interface ExerciseFilterResult {
@@ -15,7 +15,7 @@ export function filterExercises(
   muscleFilters: string[],
 ): ExerciseFilterResult {
   const trimmed = searchText.trim();
-  const scores = trimmed ? searchScores(searchEntriesOf(exercises), trimmed) : undefined;
+  const scores = !isBlankQuery(trimmed) ? searchScores(searchEntriesOf(exercises), trimmed) : undefined;
   const lowerQuery = trimmed.toLowerCase();
   let hasExactMatch = false;
   const ids = Enumerable.from(Object.entries(exercises))

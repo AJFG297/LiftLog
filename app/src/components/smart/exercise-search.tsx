@@ -11,7 +11,7 @@ import {
   pickerListOf,
   type PickerRow,
   type PickerSection,
-  recentExerciseIds,
+  loggedExerciseIds,
   toggledPick,
 } from '@/components/presentation/workout-editor/exercise-picker';
 import { type ChipOption, ChipRow } from '@/components/presentation/foundation/chip-row';
@@ -73,7 +73,6 @@ export function ExerciseSearch({ requestId, mode, swapping, context }: ExerciseS
   const exercises = useAppSelector(selectExercises);
   const latestExercises = useAppSelector(selectLatestExercises);
   const catalogMuscles = useAppSelector(selectMuscles);
-  const builtInExercises = useAppSelector((x) => x.storedSessions.builtInExercises);
   const multiSelect = mode === 'add';
 
   const [query, setQuery] = useState('');
@@ -94,10 +93,8 @@ export function ExerciseSearch({ requestId, mode, swapping, context }: ExerciseS
     return () => subscription.remove();
   }, [creating]);
 
-  const recentIds = recentExerciseIds(Object.values(latestExercises), exercises);
-  // A renamed built-in keeps its built-in id, so only exercises the user created count as their own.
-  const ownIds = Object.keys(exercises).filter((id) => !builtInExercises[id]);
-  const list = pickerListOf(exercises, recentIds, { query, muscle, equipment }, { swapping, ownIds });
+  const loggedIds = loggedExerciseIds(Object.values(latestExercises), exercises);
+  const list = pickerListOf(exercises, loggedIds, { query, muscle, equipment }, { swapping });
   const alreadyIn = new Set(context?.exerciseIds ?? []);
 
   const finish = (chosen: PickedExercise[], asSuperset: boolean) => {
