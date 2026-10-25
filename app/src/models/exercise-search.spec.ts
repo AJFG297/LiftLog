@@ -136,4 +136,37 @@ describe('searchScores', () => {
     const scores = searchScores(entries, 'bench press');
     expect(scores.get('a')!).toBeGreaterThan(scores.get('b')!);
   });
+
+  it('boosts a favoured id once, even when it is listed twice', () => {
+    expect(searchScores(entries, 'bench', ['a', 'a']).get('a')).toBe(searchScores(entries, 'bench', ['a']).get('a'));
+  });
+});
+
+describe('a custom exercise on the built-in catalog', () => {
+  const own = 'custom-bench-press';
+  const withOwn = {
+    ...catalog,
+    [own]: {
+      ...catalog['Bench Dips']!,
+      name: 'Bench Press',
+      primaryMuscles: [],
+      secondaryMuscles: [],
+      equipment: null,
+    },
+  };
+  const rankedWithOwn = (query: string, recent: string[] = []) =>
+    pickerListOf(withOwn, recent, { query, muscle: undefined, equipment: undefined }, { ownIds: [own] }).rows.flatMap(
+      (row) => (row.kind === 'exercise' ? [row.id] : []),
+    );
+
+  it.each([
+    ['bench', ['Barbell Bench Press - Medium Grip', own]],
+    ['bench press', [own, 'Barbell Bench Press - Medium Grip']],
+  ])('ranks the user\'s own "Bench Press" with the alias for "%s"', (query, top) => {
+    expect(rankedWithOwn(query).slice(0, 2)).toEqual(top);
+  });
+
+  it('keeps an own exercise that is also recent behind the alias for "bench"', () => {
+    expect(rankedWithOwn('bench', [own]).slice(0, 2)).toEqual(['Barbell Bench Press - Medium Grip', own]);
+  });
 });

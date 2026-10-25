@@ -74,6 +74,8 @@ export interface PickerFilters {
 export interface PickerContext {
   /** The id of the exercise being swapped out. */
   swapping?: string;
+  /** The user's own (custom) exercises, which search favours like recents. */
+  ownIds?: readonly string[];
 }
 
 export type PickerSection = 'similar' | 'recent' | 'all' | 'matches' | MuscleGroup;
@@ -101,7 +103,7 @@ export interface PickerList {
 /**
  * The picker's list. With no query: when swapping, Similar (same muscle group: same main muscle first, then
  * same equipment, then recents, then by name); Recent; then every other exercise by name, each exercise once. With a query: the
- * matches, best first (`searchScores`), a recent one ahead of an otherwise equal match, and no sections
+ * matches, best first (`searchScores`), a recent or own one ahead of an otherwise equal match, and no sections
  * besides. The chips narrow all of it.
  */
 export function pickerListOf(
@@ -140,7 +142,7 @@ export function pickerListOf(
   }
 
   // Scored across the whole catalog: an exact name the chips hide must not be offered as a new exercise.
-  const scores = searchScores(searchEntriesOf(exercises), query, recentIds);
+  const scores = searchScores(searchEntriesOf(exercises), query, [...recentIds, ...(context.ownIds ?? [])]);
   const matches = [...scores].map(([id, score]) => {
     const exercise = exercises[id]!;
     return { id, name: exercise.name, score, shown: passes(exercise) };

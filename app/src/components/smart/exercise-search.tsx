@@ -73,6 +73,7 @@ export function ExerciseSearch({ requestId, mode, swapping, context }: ExerciseS
   const exercises = useAppSelector(selectExercises);
   const latestExercises = useAppSelector(selectLatestExercises);
   const catalogMuscles = useAppSelector(selectMuscles);
+  const builtInExercises = useAppSelector((x) => x.storedSessions.builtInExercises);
   const multiSelect = mode === 'add';
 
   const [query, setQuery] = useState('');
@@ -94,7 +95,9 @@ export function ExerciseSearch({ requestId, mode, swapping, context }: ExerciseS
   }, [creating]);
 
   const recentIds = recentExerciseIds(Object.values(latestExercises), exercises);
-  const list = pickerListOf(exercises, recentIds, { query, muscle, equipment }, { swapping });
+  // A renamed built-in keeps its built-in id, so only exercises the user created count as their own.
+  const ownIds = Object.keys(exercises).filter((id) => !builtInExercises[id]);
+  const list = pickerListOf(exercises, recentIds, { query, muscle, equipment }, { swapping, ownIds });
   const alreadyIn = new Set(context?.exerciseIds ?? []);
 
   const finish = (chosen: PickedExercise[], asSuperset: boolean) => {
