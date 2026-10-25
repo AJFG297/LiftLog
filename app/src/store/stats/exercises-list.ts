@@ -79,7 +79,7 @@ export function exercisesListOf(
   const scores =
     query &&
     searchScores(
-      all.map((exercise) => searchEntryOf(exercise.key, exercise.name)),
+      all.map((exercise) => searchEntryOf(exercise.key, exercise.name, exercise.blueprint.exerciseId)),
       query,
     );
   const rows = all

@@ -91,11 +91,20 @@ own order for ties.
   are dropped, and spaces and `- / ( ) , . + : ; & _` all break words. Every word is made singular with the
   resolver's plural rules (`singularWord` in `exercise-name.ts`), so "squats" meets Squat and "flies" meets
   Flyes. `db`, `bb` and `kb` are spelled out as dumbbell, barbell and kettlebell.
-- **Every query word must match** a word of the name, in any order. A word matches exactly, as the start of
-  a name word ("sq" for Squat), or inside one (three letters or more, scored low). Two query words may stand
-  for one name word ("pull up" for Pullups) and one for two ("chinup" for Chin-Up).
+- **Aliases.** `models/exercise-aliases.ts` gives about 40 built-ins the names people use in the gym ("ohp",
+  "rdl", "bench", "skull crusher", "pec deck"), keyed by built-in id. Each alias is matched like a second
+  name, so a custom exercise or a Stats row finds them through its built-in id. Keep an alias on the one
+  exercise most people mean by it; a spec checks every key is a catalog id.
+- **Every query word must match** a word of the name or of one alias, in any order. A word matches exactly,
+  as the start of a name word ("sq" for Squat), with a typo, or inside one (three letters or more, scored
+  lowest). Two query words may stand for one name word ("pull up" for Pullups) and one for two ("chinup" for
+  Chin-Up).
+- **Typos** are a bounded edit distance where swapping two neighbouring letters counts as one edit: one edit
+  for a word of 4 to 6 letters, two from 7, none below 4 (one wrong letter in "row" is another word). It is
+  checked against the whole name word and against its start, so "squet" finds Squat while it's being typed.
 - **Ranking.** The words' average match, plus a bonus for covering more of a short name, a small one for
-  keeping the name's word order, and a large one when the query is the whole name.
+  keeping the name's word order, and a large one when the query is the whole name or a whole alias: "bench"
+  ranks Barbell Bench Press - Medium Grip first.
 - **Fallback.** When no exercise matches word by word, the old in-order letter match
   (`models/exercise-fuzzy-match.ts`) stands in, so an odd abbreviation still finds something.
 - The catalog's search entries are built once per catalog object (a `WeakMap` cache), as the list is rebuilt
@@ -114,6 +123,6 @@ and a placeholder, listed as Unnamed exercise until it has one.
 
 ## The built-in library
 
-About 870 exercises from `wrkout/exercises.json` (`app/assets/sources.txt`). It is big but hard to search
-with gym names: there is no plain "Bench Press" or "Overhead Press", only "Barbell Bench Press - Medium
-Grip" and "Standing Military Press". Growing or curating it is separate work.
+About 870 exercises from `wrkout/exercises.json` (`app/assets/sources.txt`). Its names are formal: there is
+no plain "Bench Press" or "Overhead Press", only "Barbell Bench Press - Medium Grip" and "Standing Military
+Press". The aliases bridge the common gym names; growing or curating the catalog itself is separate work.

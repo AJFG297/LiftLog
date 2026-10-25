@@ -1,4 +1,5 @@
 import { singularWord } from '@/models/blueprint-models/exercise-name';
+import { EXERCISE_ALIASES } from '@/models/exercise-aliases';
 import { fuzzyMatchScore } from '@/models/exercise-fuzzy-match';
 import { ExerciseDescriptor } from '@/models/exercise-models';
 
@@ -14,19 +15,21 @@ export interface SearchEntry {
   id: string;
   /** The name's normalized words. */
   words: string[];
-  /** Every name it can be found by, its own first. */
+  /** Every name it can be found by: its own, then its aliases. */
   variants: SearchVariant[];
 }
 
 /** How well one query word matches. A token's best tier counts. */
-const TIER = { exact: 1, prefix: 0.8, substring: 0.3 } as const;
+const TIER = { exact: 1, prefix: 0.8, typo: 0.5, substring: 0.3 } as const;
+/** A word shorter than this is matched exactly or not at all: one wrong letter in `row` makes another word. */
+const MIN_TYPO = 4;
 /** A substring shorter than this matches too much to count (`up` in `cup`). */
 const MIN_SUBSTRING = 3;
 /** Rewards a name the query covers most of: `Barbell Squat` over `Barbell Squat To A Bench` for "barbell squat". */
 const COVERAGE_WEIGHT = 0.5;
 /** Rewards a name whose words come in the query's order: `Bench Press` over `Press Bench` for "bench press". */
 const IN_ORDER_BONUS = 0.1;
-/** The query is the whole name, give or take spacing and punctuation: it beats every partial match. */
+/** The query is the whole name or alias, give or take spacing and punctuation: it beats every partial match. */
 const EXACT_NAME_BONUS = 2;
 
 /**
@@ -58,10 +61,14 @@ function variantOf(words: string[]): SearchVariant {
   return { words, compact: words.join('') };
 }
 
-/** The entry for one exercise. */
-export function searchEntryOf(id: string, name: string): SearchEntry {
+/**
+ * The entry for one exercise. `builtInId` keys its aliases: the catalog id, which Stats, keying its rows by
+ * history, passes apart from `id`.
+ */
+export function searchEntryOf(id: string, name: string, builtInId: string = id): SearchEntry {
   const words = wordsOf(name);
-  return { id, words, variants: [variantOf(words)] };
+  const aliases = EXERCISE_ALIASES[builtInId] ?? [];
+  return { id, words, variants: [variantOf(words), ...aliases.map((alias) => variantOf(wordsOf(alias)))] };
 }
 
 // Built on every keystroke from a record whose identity the store keeps until the catalog changes, so the
@@ -90,10 +97,20 @@ export function searchScores(entries: readonly SearchEntry[], query: string): Ma
     return scores;
   }
   const compact = tokens.join('');
+  // Most words recur across the catalog, so each token's typo checks are kept for this query.
+  const typoChecks = tokens.map(() => new Map<string, boolean>());
+  const isTypo = (t: number, word: string) => {
+    let typo = typoChecks[t]!.get(word);
+    if (typo === undefined) {
+      typo = isTypoOf(tokens[t]!, word);
+      typoChecks[t]!.set(word, typo);
+    }
+    return typo;
+  };
   for (const entry of entries) {
     let best: number | undefined;
     for (const variant of entry.variants) {
-      const score = variantScore(tokens, compact, variant);
+      const score = variantScore(tokens, compact, variant, isTypo);
       if (score !== undefined && (best === undefined || score > best)) {
         best = score;
       }
@@ -124,12 +141,54 @@ function wordTier(token: string, word: string): number {
   return token.length >= MIN_SUBSTRING && word.includes(token) ? TIER.substring : 0;
 }
 
+/** A misspelling of the word, or of its start as far as the token goes: "squet" for Squat, "benhc" for Bench. */
+function isTypoOf(token: string, word: string): boolean {
+  const max = token.length >= 7 ? 2 : 1;
+  return (
+    withinEdits(token, word, max) ||
+    (word.length > token.length && withinEdits(token, word.slice(0, token.length), max))
+  );
+}
+
+/** Whether the optimal string alignment distance is at most `max`: a swap of two neighbours counts as one edit. */
+function withinEdits(a: string, b: string, max: number): boolean {
+  if (Math.abs(a.length - b.length) > max) {
+    return false;
+  }
+  let before: number[] = [];
+  let previous = Array.from({ length: b.length + 1 }, (_, j) => j);
+  for (let i = 1; i <= a.length; i++) {
+    const row = [i];
+    let rowMin = i;
+    for (let j = 1; j <= b.length; j++) {
+      let distance = Math.min(previous[j]! + 1, row[j - 1]! + 1, previous[j - 1]! + (a[i - 1] === b[j - 1] ? 0 : 1));
+      if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) {
+        distance = Math.min(distance, before[j - 2]! + 1);
+      }
+      row.push(distance);
+      rowMin = Math.min(rowMin, distance);
+    }
+    // No row's minimum is below the one before it, so the distance can only grow from here.
+    if (rowMin > max) {
+      return false;
+    }
+    before = previous;
+    previous = row;
+  }
+  return previous[b.length]! <= max;
+}
+
 /** Exact or prefix only: a run-together match is a deliberate spelling, not a stray substring. */
 function joinedTier(token: string, joined: string): number {
   return joined === token ? TIER.exact : joined.startsWith(token) ? TIER.prefix : 0;
 }
 
-function variantScore(tokens: readonly string[], queryCompact: string, variant: SearchVariant): number | undefined {
+function variantScore(
+  tokens: readonly string[],
+  queryCompact: string,
+  variant: SearchVariant,
+  isTypo: (token: number, word: string) => boolean,
+): number | undefined {
   const { words } = variant;
   const tiers = tokens.map(() => 0);
   // Per token, the first word its best match covers and how many words that is.
@@ -162,8 +221,14 @@ function variantScore(tokens: readonly string[], queryCompact: string, variant: 
     });
   }
 
-  if (tiers.some((tier) => tier === 0)) {
-    return undefined;
+  // The costliest check, so only for tokens nothing better matched, and none once a token can't match.
+  for (let t = 0; t < tokens.length; t++) {
+    if (tokens[t]!.length >= MIN_TYPO && tiers[t]! < TIER.typo) {
+      words.forEach((word, w) => take(t, isTypo(t, word) ? TIER.typo : 0, w, 1));
+    }
+    if (tiers[t] === 0) {
+      return undefined;
+    }
   }
   const covered = new Set<number>();
   at.forEach((word, t) => {

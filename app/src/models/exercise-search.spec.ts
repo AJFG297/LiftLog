@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { pickerListOf } from '@/components/presentation/workout-editor/exercise-picker';
 import { filterExercises } from '@/components/presentation/workout-editor/filter-exercises';
+import { EXERCISE_ALIASES } from '@/models/exercise-aliases';
 import { searchEntryOf, searchScores } from '@/models/exercise-search';
 import { BuiltInExerciseJSON, ExerciseTranslationMap, resolveCatalog } from '@/services/exercise-catalog';
 import base from '../../assets/exercises.json';
@@ -79,11 +80,56 @@ describe('exercise search on the built-in catalog', () => {
   });
 });
 
+describe('aliases and typos on the built-in catalog', () => {
+  it('keys every alias by a built-in id', () => {
+    const ids = new Set(base.exercises.map((exercise) => exercise.name));
+    expect(Object.keys(EXERCISE_ALIASES).filter((id) => !ids.has(id))).toEqual([]);
+  });
+
+  it.each([
+    ['ohp', 'Standing Military Press'],
+    ['rdl', 'Romanian Deadlift'],
+    ['bench', 'Barbell Bench Press - Medium Grip'],
+    ['bench press', 'Barbell Bench Press - Medium Grip'],
+    ['overhead press', 'Standing Military Press'],
+    ['skull', 'EZ-Bar Skullcrusher'],
+  ])('ranks "%s" as %s first', (query, id) => {
+    expect(rankOf(query, id)).toBe(1);
+  });
+
+  it.each([
+    ['squat', ['Barbell Squat']],
+    ['squet', ['Barbell Squat', 'Bodyweight Squat', 'Box Squat', 'Front Barbell Squat']],
+    ['row', ['Bent Over Barbell Row']],
+    ['deadlift', ['Barbell Deadlift']],
+    ['flies', ['Dumbbell Flyes']],
+    ['curl', ['Barbell Curl', 'Dumbbell Bicep Curl']],
+    ['dip', ['Dips - Chest Version', 'Dips - Triceps Version', 'Parallel Bar Dip']],
+    ['benhc press', ['Barbell Bench Press - Medium Grip']],
+  ])('puts what "%s" means in the top 3', (query, wanted) => {
+    expect(ranked(query).slice(0, 3)).toEqual(expect.arrayContaining([expect.toBeOneOf(wanted)]));
+  });
+});
+
 describe('searchScores', () => {
   const entries = [searchEntryOf('a', 'Bench Press'), searchEntryOf('b', 'Press Bench Machine')];
 
   it('is empty for a blank query', () => {
     expect(searchScores(entries, '  ').size).toBe(0);
+  });
+
+  it('matches an alias only through the built-in id it is keyed by', () => {
+    expect(searchScores([searchEntryOf('history-key', 'Military Press', 'Standing Military Press')], 'ohp').size).toBe(
+      1,
+    );
+    expect(searchScores([searchEntryOf('history-key', 'Military Press')], 'ohp').has('history-key')).toBe(false);
+  });
+
+  it('forgives one swapped or wrong letter in a word of four or more, and none in a shorter one', () => {
+    const lifts = [searchEntryOf('row', 'Row'), searchEntryOf('squat', 'Squat')];
+    expect([...searchScores(lifts, 'sqaut').keys()]).toEqual(['squat']);
+    expect([...searchScores(lifts, 'squt').keys()]).toEqual(['squat']);
+    expect(searchScores(lifts, 'rwo').size).toBe(0);
   });
 
   it('scores words in the query order above the same words out of order', () => {
