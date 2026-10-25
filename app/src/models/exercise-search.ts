@@ -31,6 +31,11 @@ const COVERAGE_WEIGHT = 0.5;
 const IN_ORDER_BONUS = 0.1;
 /** The query is the whole name or alias, give or take spacing and punctuation: it beats every partial match. */
 const EXACT_NAME_BONUS = 2;
+/**
+ * Lifts a favoured exercise (one done recently, say) past near-ties. Smaller than one tier step on a word of
+ * a short query, so it never lifts a prefix over an exact word, nor anything over a whole name.
+ */
+const FAVOURED_BOOST = 0.05;
 
 /**
  * Shorthand for equipment, spelled out on both sides: people type it, and one catalog name uses `DB`. `ez` is
@@ -88,9 +93,13 @@ export function searchEntriesOf(exercises: Record<string, ExerciseDescriptor>): 
 /**
  * The entries matching `query`, by id, higher scoring better. Every query word must match some word of one of
  * the entry's names, in any order. When no entry matches that way, a loose in-order letter match stands in,
- * so an odd abbreviation still finds something. Empty for a blank query.
+ * so an odd abbreviation still finds something. The `favoured` ids get a small boost. Empty for a blank query.
  */
-export function searchScores(entries: readonly SearchEntry[], query: string): Map<string, number> {
+export function searchScores(
+  entries: readonly SearchEntry[],
+  query: string,
+  favoured: readonly string[] = [],
+): Map<string, number> {
   const scores = new Map<string, number>();
   const tokens = wordsOf(query);
   if (!tokens.length) {
@@ -126,6 +135,12 @@ export function searchScores(entries: readonly SearchEntry[], query: string): Ma
       if (score !== null) {
         scores.set(entry.id, score);
       }
+    }
+  }
+  for (const id of favoured) {
+    const score = scores.get(id);
+    if (score !== undefined) {
+      scores.set(id, score + FAVOURED_BOOST);
     }
   }
   return scores;

@@ -24,7 +24,8 @@ On iOS the page sheet already starts below the status bar, so the header adds no
 - **Add** picks any number. Each tap adds the row to the end of the selection and shows its number, and
   tapping it again takes it out and closes the gap. **Add N exercises** hands them back in that order.
   With two or more, **As superset** hands them back linked, the last one closing the chain.
-- **Swap** picks one: the tap closes the picker. It opens on the exercise's own name when that names one.
+- **Swap** picks one: the tap closes the picker. The swapped exercise's id travels as a route param
+  (`exerciseId`), and the picker opens with an empty search and a **Similar** section on top (see below).
 
 What was picked lands at the end of the routine or the workout as 3 × 10 with 1:30 rest and no progression
 rules (`blueprintsForPick` in `models/exercise-pick.ts`). A superset flag left on the old last exercise linked nothing, and would join
@@ -64,8 +65,15 @@ The routine or workout's name and exercise ids travel as route params, so a row 
 
 - With no search: **Recent**, then every other exercise by name. Recent is the five exercises logged most
   recently, newest first (`recentExerciseIds`, from `storedSessions.latestExercises`).
+- Swapping, with no search, **Similar** comes first: up to eight exercises filed under the swapped one's
+  muscle group (`muscleGroupOf`). Those with its main muscle (the first primary one) come first, so a squat
+  lists squats and lunges before calf raises. Then those on the same equipment (`equipmentChoiceOf`), then
+  the recent ones, then by name, without the swapped exercise itself. Each exercise is listed once: one in Similar is
+  left out of Recent and of the rest. `pickerListOf` takes the swapped id as its optional fourth argument
+  (`{ swapping }`).
 - With a search: the matches (see [Search](#search)), best first, and Recent has no section of
-  its own. If no exercise in the whole catalog is named exactly what was typed, a **Create "X"** row ends
+  its own, but a recent exercise gets a small boost: it moves ahead of an otherwise equal match, never ahead
+  of a better-matched word or a whole name. If no exercise in the whole catalog is named exactly what was typed, a **Create "X"** row ends
   the list. If one is but the filters hide it, the row offers to clear the filters instead, so a filter never
   leads to a duplicate. If nothing the filters allow matches, the screen says so and offers Create "X", or
   Clear filters when the filters hide a match.

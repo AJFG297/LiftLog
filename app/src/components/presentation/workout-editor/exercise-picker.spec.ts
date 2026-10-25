@@ -172,6 +172,79 @@ describe('pickerListOf', () => {
     expect(list.canCreate).toBe(false);
   });
 
+  describe('when swapping', () => {
+    const withCurls = {
+      ...exercises,
+      bbCurl: exercise('Barbell Curl', ['biceps'], 'barbell'),
+      cableCurl: exercise('Cable Curl', ['biceps'], 'cable'),
+      kickback: exercise('Kickback', ['triceps'], 'dumbbell'),
+    };
+
+    it('opens on Similar (same muscle group: main muscle, equipment, recent, name), then Recent, then the rest', () => {
+      const list = pickerListOf(withCurls, ['skull', 'bench'], noFilters, { swapping: 'curl' });
+      expect(ids(list)).toEqual([
+        '# similar',
+        'bbCurl',
+        'cableCurl',
+        'kickback',
+        'skull',
+        '# recent',
+        'bench',
+        '# all',
+        'row',
+        'curl',
+        'raise',
+        'neck',
+        'pullup',
+      ]);
+      expect(list.count).toBe(10);
+    });
+
+    it('lets the chips narrow Similar too', () => {
+      expect(ids(pickerListOf(withCurls, [], { ...noFilters, equipment: 'barbell' }, { swapping: 'curl' }))).toEqual([
+        '# similar',
+        'bbCurl',
+        'skull',
+        '# all',
+        'row',
+        'bench',
+      ]);
+    });
+
+    it('caps Similar so it stays a shortcut', () => {
+      const chest = Object.fromEntries(
+        Array.from({ length: 12 }, (_, i) => [
+          `press${i}`,
+          exercise(`Press ${'ABCDEFGHIJKL'[i]}`, ['chest'], 'barbell'),
+        ]),
+      );
+      const list = pickerListOf(chest, [], noFilters, { swapping: 'press0' });
+      expect(ids(list).slice(0, 9)).toEqual(['# similar', ...Array.from({ length: 8 }, (_, i) => `press${i + 1}`)]);
+      expect(list.count).toBe(12);
+    });
+
+    it('has no Similar for an exercise with no muscle group, or once a search is typed', () => {
+      expect(ids(pickerListOf(exercises, [], noFilters, { swapping: 'neck' }))[0]).toBe('# all');
+      expect(ids(pickerListOf(withCurls, [], { ...noFilters, query: 'curl' }, { swapping: 'curl' }))[0]).toBe(
+        '# matches',
+      );
+    });
+  });
+
+  it('ranks a recent exercise ahead of an otherwise equal match, but never ahead of an exact name', () => {
+    const presses = {
+      decline: exercise('Decline Press', ['chest'], 'barbell'),
+      incline: exercise('Incline Press', ['chest'], 'barbell'),
+      bench: exercise('Bench Press', ['chest'], 'barbell'),
+      machine: exercise('Bench Press Machine', ['chest'], 'machine'),
+    };
+    const search = (query: string, recent: string[]) =>
+      ids(pickerListOf(presses, recent, { ...noFilters, query })).filter((id) => !/^[#+~] /.test(id));
+    expect(search('cline press', [])).toEqual(['decline', 'incline']);
+    expect(search('cline press', ['incline'])).toEqual(['incline', 'decline']);
+    expect(search('bench press', ['machine'])).toEqual(['bench', 'machine']);
+  });
+
   it('counts the exercises it lists, a recent one once', () => {
     expect(pickerListOf(exercises, [], noFilters).count).toBe(7);
     expect(pickerListOf(exercises, ['raise', 'bench'], noFilters).count).toBe(7);

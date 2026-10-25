@@ -1344,6 +1344,7 @@
   "exercise_picker.equipment.any": "Any equipment",
   "exercise_picker.count.one": "1 exercise",
   "exercise_picker.count.many": "{count} exercises",
+  "exercise_picker.section.similar": "Similar",
   "exercise_picker.section.recent": "Recent",
   "exercise_picker.section.all": "All exercises",
   "exercise_picker.section.matches": "Matches",

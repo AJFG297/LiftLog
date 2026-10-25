@@ -172,7 +172,7 @@ export function ExerciseEditorSheet(props: ExerciseEditorSheetProps) {
             nextExerciseName={props.nextExerciseName}
             restTimersEnabled={restTimersEnabled}
             formatStep={formatStep}
-            onSwap={() => openSearch(exercise.name)}
+            onSwap={() => openSearch(exercise.exerciseId)}
             onOpenLoad={() => router.push(getExerciseLoadHref(editId))}
             onOpenRest={() => router.push(getExerciseEditRestHref(editId))}
             onOpenWarmups={() => router.push(getEditorWarmupsHref(editId, props.scope, props.workingWeight))}
