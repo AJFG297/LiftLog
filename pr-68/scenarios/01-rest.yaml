@@ -1,0 +1,43 @@
+# Starting state: onboarded empty app, Home.
+appId: com.ajfg297.liftlog
+---
+- launchApp:
+    stopApp: false
+- extendedWaitUntil:
+    visible: 'Home'
+    timeout: 60000
+- tapOn:
+    text: '(?-i)Freeform workout'
+    waitToSettleTimeoutMs: 500
+- tapOn:
+    text: 'Add exercise'
+    waitToSettleTimeoutMs: 500
+- tapOn:
+    id: 'exercise-search-input'
+    waitToSettleTimeoutMs: 500
+- inputText: 'Barbell Squat'
+- tapOn:
+    id: 'exercise-picker-row-Barbell Squat'
+    waitToSettleTimeoutMs: 500
+- back
+- tapOn:
+    id: 'exercise-picker-add'
+    waitToSettleTimeoutMs: 500
+- tapOn:
+    id: 'set-check'
+    index: 0
+    waitToSettleTimeoutMs: 500
+- takeScreenshot: logged-set
+- tapOn:
+    id: 'rest-pill'
+    waitToSettleTimeoutMs: 500
+- tapOn:
+    id: 'rest-preset-180'
+    waitToSettleTimeoutMs: 500
+- back
+- takeScreenshot: rest-running
+- swipe:
+    start: 50%, 0%
+    end: 50%, 85%
+    duration: 500
+- takeScreenshot: notification-rest

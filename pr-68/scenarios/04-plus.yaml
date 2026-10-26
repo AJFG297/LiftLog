@@ -1,0 +1,10 @@
+# Starting state: notification shade open during a three-minute rest.
+appId: com.ajfg297.liftlog
+---
+- back
+- tapOn:
+    id: 'rest-pill'
+    waitToSettleTimeoutMs: 500
+- tapOn:
+    id: 'rest-sheet-plus'
+    waitToSettleTimeoutMs: 500

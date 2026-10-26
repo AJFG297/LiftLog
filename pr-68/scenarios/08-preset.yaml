@@ -1,0 +1,6 @@
+# Starting state: the active workout's open rest sheet.
+appId: com.ajfg297.liftlog
+---
+- tapOn:
+    id: 'rest-preset-30'
+    waitToSettleTimeoutMs: 500

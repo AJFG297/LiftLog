@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="expo.modules.workoutworker.utils.WorkoutMessageTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-10-26T20:30:43.853Z" hostname="Aidans-MacBook-Pro.local" time="0.243">
+  <properties/>
+  <testcase name="a storage version does not prevent decoding a workout rest update[storage version 10]" classname="expo.modules.workoutworker.utils.WorkoutMessageTest" time="0.24"/>
+  <testcase name="a storage version does not prevent decoding a workout rest update[storage version 11]" classname="expo.modules.workoutworker.utils.WorkoutMessageTest" time="0.001"/>
+  <testcase name="a storage version does not prevent decoding a workout rest update[storage version 12]" classname="expo.modules.workoutworker.utils.WorkoutMessageTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

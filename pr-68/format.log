@@ -1,0 +1,8 @@
+
+> liftlog-react@1.0.0 format:check
+> oxfmt --check .
+
+Checking formatting...
+
+All matched files use the correct format.
+Finished in 491ms on 953 files using 12 threads.

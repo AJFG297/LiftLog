@@ -1,0 +1,30 @@
+# Starting state: the empty fixture onboarding, if its readiness flow was interrupted.
+appId: com.ajfg297.liftlog
+---
+- launchApp
+- extendedWaitUntil:
+    visible: 'Next|Get started|Home|Dismiss'
+    timeout: 180000
+- runFlow:
+    when:
+      visible: 'Dismiss'
+    commands:
+      - tapOn: 'Dismiss'
+- repeat:
+    times: 5
+    commands:
+      - runFlow:
+          when:
+            visible: '^Next$'
+          commands:
+            - tapOn: '^Next$'
+            - waitForAnimationToEnd:
+                timeout: 3000
+- runFlow:
+    when:
+      visible: 'Get started'
+    commands:
+      - tapOn: 'Get started'
+- assertVisible:
+    id: 'home-range'
+- takeScreenshot: home

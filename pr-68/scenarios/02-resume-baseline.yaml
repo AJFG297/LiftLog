@@ -1,0 +1,24 @@
+# Starting state: exercise picker with Squat selected and keyboard open.
+appId: com.ajfg297.liftlog
+---
+- back
+- tapOn:
+    id: 'exercise-picker-add'
+- tapOn:
+    id: 'set-check'
+    index: 0
+    waitToSettleTimeoutMs: 500
+- takeScreenshot: logged-set
+- tapOn:
+    id: 'rest-pill'
+    waitToSettleTimeoutMs: 500
+- tapOn:
+    id: 'rest-preset-180'
+    waitToSettleTimeoutMs: 500
+- back
+- takeScreenshot: rest-running
+- swipe:
+    start: 50%, 0%
+    end: 50%, 85%
+    duration: 500
+- takeScreenshot: notification-rest

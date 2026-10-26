@@ -1,0 +1,1626 @@
+POWER MANAGER (dumpsys power)
+
+Power Manager State:
+  Settings power_manager_constants:
+    no_cached_wake_locks=true
+  mDirty=0x0
+  mWakefulness=Dozing
+  mWakefulnessChanging=true
+  mIsPowered=true
+  mPlugType=1
+  mBatteryLevel=100
+  mStayOn=true
+  mProximityPositive=false
+  mBootCompleted=true
+  mSystemReady=true
+  mEnhancedDischargeTimeElapsed=0
+  mLastEnhancedDischargeTimeUpdatedElapsed=0
+  mEnhancedDischargePredictionIsPersonalized=false
+  mUseAutoSuspend=true
+  mHalAutoSuspendModeEnabled=false
+  mHalInteractiveModeEnabled=true
+  mWakeLockSummary=0x1
+  mNotifyLongScheduled=+9s99ms
+  mNotifyLongDispatched=-50s747ms
+  mNotifyLongNextCheck=+9s98ms
+  mUserActivityTimeoutTime=+6s273ms
+  mMessageScheduledTime=+6s273ms
+  mRequestWaitForNegativeProximity=false
+  mInterceptedPowerKeyForProximity=false
+  mSandmanScheduled=false
+  mBatteryLevelLow=false
+  mLightDeviceIdleMode=false
+  mDeviceIdleMode=false
+  mDeviceIdleWhitelist=[2000, 10104, 10115, 10121, 10146, 10200, 10208, 10209, 10212, 10215]
+  mDeviceIdleTempWhitelist=[1000]
+  mLowPowerStandbyActive=false
+  mLastWakeTime=361021 (1727 ms ago)
+  mLastSleepTime=362657 (91 ms ago)
+  mLastSleepReason=sleep_button
+  mLastGlobalWakeTimeRealtime=361021 (1727 ms ago)
+  mLastGlobalSleepTimeRealtime=362657 (91 ms ago)
+  mLastInteractivePowerHintTime=361021 (1727 ms ago)
+  mLastScreenBrightnessBoostTime=0 (362748 ms ago)
+  mScreenBrightnessBoostInProgress=false
+  mHoldingWakeLockSuspendBlocker=true
+  mHoldingDisplaySuspendBlocker=true
+  mLastFlipTime=0
+  mIsFaceDown=false
+
+Settings and Configuration:
+  mDecoupleHalAutoSuspendModeFromDisplayConfig=false
+  mDecoupleHalInteractiveModeFromDisplayConfig=false
+  mWakeUpWhenPluggedOrUnpluggedConfig=false
+  mWakeUpWhenPluggedOrUnpluggedInTheaterModeConfig=false
+  mTheaterModeEnabled=false
+  mGlobalForceDisableWakelocks=false
+  mGroupsToForceDisableWakelocks={}
+  mSuspendWhenScreenOffDueToProximityConfig=false
+  mDozeAfterScreenOff=true
+  mBrightWhenDozingConfig=false
+  mAttentiveWarningDurationConfig=30000
+  mStayOnWhilePluggedInSetting=1
+  mUserActivityTimeoutOverrideFromWindowManager=10000
+  mUserInactiveOverrideFromWindowManager=false
+  mDozeScreenStateOverrideFromDreamManager=0
+  mDrawWakeLockOverrideFromSidekick=false
+  mDozeScreenBrightnessOverrideFromDreamManager=NaN
+  mUseNormalBrightnessForDoze=false
+  mScreenBrightnessMinimum=0.035433073
+  mScreenBrightnessMaximum=1.0
+  mScreenBrightnessDefault=0.39763778
+  mDoubleTapWakeEnabled=false
+  mForegroundProfile=0
+  mUserId=0
+  mWakeUpDelegate=null
+
+Attentive timeout: -1 ms
+Sleep timeout: -1 ms
+Screen off timeout: 10000 ms
+Screen dim duration: 2000 ms
+
+UID states (changing=false changed=false):
+  UID 1000:   ACTIVE  count=0 state=0
+  UID 1001:   ACTIVE  count=0 state=0
+  UID 1002:   ACTIVE  count=0 state=0
+  UID 1027:   ACTIVE  count=0 state=0
+  UID 1041: INACTIVE  count=1 state=20
+  UID 1068:   ACTIVE  count=0 state=0
+  UID 1073:   ACTIVE  count=1 state=0
+  UID 2000: INACTIVE  count=0 state=19
+  UID u0a104: INACTIVE  count=0 state=19
+  UID u0a107: INACTIVE  count=0 state=19
+  UID u0a109: INACTIVE  count=0 state=19
+  UID u0a114: INACTIVE  count=0 state=19
+  UID u0a118: INACTIVE  count=0 state=19
+  UID u0a120: INACTIVE  count=0 state=19
+  UID u0a121: INACTIVE  count=0 state=19
+  UID u0a123: INACTIVE  count=0 state=19
+  UID u0a131: INACTIVE  count=0 state=19
+  UID u0a140: INACTIVE  count=0 state=19
+  UID u0a147: INACTIVE  count=0 state=19
+  UID u0a148: INACTIVE  count=0 state=19
+  UID u0a149: INACTIVE  count=0 state=19
+  UID u0a150:   ACTIVE  count=0 state=5
+  UID u0a151:   ACTIVE  count=0 state=19
+  UID u0a152: INACTIVE  count=0 state=19
+  UID u0a153: INACTIVE  count=0 state=19
+  UID u0a156:   ACTIVE  count=0 state=15
+  UID u0a157: INACTIVE  count=0 state=19
+  UID u0a158: INACTIVE  count=0 state=19
+  UID u0a159:   ACTIVE  count=0 state=5
+  UID u0a160:   ACTIVE  count=0 state=5
+  UID u0a161:   ACTIVE  count=0 state=5
+  UID u0a165: INACTIVE  count=0 state=19
+  UID u0a167: INACTIVE  count=0 state=19
+  UID u0a169:   ACTIVE  count=0 state=7
+  UID u0a179: INACTIVE  count=0 state=19
+  UID u0a180: INACTIVE  count=0 state=19
+  UID u0a184: INACTIVE  count=0 state=19
+  UID u0a185: INACTIVE  count=0 state=19
+  UID u0a192: INACTIVE  count=0 state=19
+  UID u0a197:   ACTIVE  count=0 state=5
+  UID u0a198:   ACTIVE  count=0 state=1
+  UID u0a202: INACTIVE  count=0 state=19
+  UID u0a203:   ACTIVE  count=0 state=0
+  UID u0a208: INACTIVE  count=0 state=19
+  UID u0a210: INACTIVE  count=0 state=19
+  UID u0a211: INACTIVE  count=0 state=19
+  UID u0a212: INACTIVE  count=0 state=19
+  UID u0a213:   ACTIVE  count=0 state=5
+  UID u0a215:   ACTIVE  count=0 state=5
+  UID u0a219: INACTIVE  count=0 state=19
+  UID u0a222:   ACTIVE  count=0 state=6
+  UID u0a230:   ACTIVE  count=0 state=4
+
+Looper state:
+  Looper (PowerManagerService, tid 54) {f749ca}
+    (MessageQueue is using DeliQueue implementation)
+    Message 0: { when=-38ms what=21 target=com.android.server.display.DisplayPowerController$DisplayControllerHandler async=true heapIndex=-1 }
+    Message 1: { when=-39ms what=21 target=com.android.server.display.DisplayPowerController$DisplayControllerHandler async=true heapIndex=-1 }
+    Message 2: { when=+6s272ms what=1 target=android.os.Handler async=true heapIndex=0 }
+    Message 3: { when=+9s97ms what=4 target=android.os.Handler async=true heapIndex=1 }
+    (Total messages: 4, polling=false, quitting=false)
+
+Wake Locks: size=2
+  PARTIAL_WAKE_LOCK                 'IpReachabilityMonitor.wlan0' ACQ=-6s459ms (uid=1073 isFrozen=false isAttributedUidCached=false pid=1001 powerGroupId=0)
+  PARTIAL_WAKE_LOCK                 'AudioMix' ACQ=-2s376ms (uid=1041 isFrozen=false isAttributedUidCached=false powerGroupId=-1)
+
+Suspend Blockers: size=5
+  PowerManagerService.Booting: ref count=0 []
+  PowerManagerService.WakeLocks: ref count=1 [unknown: (10-26 21:57:50.894)]
+  PowerManagerService.Display: ref count=1 [holding display: (10-26 21:58:41.413)]
+  PowerManagerService.Broadcasts: ref count=0 []
+  PowerManagerService.WirelessChargerDetector: ref count=0 []
+
+Display Power: com.android.server.power.PowerManagerService$2@7adabb1
+
+ScreenTimeoutConstants: 
+  mAttentiveTimeoutConfig=-1
+  mAttentiveTimeoutSetting=-1
+  mMinimumScreenOffTimeoutConfig=10000
+  mMaximumScreenDimDurationConfig=7000
+  mMaximumScreenDimRatioConfig=0.20000005
+  mMaximumScreenOffTimeoutFromDeviceAdmin=9223372036854775807 (enforced=false)
+  mScreenOffTimeoutSetting=2147483647
+  mSleepTimeoutSetting=-1
+
+Battery saving stats:
+  Battery Saver is currently: OFF
+    Times full enabled: 0
+    Times adaptive enabled: 0
+  
+  Drain stats:
+                     Battery saver OFF                          ON
+  NonDoze NonIntr:      0m      0mAh(  0%)      0.0mAh/h          0m      0mAh(  0%)      0.0mAh/h
+             Intr:      0m      0mAh(  0%)      0.0mAh/h          0m      0mAh(  0%)      0.0mAh/h
+  Deep    NonIntr:      0m      0mAh(  0%)      0.0mAh/h          0m      0mAh(  0%)      0.0mAh/h
+             Intr:      0m      0mAh(  0%)      0.0mAh/h          0m      0mAh(  0%)      0.0mAh/h
+  Light   NonIntr:      0m      0mAh(  0%)      0.0mAh/h          0m      0mAh(  0%)      0.0mAh/h
+             Intr:      0m      0mAh(  0%)      0.0mAh/h          0m      0mAh(  0%)      0.0mAh/h
+
+Battery saver policy (*NOTE* they only apply when battery saver is ON):
+  Settings: battery_saver_constants
+    value: 
+  Settings: (overlay)
+    value: 
+  DeviceConfig: battery_saver
+    location_mode: 
+  mAccessibilityEnabled=false
+  mAutomotiveProjectionActive=false
+  mPolicyLevel=0
+  
+  Policy 'default full'
+    advertise_is_enabled=true
+    disable_vibration=false
+    disable_animation=false
+    defer_full_backup=true
+    defer_keyvalue_backup=true
+    enable_firewall=true
+    enable_datasaver=false
+    disable_launch_boost=true
+    enable_brightness_adjustment=false
+    adjust_brightness_factor=0.5
+    location_mode=3
+    force_all_apps_standby=true
+    force_background_check=true
+    disable_optional_sensors=true
+    disable_aod=true
+    soundtrigger_mode=1
+    enable_quick_doze=true
+    enable_night_mode=true
+  
+  Policy 'current full'
+    advertise_is_enabled=true
+    disable_vibration=false
+    disable_animation=false
+    defer_full_backup=true
+    defer_keyvalue_backup=true
+    enable_firewall=true
+    enable_datasaver=false
+    disable_launch_boost=true
+    enable_brightness_adjustment=false
+    adjust_brightness_factor=0.5
+    location_mode=3
+    force_all_apps_standby=true
+    force_background_check=true
+    disable_optional_sensors=true
+    disable_aod=true
+    soundtrigger_mode=1
+    enable_quick_doze=true
+    enable_night_mode=true
+  
+  Policy 'default adaptive'
+    advertise_is_enabled=false
+    disable_vibration=false
+    disable_animation=false
+    defer_full_backup=false
+    defer_keyvalue_backup=false
+    enable_firewall=false
+    enable_datasaver=false
+    disable_launch_boost=false
+    enable_brightness_adjustment=false
+    adjust_brightness_factor=1.0
+    location_mode=0
+    force_all_apps_standby=false
+    force_background_check=false
+    disable_optional_sensors=false
+    disable_aod=false
+    soundtrigger_mode=0
+    enable_quick_doze=false
+    enable_night_mode=false
+  
+  Policy 'current adaptive'
+    advertise_is_enabled=false
+    disable_vibration=false
+    disable_animation=false
+    defer_full_backup=false
+    defer_keyvalue_backup=false
+    enable_firewall=false
+    enable_datasaver=false
+    disable_launch_boost=false
+    enable_brightness_adjustment=false
+    adjust_brightness_factor=1.0
+    location_mode=0
+    force_all_apps_standby=false
+    force_background_check=false
+    disable_optional_sensors=false
+    disable_aod=false
+    soundtrigger_mode=0
+    enable_quick_doze=false
+    enable_night_mode=false
+  
+  Policy 'effective'
+    advertise_is_enabled=false
+    disable_vibration=false
+    disable_animation=false
+    defer_full_backup=false
+    defer_keyvalue_backup=false
+    enable_firewall=false
+    enable_datasaver=false
+    disable_launch_boost=false
+    enable_brightness_adjustment=false
+    adjust_brightness_factor=1.0
+    location_mode=0
+    force_all_apps_standby=false
+    force_background_check=false
+    disable_optional_sensors=false
+    disable_aod=false
+    soundtrigger_mode=0
+    enable_quick_doze=false
+    enable_night_mode=false
+
+Battery saver state machine:
+  Enabled=false
+    full=false
+    adaptive=false
+  mState=1
+  mLastChangedIntReason=0
+  mLastChangedStrReason=null
+  mBootCompleted=true
+  mSettingsLoaded=true
+  mBatteryStatusSet=true
+  mIsPowered=true
+  mBatteryLevel=100
+  mIsBatteryLevelLow=false
+  mSettingAutomaticBatterySaver=0
+  mSettingBatterySaverEnabled=false
+  mSettingBatterySaverEnabledSticky=false
+  mSettingBatterySaverStickyAutoDisableEnabled=true
+  mSettingBatterySaverStickyAutoDisableThreshold=90
+  mSettingBatterySaverTriggerThreshold=0
+  mBatterySaverStickyBehaviourDisabled=false
+  mBatterySaverTurnedOffNotificationEnabled=true
+  mDynamicPowerSavingsDefaultDisableThreshold=80
+  mDynamicPowerSavingsDisableThreshold=80
+  mDynamicPowerSavingsEnableBatterySaver=false
+  mLastAdaptiveBatterySaverChangedExternallyElapsed=0
+AttentionDetector:
+ mIsSettingEnabled=false
+ mMaxExtensionMillis=900000
+ mPreDimCheckDurationMillis=2000
+ mEffectivePostDimTimeout=0
+ mLastUserActivityTime(excludingAttention)=361021
+ mAttentionServiceSupported=false
+ mRequested=false
+
+Profile power states: size=0
+Power Group User Activity:
+groupId: 0
+userActivitySummary=0x1
+mWakeLockSummary=0x1
+lastUserActivityTime=361021 (1735 ms ago)
+lastUserActivityTimeNoChangeLights=109166 (253590 ms ago)
+mLastWakeReason=6
+mLastSleepReason=6
+mDimDuration=-1
+mWakefulness=3
+mIsDefaultGroupAdjacent=false
+mSupportsSandman=true
+mDreamManagerAttemptedDozing=false
+mScreenOffTimeout=-1
+mSandmanSummonReason=unknown
+
+Dream Policy:
+ mDreamPolicy=DreamPolicy{shouldRequestOnScreenTimeout=false, shouldKeepDreamingWhenUnplugged=false, isDreamEnabled=true, dreamRestrictions=[]}
+
+Wireless Charger Detector State:
+  mGravitySensor={Sensor name="Gravity Sensor", vendor="AOSP", version=3, type=9, maxRange=19.6133, resolution=2.480159E-4, power=12.7, minDelay=10000}
+  mPoweredWirelessly=false
+  mAtRest=false
+  mRestX=0.0, mRestY=0.0, mRestZ=0.0
+  mDetectionInProgress=false
+  mDetectionStartTime=0 (never)
+  mMustUpdateRestPosition=false
+  mTotalSamples=0
+  mMovingSamples=0
+  mFirstSampleX=0.0, mFirstSampleY=0.0, mFirstSampleZ=0.0
+  mLastSampleX=0.0, mLastSampleY=0.0, mLastSampleZ=0.0
+Notifier:
+Global Wakefulness Log:
+    2026-10-26 20:56:01.420   DOZE eventTime=201026 (161730 ms ago) reason=sleep_button
+    2026-10-26 20:56:02.338  SLEEP eventTime=201947 (160809 ms ago) reason=timeout
+    2026-10-26 20:56:30.301   WAKE eventTime=229910 (132846 ms ago) reason=WAKE_REASON_WAKE_KEY
+    2026-10-26 20:58:40.384   DOZE eventTime=359986 (2770 ms ago) reason=sleep_button
+    2026-10-26 20:58:41.023  SLEEP eventTime=360633 (2123 ms ago) reason=timeout
+    2026-10-26 20:58:41.412   WAKE eventTime=361021 (1735 ms ago) reason=WAKE_REASON_WAKE_KEY
+    2026-10-26 20:58:43.047   DOZE eventTime=362657 (99 ms ago) reason=sleep_button
+
+Full Wakelock Log:
+Wake Lock Log
+  10-26 21:53:18.168 - 10230 (com.ajfg297.liftlog) - ACQ WindowManager/displayId:0 (screen-bright,on-after-release)
+  10-26 21:54:29.556 - 10230 (com.ajfg297.liftlog) - REL WindowManager/displayId:0
+  10-26 21:54:29.857 - 10230 (com.ajfg297.liftlog) - ACQ WindowManager/displayId:0 (screen-bright,on-after-release)
+  10-26 21:56:02.479 - 10230 (com.ajfg297.liftlog) - REL WindowManager/displayId:0
+  10-26 21:57:51.632 - 10230 (com.ajfg297.liftlog) - ACQ WindowManager/displayId:0 (screen-bright,on-after-release)
+  10-26 21:58:40.809 - 10230 (com.ajfg297.liftlog) - REL WindowManager/displayId:0
+  -
+  Events: 6, Time-Resets: 5
+  Buffer, Bytes used: 60
+  Tag Database: size(16), entries: 1, Bytes used: 202
+
+Partial Wakelock Log:
+Wake Lock Log
+  10-26 21:52:46.195 - 1073 (com.google.android.networkstack.tethering,...) - ACQ CdmaServiceCategoryProgramHandler (partial)
+  10-26 21:52:46.185 - 1073 (com.google.android.networkstack.tethering,...) - ACQ CellBroadcastHandler (partial)
+  10-26 21:52:54.754 - 10156 (com.google.android.apps.wellbeing) - ACQ Icing (partial)
+  10-26 21:56:11.014 - 10151 (com.android.vending) - ACQ *alarm* (partial)
+  10-26 21:57:57.809 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:57:58.065 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:57:58.314 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:57:58.568 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:57:58.820 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:57:59.073 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:57:59.323 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:57:59.578 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:57:59.826 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:57:59.957 - 10215 (com.google.android.gms) - ACQ CallbackRunner (partial)
+  10-26 21:57:59.959 - 10215 (com.google.android.gms) - REL CallbackRunner
+  10-26 21:57:59.973 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:57:59.973 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:57:59.973 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:57:59.973 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:57:59.974 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:57:59.974 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:57:59.974 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:57:59.975 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:57:59.975 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:57:59.976 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:57:59.976 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:57:59.976 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:57:59.976 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:57:59.977 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:57:59.977 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:57:59.977 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:57:59.977 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:57:59.977 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:57:59.978 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:57:59.978 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:57:59.978 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:57:59.978 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:57:59.979 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:57:59.979 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:57:59.979 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:57:59.979 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:57:59.979 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:57:59.979 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:57:59.979 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:57:59.980 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:57:59.980 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:57:59.980 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:57:59.980 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:57:59.980 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:57:59.980 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:57:59.981 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:57:59.981 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:57:59.981 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:57:59.981 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:57:59.982 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:57:59.982 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:57:59.982 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:57:59.983 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:57:59.983 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:57:59.983 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:57:59.983 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:57:59.983 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:57:59.984 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:57:59.984 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:57:59.984 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:57:59.984 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:57:59.984 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:57:59.984 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:57:59.984 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:57:59.984 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:57:59.984 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:57:59.985 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:57:59.985 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:57:59.985 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:57:59.985 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:57:59.985 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:57:59.985 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:57:59.985 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:57:59.985 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:57:59.986 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:57:59.986 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:57:59.986 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:57:59.986 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:57:59.986 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:57:59.986 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:57:59.986 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:57:59.986 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:57:59.986 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:57:59.986 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:57:59.986 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:57:59.986 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:57:59.987 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:57:59.987 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:57:59.987 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:57:59.987 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:57:59.987 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:57:59.987 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:57:59.987 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:57:59.987 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:57:59.987 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:57:59.988 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:57:59.988 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:57:59.988 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:57:59.988 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:57:59.988 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:57:59.988 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:57:59.988 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:57:59.988 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:57:59.988 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:57:59.988 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:57:59.988 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:57:59.988 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:57:59.989 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:57:59.989 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:57:59.989 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:57:59.989 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:57:59.989 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:57:59.989 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:57:59.989 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:57:59.990 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:57:59.990 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:57:59.990 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:57:59.990 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:57:59.990 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:57:59.991 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:57:59.991 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:57:59.991 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:57:59.991 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:57:59.991 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:57:59.992 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:57:59.992 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:57:59.992 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:57:59.992 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:57:59.992 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:57:59.992 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:57:59.993 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:57:59.993 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:57:59.993 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:57:59.993 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:57:59.994 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:57:59.994 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:57:59.994 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:57:59.994 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:57:59.994 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:57:59.994 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:57:59.994 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:57:59.995 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:57:59.995 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:57:59.995 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:57:59.995 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:57:59.995 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:57:59.995 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:57:59.995 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:57:59.995 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:57:59.995 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:57:59.996 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:57:59.996 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:57:59.996 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:57:59.996 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:57:59.996 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:57:59.996 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:57:59.997 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:57:59.997 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:57:59.997 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:57:59.997 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:57:59.997 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:57:59.997 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:57:59.997 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:57:59.998 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:57:59.998 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:57:59.998 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:57:59.999 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:57:59.999 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:57:59.999 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:57:59.999 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:57:59.999 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:57:59.999 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:57:59.999 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:57:59.999 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:57:59.999 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.000 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:00.000 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.000 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.000 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.000 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:00.000 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.001 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.001 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.001 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:00.001 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.001 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.001 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:00.001 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.001 - 1000 (System) - ACQ *alarm* (partial)
+  10-26 21:58:00.001 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.001 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:00.002 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.002 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:00.002 - 1000 (System) - REL *alarm*
+  10-26 21:58:00.002 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.002 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.002 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:00.002 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.003 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:00.003 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.003 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.003 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:00.003 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.003 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:00.003 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.003 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.003 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:00.004 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.004 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:00.004 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.004 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.004 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:00.004 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.004 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.004 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:00.005 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.005 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:00.005 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.005 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:00.006 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.006 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.006 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.006 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:00.006 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.006 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:00.007 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:00.007 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.007 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.007 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:00.007 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.007 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.007 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.008 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:00.008 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.008 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.008 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:00.008 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:00.008 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.008 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.009 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.009 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:00.009 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.009 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.009 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.009 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:00.009 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.009 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.009 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.009 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.009 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.009 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.010 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.010 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.010 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.010 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.010 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.010 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.011 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.011 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.011 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.011 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.011 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.011 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.011 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.011 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.012 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:00.012 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.012 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:00.012 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.012 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:00.012 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.012 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.012 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.012 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.012 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:00.013 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.013 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.013 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:00.013 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.013 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.014 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.014 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.014 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:00.014 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.014 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.014 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:00.014 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.014 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.014 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.014 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.015 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:00.015 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.015 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.015 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:00.015 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.015 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.015 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:00.016 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.016 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:00.017 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:00.017 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.017 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:00.017 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.017 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:00.018 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.018 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.018 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.018 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.018 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.019 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.019 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.019 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:00.020 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.020 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.021 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.021 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:00.021 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.021 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.021 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.021 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.021 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.022 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.022 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.022 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.022 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:00.023 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:00.023 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:00.023 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.023 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.023 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:00.023 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.024 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:00.024 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.024 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.024 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:00.024 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.024 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.024 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:00.024 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:00.025 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.025 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.025 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.025 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.025 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.025 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.029 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:00.029 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.029 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.030 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.030 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.030 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.030 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:00.031 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:00.032 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.032 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.032 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.032 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.032 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.033 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.033 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:00.033 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.033 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.033 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.033 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:00.033 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.033 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.033 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:00.033 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.033 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.034 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.034 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.034 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.034 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.034 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.034 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.034 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:00.035 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.035 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.035 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.035 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:00.035 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.035 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.036 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:00.036 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.036 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.036 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.036 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:00.036 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.036 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.036 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.036 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.036 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:00.036 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.036 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:00.037 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.037 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.037 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.037 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.037 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.037 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:00.037 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.037 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.037 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:00.037 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.037 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.037 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.037 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.037 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:00.038 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.038 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:00.038 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:00.038 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.038 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.039 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.039 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:00.039 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.039 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.039 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:00.040 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.040 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.040 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.040 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:00.040 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.040 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.040 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:00.040 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.041 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:00.041 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.041 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.041 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:00.041 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.041 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.041 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:00.042 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.042 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:00.042 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.042 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.042 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.042 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:00.042 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.042 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.042 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:00.043 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.043 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.043 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.043 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:00.043 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.043 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.043 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.043 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.043 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:00.043 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.043 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.043 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:00.044 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.044 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.044 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.044 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.044 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.044 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.044 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.044 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.044 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.044 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.044 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:00.044 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.045 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:00.045 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.045 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.045 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:00.045 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.045 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.045 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.045 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.045 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:00.046 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.046 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.046 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:00.046 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.046 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:00.046 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.046 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.046 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.046 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.047 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.047 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.047 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.047 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:00.047 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.047 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:00.047 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.047 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.048 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.048 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:00.048 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.048 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.048 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.048 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.048 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:00.048 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.048 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:00.048 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.049 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.049 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.049 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:00.049 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:00.049 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.049 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.049 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.050 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:00.050 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.050 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:00.050 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.050 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.050 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.050 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.051 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:00.051 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.051 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.051 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:00.051 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.052 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.052 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.052 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.052 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:00.052 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.052 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.052 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:00.052 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.052 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.053 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.053 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:00.053 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.053 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.053 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.053 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:00.053 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.053 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.053 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.053 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.054 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:00.054 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.054 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.054 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:00.054 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.054 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.054 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:00.054 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.054 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.055 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.055 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.055 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:00.055 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:00.055 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.055 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.055 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:00.056 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.056 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:00.056 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:00.056 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.056 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.056 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.056 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:00.057 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.057 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.057 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:00.057 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.057 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.057 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:00.057 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.057 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.058 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.058 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.058 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:00.058 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.058 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.058 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:00.058 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.058 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:00.058 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.058 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.059 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.059 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.059 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:00.059 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.059 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.059 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.059 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:00.059 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.059 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.060 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.060 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.060 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:00.060 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.060 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.060 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.060 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:00.060 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:00.061 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.061 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.061 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.061 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.061 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.061 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:00.061 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.061 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.061 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:00.061 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:00.061 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.062 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.062 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:00.062 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.062 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.062 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:00.062 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.062 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:00.062 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.062 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.063 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.063 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.063 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:00.063 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.063 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.063 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:00.063 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.064 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.064 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.064 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:00.064 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.064 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:00.064 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.064 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.064 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:00.065 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.065 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.065 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:00.065 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.065 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:00.065 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.065 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.066 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.066 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.066 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:00.066 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.066 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.066 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:00.066 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.066 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.066 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:00.066 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.067 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.067 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:00.067 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.067 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.067 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.067 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.067 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.067 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:00.067 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.067 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.068 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.068 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.068 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.068 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.068 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:00.068 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.068 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.068 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.068 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:00.068 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.068 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.068 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:00.069 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.069 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:00.069 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.069 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.069 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.069 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:00.069 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:00.069 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.069 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.070 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.070 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:00.070 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.070 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.070 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.070 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:00.070 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.070 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:00.070 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.070 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.070 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.070 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:00.070 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.071 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.071 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:00.071 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.071 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.071 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:00.071 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.071 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.071 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.071 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.071 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:00.071 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.072 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:00.072 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:00.072 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.072 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.072 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.072 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.073 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.073 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:00.073 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.073 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.073 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.073 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.073 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:00.074 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.074 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.074 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.074 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.074 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.074 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.074 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.074 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:00.074 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.074 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.074 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.074 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:00.075 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:00.075 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.075 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.075 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.075 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.075 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:00.075 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.075 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:00.076 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.076 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.076 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.076 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.076 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.076 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:00.076 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.076 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.076 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:00.076 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.076 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.077 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:00.077 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:00.077 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.077 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:00.077 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.077 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:00.077 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:00.077 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.078 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.078 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:00.078 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:00.078 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.078 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.078 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:00.078 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:58:00.079 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:00.328 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:58:00.582 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:58:00.830 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:58:00.935 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:00.935 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:00.936 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:00.936 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:01.084 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:58:01.333 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:58:01.585 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:58:01.836 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:58:01.941 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:01.941 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:01.942 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:01.942 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:02.091 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:58:02.340 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:58:02.594 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:58:02.843 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:58:02.949 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:02.949 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:02.950 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:02.950 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:03.095 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:58:03.346 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:58:03.600 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:58:03.849 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:58:03.957 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:03.957 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:03.958 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:03.959 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:03.961 - 1000 (System) - ACQ *location*:GnssLocationProvider (partial)
+  10-26 21:58:03.963 - 10215 (com.google.android.gms) - ACQ *location* (partial)
+  10-26 21:58:03.965 - 10215 (com.google.android.gms) - ACQ *location* (partial)
+  10-26 21:58:03.965 - 10215 (com.google.android.gms) - REL *location*
+  10-26 21:58:03.965 - 10215 (com.google.android.gms) - REL *location*
+  10-26 21:58:03.965 - 1000 (System) - REL *location*:GnssLocationProvider
+  10-26 21:58:03.977 - 10215 (com.google.android.gms) - ACQ *location* (partial)
+  10-26 21:58:03.981 - 10215 (com.google.android.gms) - REL *location*
+  10-26 21:58:04.003 - 10215 (com.google.android.gms) - ACQ CallbackRunner (partial)
+  10-26 21:58:04.007 - 10215 (com.google.android.gms) - REL CallbackRunner
+  10-26 21:58:04.105 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:58:04.351 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:58:04.603 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:58:04.852 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:58:04.917 - 1000 (System) - ACQ installer:packages (partial)
+  10-26 21:58:04.951 - 1000 (System) - REL installer:packages
+  10-26 21:58:05.111 - 10215 (com.google.android.gms) - ACQ IntentOp:.c.b.BackgroundBroadcastReceiverSupport$PersistentReceiverIntentOperation (partial)
+  10-26 21:58:05.111 - 10215 (com.google.android.gms) - ACQ IntentOp:.c.b.BackgroundBroadcastReceiverSupport$GmsReceiverIntentOperation (partial)
+  10-26 21:58:05.113 - 10215 (com.google.android.gms) - ACQ IntentOp:.c.b.BackgroundBroadcastReceiverSupport$PersistentReceiverIntentOperation (partial)
+  10-26 21:58:05.143 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:58:05.159 - 10215 (com.google.android.gms) - REL IntentOp:.c.b.BackgroundBroadcastReceiverSupport$GmsReceiverIntentOperation
+  10-26 21:58:05.168 - 10215 (com.google.android.gms) - ACQ Icing (partial)
+  10-26 21:58:05.188 - 10215 (com.google.android.gms) - REL IntentOp:.c.b.BackgroundBroadcastReceiverSupport$PersistentReceiverIntentOperation
+  10-26 21:58:05.192 - 10215 (com.google.android.gms) - REL Icing
+  10-26 21:58:05.192 - 10215 (com.google.android.gms) - ACQ Icing (partial)
+  10-26 21:58:05.212 - 10215 (com.google.android.gms) - REL IntentOp:.c.b.BackgroundBroadcastReceiverSupport$PersistentReceiverIntentOperation
+  10-26 21:58:05.253 - 10215 (com.google.android.gms) - REL Icing
+  10-26 21:58:05.253 - 10215 (com.google.android.gms) - ACQ Icing (partial)
+  10-26 21:58:05.282 - 10215 (com.google.android.gms) - REL Icing
+  10-26 21:58:05.282 - 10215 (com.google.android.gms) - ACQ Icing (partial)
+  10-26 21:58:05.283 - 10215 (com.google.android.gms) - REL Icing
+  10-26 21:58:05.308 - 1000 (System) - ACQ installer:packages (partial)
+  10-26 21:58:05.319 - 10215 (com.google.android.gms) - ACQ Icing (partial)
+  10-26 21:58:05.370 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:58:05.376 - 1000 (System) - REL installer:packages
+  10-26 21:58:05.378 - 10215 (com.google.android.gms) - REL Icing
+  10-26 21:58:05.457 - 10215 (com.google.android.gms) - ACQ IntentOp:.c.b.BackgroundBroadcastReceiverSupport$GmsReceiverIntentOperation (partial)
+  10-26 21:58:05.467 - 10215 (com.google.android.gms) - ACQ IntentOp:.c.b.BackgroundBroadcastReceiverSupport$PersistentReceiverIntentOperation (partial)
+  10-26 21:58:05.475 - 10215 (com.google.android.gms) - REL IntentOp:.c.b.BackgroundBroadcastReceiverSupport$PersistentReceiverIntentOperation
+  10-26 21:58:05.491 - 10215 (com.google.android.gms) - REL IntentOp:.c.b.BackgroundBroadcastReceiverSupport$GmsReceiverIntentOperation
+  10-26 21:58:05.504 - 10215 (com.google.android.gms) - ACQ Icing (partial)
+  10-26 21:58:05.531 - 10215 (com.google.android.gms) - REL Icing
+  10-26 21:58:05.540 - 10215 (com.google.android.gms) - ACQ IntentOp:.c.b.BackgroundBroadcastReceiverSupport$PersistentReceiverIntentOperation (partial)
+  10-26 21:58:05.551 - 10215 (com.google.android.gms) - ACQ Icing (partial)
+  10-26 21:58:05.555 - 10215 (com.google.android.gms) - REL IntentOp:.c.b.BackgroundBroadcastReceiverSupport$PersistentReceiverIntentOperation
+  10-26 21:58:05.565 - 10215 (com.google.android.gms) - REL Icing
+  10-26 21:58:05.624 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:58:05.711 - 10151 (com.android.vending) - ACQ *job*e/com.android.vending/com.google.android.finsky.scheduler.process.mainimpl.PhoneskyJobServiceMain (partial)
+  10-26 21:58:05.711 - 10151 (com.android.vending) - ACQ *job*e/com.android.vending/com.google.android.finsky.scheduler.process.mainimpl.PhoneskyJobServiceMain (partial)
+  10-26 21:58:05.713 - 10151 (com.android.vending) - REL *job*e/com.android.vending/com.google.android.finsky.scheduler.process.mainimpl.PhoneskyJobServiceMain
+  10-26 21:58:05.738 - 10151 (com.android.vending) - REL *job*e/com.android.vending/com.google.android.finsky.scheduler.process.mainimpl.PhoneskyJobServiceMain
+  10-26 21:58:05.791 - 10151 (com.android.vending) - ACQ *job*e/com.android.vending/com.google.android.finsky.scheduler.process.mainimpl.PhoneskyJobServiceMain (partial)
+  10-26 21:58:05.791 - 10151 (com.android.vending) - ACQ *job*e/com.android.vending/com.google.android.finsky.scheduler.process.mainimpl.PhoneskyJobServiceMain (partial)
+  10-26 21:58:05.792 - 10151 (com.android.vending) - REL *job*e/com.android.vending/com.google.android.finsky.scheduler.process.mainimpl.PhoneskyJobServiceMain
+  10-26 21:58:05.834 - 10151 (com.android.vending) - REL *job*e/com.android.vending/com.google.android.finsky.scheduler.process.mainimpl.PhoneskyJobServiceMain
+  10-26 21:58:05.875 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:58:05.935 - 10156 (com.google.android.apps.wellbeing) - ACQ NotificationManagerService:post:com.google.android.apps.wellbeing (partial)
+  10-26 21:58:05.935 - 10156 (com.google.android.apps.wellbeing) - REL NotificationManagerService:post:com.google.android.apps.wellbeing
+  10-26 21:58:06.129 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:58:06.380 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:58:06.635 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:58:06.884 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:58:07.135 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:58:07.396 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:58:07.437 - 1000 (System) - ACQ NetworkStats (partial)
+  10-26 21:58:07.483 - 1000 (System) - REL NetworkStats
+  10-26 21:58:07.567 - 10215 (com.google.android.gms) - ACQ IntentOp:.c.b.BackgroundBroadcastReceiverSupport$PersistentReceiverIntentOperation (partial)
+  10-26 21:58:07.602 - 10156 (com.google.android.apps.wellbeing) - ACQ Broadcast to com.google.android.apps.wellbeing.common.receiver.coalescedreceivers.PackageFullyRemovedCoalescedBroadcast_Receiver android.intent.action.PACKAGE_FULLY_REMOVED -> handleBroadcast (partial)
+  10-26 21:58:07.624 - 10156 (com.google.android.apps.wellbeing) - ACQ Broadcast to com.google.android.apps.wellbeing.common.receiver.coalescedreceivers.PackageFullyRemovedCoalescedBroadcast_Receiver android.intent.action.PACKAGE_FULLY_REMOVED -> handleBroadcast -> Processing on the broadcast queue workerId PACKAGE_FULLY_REMOVED_COALESCED_BROADCAST_WORKER_ID (partial)
+  10-26 21:58:07.624 - 10203 (com.google.android.providers.media.module) - ACQ *job*r/#MediaServiceV2#@androidx.work.systemjobscheduler@com.google.android.providers.media.module/androidx.work.impl.background.systemjob.SystemJobService (partial)
+  10-26 21:58:07.625 - 10203 (com.google.android.providers.media.module) - ACQ *job*r/#MediaServiceV2#@androidx.work.systemjobscheduler@com.google.android.providers.media.module/androidx.work.impl.background.systemjob.SystemJobService (partial)
+  10-26 21:58:07.625 - 10156 (com.google.android.apps.wellbeing) - ACQ Broadcast to com.google.android.apps.wellbeing.common.receiver.coalescedreceivers.PackageFullyRemovedCoalescedBroadcast_Receiver android.intent.action.PACKAGE_FULLY_REMOVED -> handleBroadcast -> Processing on the broadcast queue workerId PACKAGE_FULLY_REMOVED_COALESCED_BROADCAST_WORKER_ID (partial)
+  10-26 21:58:07.625 - 10203 (com.google.android.providers.media.module) - REL *job*r/#MediaServiceV2#@androidx.work.systemjobscheduler@com.google.android.providers.media.module/androidx.work.impl.background.systemjob.SystemJobService
+  10-26 21:58:07.639 - 10156 (com.google.android.apps.wellbeing) - ACQ Broadcast to com.google.android.apps.wellbeing.common.receiver.coalescedreceivers.PackageFullyRemovedCoalescedBroadcast_Receiver android.intent.action.PACKAGE_FULLY_REMOVED -> handleBroadcast (partial)
+  10-26 21:58:07.640 - 10156 (com.google.android.apps.wellbeing) - ACQ Broadcast to com.google.android.apps.wellbeing.common.receiver.coalescedreceivers.PackageFullyRemovedCoalescedBroadcast_Receiver android.intent.action.PACKAGE_FULLY_REMOVED -> handleBroadcast -> Processing on the broadcast queue workerId PACKAGE_FULLY_REMOVED_COALESCED_BROADCAST_WORKER_ID (partial)
+  10-26 21:58:07.640 - 10156 (com.google.android.apps.wellbeing) - ACQ Broadcast to com.google.android.apps.wellbeing.common.receiver.coalescedreceivers.PackageFullyRemovedCoalescedBroadcast_Receiver android.intent.action.PACKAGE_FULLY_REMOVED -> handleBroadcast -> Processing on the broadcast queue workerId PACKAGE_FULLY_REMOVED_COALESCED_BROADCAST_WORKER_ID (partial)
+  10-26 21:58:07.642 - 10215 (com.google.android.gms) - REL IntentOp:.c.b.BackgroundBroadcastReceiverSupport$PersistentReceiverIntentOperation
+  10-26 21:58:07.644 - 1000 (System) - ACQ NetworkStats (partial)
+  10-26 21:58:07.653 - 10203 (com.google.android.providers.media.module) - REL *job*r/#MediaServiceV2#@androidx.work.systemjobscheduler@com.google.android.providers.media.module/androidx.work.impl.background.systemjob.SystemJobService
+  10-26 21:58:07.658 - 10156 (com.google.android.apps.wellbeing) - REL Broadcast to com.google.android.apps.wellbeing.common.receiver.coalescedreceivers.PackageFullyRemovedCoalescedBroadcast_Receiver android.intent.action.PACKAGE_FULLY_REMOVED -> handleBroadcast -> Processing on the broadcast queue workerId PACKAGE_FULLY_REMOVED_COALESCED_BROADCAST_WORKER_ID
+  10-26 21:58:07.658 - 10156 (com.google.android.apps.wellbeing) - REL Broadcast to com.google.android.apps.wellbeing.common.receiver.coalescedreceivers.PackageFullyRemovedCoalescedBroadcast_Receiver android.intent.action.PACKAGE_FULLY_REMOVED -> handleBroadcast -> Processing on the broadcast queue workerId PACKAGE_FULLY_REMOVED_COALESCED_BROADCAST_WORKER_ID
+  10-26 21:58:07.678 - 10156 (com.google.android.apps.wellbeing) - REL Broadcast to com.google.android.apps.wellbeing.common.receiver.coalescedreceivers.PackageFullyRemovedCoalescedBroadcast_Receiver android.intent.action.PACKAGE_FULLY_REMOVED -> handleBroadcast
+  10-26 21:58:07.678 - 10156 (com.google.android.apps.wellbeing) - REL Broadcast to com.google.android.apps.wellbeing.common.receiver.coalescedreceivers.PackageFullyRemovedCoalescedBroadcast_Receiver android.intent.action.PACKAGE_FULLY_REMOVED -> handleBroadcast
+  10-26 21:58:07.679 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:58:07.699 - 1000 (System) - REL NetworkStats
+  10-26 21:58:07.730 - 10203 (com.google.android.providers.media.module) - ACQ *job*r/#MediaServiceV2#@androidx.work.systemjobscheduler@com.google.android.providers.media.module/androidx.work.impl.background.systemjob.SystemJobService (partial)
+  10-26 21:58:07.731 - 10203 (com.google.android.providers.media.module) - ACQ *job*r/#MediaServiceV2#@androidx.work.systemjobscheduler@com.google.android.providers.media.module/androidx.work.impl.background.systemjob.SystemJobService (partial)
+  10-26 21:58:07.737 - 10203 (com.google.android.providers.media.module) - REL *job*r/#MediaServiceV2#@androidx.work.systemjobscheduler@com.google.android.providers.media.module/androidx.work.impl.background.systemjob.SystemJobService
+  10-26 21:58:07.741 - 10215 (com.google.android.gms) - ACQ Icing (partial)
+  10-26 21:58:07.741 - 10215 (com.google.android.gms) - REL Icing
+  10-26 21:58:07.741 - 10215 (com.google.android.gms) - ACQ Icing (partial)
+  10-26 21:58:07.742 - 10215 (com.google.android.gms) - REL Icing
+  10-26 21:58:07.742 - 10215 (com.google.android.gms) - ACQ Icing (partial)
+  10-26 21:58:07.742 - 10215 (com.google.android.gms) - REL Icing
+  10-26 21:58:07.743 - 10215 (com.google.android.gms) - ACQ IntentOp:.c.b.BackgroundBroadcastReceiverSupport$PersistentReceiverIntentOperation (partial)
+  10-26 21:58:07.744 - 10215 (com.google.android.gms) - ACQ Icing (partial)
+  10-26 21:58:07.746 - 10215 (com.google.android.gms) - REL IntentOp:.c.b.BackgroundBroadcastReceiverSupport$PersistentReceiverIntentOperation
+  10-26 21:58:07.747 - 10203 (com.google.android.providers.media.module) - REL *job*r/#MediaServiceV2#@androidx.work.systemjobscheduler@com.google.android.providers.media.module/androidx.work.impl.background.systemjob.SystemJobService
+  10-26 21:58:07.748 - 10215 (com.google.android.gms) - REL Icing
+  10-26 21:58:07.754 - 10215 (com.google.android.gms) - ACQ Icing (partial)
+  10-26 21:58:07.770 - 10215 (com.google.android.gms) - REL Icing
+  10-26 21:58:07.772 - 10156 (com.google.android.apps.wellbeing) - REL Broadcast to com.google.android.apps.wellbeing.common.receiver.coalescedreceivers.PackageFullyRemovedCoalescedBroadcast_Receiver android.intent.action.PACKAGE_FULLY_REMOVED -> handleBroadcast -> Processing on the broadcast queue workerId PACKAGE_FULLY_REMOVED_COALESCED_BROADCAST_WORKER_ID
+  10-26 21:58:07.773 - 10156 (com.google.android.apps.wellbeing) - REL Broadcast to com.google.android.apps.wellbeing.common.receiver.coalescedreceivers.PackageFullyRemovedCoalescedBroadcast_Receiver android.intent.action.PACKAGE_FULLY_REMOVED -> handleBroadcast -> Processing on the broadcast queue workerId PACKAGE_FULLY_REMOVED_COALESCED_BROADCAST_WORKER_ID
+  10-26 21:58:07.794 - 10151 (com.android.vending) - ACQ *job*e/com.android.vending/com.google.android.finsky.scheduler.process.mainimpl.PhoneskyJobServiceMain (partial)
+  10-26 21:58:07.794 - 10151 (com.android.vending) - ACQ *job*e/com.android.vending/com.google.android.finsky.scheduler.process.mainimpl.PhoneskyJobServiceMain (partial)
+  10-26 21:58:07.795 - 10151 (com.android.vending) - REL *job*e/com.android.vending/com.google.android.finsky.scheduler.process.mainimpl.PhoneskyJobServiceMain
+  10-26 21:58:07.810 - 10151 (com.android.vending) - REL *job*e/com.android.vending/com.google.android.finsky.scheduler.process.mainimpl.PhoneskyJobServiceMain
+  10-26 21:58:07.900 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:58:08.153 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:58:08.403 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:58:08.657 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:58:08.908 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:58:09.161 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:58:09.412 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:58:09.588 - 1073 (com.google.android.networkstack.tethering,...) - ACQ IpReachabilityMonitor.wlan0 (partial)
+  10-26 21:58:09.666 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:58:09.916 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:58:10.171 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:58:10.419 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:58:10.673 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:58:10.924 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:58:11.176 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:58:11.428 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:58:11.681 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:58:11.931 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:58:12.184 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:58:12.436 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:58:12.692 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:58:12.942 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:58:13.196 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:58:13.445 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:58:13.697 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:58:13.947 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:58:14.204 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:58:14.451 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:58:14.704 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:58:14.955 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:58:15.209 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:58:15.460 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:58:15.718 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:58:15.963 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:58:16.218 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:58:16.465 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:58:16.720 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:58:16.968 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:58:17.222 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:58:17.472 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:58:17.730 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:58:17.976 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:58:18.230 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:58:18.479 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:58:18.732 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:58:18.983 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:58:19.236 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:58:19.487 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:58:19.743 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:58:19.992 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:58:20.246 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:58:20.496 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:58:20.749 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:58:21.000 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:58:21.255 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:58:21.502 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:58:21.756 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:58:22.005 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:58:22.258 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:58:22.509 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:58:22.762 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:58:23.013 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:58:23.270 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:58:23.516 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:58:23.769 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:58:24.018 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:58:24.272 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:58:24.524 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:58:24.783 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:58:24.935 - 1000 (System) - ACQ *alarm* (partial)
+  10-26 21:58:24.938 - 10215 (com.google.android.gms) - ACQ CallbackRunner (partial)
+  10-26 21:58:24.939 - 10179 (com.google.android.apps.photos) - ACQ *job*r/com.google.android.apps.photos/.dbprocessor.impl.DatabaseProcessorJobService (partial)
+  10-26 21:58:24.939 - 10179 (com.google.android.apps.photos) - ACQ *job*r/com.google.android.apps.photos/.dbprocessor.impl.DatabaseProcessorJobService (partial)
+  10-26 21:58:24.943 - 10215 (com.google.android.gms) - ACQ CollectionLib-SigCollector (partial)
+  10-26 21:58:24.946 - 10179 (com.google.android.apps.photos) - REL *job*r/com.google.android.apps.photos/.dbprocessor.impl.DatabaseProcessorJobService
+  10-26 21:58:24.946 - 10151 (com.android.vending) - ACQ *job*r/com.android.vending/com.google.android.finsky.scheduler.process.mainimpl.PhoneskyJobServiceMain (partial)
+  10-26 21:58:24.946 - 10151 (com.android.vending) - ACQ *job*r/com.android.vending/com.google.android.finsky.scheduler.process.mainimpl.PhoneskyJobServiceMain (partial)
+  10-26 21:58:24.947 - 1000 (System) - REL *alarm*
+  10-26 21:58:24.948 - 10215 (com.google.android.gms) - REL CallbackRunner
+  10-26 21:58:24.952 - 10151 (com.android.vending) - REL *job*r/com.android.vending/com.google.android.finsky.scheduler.process.mainimpl.PhoneskyJobServiceMain
+  10-26 21:58:24.991 - 10179 (com.google.android.apps.photos) - REL *job*r/com.google.android.apps.photos/.dbprocessor.impl.DatabaseProcessorJobService
+  10-26 21:58:25.027 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:58:25.115 - 10151 (com.android.vending) - REL *job*r/com.android.vending/com.google.android.finsky.scheduler.process.mainimpl.PhoneskyJobServiceMain
+  10-26 21:58:25.284 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:58:25.518 - 10215 (com.google.android.gms) - REL CollectionLib-SigCollector
+  10-26 21:58:25.523 - 10215 (com.google.android.gms) - ACQ CallbackRunner (partial)
+  10-26 21:58:25.529 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:58:25.533 - 10215 (com.google.android.gms) - ACQ PendingIntentClient (partial)
+  10-26 21:58:25.534 - 10215 (com.google.android.gms) - REL PendingIntentClient
+  10-26 21:58:25.537 - 10215 (com.google.android.gms) - ACQ PendingIntentClient (partial)
+  10-26 21:58:25.539 - 10215 (com.google.android.gms) - REL CallbackRunner
+  10-26 21:58:25.539 - 10215 (com.google.android.gms) - REL PendingIntentClient
+  10-26 21:58:25.544 - 10215 (com.google.android.gms) - ACQ GCoreFlp (partial)
+  10-26 21:58:25.545 - 10215 (com.google.android.gms) - REL GCoreFlp
+  10-26 21:58:25.785 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:58:26.033 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:58:26.286 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:58:26.536 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:58:26.791 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:58:27.038 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:58:27.293 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:58:27.542 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:58:27.795 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:58:28.044 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:58:28.297 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:58:28.548 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:58:28.803 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:58:29.055 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:58:29.310 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:58:29.559 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:58:29.807 - 1001 (com.android.phone,...) - ACQ *telephony-radio* (partial)
+  10-26 21:58:29.807 - 1001 (com.android.phone,...) - REL *telephony-radio*
+  10-26 21:58:29.807 - 1000 (System) - ACQ *telephony-radio* (partial)
+  10-26 21:58:29.812 - 1000 (System) - REL *telephony-radio*
+  10-26 21:58:29.812 - 1001 (com.android.phone,...) - ACQ *telephony-radio* (partial)
+  10-26 21:58:29.812 - 1001 (com.android.phone,...) - REL *telephony-radio*
+  10-26 21:58:29.813 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:58:30.061 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:58:30.315 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:58:30.563 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:58:30.816 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:58:31.067 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:58:31.320 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:58:31.570 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:58:31.826 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:58:32.074 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:58:32.327 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:58:32.578 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:58:32.832 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:58:33.081 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:58:33.336 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:58:33.587 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:58:33.842 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:58:33.954 - 10215 (com.google.android.gms) - ACQ IntentOp:.c.b.BackgroundBroadcastReceiverSupport$PersistentReceiverIntentOperation (partial)
+  10-26 21:58:33.957 - 10215 (com.google.android.gms) - ACQ IntentOp:c.g.a.g/.c.GmsIntentOperationService (partial)
+  10-26 21:58:33.958 - 10215 (com.google.android.gms) - REL IntentOp:.c.b.BackgroundBroadcastReceiverSupport$PersistentReceiverIntentOperation
+  10-26 21:58:33.960 - 10215 (com.google.android.gms) - ACQ IntentOp:.a.f.FrpUpdateIntentOperation (partial)
+  10-26 21:58:33.963 - 10215 (com.google.android.gms) - REL IntentOp:.a.f.FrpUpdateIntentOperation
+  10-26 21:58:33.965 - 10215 (com.google.android.gms) - REL IntentOp:c.g.a.g/.c.GmsIntentOperationService
+  10-26 21:58:34.091 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:58:34.144 - 1073 (com.google.android.networkstack.tethering,...) - REL IpReachabilityMonitor.wlan0
+  10-26 21:58:34.344 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:58:34.595 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:58:34.849 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:58:35.097 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:58:35.228 - 1000 (System) - ACQ installer:packages (partial)
+  10-26 21:58:35.270 - 1000 (System) - REL installer:packages
+  10-26 21:58:35.354 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:58:35.372 - 1000 (System) - ACQ installer:packages (partial)
+  10-26 21:58:35.382 - 10215 (com.google.android.gms) - ACQ IntentOp:.c.b.BackgroundBroadcastReceiverSupport$GmsReceiverIntentOperation (partial)
+  10-26 21:58:35.393 - 10215 (com.google.android.gms) - ACQ IntentOp:.c.b.BackgroundBroadcastReceiverSupport$PersistentReceiverIntentOperation (partial)
+  10-26 21:58:35.422 - 10215 (com.google.android.gms) - ACQ IntentOp:.c.b.BackgroundBroadcastReceiverSupport$PersistentReceiverIntentOperation (partial)
+  10-26 21:58:35.534 - 10215 (com.google.android.gms) - REL IntentOp:.c.b.BackgroundBroadcastReceiverSupport$GmsReceiverIntentOperation
+  10-26 21:58:35.539 - 1000 (System) - REL installer:packages
+  10-26 21:58:35.540 - 10215 (com.google.android.gms) - REL IntentOp:.c.b.BackgroundBroadcastReceiverSupport$PersistentReceiverIntentOperation
+  10-26 21:58:35.543 - 10215 (com.google.android.gms) - ACQ Icing (partial)
+  10-26 21:58:35.585 - 10215 (com.google.android.gms) - REL Icing
+  10-26 21:58:35.585 - 10215 (com.google.android.gms) - ACQ Icing (partial)
+  10-26 21:58:35.585 - 10215 (com.google.android.gms) - REL Icing
+  10-26 21:58:35.585 - 10215 (com.google.android.gms) - ACQ Icing (partial)
+  10-26 21:58:35.601 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:58:35.622 - 10215 (com.google.android.gms) - REL IntentOp:.c.b.BackgroundBroadcastReceiverSupport$PersistentReceiverIntentOperation
+  10-26 21:58:35.662 - 10215 (com.google.android.gms) - REL Icing
+  10-26 21:58:35.716 - 10215 (com.google.android.gms) - ACQ Icing (partial)
+  10-26 21:58:35.723 - 10215 (com.google.android.gms) - ACQ IntentOp:.c.b.BackgroundBroadcastReceiverSupport$GmsReceiverIntentOperation (partial)
+  10-26 21:58:35.748 - 10215 (com.google.android.gms) - ACQ IntentOp:.c.b.BackgroundBroadcastReceiverSupport$PersistentReceiverIntentOperation (partial)
+  10-26 21:58:35.749 - 10215 (com.google.android.gms) - ACQ IntentOp:.c.b.BackgroundBroadcastReceiverSupport$PersistentReceiverIntentOperation (partial)
+  10-26 21:58:35.763 - 10215 (com.google.android.gms) - REL IntentOp:.c.b.BackgroundBroadcastReceiverSupport$GmsReceiverIntentOperation
+  10-26 21:58:35.765 - 10215 (com.google.android.gms) - REL IntentOp:.c.b.BackgroundBroadcastReceiverSupport$PersistentReceiverIntentOperation
+  10-26 21:58:35.777 - 10215 (com.google.android.gms) - REL IntentOp:.c.b.BackgroundBroadcastReceiverSupport$PersistentReceiverIntentOperation
+  10-26 21:58:35.814 - 10159 (com.google.android.apps.messaging) - REL com.google.android.apps.messaging.shared.datamodel.action.GenericWorkerQueueAction
+  10-26 21:58:35.869 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:58:35.877 - 10156 (com.google.android.apps.wellbeing) - ACQ NotificationManagerService:post:com.google.android.apps.wellbeing (partial)
+  10-26 21:58:36.118 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:58:36.129 - 10156 (com.google.android.apps.wellbeing) - REL NotificationManagerService:post:com.google.android.apps.wellbeing
+  10-26 21:58:36.161 - 10151 (com.android.vending) - ACQ *job*e/com.android.vending/com.google.android.finsky.scheduler.process.mainimpl.PhoneskyJobServiceMain (partial)
+  10-26 21:58:36.161 - 10151 (com.android.vending) - ACQ *job*e/com.android.vending/com.google.android.finsky.scheduler.process.mainimpl.PhoneskyJobServiceMain (partial)
+  10-26 21:58:36.162 - 10151 (com.android.vending) - REL *job*e/com.android.vending/com.google.android.finsky.scheduler.process.mainimpl.PhoneskyJobServiceMain
+  10-26 21:58:36.200 - 10151 (com.android.vending) - REL *job*e/com.android.vending/com.google.android.finsky.scheduler.process.mainimpl.PhoneskyJobServiceMain
+  10-26 21:58:36.373 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:58:36.620 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:58:36.680 - 1073 (com.google.android.networkstack.tethering,...) - ACQ IpReachabilityMonitor.wlan0 (partial)
+  10-26 21:58:36.874 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:58:37.124 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:58:37.383 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:58:37.625 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:58:37.884 - 10230 (com.ajfg297.liftlog) - ACQ *vibrator* (partial)
+  10-26 21:58:37.885 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:58:37.890 - 1041 (com.ajfg297.liftlog) - ACQ AudioMix (partial)
+  10-26 21:58:37.890 - 1041 (com.ajfg297.liftlog) - REL AudioMix
+  10-26 21:58:37.890 - 1000 (System) - ACQ AudioMix (partial)
+  10-26 21:58:37.939 - 10230 (com.ajfg297.liftlog) - REL *vibrator*
+  10-26 21:58:38.059 - 1000 (System) - REL AudioMix
+  10-26 21:58:38.059 - 1041 (System) - ACQ AudioMix (partial)
+  10-26 21:58:38.128 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:58:38.381 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:58:38.630 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:58:38.884 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:58:39.131 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:58:39.384 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:58:39.634 - 1000 (System) - ACQ NetworkStats (partial)
+  10-26 21:58:39.640 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:58:39.667 - 1000 (System) - REL NetworkStats
+  10-26 21:58:39.701 - 1000 (System) - ACQ NetworkStats (partial)
+  10-26 21:58:39.723 - 10215 (com.google.android.gms) - ACQ IntentOp:.c.b.BackgroundBroadcastReceiverSupport$PersistentReceiverIntentOperation (partial)
+  10-26 21:58:39.725 - 1000 (System) - REL NetworkStats
+  10-26 21:58:39.775 - 10203 (com.google.android.providers.media.module) - ACQ *job*r/#MediaServiceV2#@androidx.work.systemjobscheduler@com.google.android.providers.media.module/androidx.work.impl.background.systemjob.SystemJobService (partial)
+  10-26 21:58:39.775 - 10203 (com.google.android.providers.media.module) - ACQ *job*r/#MediaServiceV2#@androidx.work.systemjobscheduler@com.google.android.providers.media.module/androidx.work.impl.background.systemjob.SystemJobService (partial)
+  10-26 21:58:39.783 - 10215 (com.google.android.gms) - REL IntentOp:.c.b.BackgroundBroadcastReceiverSupport$PersistentReceiverIntentOperation
+  10-26 21:58:39.785 - 10203 (com.google.android.providers.media.module) - REL *job*r/#MediaServiceV2#@androidx.work.systemjobscheduler@com.google.android.providers.media.module/androidx.work.impl.background.systemjob.SystemJobService
+  10-26 21:58:39.795 - 1000 (System) - ACQ NetworkStats (partial)
+  10-26 21:58:39.807 - 10156 (com.google.android.apps.wellbeing) - ACQ Broadcast to com.google.android.apps.wellbeing.common.receiver.coalescedreceivers.PackageFullyRemovedCoalescedBroadcast_Receiver android.intent.action.PACKAGE_FULLY_REMOVED -> handleBroadcast (partial)
+  10-26 21:58:39.808 - 10156 (com.google.android.apps.wellbeing) - ACQ Broadcast to com.google.android.apps.wellbeing.common.receiver.coalescedreceivers.PackageFullyRemovedCoalescedBroadcast_Receiver android.intent.action.PACKAGE_FULLY_REMOVED -> handleBroadcast -> Processing on the broadcast queue workerId PACKAGE_FULLY_REMOVED_COALESCED_BROADCAST_WORKER_ID (partial)
+  10-26 21:58:39.809 - 10156 (com.google.android.apps.wellbeing) - ACQ Broadcast to com.google.android.apps.wellbeing.common.receiver.coalescedreceivers.PackageFullyRemovedCoalescedBroadcast_Receiver android.intent.action.PACKAGE_FULLY_REMOVED -> handleBroadcast -> Processing on the broadcast queue workerId PACKAGE_FULLY_REMOVED_COALESCED_BROADCAST_WORKER_ID (partial)
+  10-26 21:58:39.810 - 10156 (com.google.android.apps.wellbeing) - REL Broadcast to com.google.android.apps.wellbeing.common.receiver.coalescedreceivers.PackageFullyRemovedCoalescedBroadcast_Receiver android.intent.action.PACKAGE_FULLY_REMOVED -> handleBroadcast -> Processing on the broadcast queue workerId PACKAGE_FULLY_REMOVED_COALESCED_BROADCAST_WORKER_ID
+  10-26 21:58:39.817 - 1000 (System) - REL NetworkStats
+  10-26 21:58:39.818 - 10156 (com.google.android.apps.wellbeing) - REL Broadcast to com.google.android.apps.wellbeing.common.receiver.coalescedreceivers.PackageFullyRemovedCoalescedBroadcast_Receiver android.intent.action.PACKAGE_FULLY_REMOVED -> handleBroadcast
+  10-26 21:58:39.820 - 10215 (com.google.android.gms) - ACQ Icing (partial)
+  10-26 21:58:39.830 - 10156 (com.google.android.apps.wellbeing) - ACQ Broadcast to com.google.android.apps.wellbeing.common.receiver.coalescedreceivers.PackageFullyRemovedCoalescedBroadcast_Receiver android.intent.action.PACKAGE_FULLY_REMOVED -> handleBroadcast (partial)
+  10-26 21:58:39.830 - 10156 (com.google.android.apps.wellbeing) - ACQ Broadcast to com.google.android.apps.wellbeing.common.receiver.coalescedreceivers.PackageFullyRemovedCoalescedBroadcast_Receiver android.intent.action.PACKAGE_FULLY_REMOVED -> handleBroadcast -> Processing on the broadcast queue workerId PACKAGE_FULLY_REMOVED_COALESCED_BROADCAST_WORKER_ID (partial)
+  10-26 21:58:39.830 - 10156 (com.google.android.apps.wellbeing) - ACQ Broadcast to com.google.android.apps.wellbeing.common.receiver.coalescedreceivers.PackageFullyRemovedCoalescedBroadcast_Receiver android.intent.action.PACKAGE_FULLY_REMOVED -> handleBroadcast -> Processing on the broadcast queue workerId PACKAGE_FULLY_REMOVED_COALESCED_BROADCAST_WORKER_ID (partial)
+  10-26 21:58:39.836 - 10156 (com.google.android.apps.wellbeing) - REL Broadcast to com.google.android.apps.wellbeing.common.receiver.coalescedreceivers.PackageFullyRemovedCoalescedBroadcast_Receiver android.intent.action.PACKAGE_FULLY_REMOVED -> handleBroadcast -> Processing on the broadcast queue workerId PACKAGE_FULLY_REMOVED_COALESCED_BROADCAST_WORKER_ID
+  10-26 21:58:39.842 - 10203 (com.google.android.providers.media.module) - REL *job*r/#MediaServiceV2#@androidx.work.systemjobscheduler@com.google.android.providers.media.module/androidx.work.impl.background.systemjob.SystemJobService
+  10-26 21:58:39.845 - 10215 (com.google.android.gms) - REL Icing
+  10-26 21:58:39.845 - 10215 (com.google.android.gms) - ACQ Icing (partial)
+  10-26 21:58:39.846 - 10215 (com.google.android.gms) - REL Icing
+  10-26 21:58:39.846 - 10215 (com.google.android.gms) - ACQ Icing (partial)
+  10-26 21:58:39.847 - 10215 (com.google.android.gms) - REL Icing
+  10-26 21:58:39.853 - 10156 (com.google.android.apps.wellbeing) - REL Broadcast to com.google.android.apps.wellbeing.common.receiver.coalescedreceivers.PackageFullyRemovedCoalescedBroadcast_Receiver android.intent.action.PACKAGE_FULLY_REMOVED -> handleBroadcast
+  10-26 21:58:39.870 - 10203 (com.google.android.providers.media.module) - ACQ *job*r/#MediaServiceV2#@androidx.work.systemjobscheduler@com.google.android.providers.media.module/androidx.work.impl.background.systemjob.SystemJobService (partial)
+  10-26 21:58:39.870 - 10203 (com.google.android.providers.media.module) - ACQ *job*r/#MediaServiceV2#@androidx.work.systemjobscheduler@com.google.android.providers.media.module/androidx.work.impl.background.systemjob.SystemJobService (partial)
+  10-26 21:58:39.889 - 10203 (com.google.android.providers.media.module) - REL *job*r/#MediaServiceV2#@androidx.work.systemjobscheduler@com.google.android.providers.media.module/androidx.work.impl.background.systemjob.SystemJobService
+  10-26 21:58:39.909 - 10215 (com.google.android.gms) - ACQ Icing (partial)
+  10-26 21:58:39.919 - 10203 (com.google.android.providers.media.module) - REL *job*r/#MediaServiceV2#@androidx.work.systemjobscheduler@com.google.android.providers.media.module/androidx.work.impl.background.systemjob.SystemJobService
+  10-26 21:58:39.922 - 10215 (com.google.android.gms) - REL Icing
+  10-26 21:58:39.929 - 10215 (com.google.android.gms) - ACQ IntentOp:.c.b.BackgroundBroadcastReceiverSupport$PersistentReceiverIntentOperation (partial)
+  10-26 21:58:39.936 - 10197 (com.google.android.apps.nexuslauncher) - ACQ *launch* (partial)
+  10-26 21:58:39.946 - 10215 (com.google.android.gms) - REL IntentOp:.c.b.BackgroundBroadcastReceiverSupport$PersistentReceiverIntentOperation
+  10-26 21:58:39.968 - 10215 (com.google.android.gms) - ACQ Icing (partial)
+  10-26 21:58:39.979 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:58:39.986 - 10151 (com.android.vending) - ACQ *job*e/com.android.vending/com.google.android.finsky.scheduler.process.mainimpl.PhoneskyJobServiceMain (partial)
+  10-26 21:58:39.986 - 10151 (com.android.vending) - ACQ *job*e/com.android.vending/com.google.android.finsky.scheduler.process.mainimpl.PhoneskyJobServiceMain (partial)
+  10-26 21:58:39.989 - 10151 (com.android.vending) - REL *job*e/com.android.vending/com.google.android.finsky.scheduler.process.mainimpl.PhoneskyJobServiceMain
+  10-26 21:58:39.990 - 10197 (com.google.android.apps.nexuslauncher) - REL *launch*
+  10-26 21:58:40.072 - 10215 (com.google.android.gms) - REL Icing
+  10-26 21:58:40.139 - 10156 (com.google.android.apps.wellbeing) - REL Broadcast to com.google.android.apps.wellbeing.common.receiver.coalescedreceivers.PackageFullyRemovedCoalescedBroadcast_Receiver android.intent.action.PACKAGE_FULLY_REMOVED -> handleBroadcast -> Processing on the broadcast queue workerId PACKAGE_FULLY_REMOVED_COALESCED_BROADCAST_WORKER_ID
+  10-26 21:58:40.177 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:58:40.218 - 1000 (System) - ACQ NetworkStats (partial)
+  10-26 21:58:40.221 - 10156 (com.google.android.apps.wellbeing) - REL Broadcast to com.google.android.apps.wellbeing.common.receiver.coalescedreceivers.PackageFullyRemovedCoalescedBroadcast_Receiver android.intent.action.PACKAGE_FULLY_REMOVED -> handleBroadcast -> Processing on the broadcast queue workerId PACKAGE_FULLY_REMOVED_COALESCED_BROADCAST_WORKER_ID
+  10-26 21:58:40.228 - 1000 (System) - REL NetworkStats
+  10-26 21:58:40.264 - 10151 (com.android.vending) - REL *job*e/com.android.vending/com.google.android.finsky.scheduler.process.mainimpl.PhoneskyJobServiceMain
+  10-26 21:58:40.424 - 1041 (com.android.vending) - REL AudioMix
+  10-26 21:58:40.424 - 10198 (com.android.systemui) - ACQ AudioMix (partial)
+  10-26 21:58:40.461 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:58:40.590 - 10198 (com.android.systemui) - ACQ AmbientIndication (partial)
+  10-26 21:58:40.703 - 1000 (System) - ACQ ActivityManager-Sleep (partial)
+  10-26 21:58:40.730 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:58:40.763 - 10198 (com.android.systemui) - REL AudioMix
+  10-26 21:58:40.763 - 1041 (com.android.systemui) - ACQ AudioMix (partial)
+  10-26 21:58:40.837 - 1000 (System) - REL ActivityManager-Sleep
+  10-26 21:58:41.045 - 10198 (com.android.systemui) - ACQ show keyguard (partial)
+  10-26 21:58:41.051 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:58:41.056 - 10198 (com.android.systemui) - REL show keyguard
+  10-26 21:58:41.062 - 1000 (System) - ACQ WifiSuspend (partial)
+  10-26 21:58:41.063 - 1000 (System) - REL WifiSuspend
+  10-26 21:58:41.065 - 10215 (com.google.android.gms) - ACQ CallbackRunner (partial)
+  10-26 21:58:41.067 - 10215 (com.google.android.gms) - REL CallbackRunner
+  10-26 21:58:41.119 - 10198 (com.android.systemui) - REL AmbientIndication
+  10-26 21:58:41.249 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:58:41.419 - 10215 (com.google.android.gms) - ACQ CallbackRunner (partial)
+  10-26 21:58:41.420 - 10215 (com.google.android.gms) - REL CallbackRunner
+  10-26 21:58:41.502 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:58:41.758 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:58:42.011 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:58:42.143 - 10215 (com.google.android.gms) - ACQ IntentOp:.c.b.BackgroundBroadcastReceiverSupport$PersistentReceiverIntentOperation (partial)
+  10-26 21:58:42.149 - 10215 (com.google.android.gms) - REL IntentOp:.c.b.BackgroundBroadcastReceiverSupport$PersistentReceiverIntentOperation
+  10-26 21:58:42.262 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:58:42.517 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  10-26 21:58:42.768 - 10230 (com.ajfg297.liftlog) - ACQ NotificationManagerService:post:com.ajfg297.liftlog (partial)
+  10-26 21:58:43.021 - 10230 (com.ajfg297.liftlog) - REL NotificationManagerService:post:com.ajfg297.liftlog
+  -
+  Events: 1188, Time-Resets: 12
+  Buffer, Bytes used: 3066
+  Tag Database: size(128), entries: 128, Bytes used: 24020
+
+
+Wakefulness Session Observer:
+default timeout: 2147483647
+override timeout: -1
+  Wakefulness Session Power Group powerGroupId: 0
+    current wakefulness: 3
+    current user activity event: 0
+    current user activity duration: 3261
+    previous user activity event: 1
+    previous user activity duration: 3263
+    is in override timeout: false
+    mIsInteractive: false
+    current screen policy: 0
+    current screen policy duration: 145
+    previous screen policy: 3
+    past screen policy duration: 1636
+
+FaceDownDetector:
+  mFaceDown=false
+  mActive=false
+  mWakeLockActive=true
+  mLastFlipTime=0
+  mSensorMaxLatencyMicros=2000000
+  mUserInteractionBackoffMillis=60000
+  mPreviousResultTime=0
+  mPreviousResultType=1
+  mMillisSaved=0
+  mZAccelerationThreshold=-9.5
+  mAccelerationThreshold=0.2
+  mTimeThreshold=PT1S
+  mEnabledOverride=true
+AmbientDisplaySuppressionController:
+ ambientDisplaySuppressed=false
+ mSuppressionTokens={}
+ mSuppressions={}
+
+Low Power Standby Controller:
+  mIsActive=false
+  mIsEnabled=false
+  mSupportedConfig=false
+  mEnabledByDefaultConfig=false
+  mStandbyTimeoutConfig=0
+  mEnableCustomPolicy=false
+  Allowed UIDs=[]
+  
+  UID allowed reasons:
+
+ScreenTimeoutOverridePolicy:
+  mScreenTimeoutOverrideConfig=-1
+  mLastAutoReleaseReason=-1

@@ -1,0 +1,9 @@
+# Starting state: notifications preference off, timers on.
+appId: com.ajfg297.liftlog
+---
+- tapOn:
+    text: '^Rest notifications$'
+    waitToSettleTimeoutMs: 500
+- tapOn:
+    text: '^Rest timers$'
+    waitToSettleTimeoutMs: 500

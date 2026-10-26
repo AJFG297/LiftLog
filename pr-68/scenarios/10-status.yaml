@@ -1,0 +1,12 @@
+# Starting state: Rest and notifications settings, active workout.
+appId: com.ajfg297.liftlog
+---
+- tapOn:
+    id: 'workout-in-progress-bar'
+    waitToSettleTimeoutMs: 500
+- tapOn:
+    id: 'rest-pill'
+    waitToSettleTimeoutMs: 500
+- tapOn:
+    id: 'rest-preset-180'
+    waitToSettleTimeoutMs: 500

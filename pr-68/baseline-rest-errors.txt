@@ -1,0 +1,8 @@
+10-26 21:27:15.779 10772 11138 E ReactNativeJS: 'Error during effect [broadcastWorkoutEvent]:', { [Error: Call to function 'WorkoutWorker.broadcast' has been rejected.
+10-26 21:27:15.779 10772 11138 E ReactNativeJS: → Caused by: java.lang.reflect.InvocationTargetException] code: 'ERR_UNEXPECTED' }
+10-26 21:27:17.144 10772 11138 I ReactNativeJS: persistStoredSession completed in 1360.50ms
+10-26 21:27:20.580 10772 11138 E ReactNativeJS: 'Error during effect [broadcastWorkoutEvent]:', { [Error: Call to function 'WorkoutWorker.broadcast' has been rejected.
+10-26 21:27:20.580 10772 11138 E ReactNativeJS: → Caused by: java.lang.reflect.InvocationTargetException] code: 'ERR_UNEXPECTED' }
+10-26 21:27:20.858 10772 11138 I ReactNativeJS: persistStoredSession completed in 255.98ms
+10-26 21:27:36.879 10772 11138 E ReactNativeJS: 'Error during effect [broadcastWorkoutEvent]:', { [Error: Call to function 'WorkoutWorker.broadcast' has been rejected.
+10-26 21:27:36.879 10772 11138 E ReactNativeJS: → Caused by: java.lang.reflect.InvocationTargetException] code: 'ERR_UNEXPECTED' }

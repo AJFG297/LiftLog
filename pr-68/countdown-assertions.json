@@ -1,0 +1,26 @@
+{
+  "result": "PASS",
+  "samples": {
+    "before": {
+      "sample_epoch": 1793048069,
+      "elapsed": "0:25",
+      "remaining": "2:35",
+      "total": "3:00",
+      "deadline_epoch": 1793048224
+    },
+    "plus": {
+      "sample_epoch": 1793048093,
+      "elapsed": "0:34",
+      "remaining": "2:26",
+      "total": "3:00",
+      "deadline_epoch": 1793048239
+    },
+    "minus": {
+      "sample_epoch": 1793048102,
+      "elapsed": "0:58",
+      "remaining": "2:02",
+      "total": "3:00",
+      "deadline_epoch": 1793048224
+    }
+  }
+}

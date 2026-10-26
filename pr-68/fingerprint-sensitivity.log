@@ -1,0 +1,26 @@
+{
+  "before": "66c4090f05bbbc34f60fe3536893eb8b448f805b",
+  "after": "50a7b7497425d55f97aae6a6a62cb9c8803f998d",
+  "changes": [
+    {
+      "op": "changed",
+      "beforeSource": {
+        "type": "dir",
+        "filePath": "../docs/schemas/workout-worker",
+        "reasons": [
+          "workout-worker generated native contract"
+        ],
+        "hash": "bcf0c995c802035ab57bb0bd1e78d31bf5ba9556"
+      },
+      "afterSource": {
+        "type": "dir",
+        "filePath": "../docs/schemas/workout-worker",
+        "reasons": [
+          "workout-worker generated native contract"
+        ],
+        "hash": "94bc4ae0594adbf2defde7d529ebdb82115a114c"
+      }
+    }
+  ]
+}
+PASS: schema change affects the Android runtime fingerprint; restoring it restores the hash.

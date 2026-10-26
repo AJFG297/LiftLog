@@ -1,0 +1,12 @@
+# Starting state: the active workout's open rest sheet after completion.
+appId: com.ajfg297.liftlog
+---
+- tapOn:
+    text: 'Close'
+    waitToSettleTimeoutMs: 500
+- tapOn:
+    text: 'You'
+    waitToSettleTimeoutMs: 500
+- tapOn:
+    text: 'Rest and notifications'
+    waitToSettleTimeoutMs: 500

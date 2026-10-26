@@ -1,0 +1,6 @@
+# Starting state: open rest sheet, countdown running.
+appId: com.ajfg297.liftlog
+---
+- tapOn:
+    id: 'rest-sheet-minus'
+    waitToSettleTimeoutMs: 500

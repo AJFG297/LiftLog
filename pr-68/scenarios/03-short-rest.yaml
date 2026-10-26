@@ -1,0 +1,10 @@
+# Starting state: notification shade open over an active workout with Squat.
+appId: com.ajfg297.liftlog
+---
+- back
+- tapOn:
+    id: 'rest-pill'
+    waitToSettleTimeoutMs: 500
+- tapOn:
+    id: 'rest-preset-30'
+    waitToSettleTimeoutMs: 500

@@ -1,0 +1,24 @@
+--------- beginning of main
+10-26 21:56:28.458   931   945 D RingtonePlayer: playAsync(uri=content://settings/system/notification_sound, user=UserHandle{0})
+10-26 21:56:28.459   931   945 D RingtonePlayer: play uri=content://settings/system/notification_sound
+10-26 21:56:28.460   931  7829 D RingtonePlayer: RemoveFirst
+10-26 21:56:28.460   931  7829 D RingtonePlayer: PLAY
+10-26 21:56:28.460   931  7829 D RingtonePlayer: startSound()
+10-26 21:56:28.460   931  7830 D RingtonePlayer: in run: new looper Looper (Thread-8, tid 106) {80e0ce7}
+10-26 21:56:28.465   497  2474 D AudioFlinger: onStateChanged: pid:931  uid:10198  state:unfrozen - no freeze activity
+10-26 21:56:28.554   931  7830 D RingtonePlayer: requesting AudioFocus
+10-26 21:56:28.556   931  7830 D RingtonePlayer: notification will be delayed by 500ms
+10-26 21:56:29.057   931  7830 D RingtonePlayer: player.start piid:39
+10-26 21:56:29.097   497  2474 D AudioFlinger: onStateChanged: pid:556  uid:1013  state:unfrozen - no freeze activity
+10-26 21:56:29.099   497   497 D AudioFlinger: Client defaulted notificationFrames to 12512 for frameCount 25024
+10-26 21:56:29.198   497   531 D AudioFlinger: mixer(0xb4007e1668e7b790) throttle end: throttle time(36)
+10-26 21:56:30.859   931  7830 D RingtonePlayer: onCompletion() abandoning AudioFocus
+10-26 21:56:30.859   931  7830 D RingtonePlayer: onCompletion queue size=0
+10-26 21:56:30.859   931  7830 D RingtonePlayer: in onCompletion quitting looper Looper (Thread-8, tid 106) {80e0ce7}
+10-26 21:56:30.860   931  7830 V MediaPlayer: resetDrmState:  mDrmInfo=null mDrmProvisioningThread=null mPrepareDrmInProgress=false mActiveDrmScheme=false
+10-26 21:56:30.860   931  7830 V MediaPlayer: cleanDrmObj: mDrmObj=null mDrmSessionId=null
+10-26 21:56:38.205   931  1676 D RingtonePlayer: stopAsync()
+10-26 21:56:38.205   931  1676 D RingtonePlayer: stop
+10-26 21:56:38.207   931  7976 D RingtonePlayer: RemoveFirst
+10-26 21:56:38.207   931  7976 D RingtonePlayer: STOP
+10-26 21:56:38.207   931  7976 W RingtonePlayer: STOP command without a player
