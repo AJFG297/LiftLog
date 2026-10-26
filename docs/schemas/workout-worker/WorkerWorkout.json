@@ -3,8 +3,7 @@
   "type": "object",
   "properties": {
     "version": {
-      "type": "number",
-      "const": 11
+      "type": "number"
     },
     "id": {
       "type": "string"
@@ -34,5 +33,5 @@
       "$ref": "./Weight.json"
     }
   },
-  "required": ["version", "id", "blueprint", "recordedExercises", "date"]
+  "required": ["blueprint", "date", "id", "recordedExercises", "version"]
 }

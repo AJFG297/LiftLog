@@ -22,7 +22,10 @@ version is a fingerprint of the native side of the app (`runtimeVersion: { polic
 - anything in the Expo config (`app.json`, `app.config.js`), including plugins, the app icon and the
   splash screen;
 - anything under `app/modules/`, `app/plugins/` or `app/patches/`, and the `scripts` in `package.json`;
-- `eas.json`.
+- `eas.json`;
+- `docs/schemas/workout-worker/`, explicitly included by `app/fingerprint.config.js`, because Android
+  generates its native message decoder from these files. A storage-version change in this decoder is a
+  native change, even when no hand-written Kotlin changes.
 
 Print the current fingerprint with:
 
