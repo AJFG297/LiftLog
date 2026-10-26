@@ -1,0 +1,33 @@
+{
+  "translations": {
+    "workoutPersistentNotificationRestBreakMessage": "Rest break",
+    "workoutPersistentNotificationStartSoonMessage": "Start soon",
+    "workoutPersistentNotificationStartNowMessage": "Start now",
+    "workoutPersistentNotificationMinRestOverMessage": "Rest over",
+    "workoutPersistentNotificationMaxRestOverMessage": "Rest over",
+    "workoutPersistentNotificationCurrentExerciseMessage": "Current exercise",
+    "workoutPersistentNotificationWarmupSetMessage": "Warm-up: $SET$",
+    "workoutPersistentNotificationCardioTargetReachedMessage": "Target reached",
+    "workoutPersistentNotificationFinishedMessage": "Workout finished",
+    "workoutPersistentNotificationInProgressMessage": "Workout in progress",
+    "workoutPersistentNotificationFinishWorkoutAction": "Finish workout"
+  },
+  "appConfiguration": { "notificationsEnabled": true },
+  "payload": {
+    "type": "WorkoutUpdatedEvent",
+    "workout": {
+      "version": 11,
+      "id": "worker-rest-regression",
+      "blueprint": { "name": "Rest regression", "notes": "" },
+      "recordedExercises": [],
+      "date": "2026-10-26"
+    },
+    "restTimerInfo": {
+      "startedAt": "2026-10-26T12:00:00Z",
+      "partiallyEndAt": "2026-10-26T12:01:30Z",
+      "endAt": "2026-10-26T12:01:30Z"
+    },
+    "totalWeightLifted": { "unit": "kilograms", "value": "0" },
+    "workoutDuration": "PT30S"
+  }
+}
