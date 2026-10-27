@@ -1,9 +1,9 @@
-import { act, cleanup, fireEvent, render } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, within } from '@testing-library/react';
 import BigNumber from 'bignumber.js';
 import { type PropsWithChildren, useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { WarmupsEditor, type WarmupsEditorProps } from './warmups-editor';
-import { type NumberPadAction } from '@/components/presentation/foundation/number-pad/number-pad-buffer';
+import { type NumberPadAction, type Digit } from '@/components/presentation/foundation/number-pad/number-pad-buffer';
 import { makeWeightedBlueprint } from '@/models/session-models/__test__/helpers';
 import { Weight } from '@/models/weight';
 
@@ -78,7 +78,11 @@ vi.mock('@/components/presentation/foundation/number-pad', async () => ({
   NumberPad: ({ visible, onAction }: { visible: boolean; onAction: (action: NumberPadAction) => void }) =>
     visible ? (
       <>
-        <button onClick={() => onAction({ type: 'digit', digit: '8' })}>8</button>
+        {(['0', '1', '2', '8', '9'] satisfies Digit[]).map((digit) => (
+          <button key={digit} onClick={() => onAction({ type: 'digit', digit })}>
+            {digit}
+          </button>
+        ))}
         <button onClick={() => onAction({ type: 'backspace' })}>Backspace</button>
       </>
     ) : null,
@@ -224,5 +228,45 @@ describe('warm-up sheet tap outside the pad', () => {
     fireEvent.click(editor.view.getByText('8'));
     fireEvent.click(editor.view.getByText('Backspace'));
     expect(editor.view.getByText('Backspace')).toBeTruthy();
+  });
+});
+
+describe('warm-up sheet cleared fields', () => {
+  it('leaves reps blank through repeated backspace and saves the minimum planned reps', () => {
+    const editor = openEditor(makeWeightedBlueprint({ warmupSets: [{ load: undefined, reps: 10 }] }));
+    const cell = editor.view.getByTestId('warmups-reps-0');
+    fireEvent.click(cell);
+    for (let press = 0; press < 4; press += 1) {
+      fireEvent.click(editor.view.getByText('Backspace'));
+    }
+    expect.soft(within(cell).queryByText(/\S/)).toBeNull();
+    expect(editor.draft().warmupSets[0]?.reps).toBe(1);
+    fireEvent.click(editor.view.getByTestId('warmups-done'));
+    expect(editor.saved().warmupSets[0]?.reps).toBe(1);
+  });
+
+  it.each(['absolute', 'percent'] as const)('leaves a cleared %s load blank and saves its zero meaning', (type) => {
+    const load = type === 'percent' ? { type, percent: 50 } : { type, weight: new Weight(20, 'kilograms') };
+    const editor = openEditor(makeWeightedBlueprint({ warmupSets: [{ load, reps: 10 }] }));
+    const cell = editor.view.getByTestId('warmups-load-0');
+    fireEvent.click(cell);
+    for (let press = 0; press < 4; press += 1) {
+      fireEvent.click(editor.view.getByText('Backspace'));
+    }
+    expect.soft(within(cell).queryByText(/\S/)).toBeNull();
+    fireEvent.click(editor.view.getByTestId('warmups-done'));
+    expect(editor.saved().warmupSets[0]?.load).toEqual(type === 'percent' ? { type, percent: 0 } : undefined);
+  });
+
+  it('limits the saved percentage to 100', () => {
+    const editor = openEditor(
+      makeWeightedBlueprint({ warmupSets: [{ load: { type: 'percent', percent: 50 }, reps: 10 }] }),
+    );
+    fireEvent.click(editor.view.getByTestId('warmups-load-0'));
+    for (const digit of ['9', '9', '9']) {
+      fireEvent.click(editor.view.getByText(digit));
+    }
+    fireEvent.click(editor.view.getByTestId('warmups-done'));
+    expect(editor.saved().warmupSets[0]?.load).toEqual({ type: 'percent', percent: 100 });
   });
 });

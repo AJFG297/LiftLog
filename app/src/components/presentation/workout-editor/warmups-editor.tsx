@@ -301,6 +301,7 @@ export function WarmupsEditor(props: WarmupsEditorProps) {
                     liveLoad={liveValue(index, 'load')}
                     liveReps={liveValue(index, 'reps')}
                     editingField={editing?.index === index ? editing.field : undefined}
+                    cleared={buffer.typed === ''}
                     emptyBar={isEmptyBar(warmup, props.bar)}
                     resolved={resolvedWarmupWeight(
                       warmup,
@@ -390,6 +391,7 @@ function WarmupRow(props: {
   liveLoad: BigNumber | undefined;
   liveReps: BigNumber | undefined;
   editingField: PadField | undefined;
+  cleared: boolean;
   emptyBar: boolean;
   resolved: Weight | undefined;
   unit: LoadUnit;
@@ -403,6 +405,9 @@ function WarmupRow(props: {
   const number = index + 1;
   const load = warmup.load;
   const loadText = (() => {
+    if (props.editingField === 'load' && props.cleared) {
+      return '';
+    }
     const value = props.liveLoad;
     if (load?.type === 'percent') {
       return `${value ? value.toFixed() : load.percent}%`;
@@ -420,7 +425,12 @@ function WarmupRow(props: {
         : props.emptyBar
           ? t('exercise_editor.warmups.empty_bar.label')
           : undefined;
-  const reps = props.liveReps ? props.liveReps.toFixed() : String(warmup.reps);
+  const reps =
+    props.editingField === 'reps' && props.cleared
+      ? ''
+      : props.liveReps
+        ? props.liveReps.toFixed()
+        : String(warmup.reps);
 
   return (
     <View

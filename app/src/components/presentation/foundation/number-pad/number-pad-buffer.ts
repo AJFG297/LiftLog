@@ -52,7 +52,7 @@ export function numberPadReducer(state: NumberPadBuffer, action: NumberPadAction
     case 'backspace': {
       const typed = (state.typed ?? state.placeholder?.toFixed() ?? '').slice(0, -1);
       // Only a leading decimal leaves a lone 0 to delete back to, and that 0 wasn't typed.
-      return withTyped(state, typed === '0' ? '' : typed);
+      return withTyped(state, typed === '0' || typed === '-' ? '' : typed);
     }
     case 'step': {
       const decimals = state.allowDecimal ? MAX_DECIMAL_DIGITS : 0;

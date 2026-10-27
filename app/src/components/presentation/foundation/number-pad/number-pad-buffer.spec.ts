@@ -60,6 +60,24 @@ describe('number pad buffer', () => {
     expect(press(emptyWeight, '⌫')).toEqual({ typed: '', value: '0' });
   });
 
+  it.each([-5, -20])('clears the final magnitude digit of reopened signed weight %s', (placeholder) => {
+    const field = { ...weight, placeholder };
+    const deletes: Key[] = placeholder === -5 ? ['⌫'] : ['⌫', '⌫'];
+    expect(press(field, ...deletes)).toEqual({ typed: '', value: '0' });
+    expect(press(field, ...deletes, '⌫', '⌫')).toEqual({ typed: '', value: '0' });
+    expect(press(field, ...deletes, '7')).toEqual({ typed: '7', value: '7' });
+    expect(press(field, ...deletes, '.', '5')).toEqual({ typed: '0.5', value: '0.5' });
+    expect(press(field, ...deletes, '+')).toEqual({ typed: '2.5', value: '2.5' });
+    expect(press(field, ...deletes, '-')).toEqual({ typed: '0', value: '0' });
+  });
+
+  it('retains valid signed intermediate text while deleting and typing', () => {
+    expect(press({ ...weight, placeholder: -20 }, '⌫')).toEqual({ typed: '-2', value: '-2' });
+    expect(press({ ...weight, placeholder: -20 }, '⌫', '5')).toEqual({ typed: '-25', value: '-25' });
+    expect(press({ ...weight, placeholder: -2.5 }, '⌫')).toEqual({ typed: '-2.', value: '-2' });
+    expect(press({ ...weight, placeholder: -0.5 }, '⌫', '⌫')).toEqual({ typed: '-0', value: '0' });
+  });
+
   it('types and steps from zero after clearing a field', () => {
     expect(press(weight, '⌫', '⌫', '2')).toEqual({ typed: '2', value: '2' });
     expect(press(weight, '⌫', '⌫', '+')).toEqual({ typed: '2.5', value: '2.5' });
