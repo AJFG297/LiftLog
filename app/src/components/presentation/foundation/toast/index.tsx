@@ -150,8 +150,10 @@ function ToastView({
     .onUpdate((event) => {
       drag.set(event.translationX);
     })
-    .onEnd((event) => {
-      if (swipeDismisses(event.translationX, event.velocityX, width.get())) {
+    // `success` is false when the system cancels the pan (say, the notification shade takes the touch), which
+    // shouldn't throw away the toast's Undo.
+    .onEnd((event, success) => {
+      if (success && swipeDismisses(event.translationX, event.velocityX, width.get())) {
         drag.set(withTiming(Math.sign(event.translationX) * width.get(), { duration: EXIT_MS }));
         scheduleOnRN(onDismiss);
       } else {
