@@ -15,6 +15,24 @@ export function toastTimeoutMs(toast: ToastContent, screenReaderEnabled: boolean
   return screenReaderEnabled && toast.action ? undefined : TOAST_VISIBLE_MS;
 }
 
+/** Past this share of the toast's width, letting go dismisses it. */
+export const SWIPE_DISMISS_FRACTION = 0.35;
+/** A fling at least this fast (px/s) dismisses from a shorter drag. */
+export const SWIPE_DISMISS_VELOCITY = 800;
+/** The shortest drag a fling can dismiss from, so a twitch of the finger can't. */
+export const SWIPE_FLING_MIN_PX = 24;
+
+/**
+ * Whether letting go of a horizontal swipe dismisses the toast. Either direction counts. A worklet because the
+ * pan gesture's `onEnd` runs on the UI thread, which can't call a plain function.
+ */
+export function swipeDismisses(translationX: number, velocityX: number, width: number): boolean {
+  'worklet';
+  const dragged = Math.abs(translationX);
+  if (dragged > width * SWIPE_DISMISS_FRACTION) return true;
+  return dragged > SWIPE_FLING_MIN_PX && Math.abs(velocityX) > SWIPE_DISMISS_VELOCITY && velocityX * translationX > 0;
+}
+
 export interface Toast extends ToastContent {
   id: number;
 }
