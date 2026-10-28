@@ -25,9 +25,11 @@ export interface WorkoutStartedEvent {
   type: 'WorkoutStartedEvent';
 }
 
+export type WorkerWorkout = Omit<SessionJSON, 'version'> & { version: number };
+
 export interface WorkoutUpdatedEvent {
   type: 'WorkoutUpdatedEvent';
-  workout: SessionJSON;
+  workout: WorkerWorkout;
   restTimerInfo: RestTimerInfo | undefined;
   cardioTimerInfo: CardioTimerInfo | undefined;
 
