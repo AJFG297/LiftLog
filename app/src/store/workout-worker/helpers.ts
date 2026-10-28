@@ -1,13 +1,18 @@
 import { RecordedWeightedExercise, Session } from '@/models/session-models';
 import { restWindowOf } from '@/models/session-models/rest';
 import { toDurationJSON, toInstantJson } from '@/models/storage/versions/latest';
-import { CardioTimerInfo, CurrentExerciseDetails, RestTimerInfo } from '@/models/workout-worker-messages';
+import {
+  CardioTimerInfo,
+  CurrentExerciseDetails,
+  RestTimerInfo,
+  WORKER_WORKOUT_VERSION,
+} from '@/models/workout-worker-messages';
 import { Duration } from '@js-joda/core';
 
 export function workoutUpdatedEvent(session: Session, restTimersEnabled: boolean) {
   return {
     type: 'WorkoutUpdatedEvent',
-    workout: session.toJSON(),
+    workout: { ...session.toJSON(), version: WORKER_WORKOUT_VERSION },
     restTimerInfo: restTimersEnabled ? getTimerInfo(session) : undefined,
     cardioTimerInfo: getCardioTimerInfo(session),
     currentExerciseDetails: getCurrentExerciseDetails(session),

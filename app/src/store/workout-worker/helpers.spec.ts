@@ -238,3 +238,12 @@ describe('warm-ups in the workout worker', () => {
     expect(event.totalWeightLifted).toEqual(new Weight(1000, 'kilograms').toJSON());
   });
 });
+
+describe('workoutUpdatedEvent', () => {
+  it('sends the version installed Android builds accept, not the storage version', () => {
+    const session = makeSession([makeWeightedBlueprint()]);
+    expect(session.toJSON().version).not.toBe(10);
+
+    expect(workoutUpdatedEvent(session, true).workout.version).toBe(10);
+  });
+});
