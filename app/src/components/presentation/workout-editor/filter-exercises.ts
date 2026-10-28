@@ -1,5 +1,5 @@
-import { fuzzyMatchScore } from '@/models/exercise-fuzzy-match';
 import { ExerciseDescriptor, musclesOf } from '@/models/exercise-models';
+import { isBlankQuery, searchEntriesOf, searchScores } from '@/models/exercise-search';
 import Enumerable from 'linq';
 
 export interface ExerciseFilterResult {
@@ -15,24 +15,24 @@ export function filterExercises(
   muscleFilters: string[],
 ): ExerciseFilterResult {
   const trimmed = searchText.trim();
-  const trimmedSearchText = escapeRegExp(trimmed);
-  const fullMatchRegex = new RegExp('^' + trimmedSearchText + '$', 'i');
+  const scores = !isBlankQuery(trimmed) ? searchScores(searchEntriesOf(exercises), trimmed) : undefined;
+  const lowerQuery = trimmed.toLowerCase();
   let hasExactMatch = false;
   const ids = Enumerable.from(Object.entries(exercises))
     .select((x) => ({
       entry: { id: x[0], exercise: x[1] },
-      score: trimmedSearchText ? fuzzyMatchScore(trimmedSearchText, x[1].name) : 0,
+      score: scores ? scores.get(x[0]) : 0,
     }))
     .where(
       (x) =>
         (!muscleFilters.length ||
           musclesOf(x.entry.exercise).some((exerciseMuscle) => muscleFilters.includes(exerciseMuscle))) &&
-        (!trimmedSearchText || x.score !== null),
+        x.score !== undefined,
     )
     .orderByDescending((x) => x.score ?? 0)
     .thenBy((x) => x.entry.exercise.name)
     .doAction((x) => {
-      if (!hasExactMatch && trimmedSearchText && fullMatchRegex.test(x.entry.exercise.name)) {
+      if (!hasExactMatch && trimmed && x.entry.exercise.name.toLowerCase() === lowerQuery) {
         hasExactMatch = true;
       }
     })
@@ -40,7 +40,7 @@ export function filterExercises(
     .toArray();
 
   const suggestion: ExerciseDescriptor | 'NONE' =
-    !hasExactMatch && trimmedSearchText
+    !hasExactMatch && trimmed
       ? {
           name: trimmed,
           category: '',
@@ -54,20 +54,4 @@ export function filterExercises(
         }
       : 'NONE';
   return { ids, suggestion };
-}
-
-/**
- * What the search opens with for the exercise being picked: its name when that names an exercise in the
- * list, as when swapping one out, so the list starts on it. A placeholder name like "New Exercise" names
- * nothing, so the search starts empty with every exercise listed.
- */
-export function searchSeedFor(exercises: Record<string, ExerciseDescriptor>, exerciseName: string): string {
-  const name = exerciseName.trim().toLowerCase();
-  return name && Object.values(exercises).some((exercise) => exercise.name.trim().toLowerCase() === name)
-    ? exerciseName
-    : '';
-}
-
-function escapeRegExp(string: string) {
-  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }

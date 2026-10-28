@@ -1,0 +1,46 @@
+/**
+ * The names people use in the gym for built-in exercises, keyed by built-in id (the English catalog name).
+ * The catalog names are formal ("Barbell Bench Press - Medium Grip"), so search also matches these, and a
+ * query that is a whole alias ranks the exercise as if it were its name: "bench" finds the barbell bench press
+ * first. Keep each alias on the one exercise most people mean by it; aliases are English, like the ids.
+ */
+export const EXERCISE_ALIASES: Readonly<Record<string, readonly string[]>> = {
+  'Barbell Bench Press - Medium Grip': ['bench', 'bench press', 'flat bench'],
+  'Barbell Incline Bench Press - Medium Grip': ['incline bench', 'incline bench press'],
+  'Close-Grip Barbell Bench Press': ['close grip bench'],
+  'Incline Dumbbell Press': ['incline db press'],
+  'Standing Military Press': ['ohp', 'overhead press', 'military press'],
+  'Arnold Dumbbell Press': ['arnold press'],
+  'Barbell Squat': ['squat', 'back squat'],
+  'Front Barbell Squat': ['front squat'],
+  'Split Squat with Dumbbells': ['bulgarian split squat', 'split squat'],
+  'Barbell Deadlift': ['deadlift', 'conventional deadlift'],
+  'Romanian Deadlift': ['rdl'],
+  'Stiff-Legged Barbell Deadlift': ['stiff leg deadlift', 'sldl'],
+  'Bent Over Barbell Row': ['row', 'barbell row', 'bent over row'],
+  'One-Arm Dumbbell Row': ['dumbbell row'],
+  'Seated Cable Rows': ['cable row', 'seated row'],
+  'T-Bar Row with Handle': ['t bar row'],
+  'Upright Barbell Row': ['upright row'],
+  'Wide-Grip Lat Pulldown': ['lat pulldown', 'pulldown'],
+  'Dips - Triceps Version': ['dip', 'tricep dip'],
+  'Dips - Chest Version': ['chest dip'],
+  'Barbell Curl': ['curl'],
+  'Dumbbell Bicep Curl': ['bicep curl', 'dumbbell curl'],
+  'EZ-Bar Skullcrusher': ['skull crusher', 'lying tricep extension'],
+  'Triceps Pushdown': ['pushdown'],
+  Butterfly: ['pec deck'],
+  'Dumbbell Flyes': ['fly', 'chest fly'],
+  'Cable Crossover': ['cable fly'],
+  'Reverse Flyes': ['rear delt fly'],
+  'Side Lateral Raise': ['lateral raise', 'side raise', 'lat raise'],
+  'Barbell Shrug': ['shrug'],
+  'Lying Leg Curls': ['leg curl', 'hamstring curl'],
+  'Leg Extensions': ['quad extension'],
+  'Standing Calf Raises': ['calf raise'],
+  'Barbell Hip Thrust': ['hip thrust'],
+  'Barbell Lunge': ['lunge'],
+  'Hyperextensions (Back Extensions)': ['back extension'],
+  'Hanging Leg Raise': ['leg raise'],
+  'One-Arm Kettlebell Swings': ['kettlebell swing'],
+};

@@ -1,5 +1,5 @@
-import { fuzzyMatchScore } from '@/models/exercise-fuzzy-match';
 import { ExerciseDescriptor } from '@/models/exercise-models';
+import { isBlankQuery, searchEntriesOf, searchScores } from '@/models/exercise-search';
 import { MuscleGroup, muscleGroupOf } from '@/models/muscle-groups';
 import type { OffsetDateTime } from '@js-joda/core';
 
@@ -37,11 +37,13 @@ export interface ExercisePerformance {
 /** How many recent exercises the picker lists above the rest. */
 export const RECENT_LIMIT = 5;
 
-/** The exercises done most recently, newest first, once each, and only those still in the catalog. */
-export function recentExerciseIds(
+/** How many exercises Similar lists when swapping: a shortcut, not a second catalog. */
+export const SIMILAR_LIMIT = 8;
+
+/** The exercises the user has done, newest first, once each, and only those still in the catalog. */
+export function loggedExerciseIds(
   performances: readonly (ExercisePerformance | undefined)[],
   exercises: Record<string, ExerciseDescriptor>,
-  limit = RECENT_LIMIT,
 ): string[] {
   const dated = performances.flatMap((performance) =>
     performance?.latestTime && exercises[performance.blueprint.exerciseId]
@@ -54,9 +56,6 @@ export function recentExerciseIds(
     if (!ids.includes(id)) {
       ids.push(id);
     }
-    if (ids.length === limit) {
-      break;
-    }
   }
   return ids;
 }
@@ -67,7 +66,13 @@ export interface PickerFilters {
   equipment: EquipmentChoice | undefined;
 }
 
-export type PickerSection = 'recent' | 'all' | 'matches' | MuscleGroup;
+/** Where the picker was opened from, beyond what the chips filter. */
+export interface PickerContext {
+  /** The id of the exercise being swapped out. */
+  swapping?: string;
+}
+
+export type PickerSection = 'similar' | 'recent' | 'all' | 'matches' | MuscleGroup;
 
 export type PickerRow =
   | { kind: 'header'; key: string; section: PickerSection }
@@ -90,41 +95,54 @@ export interface PickerList {
 }
 
 /**
- * The picker's list. With no query: Recent, then every other exercise by name. With a query: the matches,
- * best first, and recents lose their own section. The chips narrow both.
+ * The picker's list, from the exercises the user has done (`loggedIds`, newest first). With no query: when
+ * swapping, Similar (see `similarIds`); Recent, the first few logged; then every other exercise by name, each
+ * exercise once. With a query: the matches, best first (`searchScores`), one with history ahead of an
+ * otherwise equal match, and no sections besides. The chips narrow all of it.
  */
 export function pickerListOf(
   exercises: Record<string, ExerciseDescriptor>,
-  recentIds: readonly string[],
+  loggedIds: readonly string[],
   filters: PickerFilters,
+  context: PickerContext = {},
 ): PickerList {
   const query = filters.query.trim();
+  const recentIds = loggedIds.slice(0, RECENT_LIMIT);
   const passes = (exercise: ExerciseDescriptor) =>
     (!filters.muscle || muscleGroupOf(exercise) === filters.muscle) &&
     (!filters.equipment || equipmentChoiceOf(exercise) === filters.equipment);
   const rows: PickerRow[] = [];
 
-  if (!query) {
-    const recent = recentIds.filter((id) => exercises[id] && passes(exercises[id]));
+  if (isBlankQuery(query)) {
+    const similar = similarIds(exercises, loggedIds, recentIds, context.swapping, passes);
+    if (similar.length) {
+      rows.push({ kind: 'header', key: 'header-similar', section: 'similar' });
+      rows.push(...similar.map((id): PickerRow => ({ kind: 'exercise', key: `similar-${id}`, id })));
+    }
+    const recent = recentIds.filter(
+      (id) => id !== context.swapping && exercises[id] && passes(exercises[id]) && !similar.includes(id),
+    );
     if (recent.length) {
       rows.push({ kind: 'header', key: 'header-recent', section: 'recent' });
       rows.push(...recent.map((id): PickerRow => ({ kind: 'exercise', key: `recent-${id}`, id })));
     }
     const rest = Object.entries(exercises)
-      .filter(([id, exercise]) => !recent.includes(id) && passes(exercise))
+      .filter(([id, exercise]) => !similar.includes(id) && !recent.includes(id) && passes(exercise))
       .sort((a, b) => byName(a[1].name, b[1].name))
       .map(([id]): PickerRow => ({ kind: 'exercise', key: id, id }));
     if (rest.length) {
       rows.push({ kind: 'header', key: 'header-all', section: filters.muscle ?? 'all' });
       rows.push(...rest);
     }
-    return { rows, count: recent.length + rest.length, noMatch: false, hiddenByFilters: false, canCreate: false };
+    const count = similar.length + recent.length + rest.length;
+    return { rows, count, noMatch: false, hiddenByFilters: false, canCreate: false };
   }
 
   // Scored across the whole catalog: an exact name the chips hide must not be offered as a new exercise.
-  const matches = Object.entries(exercises).flatMap(([id, exercise]) => {
-    const score = fuzzyMatchScore(query, exercise.name);
-    return score === null ? [] : [{ id, name: exercise.name, score, shown: passes(exercise) }];
+  const scores = searchScores(searchEntriesOf(exercises), query, loggedIds);
+  const matches = [...scores].map(([id, score]) => {
+    const exercise = exercises[id]!;
+    return { id, name: exercise.name, score, shown: passes(exercise) };
   });
   const isExact = ({ name }: { name: string }) => name.trim().toLowerCase() === query.toLowerCase();
   const shown = matches.filter((match) => match.shown);
@@ -144,6 +162,51 @@ export function pickerListOf(
     rows.push({ kind: 'filtered', key: 'filtered', name: hiddenExact.name });
   }
   return { rows, count: shown.length, noMatch: false, hiddenByFilters, canCreate };
+}
+
+/**
+ * Swap shortcuts: the exercises the chips let through that file under the swapped one's muscle group. Those
+ * with its main muscle come first, so a squat lists squats before calf raises, then the recent ones, then
+ * those on the same equipment, then by name. An exercise with no muscle group (a stub the AI planner or an
+ * import made) has nothing to file under, so its name stands in: a stub "Bench Press" lists bench presses.
+ */
+function similarIds(
+  exercises: Record<string, ExerciseDescriptor>,
+  loggedIds: readonly string[],
+  recentIds: readonly string[],
+  swapping: string | undefined,
+  passes: (exercise: ExerciseDescriptor) => boolean,
+): string[] {
+  const swapped = swapping === undefined ? undefined : exercises[swapping];
+  if (!swapped) {
+    return [];
+  }
+  const group = muscleGroupOf(swapped);
+  if (!group) {
+    const scores = searchScores(searchEntriesOf(exercises), swapped.name, loggedIds);
+    return [...scores]
+      .filter(([id]) => id !== swapping && passes(exercises[id]!))
+      .sort(([a, x], [b, y]) => y - x || byName(exercises[a]!.name, exercises[b]!.name))
+      .slice(0, SIMILAR_LIMIT)
+      .map(([id]) => id);
+  }
+  const muscle = swapped.primaryMuscles[0];
+  const equipment = equipmentChoiceOf(swapped);
+  const recency = (id: string) => {
+    const at = recentIds.indexOf(id);
+    return at === -1 ? recentIds.length : at;
+  };
+  const similar = Object.entries(exercises).filter(
+    ([id, exercise]) => id !== swapping && muscleGroupOf(exercise) === group && passes(exercise),
+  );
+  similar.sort(
+    ([a, x], [b, y]) =>
+      Number(y.primaryMuscles[0] === muscle) - Number(x.primaryMuscles[0] === muscle) ||
+      recency(a) - recency(b) ||
+      Number(equipmentChoiceOf(y) === equipment) - Number(equipmentChoiceOf(x) === equipment) ||
+      byName(x.name, y.name),
+  );
+  return similar.slice(0, SIMILAR_LIMIT).map(([id]) => id);
 }
 
 /** Tapping a row adds it to the end of the selection, or takes it out and closes the gap. */

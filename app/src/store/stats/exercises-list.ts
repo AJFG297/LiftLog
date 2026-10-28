@@ -1,7 +1,7 @@
 import { LocalDate } from '@js-joda/core';
-import { fuzzyMatchScore } from '@/models/exercise-fuzzy-match';
 import { ExerciseId, MovementKey } from '@/models/blueprint-models';
 import { ExerciseDescriptor } from '@/models/exercise-models';
+import { isBlankQuery, searchEntryOf, searchScores } from '@/models/exercise-search';
 import { MuscleGroup, muscleGroupOf } from '@/models/muscle-groups';
 import { LastDoneLabel, lastDoneLabelOf } from '@/models/home/up-next';
 import { Weight, WeightUnit } from '@/models/weight';
@@ -76,11 +76,17 @@ export function exercisesListOf(
   const query = filters.query.trim();
   const all = [...history.exercises.values()].filter((exercise) => exercise.points.length > 0);
 
+  const scores =
+    !isBlankQuery(query) &&
+    searchScores(
+      all.map((exercise) => searchEntryOf(exercise.key, exercise.name, exercise.blueprint.exerciseId)),
+      query,
+    );
   const rows = all
     .flatMap((exercise, firstDone) => {
-      const score = query ? fuzzyMatchScore(query, exercise.name) : 0;
-      const shown = score !== null && (!filters.muscle || groupOf(exercise) === filters.muscle);
-      return shown ? [{ exercise, firstDone, score }] : [];
+      const score = scores ? scores.get(exercise.key) : 0;
+      const shown = score !== undefined && (!filters.muscle || groupOf(exercise) === filters.muscle);
+      return shown ? [{ exercise, firstDone, score: score ?? 0 }] : [];
     })
     .sort(
       (a, b) => b.score - a.score || lastDate(b.exercise).compareTo(lastDate(a.exercise)) || a.firstDone - b.firstDone,

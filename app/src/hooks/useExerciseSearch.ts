@@ -24,8 +24,8 @@ export interface ExercisePickerContext {
 
 export interface OpenExercisePicker {
   mode: ExercisePickerMode;
-  /** The exercise being swapped out: the search opens on its name when it names one. */
-  exerciseName?: string;
+  /** The id of the exercise being swapped out: the picker opens on exercises like it. */
+  exerciseId?: string;
   context?: ExercisePickerContext;
 }
 
@@ -33,7 +33,7 @@ export interface OpenExercisePicker {
 export type ExercisePickerParams = {
   requestId: string;
   mode?: ExercisePickerMode;
-  exerciseName?: string;
+  exerciseId?: string;
   contextName?: string;
   /** JSON array of exercise ids. */
   contextIds?: string;
@@ -69,9 +69,9 @@ export function useExercisePicker(onPick: (pick: ExercisePick) => void, options?
     onPickRef.current({ exercises: searchResult.exercises, asSuperset: searchResult.asSuperset });
   }, [searchResult, requestId, dispatch, store]);
 
-  return ({ mode, exerciseName, context }: OpenExercisePicker) => {
+  return ({ mode, exerciseId, context }: OpenExercisePicker) => {
     Keyboard.dismiss();
-    const params: ExercisePickerParams = { requestId, mode, exerciseName: exerciseName ?? '' };
+    const params: ExercisePickerParams = { requestId, mode, exerciseId: exerciseId ?? '' };
     if (context) {
       params.contextName = context.name;
       params.contextIds = JSON.stringify(context.exerciseIds);
@@ -80,7 +80,7 @@ export function useExercisePicker(onPick: (pick: ExercisePick) => void, options?
   };
 }
 
-/** Opens the picker to swap one exercise and hands the one picked to `onSelect`. */
+/** Opens the picker to swap out the exercise with the given id and hands the one picked to `onSelect`. */
 export function useExerciseSearch(onSelect: (exercise: PickedExercise) => void, context?: ExercisePickerContext) {
   const open = useExercisePicker((pick) => {
     const [exercise] = pick.exercises;
@@ -88,5 +88,5 @@ export function useExerciseSearch(onSelect: (exercise: PickedExercise) => void, 
       onSelect(exercise);
     }
   });
-  return (exerciseName: string) => open({ mode: 'swap', exerciseName, context });
+  return (exerciseId: string) => open({ mode: 'swap', exerciseId, context });
 }

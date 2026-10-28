@@ -119,19 +119,19 @@ describe('exercisesListOf', () => {
 
   it('ranks a search by how well the name matches, then by the most recently done', () => {
     const dips = makeWeightedBlueprint({ name: 'Dips' });
-    const inclinePress = makeWeightedBlueprint({ name: 'Dumbbell Incline Press' });
+    const ringDips = makeWeightedBlueprint({ name: 'Ring Dips' });
     const backSquat = makeWeightedBlueprint({ name: 'Back Squat' });
     const hackSquat = makeWeightedBlueprint({ name: 'Hack Squat' });
     const searched = buildProgressHistory([
       session(day(9, 1), lift(dips, 0, 10)),
       session(day(9, 10), lift(hackSquat, 100, 8)),
-      session(day(9, 20), lift(inclinePress, 30, 10), lift(backSquat, 120, 5)),
+      session(day(9, 20), lift(ringDips, 0, 10), lift(backSquat, 120, 5)),
     ]);
     const search = (query: string) =>
       exercisesListOf(searched, catalog, today, { query, muscle: undefined }, 'kilograms').rows.map((row) => row.name);
 
-    // Dumbbell Incline Press was done more recently, but Dips is the closer match.
-    expect(search('dip')).toEqual(['Dips', 'Dumbbell Incline Press']);
+    // Ring Dips was done more recently, but Dips is the closer match.
+    expect(search('dip')).toEqual(['Dips', 'Ring Dips']);
     // Both names match "squat" equally well, so the one done last comes first.
     expect(search('squat')).toEqual(['Back Squat', 'Hack Squat']);
   });

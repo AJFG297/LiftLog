@@ -6,10 +6,7 @@ import { selectExercises } from '@/store/stored-sessions';
 import { useState } from 'react';
 import { useDebouncedCallback } from 'use-debounce';
 
-/**
- * The search field and muscle filters. It reports results only as the query or filters change, so a
- * caller that opens it with an `exerciseName` must seed its list with `filterExercises` for that name.
- */
+/** The search field and muscle filters. It reports results only as the query or filters change, not on mount. */
 export default function ExerciseFilterer(props: {
   exerciseName: string;
   onFilteredExerciseIdsChange: (ids: string[]) => void;
