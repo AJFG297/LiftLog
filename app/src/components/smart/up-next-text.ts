@@ -19,7 +19,7 @@ export function upNextDetailText(
   formatDate: FormatDate,
 ): string | undefined {
   const minutes = estimatedMinutesOf(session.blueprint, sessions);
-  const lastDone = lastDoneOf(session.blueprint.name, sessions);
+  const lastDone = lastDoneOf(session.blueprint, sessions);
   const parts = [
     namesText(
       t,

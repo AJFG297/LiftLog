@@ -1,4 +1,5 @@
 import { ProgramBlueprint, Rest, SessionBlueprint, WeightedExerciseBlueprint } from '@/models/blueprint-models';
+import { findRoutineIndex } from '@/models/routine-identity';
 import { RecordedWeightedExercise, Session } from '@/models/session-models';
 import { Duration } from '@js-joda/core';
 
@@ -10,8 +11,9 @@ export interface RoutineExerciseLocation {
 
 /**
  * The routine exercise that a workout's exercise is compared with when the workout finishes. It follows
- * `getPlanDiff`: the first routine with the workout's name, and exercises matched by name, the nth of a
- * name with the nth. Undefined when the workout has no routine, or the routine lacks the exercise.
+ * `getPlanDiff`: the routine the workout was started from, then the first of its name, and exercises
+ * matched by name, the nth of a name with the nth. Undefined when the workout has no routine, or the
+ * routine lacks the exercise.
  */
 export function routineExerciseLocation(
   program: ProgramBlueprint,
@@ -19,7 +21,7 @@ export function routineExerciseLocation(
   exerciseIndex: number,
 ): RoutineExerciseLocation | undefined {
   const exercise = workout.exercises[exerciseIndex];
-  const sessionIndex = program.sessions.findIndex((s) => s.name === workout.name);
+  const sessionIndex = findRoutineIndex(program.sessions, workout);
   if (!exercise || sessionIndex < 0) {
     return undefined;
   }

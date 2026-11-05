@@ -16,6 +16,7 @@ import { useOnDismiss } from '@/hooks/useOnDismiss';
 import { useWorkoutComparison } from '@/hooks/useWorkoutComparison';
 import { fontFamily, numberStyle, spacing, useAppTheme } from '@/hooks/useAppTheme';
 import { formatRepsTarget } from '@/models/blueprint-models';
+import { findRoutineIndex } from '@/models/routine-identity';
 import { SharedSession } from '@/models/feed-models';
 import { SESSION_FEELS, SessionFeel, Session } from '@/models/session-models';
 import { shortFormatWeightUnit, Weight, WeightUnit } from '@/models/weight';
@@ -163,7 +164,8 @@ export function WorkoutSummary({ sessionId, finished }: WorkoutSummaryProps) {
     dispatch(encryptAndShare({ item: new SharedSession(session), title: t('workout.shared_item.title') }));
 
   const routineName = session.blueprint.name;
-  const routine = program.sessions.find((s) => s.name === routineName);
+  const routineIndex = findRoutineIndex(program.sessions, session.blueprint);
+  const routine = routineIndex >= 0 ? program.sessions[routineIndex] : undefined;
   // Programs repeat with no set length, so there is no honest "session N of M" to show: just the program.
   const dateLine = [
     formatDate(session.date, { weekday: 'long', month: 'short', day: 'numeric' }),

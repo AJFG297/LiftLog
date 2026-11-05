@@ -67,7 +67,7 @@ All of it is `models/session-models/rest.ts`:
 
 "Use … from now on" writes the new rest (`withRest` in `models/rest-default.ts`; a failed-set rest of the
 exercise's own is left alone) to two places at once: the routine's exercise, found the way the finish diff finds
-it (`routineExerciseLocation`: the routine with the workout's name, exercises matched by name), and the
+it (`routineExerciseLocation`: the routine the workout was started from, then one of its name, exercises matched by name), and the
 running workout's exercise. The finish sheet compares the two, so it doesn't list the same rest change
 again. The row turns into "Bench Press now rests 2:00" with Undo, which puts both rests back. It is only
 offered for a weighted exercise that is in the workout's routine; a freeform workout or an exercise added

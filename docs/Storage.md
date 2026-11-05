@@ -209,6 +209,14 @@ A workout is stored across five tables (`db/schema.ts`), not as one payload:
   by name. Workouts and plans stored
   before ids were linked once by the `LINK_EXERCISE_IDS` data migration
   (`services/data-migrations/link-exercise-ids.ts`), which also rewrote every row's key columns.
+- **Routine identity**: a routine's `id` is optional on `SessionBlueprintJSON` (version 11) and copied onto
+  `workout.routine_id` when a workout is logged. Last performed, the round and "last time" match that id, so
+  renaming the routine keeps them. `routine_id` null is a workout from before the column: it matches a routine
+  of the same name, and so does a stamp whose routine is no longer saved. A stamp that still belongs to a
+  saved routine is not taken by a different routine that reuses the name. `LINK_ROUTINE_IDS`
+  (`services/data-migrations/link-routine-ids.ts`) assigns the missing ids and stamps a workout only when
+  its name belongs to exactly one saved routine. A backup restored after that migration has already run is
+  stamped again at the end of the restore, once the programs are written.
 - **The name fold** (`normalizeExerciseName`, `models/blueprint-models/exercise-name.ts`) lowercases, trims
   and collapses spaces, folds the fly spellings (`Flye`, `Flyes`, `Flies`, `Flys`) to `fly`, and makes the
   last word singular: an irregulars table first (`abs` and `series` stay, `calves` is `calf`), then
@@ -291,8 +299,10 @@ Every read below covers _finished_ workouts only: the one in progress (`active =
 - `finishedBetween(from, to)` - the workouts dated in the range, inclusive, latest first by
   `reference_time_ms`. The History month list, a selected day, Home's 7/30-day ranges and the Stats date
   range all come from it, and `calculateStats` runs over its result unchanged.
-- `latestNamed(name, limit, { before?, includeUnstarted? })` - the last few started workouts of one name,
-  latest first: Home's Up next detail (time estimate, last done). With `before`, only those done before
+- `latestNamed(name, limit, { before?, includeUnstarted?, routineId?, liveRoutineIds? })` - the last few
+  started workouts of one routine, latest first: Home's Up next detail (time estimate, last done). The id
+  finds a renamed routine. The name finds a workout that was never stamped, or whose routine is no longer
+  saved (`liveRoutineIds` is every routine id still saved). With `before`, only those done before
   that workout (to the second, as the old selectors compared): the previous comparable workout for the
   summary and the workout detail, which pass `includeUnstarted` so a workout with nothing logged still
   counts, as it always has; and the last five for the usual duration.
@@ -307,12 +317,14 @@ Every read below covers _finished_ workouts only: the one in progress (`active =
   set over the finished workouts before it, as `RecordLedger` holds them; `sessionRecords(session, bests)`
   then names the records the workout set. Sets are scored as in `personalRecords()`, so the two agree
   except on an exact e1RM tie that floats can't tell apart.
-- `routineHistory(names)` - how far a program's routines have got, counting a workout as done when it has
-  any set logged (a warm-up included) and isn't freeform: the last day each was done and how many were
-  done, as SQL aggregates, and how many routines were done this round (`models/routine-rounds.ts`). The
-  round walks the routine name of every done workout, oldest first: where a round ends depends on all of
-  them (A B A B read from its second workout splits differently), so no bounded tail gives the same answer.
-  The Routines screen's active program card and rows.
+- `routineHistory(routines, liveRoutineIds?)` - how far a program's routines have got, counting a workout
+  as done when it has any set logged (a warm-up included) and isn't freeform: the last day each was done
+  and how many were done, and how many routines were done this round (`models/routine-rounds.ts`). A workout
+  belongs to the routine it was started from, otherwise to a routine of the same name when it was never
+  stamped or its routine is gone. The round walks each matched routine's current name, oldest first: where
+  a round ends depends on all of them (A B A B read from its second workout splits differently), so no
+  bounded tail gives the same answer. The Routines screen's active program card and rows. The map is keyed
+  by the routine's id, or its name when it has none yet.
 - `startedWorkouts()` - how many workouts were started and the date of the first, over the same workouts:
   the You profile's "N workouts since".
 - `earliestDate()` - `MIN(date)`: where the Progress tab's history starts, so deleting the first workout

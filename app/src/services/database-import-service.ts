@@ -10,6 +10,7 @@ import {
 import { readHiddenBuiltInIds } from '@/services/hidden-built-in-exercises';
 import { importBackends, importBackendsDataMigration } from '@/services/data-migrations/import-backends';
 import { linkExerciseIds, linkExerciseIdsDataMigration } from '@/services/data-migrations/link-exercise-ids';
+import { linkRoutineIds, linkRoutineIdsDataMigration } from '@/services/data-migrations/link-routine-ids';
 import { mergeExerciseNames, mergeExerciseNamesDataMigration } from '@/services/data-migrations/merge-exercise-names';
 import { rekeyProgression, rekeyProgressionDataMigration } from '@/services/data-migrations/rekey-progression';
 import { restoreMuscleRoles, restoreMuscleRolesDataMigration } from '@/services/data-migrations/restore-muscle-roles';
@@ -60,6 +61,11 @@ export class DatabaseImportService implements DatabaseImporter {
     // After linking, which made the stubs it merges.
     if (!dataMigrationsRun.includes(mergeExerciseNamesDataMigration)) {
       await mergeExerciseNames(this.db, await readHiddenBuiltInIds(this.keyValueStore));
+    }
+    // After the plans are in their latest shape. A restored backup calls `linkRoutineIds` itself:
+    // this flag is already set on the device, and the backup's programs are not in the database yet.
+    if (!dataMigrationsRun.includes(linkRoutineIdsDataMigration)) {
+      await linkRoutineIds(this.db);
     }
 
     console.info('Imported old data to DB in ' + (performance.now() - now) + 'ms');

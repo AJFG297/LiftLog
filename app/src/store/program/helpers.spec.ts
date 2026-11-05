@@ -37,6 +37,20 @@ describe('getPlanDiff', () => {
     }
   });
 
+  it('keeps a renamed routine when the workout still carries its id', () => {
+    const done = makeSession([makeWeightedBlueprint({ name: 'Squat' })]);
+    const routine = done.blueprint.with({ id: 'push', name: 'Press' });
+    const workout = done.with({ blueprint: done.blueprint.with({ id: 'push' }) });
+    const edited = workout.withAddedExercise(
+      RecordedWeightedExercise.empty(makeWeightedBlueprint({ name: 'Bench' }), 'kilograms'),
+    );
+
+    expect(getPlanDiff(programWith([routine]), workout, 'plan-id')).toBeUndefined();
+    const result = getPlanDiff(programWith([routine]), edited, 'plan-id');
+    expect(result?.type).toBe('diff');
+    expect(result?.diff.sessionChanges.map((change) => change.kind)).not.toContain('sessionName');
+  });
+
   it('returns an add diff when no session shares the name', () => {
     const session = makeSession([makeWeightedBlueprint({ name: 'Squat' })]);
     const program = programWith([

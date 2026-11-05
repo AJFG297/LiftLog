@@ -25,7 +25,7 @@ import { RecordedWeightedExercise } from '@/models/session-models';
 import { setLabels, type SetKind, type WorkingListKind } from '@/models/session-models/set-kind';
 import { Weight, WeightUnit } from '@/models/weight';
 import { parseRoutineColor, type RoutineColor } from '@/models/routine-color';
-import { uuidFromName } from '@/utils/uuid';
+import { uuid, uuidFromName } from '@/utils/uuid';
 import { normalizeExerciseName } from './exercise-name';
 
 export { normalizeExerciseName };
@@ -83,7 +83,9 @@ export class ProgramBlueprint {
   }
 
   withSessions(sessions: SessionBlueprint[]): ProgramBlueprint {
-    return this.with({ sessions });
+    return this.with({
+      sessions: sessions.map((session) => (session.id ? session : session.with({ id: uuid() }))),
+    });
   }
 
   withSession(sessionIndex: number, update: (session: SessionBlueprint) => SessionBlueprint): ProgramBlueprint {
@@ -95,7 +97,7 @@ export class ProgramBlueprint {
   }
 
   withAddedSession(session: SessionBlueprint): ProgramBlueprint {
-    return this.with({ sessions: [...this.sessions, session] });
+    return this.withSessions([...this.sessions, session]);
   }
 
   withoutSession(session: SessionBlueprint): ProgramBlueprint {
@@ -119,6 +121,11 @@ export class ProgramBlueprint {
   }
 }
 
+/** Gives every routine that does not yet have one a stable id. Routines that have one keep it. */
+export function withAssignedRoutineIds(program: ProgramBlueprint): ProgramBlueprint {
+  return program.sessions.every((session) => session.id) ? program : program.withSessions(program.sessions);
+}
+
 export class SessionBlueprint {
   constructor(
     readonly name: string,
@@ -126,6 +133,11 @@ export class SessionBlueprint {
     readonly notes: string,
     /** Undefined until someone picks one: the routine then shows the colour for its place (`routineColorOf`). */
     readonly color?: RoutineColor,
+    /**
+     * Stable id. Absent on a blueprint that has not been saved since routines gained ids.
+     * Identity for history. Two routines can share a name and still be different.
+     */
+    readonly id?: string,
   ) {}
 
   static fromJSON(json: SessionBlueprintJSON): SessionBlueprint {
@@ -134,6 +146,7 @@ export class SessionBlueprint {
       json.exercises.map(fromExerciseBlueprintJSON),
       json.notes,
       parseRoutineColor(json.color),
+      json.id,
     );
   }
 
@@ -156,11 +169,12 @@ export class SessionBlueprint {
 
   toJSON(): SessionBlueprintJSON {
     return {
-      version: 10,
+      version: 11,
       name: this.name,
       exercises: this.exercises.map((exercise) => exercise.toJSON()),
       notes: this.notes,
       ...(this.color ? { color: this.color } : {}),
+      ...(this.id ? { id: this.id } : {}),
     };
   }
 
@@ -170,6 +184,7 @@ export class SessionBlueprint {
       other.exercises ?? this.exercises,
       other.notes ?? this.notes,
       other.color ?? this.color,
+      other.id ?? this.id,
     );
   }
 

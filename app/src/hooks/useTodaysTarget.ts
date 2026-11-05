@@ -1,6 +1,7 @@
 import { usePreviousPerformances } from '@/components/smart/previous-performances';
 import { RecordedExercise, RecordedWeightedExercise, Session } from '@/models/session-models';
 import { carriedFrom, TodaysTarget, todaysTarget } from '@/models/session-models/todays-target';
+import { findRoutineIndex } from '@/models/routine-identity';
 import { useAppSelector } from '@/store';
 import { selectActiveProgram } from '@/store/program';
 
@@ -21,7 +22,8 @@ export function usePreviousPerformance(
 ): ((exercise: RecordedWeightedExercise) => PreviousPerformance) | undefined {
   const { ofMovement, byLineage, loaded } = usePreviousPerformances();
   const program = useAppSelector(selectActiveProgram);
-  const routine = program.sessions.find((planned) => planned.name === session.blueprint.name);
+  const routineIndex = findRoutineIndex(program.sessions, session.blueprint);
+  const routine = routineIndex >= 0 ? program.sessions[routineIndex] : undefined;
   if (!loaded) {
     return undefined;
   }

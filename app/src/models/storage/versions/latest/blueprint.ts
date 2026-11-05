@@ -12,8 +12,14 @@ export interface ProgramBlueprintJSON {
 }
 
 export interface SessionBlueprintJSON {
-  version: 10;
+  version: 11;
   name: string;
+  /**
+   * Stable id of this routine. Everything the app saves has one. Leave it out of a hand-written plan:
+   * the app assigns one on import. Workouts logged before routines had ids are linked by name until
+   * that assignment can stamp them.
+   */
+  id?: string | undefined;
   exercises: ExerciseBlueprintJSON[];
   notes: string;
   /**

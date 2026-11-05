@@ -55,6 +55,8 @@ export const workoutsSchema = sqliteTable(
     blueprintVersion: integer('blueprint_version').notNull(),
     date: text().$type<LocalDateJSON>().notNull(),
     name: text().notNull(),
+    // The routine this workout was started from. Null on workouts logged before routines had ids.
+    routineId: text('routine_id'),
     notes: text().notNull(),
     bodyweightValue: text('bodyweight_value').$type<BigNumberJSON>(),
     bodyweightUnit: text('bodyweight_unit').$type<WeightUnitJSON>(),
@@ -71,6 +73,7 @@ export const workoutsSchema = sqliteTable(
       .where(sql`${table.active} = 1`),
     index('workout_date').on(table.date),
     index('workout_reference_time').on(table.referenceTimeMs),
+    index('workout_routine').on(table.routineId),
   ],
 );
 

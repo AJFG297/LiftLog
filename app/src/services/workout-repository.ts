@@ -1,7 +1,23 @@
 import { mapSessionExercises } from '@/models/map-exercise-blueprints';
 import type { ExerciseBlueprint } from '@/models/blueprint-models';
 import { ExpoSQLiteDatabase } from 'drizzle-orm/expo-sqlite';
-import { SQL, and, asc, count, desc, eq, getTableColumns, gte, inArray, isNotNull, lte, sql } from 'drizzle-orm';
+import {
+  SQL,
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  getTableColumns,
+  gte,
+  inArray,
+  isNotNull,
+  isNull,
+  lte,
+  notInArray,
+  or,
+  sql,
+} from 'drizzle-orm';
 import { SQLiteColumn, SQLiteTable } from 'drizzle-orm/sqlite-core';
 import { LocalDate } from '@js-joda/core';
 import {
@@ -31,7 +47,7 @@ import { volumeScaleOf } from '@/store/activity/volume';
 import { PersonalRecord, PreviousBest, PreviousBests } from '@/store/stats/personal-records';
 import { oneRepMaxOf } from '@/store/stats/calculate-stats';
 import { getSessionReferenceTime } from '@/store/stored-sessions';
-import { routinesDoneThisRoundOf } from '@/models/routine-rounds';
+import { DoneWorkoutRef, RoutineRef, routineHistoryOf } from '@/models/routine-identity';
 import {
   CardioSetRow,
   WarmupSetRow,
@@ -85,7 +101,7 @@ const loggedAnySet = sql`(${started} or exists (select 1 from ${warmupSetsSchema
 
 /** The routines of a program as done so far, from {@link WorkoutRepository.routineHistory}. */
 export interface RoutineHistory {
-  /** The last day each routine was done, by name. */
+  /** The last day each routine was done, keyed by {@link routineKey}. */
   lastDone: Map<string, LocalDate>;
   workoutsDone: number;
   /** How many of the routines were done in the current round (`routinesDoneThisRoundOf`). */
@@ -317,22 +333,37 @@ export class WorkoutRepository {
   }
 
   /**
-   * The last `limit` finished workouts named `name` that were started, latest first. With `before`, only
-   * those done before that workout: the previous comparable workouts for a comparison or a summary.
-   * `includeUnstarted` counts a workout with nothing logged too, as the post-workout comparison always has.
+   * The last `limit` finished workouts of one routine that were started, latest first. `routineId` finds
+   * one that was renamed. The name finds a workout that was never stamped, or whose routine is gone.
+   * With `before`, only those done before that workout. `includeUnstarted` counts a workout with nothing
+   * logged too, as the post-workout comparison always has.
    */
   async latestNamed(
     name: string,
     limit: number,
-    { before, includeUnstarted = false }: { before?: Session; includeUnstarted?: boolean } = {},
+    {
+      before,
+      includeUnstarted = false,
+      routineId,
+      liveRoutineIds,
+    }: { before?: Session; includeUnstarted?: boolean; routineId?: string; liveRoutineIds?: readonly string[] } = {},
   ): Promise<Session[]> {
+    const named =
+      liveRoutineIds && liveRoutineIds.length
+        ? and(
+            eq(workoutsSchema.name, name),
+            or(isNull(workoutsSchema.routineId), notInArray(workoutsSchema.routineId, [...liveRoutineIds])),
+          )
+        : and(eq(workoutsSchema.name, name), isNull(workoutsSchema.routineId));
     const workouts = await this.db
       .select(readColumns.workout)
       .from(workoutsSchema)
       .where(
         and(
           finished,
-          eq(workoutsSchema.name, name),
+          // The id finds a renamed routine. The name finds a workout that was never stamped, or whose
+          // routine no longer exists. A stamp that still belongs to a live routine stays with that routine.
+          or(routineId ? eq(workoutsSchema.routineId, routineId) : undefined, named),
           includeUnstarted ? undefined : started,
           ...(before ? earlierThan(before) : []),
         ),
@@ -523,42 +554,43 @@ export class WorkoutRepository {
   }
 
   /**
-   * How far the routines named `names` have got: a finished workout counts as one done when it has any set
-   * logged, a warm-up included, and is not freeform. The counts and dates are SQL aggregates. The round
-   * is walked from the routine name of every done workout, oldest first by day and then by when it was
-   * done: one short column per workout, since where a round ends depends on all of them.
+   * How far `routines` have got. A finished workout counts when it has any set logged, a warm-up
+   * included, and is not freeform. It belongs to the routine it was started from (`routine_id`), and
+   * otherwise to a routine of the same name when that workout was never stamped or its routine is gone.
+   * `liveRoutineIds` is every routine id still saved, so a name is not taken from a routine that still exists.
+   * The round walks one row per done workout: where a round ends depends on all of them.
    */
-  async routineHistory(names: readonly string[]): Promise<RoutineHistory> {
-    if (!names.length) {
+  async routineHistory(routines: readonly RoutineRef[], liveRoutineIds?: readonly string[]): Promise<RoutineHistory> {
+    if (!routines.length) {
       return { lastDone: new Map(), workoutsDone: 0, routinesDoneThisRound: 0 };
     }
+    const ids = routines.flatMap((routine) => (routine.id ? [routine.id] : []));
+    const names = [...new Set(routines.map((routine) => routine.name))];
     const done = and(
       finished,
-      inArray(workoutsSchema.name, [...names]),
       sql`${workoutsSchema.name} != ${FREEFORM_WORKOUT_NAME}`,
       loggedAnySet,
-    );
-    const [perName, ordered] = await Promise.all([
-      this.db
-        .select({ name: workoutsSchema.name, lastDone: sql<LocalDateJSON>`max(${workoutsSchema.date})`, done: count() })
-        .from(workoutsSchema)
-        .where(done)
-        .groupBy(workoutsSchema.name),
-      this.db
-        .select({ name: workoutsSchema.name })
-        .from(workoutsSchema)
-        .where(done)
-        // To the second, as the model's activity times compared them.
-        .orderBy(asc(workoutsSchema.date), sql`${workoutsSchema.referenceTimeMs} / 1000`, sql`rowid`),
-    ]);
-    return {
-      lastDone: new Map(perName.map((x) => [x.name, LocalDate.parse(x.lastDone)])),
-      workoutsDone: perName.reduce((total, x) => total + x.done, 0),
-      routinesDoneThisRound: routinesDoneThisRoundOf(
-        ordered.map((x) => x.name),
-        names,
+      or(
+        ids.length ? inArray(workoutsSchema.routineId, ids) : undefined,
+        names.length ? inArray(workoutsSchema.name, names) : undefined,
       ),
-    };
+    );
+    const ordered = await this.db
+      .select({
+        routineId: workoutsSchema.routineId,
+        name: workoutsSchema.name,
+        date: workoutsSchema.date,
+      })
+      .from(workoutsSchema)
+      .where(done)
+      // To the second, as the model's activity times compared them.
+      .orderBy(asc(workoutsSchema.date), sql`${workoutsSchema.referenceTimeMs} / 1000`, sql`rowid`);
+    const rows: DoneWorkoutRef[] = ordered.map((row) => ({
+      routineId: row.routineId,
+      name: row.name,
+      date: LocalDate.parse(row.date),
+    }));
+    return routineHistoryOf(rows, routines, liveRoutineIds ? new Set(liveRoutineIds) : undefined);
   }
 
   /** The date of the earliest finished workout, started or not: where all-time stats begin. */

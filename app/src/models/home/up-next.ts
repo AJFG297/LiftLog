@@ -1,4 +1,5 @@
 import { CardioExerciseBlueprint, SessionBlueprint, WeightedExerciseBlueprint } from '@/models/blueprint-models';
+import { RoutineRef, sameRoutine } from '@/models/routine-identity';
 import { Session } from '@/models/session-models';
 import { LocalDate } from '@js-joda/core';
 
@@ -30,7 +31,11 @@ export function namePreviewOf(names: readonly string[], shown: number): NamePrev
  */
 export function estimatedMinutesOf(blueprint: SessionBlueprint, sessions: readonly Session[]): number | undefined {
   const past = sessions
-    .filter((session) => session.blueprint.name === blueprint.name && session.duration !== undefined)
+    .filter(
+      (session) =>
+        sameRoutine(blueprint, { id: session.blueprint.id, name: session.blueprint.name }) &&
+        session.duration !== undefined,
+    )
     .sort((a, b) => b.date.compareTo(a.date))
     .slice(0, ESTIMATE_SAMPLE)
     .map((session) => session.duration!.seconds() / 60)
@@ -42,10 +47,13 @@ export function estimatedMinutesOf(blueprint: SessionBlueprint, sessions: readon
   return planned > 0 ? roundToStep(planned / 60) : undefined;
 }
 
-/** The last day a workout of this name was done, or `undefined` if it never was. */
-export function lastDoneOf(workoutName: string, sessions: readonly Session[]): LocalDate | undefined {
+/** The last day this routine was done, or `undefined` if it never was. */
+export function lastDoneOf(routine: RoutineRef, sessions: readonly Session[]): LocalDate | undefined {
   return sessions
-    .filter((session) => session.isStarted && session.blueprint.name === workoutName)
+    .filter(
+      (session) =>
+        session.isStarted && sameRoutine(routine, { id: session.blueprint.id, name: session.blueprint.name }),
+    )
     .reduce<LocalDate | undefined>(
       (latest, session) => (!latest || session.date.isAfter(latest) ? session.date : latest),
       undefined,

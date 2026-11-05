@@ -70,8 +70,8 @@ describe('lastDoneOf', () => {
       workout('Pull', today),
     ];
 
-    expect(lastDoneOf('Push', sessions)?.toString()).toBe('2025-04-08');
-    expect(lastDoneOf('Legs', sessions)).toBeUndefined();
+    expect(lastDoneOf({ name: 'Push' }, sessions)?.toString()).toBe('2025-04-08');
+    expect(lastDoneOf({ name: 'Legs' }, sessions)).toBeUndefined();
   });
 });
 

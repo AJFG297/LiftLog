@@ -68,6 +68,12 @@ export const sessionBlueprintMigrations = createMigrations<InitialSessionBluepri
     ...value,
     version: 10 as const,
   }))
+  // `id` is optional. Older routines already fit. LINK_ROUTINE_IDS assigns one and stamps the
+  // workouts that name only that routine, so a later rename still finds them.
+  .add((value) => ({
+    ...value,
+    version: 11 as const,
+  }))
   .build<SessionBlueprintJSON>();
 
 export const programBlueprintMigrations = createMigrations<InitialProgramBlueprintJSON>({ pseudoMigrateUntil: 3 })

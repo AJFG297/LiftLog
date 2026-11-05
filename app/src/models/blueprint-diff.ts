@@ -1043,7 +1043,7 @@ export function applySessionBlueprintDiff(original: SessionBlueprint, diff: Sess
     finalExercises.splice(Math.min(index, finalExercises.length), 0, exercise);
   }
 
-  return new SessionBlueprint(name, finalExercises, notes, original.color);
+  return new SessionBlueprint(name, finalExercises, notes, original.color, original.id);
 }
 
 /**
