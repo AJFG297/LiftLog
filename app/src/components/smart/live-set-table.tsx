@@ -10,7 +10,14 @@ import { equipmentClassOf } from '@/models/equipment';
 import { PotentialSet, RecordedWeightedExercise, Session } from '@/models/session-models';
 import { SetPosition } from '@/models/session-models/recorded-weighted-exercise';
 import { formatRpe } from '@/models/session-models/rpe';
-import { canRemoveSet, SetField, SetRow, setRowsOf, weightUnitOf } from '@/models/session-models/set-entry';
+import {
+  canRemoveSet,
+  copyablePreviousWeight,
+  SetField,
+  SetRow,
+  setRowsOf,
+  weightUnitOf,
+} from '@/models/session-models/set-entry';
 import { LoadUnit, Weight } from '@/models/weight';
 import { useAppSelector } from '@/store';
 import { selectPreferredWeightUnit } from '@/store/settings';
@@ -83,12 +90,25 @@ export function LiveSetTable(props: LiveSetTableProps) {
         reps: row.reps.value,
       },
     );
+    const previousSlot = previousSlotAt(previous, row.position);
+    const previousLabel = previousText(previousSlot, resistance, unit, bodyweightLabel);
+    const previousWeight = row.logged ? undefined : copyablePreviousWeight(previousSlot, resistance, unit);
     return {
       key: `${row.position.list}-${row.position.index}`,
       badge,
       badgeAccessibilityLabel: t('live_workout.set_table.set_type.button', { set }),
       onPressBadge: () => entry.openSetType(exerciseIndex, row.position),
-      previous: previousText(previousSlotAt(previous, row.position), resistance, unit, bodyweightLabel),
+      previous: previousLabel,
+      previousAction: previousWeight
+        ? {
+            accessibilityLabel: t('live_workout.set_table.copy_previous_weight.button', {
+              previous: previousLabel,
+              weight: formatWeightText(previousWeight, resistance === 'bodyweight', bodyweightLabel),
+              set,
+            }),
+            onPress: () => entry.copyPreviousWeight(exerciseIndex, row.position, previousWeight),
+          }
+        : undefined,
       weight:
         resistance === 'none'
           ? undefined

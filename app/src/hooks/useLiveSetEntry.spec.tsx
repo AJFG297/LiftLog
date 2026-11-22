@@ -11,34 +11,49 @@ import appReducer from '@/store/app';
 import { settingsReducer } from '@/store/settings';
 import { storedSessionsReducer } from '@/store/stored-sessions';
 
+const mocks = vi.hoisted(() => ({
+  setLogged: vi.fn(),
+  selection: vi.fn(),
+  withRestTimerAt: vi.fn((session: Session) => session),
+}));
+
 vi.mock('@/store', async () => ({ useAppSelector: (await import('react-redux')).useSelector }));
 vi.mock('expo-router', () => ({ useRouter: () => ({ push: () => {} }) }));
 vi.mock('@tolgee/react', () => ({ useTranslate: () => ({ t: (key: string) => key }) }));
 vi.mock('@/components/presentation/foundation/haptics', () => ({
-  haptics: { setLogged: () => {} },
+  haptics: { setLogged: mocks.setLogged, selection: mocks.selection },
 }));
 vi.mock('@/components/presentation/foundation/toast', () => ({ useToast: () => ({ show: () => {} }) }));
 vi.mock('@/components/smart/recorded-exercise-view', () => ({
-  withRestTimerAt: (session: Session) => session,
+  withRestTimerAt: mocks.withRestTimerAt,
 }));
 vi.mock('@/components/presentation/foundation/number-pad', async () => ({
   ...(await import('@/components/presentation/foundation/number-pad/number-pad-buffer')),
   weightAccessoryFor: () => undefined,
 }));
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  mocks.setLogged.mockClear();
+  mocks.selection.mockClear();
+  mocks.withRestTimerAt.mockClear();
+});
 
 const first = { list: 'working', index: 0 } as const;
+const second = { list: 'working', index: 1 } as const;
 
-function openEntry(weight: number) {
+function openEntry(weight: number, sets: (number | undefined)[] = [undefined]) {
   const store = configureStore({
     reducer: { app: appReducer, settings: settingsReducer, storedSessions: storedSessionsReducer },
     middleware: (getDefault) => getDefault({ serializableCheck: false, immutableCheck: false }),
   });
-  const blueprint = makeWeightedBlueprint({ progression: [] });
+  const blueprint = makeWeightedBlueprint({
+    progression: [],
+    plannedSets: sets.map(() => ({ reps: { min: 5, max: 5 }, kind: 'working' as const })),
+  });
   const initial = makeSession([blueprint]).withExercise(
     0,
-    makeRecordedExercise(blueprint, [undefined], new Weight(weight, 'kilograms')),
+    makeRecordedExercise(blueprint, sets, new Weight(weight, 'kilograms')),
   );
   function wrapper({ children }: PropsWithChildren) {
     return <Provider store={store}>{children}</Provider>;
@@ -84,4 +99,59 @@ describe('clearing a reopened assisted load', () => {
       }
     },
   );
+});
+
+describe('copying previous weight', () => {
+  it('copies weight into the same row without logging, starting rest, or changing later sets', () => {
+    const { result } = openEntry(87.5, [undefined, undefined]);
+    act(() => result.current.entry.copyPreviousWeight(0, first, new Weight(85, 'kilograms')));
+
+    const exercise = result.current.session.recordedExercises[0] as RecordedWeightedExercise;
+    expect(exercise.potentialSets.map((s) => s.weight.value.toNumber())).toEqual([85, 87.5]);
+    expect(exercise.potentialSets[0]!.set).toBeUndefined();
+    expect(result.current.entry.editing).toBeUndefined();
+    expect(mocks.withRestTimerAt).not.toHaveBeenCalled();
+    expect(mocks.setLogged).not.toHaveBeenCalled();
+    expect(mocks.selection).toHaveBeenCalledTimes(1);
+  });
+
+  it('drops an uncommitted weight buffer on the same row instead of moving following sets', () => {
+    const { result } = openEntry(87.5, [undefined, undefined]);
+    act(() => result.current.entry.open(0, first, 'weight'));
+    act(() => result.current.entry.pad.onAction({ type: 'digit', digit: '9' }));
+    act(() => result.current.entry.copyPreviousWeight(0, first, new Weight(82.5, 'kilograms')));
+
+    const exercise = result.current.session.recordedExercises[0] as RecordedWeightedExercise;
+    expect(exercise.potentialSets.map((s) => s.weight.value.toNumber())).toEqual([82.5, 87.5]);
+    expect(result.current.entry.editing).toBeUndefined();
+  });
+
+  it('commits typed reps on the row before copying previous weight', () => {
+    const { result } = openEntry(87.5, [undefined, undefined]);
+    act(() => result.current.entry.open(0, first, 'reps'));
+    act(() => result.current.entry.pad.onAction({ type: 'digit', digit: '7' }));
+    act(() => result.current.entry.copyPreviousWeight(0, first, new Weight(80, 'kilograms')));
+
+    const exercise = result.current.session.recordedExercises[0] as RecordedWeightedExercise;
+    expect(exercise.potentialSets[0]!.weight.value.toNumber()).toBe(80);
+    expect(exercise.potentialSets[0]!.set).toBeUndefined();
+    expect(result.current.entry.stateFor(0)?.drafts['working:0']).toEqual({ reps: 7, weightTyped: true });
+    expect(result.current.entry.editing).toBeUndefined();
+  });
+
+  it('does nothing for a completed set', () => {
+    const { result } = openEntry(87.5, [5, undefined]);
+    act(() => result.current.entry.copyPreviousWeight(0, first, new Weight(80, 'kilograms')));
+
+    const exercise = result.current.session.recordedExercises[0] as RecordedWeightedExercise;
+    expect(exercise.potentialSets[0]!.weight.value.toNumber()).toBe(87.5);
+    expect(exercise.potentialSets[0]!.set?.repsCompleted).toBe(5);
+    expect(mocks.selection).not.toHaveBeenCalled();
+
+    // Still works on the next unlogged set.
+    act(() => result.current.entry.copyPreviousWeight(0, second, new Weight(80, 'kilograms')));
+    const updated = result.current.session.recordedExercises[0] as RecordedWeightedExercise;
+    expect(updated.potentialSets[1]!.weight.value.toNumber()).toBe(80);
+    expect(mocks.selection).toHaveBeenCalledTimes(1);
+  });
 });

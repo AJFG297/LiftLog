@@ -1,4 +1,4 @@
-import { PlannedSet, PlannedWarmupSet } from '@/models/blueprint-models';
+import { PlannedSet, PlannedWarmupSet, Resistance } from '@/models/blueprint-models';
 import {
   PotentialSet,
   RecordedWeightedExercise,
@@ -122,6 +122,61 @@ export function withTypedValue(
   const weight = new Weight(value, slot.weight.unit === 'nil' ? fallbackUnit : slot.weight.unit);
   return {
     exercise: withWeightAt(state, position, slot, weight),
+    drafts: withDraft(state.drafts, position, { weightTyped: true }),
+  };
+}
+
+/**
+ * The previous set's weight expressed in `targetUnit`, when it represents a real load that can be copied
+ * into today's row. Returns `undefined` when there was no logged previous set, the movement tracks no load,
+ * or the previous external-resistance set had no recorded weight unit (`nil`).
+ */
+export function copyablePreviousWeight(
+  slot: PotentialSet | undefined,
+  resistance: Resistance,
+  targetUnit: LoadUnit,
+): Weight | undefined {
+  if (!slot?.set || resistance === 'none') {
+    return undefined;
+  }
+  const { weight } = slot;
+  if (!weight.value.isFinite()) {
+    return undefined;
+  }
+  if (weight.unit === 'nil' && resistance === 'external') {
+    return undefined;
+  }
+  if (weight.unit === targetUnit || weight.unit === 'nil') {
+    return new Weight(weight.value, targetUnit);
+  }
+  return new Weight(weight.convertTo(targetUnit).value.decimalPlaces(2), targetUnit);
+}
+
+/**
+ * Copies a previous weight onto one unlogged set on the same row, leaving reps, other sets, and logging
+ * state untouched. Completed sets and movements that track no load are left alone.
+ */
+export function withCopiedPreviousWeight(
+  state: SetEntryState,
+  position: SetPosition,
+  previousWeight: Weight,
+  fallbackUnit: LoadUnit,
+): SetEntryState {
+  const slot = state.exercise.slotAt(position);
+  if (!slot || slot.set || !state.exercise.tracksResistance || !previousWeight.value.isFinite()) {
+    return state;
+  }
+  const unit = slot.weight.unit === 'nil' ? fallbackUnit : slot.weight.unit;
+  const weight =
+    previousWeight.unit === unit || previousWeight.unit === 'nil'
+      ? new Weight(previousWeight.value, unit)
+      : new Weight(previousWeight.convertTo(unit).value.decimalPlaces(2), unit);
+  const exercise =
+    position.list === 'warmup'
+      ? state.exercise.withWarmupWeight(position.index, weight)
+      : state.exercise.withSet(position.index, (s) => s.with({ weight }));
+  return {
+    exercise,
     drafts: withDraft(state.drafts, position, { weightTyped: true }),
   };
 }

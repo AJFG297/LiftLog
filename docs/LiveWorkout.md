@@ -132,7 +132,9 @@ the reps, and a check. Warm-ups come first, then the working list. Previous is t
 performance Today's target compares against, by position, so a set past last time's count has none.
 
 - **Placeholders.** An untouched weight and reps show today's target, `PotentialSet.weight` and the top of
-  `PotentialSet.target`, in the `placeholder` grey. Typed or logged values are ink and bold. The check logs
+  `PotentialSet.target`, in the `placeholder` grey. Typed or logged values are ink and bold. Tapping Previous
+  on an unlogged weighted set copies that weight into the same row without changing reps, logging the set, or
+  restarting rest. The check logs
   the set as the row shows it, so logging a set as planned is one tap. The next set is outlined.
 - **Typing.** Tapping a field opens the [number pad](./NumberPad.md) with the field empty and its value as
   the placeholder. The pad takes the Up next dock's place, the page shrinks above it, and the screen

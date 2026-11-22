@@ -23,6 +23,7 @@ import {
   SetRow,
   setRowAt,
   withAddedSet,
+  withCopiedPreviousWeight,
   withSetLogged,
   withSetRemoved,
   withSetRestored,
@@ -31,6 +32,7 @@ import {
   withTypedValue,
   weightUnitOf,
 } from '@/models/session-models/set-entry';
+import { Weight } from '@/models/weight';
 import { useAppSelector } from '@/store';
 import { setLiveWorkoutDrafts } from '@/store/app';
 import { selectPreferredWeightUnit } from '@/store/settings';
@@ -236,6 +238,26 @@ export function useLiveSetEntry(session: Session, updateSession: UpdateSession, 
     setEditing(undefined);
   };
 
+  const copyPreviousWeight = (exerciseIndex: number, position: SetPosition, weight: Weight) => {
+    const typingSameWeight =
+      editing?.exerciseIndex === exerciseIndex &&
+      editing.field === 'weight' &&
+      editing.position.list === position.list &&
+      editing.position.index === position.index;
+    const change: SetEntryChange = (state) =>
+      withCopiedPreviousWeight(state, position, weight, weightUnitOf(state.exercise, preferredUnit));
+    const current = stateFor(exerciseIndex);
+    const next = typingSameWeight
+      ? apply(exerciseIndex, change, { keepsRest: true })
+      : applyAfterTyping(exerciseIndex, change, { keepsRest: true });
+    if (editing) {
+      setEditing(undefined);
+    }
+    if (current && next && (next.exercise !== current.exercise || next.drafts !== current.drafts)) {
+      haptics.selection();
+    }
+  };
+
   const addSet = (exerciseIndex: number) => {
     applyAfterTyping(exerciseIndex, (state) => withAddedSet(state, weightUnitOf(state.exercise, preferredUnit)));
     setEditing(undefined);
@@ -335,7 +357,19 @@ export function useLiveSetEntry(session: Session, updateSession: UpdateSession, 
     };
   })();
 
-  return { editing, buffer, stateFor, open, toggle, addSet, removeSet, openSetType, close, pad };
+  return {
+    editing,
+    buffer,
+    stateFor,
+    open,
+    copyPreviousWeight,
+    toggle,
+    addSet,
+    removeSet,
+    openSetType,
+    close,
+    pad,
+  };
 }
 
 export type LiveSetEntry = ReturnType<typeof useLiveSetEntry>;
