@@ -40,6 +40,8 @@ export interface SetTableRow {
   badgeAccessibilityLabel: string;
   onPressBadge: () => void;
   previous: string;
+  /** Copies the previous weight into this unlogged row. Undefined when there is no copyable weight or the set is logged. */
+  previousAction?: { accessibilityLabel: string; onPress: () => void };
   /** Undefined for a movement that tracks no load. */
   weight: SetTableCell | undefined;
   reps: SetTableCell;
@@ -214,15 +216,45 @@ function SetTableRowView(props: {
       >
         <SetBadge {...row.badge} />
       </Pressable>
-      <SurfaceText
-        numeric
-        font="text-sm"
-        numberOfLines={props.showsPartials ? 2 : 1}
-        adjustsFontSizeToFit
-        style={{ flex: 1, minWidth: 0, color: tokens.muted }}
-      >
-        {row.previous}
-      </SurfaceText>
+      {row.previousAction ? (
+        <Pressable
+          testID="set-previous"
+          accessibilityRole="button"
+          accessibilityLabel={row.previousAction.accessibilityLabel}
+          onPress={row.previousAction.onPress}
+          style={({ pressed }) => ({
+            flex: 1,
+            minWidth: 0,
+            minHeight: MIN_TOUCH_TARGET,
+            borderRadius: CELL_RADIUS,
+            paddingHorizontal: spacing[1],
+            marginHorizontal: -spacing[1],
+            justifyContent: 'center',
+            backgroundColor: pressed ? tokens.track : 'transparent',
+          })}
+        >
+          <SurfaceText
+            numeric
+            font="text-sm"
+            numberOfLines={props.showsPartials ? 2 : 1}
+            adjustsFontSizeToFit
+            style={{ color: tokens.muted }}
+          >
+            {row.previous}
+          </SurfaceText>
+        </Pressable>
+      ) : (
+        <SurfaceText
+          testID="set-previous"
+          numeric
+          font="text-sm"
+          numberOfLines={props.showsPartials ? 2 : 1}
+          adjustsFontSizeToFit
+          style={{ flex: 1, minWidth: 0, color: tokens.muted }}
+        >
+          {row.previous}
+        </SurfaceText>
+      )}
       {props.showsWeight && row.weight ? (
         <EntryCell
           testID="set-weight"

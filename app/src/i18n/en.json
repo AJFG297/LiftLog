@@ -1401,6 +1401,7 @@
   "live_workout.set_table.pounds.label": "lb",
   "live_workout.set_table.pounds_each.label": "lb each",
   "live_workout.set_table.set_type.button": "{set}, change set type",
+  "live_workout.set_table.copy_previous_weight.button": "Previous {previous}, copy {weight} to {set}",
   "live_workout.set_table.weight.label": "Weight for {set}: {weight}",
   "live_workout.set_table.weight_target.label": "Weight for {set}: {weight}, today's target",
   "live_workout.set_table.reps_value.label": "Reps for {set}: {reps}",
