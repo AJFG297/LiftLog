@@ -8,7 +8,7 @@ import { makeRecordedExercise, makeSession, makeWeightedBlueprint } from '@/mode
 import { RecordedWeightedExercise, Session } from '@/models/session-models';
 import { Weight } from '@/models/weight';
 import appReducer from '@/store/app';
-import { settingsReducer } from '@/store/settings';
+import { setScaleWarmupsWithWorkingWeight, settingsReducer } from '@/store/settings';
 import { storedSessionsReducer } from '@/store/stored-sessions';
 
 const mocks = vi.hoisted(() => ({
@@ -153,5 +153,52 @@ describe('copying previous weight', () => {
     const updated = result.current.session.recordedExercises[0] as RecordedWeightedExercise;
     expect(updated.potentialSets[1]!.weight.value.toNumber()).toBe(80);
     expect(mocks.selection).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('warm-up scaling preference during live set entry', () => {
+  function openWithWarmup(scaleWarmupsWithWorkingWeight: boolean) {
+    const store = configureStore({
+      reducer: { app: appReducer, settings: settingsReducer, storedSessions: storedSessionsReducer },
+      middleware: (getDefault) => getDefault({ serializableCheck: false, immutableCheck: false }),
+    });
+    if (scaleWarmupsWithWorkingWeight) {
+      store.dispatch(setScaleWarmupsWithWorkingWeight(true));
+    }
+    const blueprint = makeWeightedBlueprint({
+      progression: [],
+      plannedSets: [{ reps: { min: 5, max: 5 }, kind: 'working' }],
+      warmupSets: [{ reps: 5, load: { type: 'percent', percent: 50 } }],
+    });
+    const initial = makeSession([blueprint]).withExercise(
+      0,
+      makeRecordedExercise(blueprint, [undefined], new Weight(100, 'kilograms')).withWarmupsFromPlan('kilograms'),
+    );
+    function wrapper({ children }: PropsWithChildren) {
+      return <Provider store={store}>{children}</Provider>;
+    }
+    return renderHook(
+      () => {
+        const [session, updateSession] = useState(initial);
+        return { session, entry: useLiveSetEntry(session, updateSession, [0]) };
+      },
+      { wrapper },
+    );
+  }
+
+  it.each([
+    [false, 50],
+    [true, 60],
+  ])('with scaleWarmupsWithWorkingWeight=%s leaves warm-up at %d kg after typing 120 kg', (scale, expectedWarmup) => {
+    const { result } = openWithWarmup(scale);
+    act(() => result.current.entry.open(0, first, 'weight'));
+    for (const digit of ['1', '2', '0'] as const) {
+      act(() => result.current.entry.pad.onAction({ type: 'digit', digit }));
+    }
+    act(() => result.current.entry.pad.onHide());
+
+    const exercise = result.current.session.recordedExercises[0] as RecordedWeightedExercise;
+    expect(exercise.potentialSets[0]!.weight.value.toNumber()).toBe(120);
+    expect(exercise.warmupSets[0]!.weight.value.toNumber()).toBe(expectedWarmup);
   });
 });

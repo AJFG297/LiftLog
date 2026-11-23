@@ -57,7 +57,7 @@ export function sessionWithPickAdded(
   session: Session,
   picked: readonly PickedExerciseRef[],
   asSuperset: boolean,
-  { latest, unit }: CarryOver,
+  { latest, unit, scaleWarmupsWithWorkingWeight }: CarryOver,
 ): Session {
   if (!picked.length) {
     return session;
@@ -78,7 +78,10 @@ export function sessionWithPickAdded(
   const added = blueprintsForPick(picked, asSuperset);
   const lineages = lineageKeys([...result.blueprint.exercises, ...added]).slice(result.blueprint.exercises.length);
   return added.reduce(
-    (next, blueprint, index) => next.withAddedExercise(nextRecordedExercise(blueprint, lineages[index]!, latest, unit)),
+    (next, blueprint, index) =>
+      next.withAddedExercise(
+        nextRecordedExercise(blueprint, lineages[index]!, latest, unit, { scaleWarmupsWithWorkingWeight }),
+      ),
     result,
   );
 }

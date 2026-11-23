@@ -37,10 +37,13 @@ day's. The workout you are in never counts as its own last time.
 - **Reps you completed last time normally do not.** The target comes back from the plan each session.
 - A workout you opened but never logged a set in is ignored, so an abandoned session cannot become the
   number you are stuck chasing. Logging only the warm-ups counts as not logging a set.
-- **Warm-up, drop and myo sets are never the best set**, however heavy. Warm-ups are rebuilt from the
-  plan each session rather than carried, and the rules ignore them: a skipped or short warm-up never
-  fails a session, and a light one is never picked as the "lowest set". A drop or myo set opens on the
-  weight of the same drop or myo set last time, and the rules never move it.
+- **Warm-up, drop and myo sets are never the best set**, however heavy. By default, warm-ups carry last
+  session's weight on unchanged warm-up slots (even if skipped once, as long as the slot had a weight) while
+  reps come back from the plan; new or re-planned warm-ups resolve from the plan. With **Scale warm-ups with
+  working weight** turned on in Settings, percentage warm-ups instead recalculate from today's working weight
+  each session. Either way, progression rules ignore warm-ups: a skipped or short warm-up never fails a
+  session, and a light one is never picked as the "lowest set". A drop or myo set opens on the weight of the
+  same drop or myo set last time, and the rules never move it.
 - **Across sessions, one exercise is one lineage.** If you run it heavy one day and light another (Squat
   5x5 on Monday, 3x8 on Friday), the next session carries from whichever you did last.
 - **Within a session, each place is its own lineage.** If a routine has the same exercise twice (a heavy

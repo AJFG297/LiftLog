@@ -60,7 +60,9 @@ vi.mock('@/hooks/useAppTheme', () => ({
   spacing: { 0.5: 2, 1: 4, 2: 8, 3: 12, 4: 16, 5: 20, pageHorizontalMargin: 20 },
 }));
 vi.mock('@/components/presentation/foundation/surface-text', () => ({
-  SurfaceText: ({ children }: PropsWithChildren) => <span>{children}</span>,
+  SurfaceText: ({ children, testID }: PropsWithChildren<{ testID?: string }>) => (
+    <span data-testid={testID}>{children}</span>
+  ),
 }));
 vi.mock('@/components/presentation/foundation/header-pill-button', () => ({
   HeaderPillButton: ({ testID, label, onPress }: { testID: string; label: string; onPress: () => void }) => (
@@ -70,7 +72,25 @@ vi.mock('@/components/presentation/foundation/header-pill-button', () => ({
   ),
 }));
 vi.mock('@/components/presentation/foundation/chip', () => ({ Chip: () => null }));
-vi.mock('@/components/presentation/foundation/segmented-control', () => ({ SegmentedControl: () => null }));
+vi.mock('@/components/presentation/foundation/segmented-control', () => ({
+  SegmentedControl: ({
+    testID,
+    options,
+    onChange,
+  }: {
+    testID?: string;
+    options: { value: string; label: string }[];
+    onChange: (value: string) => void;
+  }) => (
+    <div data-testid={testID}>
+      {options.map((option) => (
+        <button key={option.value} data-testid={`${testID}-${option.value}`} onClick={() => onChange(option.value)}>
+          {option.label}
+        </button>
+      ))}
+    </div>
+  ),
+}));
 vi.mock('@/components/presentation/foundation/ms-icon-source', () => ({ MsIconSrc: () => null }));
 vi.mock('@/components/presentation/foundation/haptics', () => ({ haptics: { selection: () => {} } }));
 vi.mock('@/components/presentation/foundation/number-pad', async () => ({
@@ -90,9 +110,13 @@ vi.mock('@/components/presentation/foundation/number-pad', async () => ({
 
 afterEach(cleanup);
 
-function openEditor(initial: WarmupsEditorProps['exercise']) {
+function openEditor(
+  initial: WarmupsEditorProps['exercise'],
+  options?: { workingWeight?: Weight | undefined; scaleWarmupsWithWorkingWeight?: boolean },
+) {
   let draft = initial;
   let saved = initial;
+  const workingWeight = options && 'workingWeight' in options ? options.workingWeight : new Weight(100, 'kilograms');
   function Harness() {
     const [exercise, setExercise] = useState(initial);
     const [open, setOpen] = useState(true);
@@ -103,11 +127,12 @@ function openEditor(initial: WarmupsEditorProps['exercise']) {
           draft = fn(draft);
           setExercise(draft);
         }}
-        workingWeight={new Weight(100, 'kilograms')}
+        workingWeight={workingWeight}
         bar={new Weight(20, 'kilograms')}
         preferredUnit="kilograms"
         stepFor={() => new BigNumber(2.5)}
         scopeNote="Applies to today"
+        scaleWarmupsWithWorkingWeight={options?.scaleWarmupsWithWorkingWeight}
         bottomInset={0}
         onDone={() => {
           saved = draft;
@@ -268,5 +293,57 @@ describe('warm-up sheet cleared fields', () => {
     }
     fireEvent.click(editor.view.getByTestId('warmups-done'));
     expect(editor.saved().warmupSets[0]?.load).toEqual({ type: 'percent', percent: 100 });
+  });
+});
+
+describe('warm-up sheet load type switch and scaling copy', () => {
+  it('pre-fills the resolved weight when switching a percentage warm-up to a fixed weight', () => {
+    const editor = openEditor(
+      makeWeightedBlueprint({ warmupSets: [{ load: { type: 'percent', percent: 50 }, reps: 8 }] }),
+      { workingWeight: new Weight(105, 'kilograms') },
+    );
+    fireEvent.click(editor.view.getByTestId('warmups-load-0'));
+    fireEvent.click(editor.view.getByTestId('warmups-load-type-absolute'));
+    fireEvent.click(editor.view.getByTestId('warmups-done'));
+    expect(editor.saved().warmupSets[0]?.load).toEqual({ type: 'absolute', weight: new Weight(52.5, 'kilograms') });
+  });
+
+  it('starts a fixed weight empty when switching without a known working weight', () => {
+    const editor = openEditor(
+      makeWeightedBlueprint({ warmupSets: [{ load: { type: 'percent', percent: 50 }, reps: 8 }] }),
+      { workingWeight: undefined },
+    );
+    fireEvent.click(editor.view.getByTestId('warmups-load-0'));
+    fireEvent.click(editor.view.getByTestId('warmups-load-type-absolute'));
+    fireEvent.click(editor.view.getByTestId('warmups-done'));
+    expect(editor.saved().warmupSets[0]?.load).toBeUndefined();
+  });
+
+  it('shows the carry-over note only when auto-scaling is off and percentage warm-ups exist', () => {
+    const percentPlan = makeWeightedBlueprint({ warmupSets: [{ load: { type: 'percent', percent: 50 }, reps: 8 }] });
+    const fixedPlan = makeWeightedBlueprint({
+      warmupSets: [{ load: { type: 'absolute', weight: new Weight(20, 'kilograms') }, reps: 8 }],
+    });
+
+    const offPercent = openEditor(percentPlan, { scaleWarmupsWithWorkingWeight: false });
+    expect(offPercent.view.getByTestId('warmups-carry-over-note')).toBeTruthy();
+    expect(
+      within(offPercent.view.getByTestId('warmups-working-weight')).getByText(
+        'exercise_editor.warmups.working_weight_initial.label',
+      ),
+    ).toBeTruthy();
+    offPercent.view.unmount();
+
+    const onPercent = openEditor(percentPlan, { scaleWarmupsWithWorkingWeight: true });
+    expect(onPercent.view.queryByTestId('warmups-carry-over-note')).toBeNull();
+    expect(
+      within(onPercent.view.getByTestId('warmups-working-weight')).getByText(
+        'exercise_editor.warmups.working_weight.label',
+      ),
+    ).toBeTruthy();
+    onPercent.view.unmount();
+
+    const offFixed = openEditor(fixedPlan, { scaleWarmupsWithWorkingWeight: false });
+    expect(offFixed.view.queryByTestId('warmups-carry-over-note')).toBeNull();
   });
 });

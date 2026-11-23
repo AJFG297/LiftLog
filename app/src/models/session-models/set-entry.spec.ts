@@ -363,7 +363,7 @@ describe('removing a set', () => {
     expect(withSetRemoved(single, first)).toEqual({ state: single, removed: undefined });
   });
 
-  it('moves a percentage warm-up to the heaviest working set that is left', () => {
+  it('keeps an already-seeded percentage warm-up steady by default, and rescales it when scaling is enabled', () => {
     const blueprint = makeWeightedBlueprint({
       name: 'Squat',
       plannedSets: [
@@ -376,9 +376,11 @@ describe('removing a set', () => {
     const exercise = planned.with({ warmupSets: [planned.warmupSlotFor(blueprint.warmupSets[0]!, 'kilograms')] });
     expect(exercise.warmupSets[0]!.weight.value.toNumber()).toBe(50);
 
-    const state = remove({ exercise, drafts: {} }, first);
+    const kept = remove({ exercise, drafts: {} }, first);
+    expect(kept.exercise.warmupSets[0]!.weight.value.toNumber()).toBe(50);
 
-    expect(state.exercise.warmupSets[0]!.weight.value.toNumber()).toBe(40);
+    const scaled = withSetRemoved({ exercise, drafts: {} }, first, { scaleWarmupsWithWorkingWeight: true }).state;
+    expect(scaled.exercise.warmupSets[0]!.weight.value.toNumber()).toBe(40);
   });
 
   it('puts a removed set back where it was, with its plan entry and draft', () => {
@@ -514,7 +516,7 @@ describe('copying previous weight', () => {
     expect(copied.exercise.potentialSets[1]!.weight).toEqual(kg(87.5));
   });
 
-  it('leaves unlogged percentage warm-ups untouched while manual typing still updates them', () => {
+  it('leaves unlogged percentage warm-ups untouched while manual typing updates them only when scaling is enabled', () => {
     const blueprint = makeWeightedBlueprint({
       name: 'Bench Press',
       plannedSets: [
@@ -538,9 +540,15 @@ describe('copying previous weight', () => {
     expect(copied.exercise.potentialSets[1]!.weight).toEqual(kg(100));
     expect(copied.exercise.warmupSets[0]!.weight).toEqual(kg(50));
 
-    const typed = type(initial, first, 'weight', 120);
-    expect(typed.exercise.potentialSets[0]!.weight).toEqual(kg(120));
-    expect(typed.exercise.warmupSets[0]!.weight).toEqual(kg(60));
+    const typedDefault = type(initial, first, 'weight', 120);
+    expect(typedDefault.exercise.potentialSets[0]!.weight).toEqual(kg(120));
+    expect(typedDefault.exercise.warmupSets[0]!.weight).toEqual(kg(50));
+
+    const typedScaled = withTypedValue(initial, first, 'weight', new BigNumber(120), 'kilograms', {
+      scaleWarmupsWithWorkingWeight: true,
+    });
+    expect(typedScaled.exercise.potentialSets[0]!.weight).toEqual(kg(120));
+    expect(typedScaled.exercise.warmupSets[0]!.weight).toEqual(kg(60));
   });
 
   it('leaves completed sets and resistance-none exercises untouched', () => {

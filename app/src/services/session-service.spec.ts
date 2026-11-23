@@ -405,8 +405,12 @@ describe('SessionService warm-ups', () => {
     blueprint: WeightedExerciseBlueprint,
     latest?: RecordedWeightedExercise,
     useImperialUnits = false,
+    scaleWarmupsWithWorkingWeight = false,
   ) {
-    const state = { ...makeState(), settings: { useImperialUnits } } as unknown as RootState;
+    const state = {
+      ...makeState(),
+      settings: { useImperialUnits, scaleWarmupsWithWorkingWeight },
+    } as unknown as RootState;
     const [session] = await collect(
       makeService(state).getUpcomingSessions(
         [new SessionBlueprint('Day', [blueprint], '')],
@@ -490,14 +494,86 @@ describe('SessionService warm-ups', () => {
     expect(weights((await upcoming(blueprint, lastWeek)).warmupSets)).toEqual([0]);
   });
 
-  it('rebuilds warm-ups from the plan instead of carrying last session’s', async () => {
+  it('carries last session’s warm-up weight by default even as working weight progresses, while keeping plan reps', async () => {
+    const blueprint = makeWeightedBlueprint({
+      sets: 1,
+      progression: [ProgressionRule.load(new BigNumber(5))],
+      warmupSets: [percent(50, 5), percent(70, 3)],
+    });
+    const lastWeek = makeRecordedExercise(blueprint, [10], new Weight(100, 'kilograms'))
+      .withWarmupsFromPlan('kilograms')
+      .withWarmupWeight(0, new Weight(45, 'kilograms'))
+      .withWarmupRepCount(0, 2, OffsetDateTime.now())
+      .withWarmupRepCount(1, 3, OffsetDateTime.now());
+
+    const next = await upcoming(blueprint, lastWeek);
+    expect(weights(next.potentialSets)).toEqual([105]);
+    expect(weights(next.warmupSets)).toEqual([45, 70]);
+    expect(next.warmupSets.every((s) => s.set === undefined)).toBe(true);
+    expect(next.warmupSets.map((s) => s.target)).toEqual([
+      { min: 5, max: 5 },
+      { min: 3, max: 3 },
+    ]);
+  });
+
+  it('keeps last session’s warm-up weight when the warm-up was skipped, as long as it had a weight', async () => {
+    const blueprint = makeWeightedBlueprint({
+      sets: 1,
+      progression: [ProgressionRule.load(new BigNumber(10))],
+      warmupSets: [percent(50, 5)],
+    });
+    const lastWeek = makeRecordedExercise(blueprint, [10], new Weight(100, 'kilograms')).withWarmupsFromPlan(
+      'kilograms',
+    );
+    // Warm-up was left unlogged at 50 kg while the working set progressed to 110 kg.
+    expect(lastWeek.warmupSets[0]!.set).toBeUndefined();
+
+    const next = await upcoming(blueprint, lastWeek);
+    expect(weights(next.potentialSets)).toEqual([110]);
+    expect(weights(next.warmupSets)).toEqual([50]);
+  });
+
+  it('resolves from the plan when an unlogged warm-up was still at zero', async () => {
+    const blueprint = makeWeightedBlueprint({ sets: 1, progression: [], warmupSets: [percent(50, 5)] });
+    const lastWeek = RecordedWeightedExercise.empty(blueprint, 'kilograms')
+      .withWeight(0, new Weight(100, 'kilograms'), 'allSets')
+      .withWarmupWeight(0, new Weight(0, 'kilograms'))
+      .withRepCount(0, 10, OffsetDateTime.now());
+
+    const next = await upcoming(blueprint, lastWeek);
+    expect(weights(next.warmupSets)).toEqual([50]);
+  });
+
+  it('recomputes only re-planned or added warm-ups when the routine’s warm-ups change', async () => {
+    const previousPlan = makeWeightedBlueprint({
+      sets: 1,
+      progression: [],
+      warmupSets: [percent(40, 8), percent(60, 5), percent(80, 3)],
+    });
+    const lastWeek = makeRecordedExercise(previousPlan, [10], new Weight(100, 'kilograms'))
+      .withWarmupsFromPlan('kilograms')
+      .withWarmupWeight(0, new Weight(35, 'kilograms'))
+      .withWarmupWeight(1, new Weight(55, 'kilograms'))
+      .withWarmupWeight(2, new Weight(75, 'kilograms'));
+
+    // Insert empty bar in front, keep 40% (reps-only change), edit 60% -> 65%, keep 80%.
+    const editedPlan = previousPlan.with({
+      warmupSets: [absolute(new Weight(20, 'kilograms'), 10), percent(40, 10), percent(65, 5), percent(80, 3)],
+    });
+
+    const next = await upcoming(editedPlan, lastWeek);
+    expect(weights(next.warmupSets)).toEqual([20, 35, 65, 75]);
+    expect(next.warmupSets.map((s) => s.target.max)).toEqual([10, 10, 5, 3]);
+  });
+
+  it('rebuilds warm-ups from the plan instead of carrying last session’s when scaling is enabled', async () => {
     const blueprint = makeWeightedBlueprint({ sets: 1, warmupSets: [percent(50)] });
     const lastWeek = makeRecordedExercise(blueprint, [9], new Weight(100, 'kilograms'))
       .withWarmupsFromPlan('kilograms')
       .withWarmupWeight(0, new Weight(80, 'kilograms'))
       .withWarmupRepCount(0, 2, OffsetDateTime.now());
 
-    const warmup = (await upcoming(blueprint, lastWeek)).warmupSets[0]!;
+    const warmup = (await upcoming(blueprint, lastWeek, false, true)).warmupSets[0]!;
     expect(warmup.weight.value.toNumber()).toBe(50);
     expect(warmup.set).toBeUndefined();
     expect(warmup.target).toEqual({ min: 5, max: 5 });

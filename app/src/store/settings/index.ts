@@ -97,6 +97,7 @@ export const {
   setExportToHealthAggregator,
   setShowPostWorkoutSummary,
   setLogRpe,
+  setScaleWarmupsWithWorkingWeight,
   setTrueBlackDarkTheme,
   setThemeMode,
   setBarWeight,

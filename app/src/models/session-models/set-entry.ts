@@ -84,6 +84,11 @@ function rowFor(state: SetEntryState, position: SetPosition, slot: PotentialSet,
   };
 }
 
+export interface SetEntryOptions {
+  /** When true, unlogged percentage warm-ups follow working-weight edits during the workout. */
+  scaleWarmupsWithWorkingWeight?: boolean;
+}
+
 /**
  * The exercise with `value` typed into one field. A weight goes onto the slot, and later unlogged sets of
  * the same kind that were on the same weight (and weren't typed themselves) follow it, as they would a
@@ -96,6 +101,7 @@ export function withTypedValue(
   field: SetField,
   value: BigNumber,
   fallbackUnit: LoadUnit,
+  options?: SetEntryOptions,
 ): SetEntryState {
   const slot = state.exercise.slotAt(position);
   if (!slot) {
@@ -121,7 +127,7 @@ export function withTypedValue(
   }
   const weight = new Weight(value, slot.weight.unit === 'nil' ? fallbackUnit : slot.weight.unit);
   return {
-    exercise: withWeightAt(state, position, slot, weight),
+    exercise: withWeightAt(state, position, slot, weight, options),
     drafts: withDraft(state.drafts, position, { weightTyped: true }),
   };
 }
@@ -186,6 +192,7 @@ function withWeightAt(
   position: SetPosition,
   slot: PotentialSet,
   weight: Weight,
+  options?: SetEntryOptions,
 ): RecordedWeightedExercise {
   const { exercise } = state;
   if (position.list === 'warmup') {
@@ -202,8 +209,11 @@ function withWeightAt(
           ? [index]
           : [],
       );
-  // One set at a time, so percentage warm-ups keep following the working weight as it moves.
-  return [position.index, ...followers].reduce((ex, index) => ex.withWeight(index, weight, 'thisSet'), exercise);
+  // One set at a time, so percentage warm-ups follow the working weight according to `options`.
+  return [position.index, ...followers].reduce(
+    (ex, index) => ex.withWeight(index, weight, 'thisSet', options),
+    exercise,
+  );
 }
 
 /**
@@ -308,7 +318,12 @@ export function canChangeSetKind(exercise: RecordedWeightedExercise, position: S
  * that becomes one moves to the end of the warm-ups, and a warm-up that stops being one becomes the
  * first set of the working list. Its reps, weight and draft move with it.
  */
-export function withSetKind(state: SetEntryState, position: SetPosition, kind: SetKind): SetEntryState {
+export function withSetKind(
+  state: SetEntryState,
+  position: SetPosition,
+  kind: SetKind,
+  options?: SetEntryOptions,
+): SetEntryState {
   const { exercise } = state;
   const slot = exercise.slotAt(position);
   if (!slot || slot.kind === kind || !canChangeSetKind(exercise, position, kind)) {
@@ -339,6 +354,7 @@ export function withSetKind(state: SetEntryState, position: SetPosition, kind: S
           }),
         }),
         exercise,
+        options,
       ),
       drafts: remapDrafts(state.drafts, (p) => {
         if (p.list === 'warmup') {
@@ -363,6 +379,7 @@ export function withSetKind(state: SetEntryState, position: SetPosition, kind: S
         }),
       }),
       exercise,
+      options,
     ),
     drafts: remapDrafts(state.drafts, (p) => {
       if (p.list === 'working') {
@@ -392,11 +409,12 @@ export interface RemovedSet {
 /**
  * The exercise without the set at `position`, logged or not, in the session and its plan, so finishing
  * offers the lower set count as a routine change. Later sets in the same list move up, and their drafts
- * with them. Percentage warm-ups follow the working weight that is left. `removed` puts it back.
+ * with them. Percentage warm-ups follow the working weight that is left when scaling is enabled. `removed` puts it back.
  */
 export function withSetRemoved(
   state: SetEntryState,
   position: SetPosition,
+  options?: SetEntryOptions,
 ): { state: SetEntryState; removed: RemovedSet | undefined } {
   const { exercise } = state;
   const slot = exercise.slotAt(position);
@@ -424,11 +442,11 @@ export function withSetRemoved(
   const drafts = remapDrafts(withoutDraft(state.drafts, position), (p) =>
     p.list === position.list && p.index > position.index ? { list: p.list, index: p.index - 1 } : p,
   );
-  return { state: { exercise: withWarmupsFollowing(changed, exercise), drafts }, removed };
+  return { state: { exercise: withWarmupsFollowing(changed, exercise, options), drafts }, removed };
 }
 
 /** Undoes {@link withSetRemoved}: the set goes back where it was, with its plan entry and draft. */
-export function withSetRestored(state: SetEntryState, removed: RemovedSet): SetEntryState {
+export function withSetRestored(state: SetEntryState, removed: RemovedSet, options?: SetEntryOptions): SetEntryState {
   const { exercise } = state;
   const { position } = removed;
   const { blueprint } = exercise;
@@ -453,17 +471,22 @@ export function withSetRestored(state: SetEntryState, removed: RemovedSet): SetE
     p.list === position.list && p.index >= position.index ? { list: p.list, index: p.index + 1 } : p,
   );
   return {
-    exercise: withWarmupsFollowing(changed, exercise),
+    exercise: withWarmupsFollowing(changed, exercise, options),
     drafts: removed.draft ? withDraft(shifted, position, removed.draft) : shifted,
   };
 }
 
-/** Percentage warm-ups follow the heaviest working set (D6), so they move when the working list changes. */
+/** Percentage warm-ups follow the heaviest working set when scaling is enabled (or from zero on a fresh exercise). */
 function withWarmupsFollowing(
   changed: RecordedWeightedExercise,
   before: RecordedWeightedExercise,
+  options?: SetEntryOptions,
 ): RecordedWeightedExercise {
-  return changed.withPercentWarmupsFollowing(before, weightUnitOf(before, 'kilograms'));
+  return changed.withPercentWarmupsFollowing(
+    before,
+    weightUnitOf(before, 'kilograms'),
+    options?.scaleWarmupsWithWorkingWeight ?? false,
+  );
 }
 
 /** The number the set at `position` would have as a working set, which the set-type sheet shows. */

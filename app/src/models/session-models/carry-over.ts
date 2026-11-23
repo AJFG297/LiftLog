@@ -20,31 +20,42 @@ export type LatestByLineage = Readonly<Record<ProgressionKey, RecordedExercise |
 export interface CarryOver {
   latest: LatestByLineage;
   unit: WeightUnit;
+  /** When true, percentage warm-ups recalculate from today's working weight instead of keeping last session's weight. */
+  scaleWarmupsWithWorkingWeight?: boolean;
+}
+
+export interface CarryOverOptions {
+  /** When true, percentage warm-ups recalculate from today's working weight instead of keeping last session's weight. */
+  scaleWarmupsWithWorkingWeight?: boolean;
 }
 
 /**
  * `blueprint` as it opens in a new workout at the place whose lineage is `lineage`: last time's numbers
- * carried onto its sets and moved by any progression rule they earned, with warm-ups built from the plan.
- * Cardio carries incline and resistance. Starting a routine, adding or swapping an exercise and Do again
- * all open exercises through this, so they agree on what "last time" gives.
+ * carried onto its sets and moved by any progression rule they earned, with warm-ups carried from last time
+ * unless `scaleWarmupsWithWorkingWeight` is enabled (or rebuilt from the plan when there is no prior slot
+ * or its planned load changed). Cardio carries incline and resistance. Starting a routine, adding or swapping
+ * an exercise and Do again all open exercises through this, so they agree on what "last time" gives.
  */
 export function nextRecordedExercise(
   blueprint: WeightedExerciseBlueprint,
   lineage: ProgressionKey,
   latest: LatestByLineage,
   unit: WeightUnit,
+  options?: CarryOverOptions,
 ): RecordedWeightedExercise;
 export function nextRecordedExercise(
   blueprint: ExerciseBlueprint,
   lineage: ProgressionKey,
   latest: LatestByLineage,
   unit: WeightUnit,
+  options?: CarryOverOptions,
 ): RecordedExercise;
 export function nextRecordedExercise(
   blueprint: ExerciseBlueprint,
   lineage: ProgressionKey,
   latest: LatestByLineage,
   unit: WeightUnit,
+  options: CarryOverOptions = {},
 ): RecordedExercise {
   const lastExercise = latestInLineage(latest, lineage);
   if (blueprint instanceof CardioExerciseBlueprint) {
@@ -71,9 +82,10 @@ export function nextRecordedExercise(
   const progressed = weightedLastExercise
     ? applyEarnedProgression(blueprint.progression, newExercise, weightedLastExercise)
     : newExercise;
-  // Built from the plan rather than carried, and only now, so a percentage follows today's
-  // progressed working weight.
-  return progressed.withWarmupsFromPlan(unit);
+  // Built after progression so any percentage warm-up resolving from the plan sees today's working weight.
+  return weightedLastExercise && !options.scaleWarmupsWithWorkingWeight
+    ? progressed.withWarmupsCarriedFrom(weightedLastExercise, unit)
+    : progressed.withWarmupsFromPlan(unit);
 }
 
 /**
@@ -84,14 +96,17 @@ export function sessionWithExerciseReplaced(
   session: Session,
   index: number,
   blueprint: ExerciseBlueprint,
-  { latest, unit }: CarryOver,
+  { latest, unit, scaleWarmupsWithWorkingWeight }: CarryOver,
 ): Session {
   const current = session.recordedExercises[index];
   if (!current) {
     return session;
   }
   const lineage = lineageKeys(session.blueprint.exercises.with(index, blueprint))[index]!;
-  return session.withExercise(index, keepingLogged(current, nextRecordedExercise(blueprint, lineage, latest, unit)));
+  return session.withExercise(
+    index,
+    keepingLogged(current, nextRecordedExercise(blueprint, lineage, latest, unit, { scaleWarmupsWithWorkingWeight })),
+  );
 }
 
 /**

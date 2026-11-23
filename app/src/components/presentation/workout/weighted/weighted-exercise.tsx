@@ -16,6 +16,7 @@ interface WeightedExerciseProps {
   isReadonly: boolean;
   /** The Log RPE setting. Off still shows RPE already logged, it just stops offering to enter it. */
   rpeEnabled: boolean;
+  scaleWarmupsWithWorkingWeight?: boolean;
   showPreviousButton: boolean;
   /** See {@link ExerciseSection}'s `variant`. */
   variant?: 'list' | 'focus';
@@ -101,7 +102,13 @@ export default function WeightedExercise(props: WeightedExerciseProps) {
               updateExercise((ex) => ex.withRepCount(index, reps, timeProvider()));
               resetSetTimer();
             }}
-            onUpdateWeight={(w, applyTo) => updateExercise((ex) => ex.withWeight(index, w, applyTo))}
+            onUpdateWeight={(w, applyTo) =>
+              updateExercise((ex) =>
+                ex.withWeight(index, w, applyTo, {
+                  scaleWarmupsWithWorkingWeight: props.scaleWarmupsWithWorkingWeight,
+                }),
+              )
+            }
             set={set}
             showRpe={showRpe}
             rpe={rpeFor(index)}
