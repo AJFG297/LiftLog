@@ -209,16 +209,16 @@ function renderTable(options: {
   };
 }
 
-describe('LiveSetTable previous weight shortcut', () => {
-  it('tapping Previous copies weight into the same unlogged row with an accessible 44pt button', () => {
+describe('LiveSetTable previous set shortcut', () => {
+  it('tapping Previous copies weight and reps into the same unlogged row with an accessible 44pt button', () => {
     const { getAllByTestId, getExercise } = renderTable({
       todaySets: [unloggedSlot(kg(87.5), 5), unloggedSlot(kg(87.5), 5)],
-      previousSets: [loggedSlot(kg(85), 5), loggedSlot(kg(82.5), 6)],
+      previousSets: [loggedSlot(kg(85), 7), loggedSlot(kg(82.5), 6)],
     });
 
     const rows = getAllByTestId('set-row');
     const firstPrevious = within(rows[0]!).getByRole('button', {
-      name: 'Previous 85 × 5, copy 85 kg to Set 1',
+      name: 'Copy previous 85 kg and 7 reps to Set 1',
     });
     expect(mocks.previousMinHeights[0]).toBe(44);
 
@@ -226,7 +226,7 @@ describe('LiveSetTable previous weight shortcut', () => {
 
     const updatedRows = getAllByTestId('set-row');
     expect(within(updatedRows[0]!).getByRole('button', { name: 'Weight for Set 1: 85 kg' })).toBeTruthy();
-    expect(within(updatedRows[0]!).getByRole('button', { name: "Reps for Set 1: 5, today's target" })).toBeTruthy();
+    expect(within(updatedRows[0]!).getByRole('button', { name: 'Reps for Set 1: 7' })).toBeTruthy();
     expect(
       within(updatedRows[1]!).getByRole('button', { name: "Weight for Set 2: 87.5 kg, today's target" }),
     ).toBeTruthy();
@@ -236,6 +236,9 @@ describe('LiveSetTable previous weight shortcut', () => {
     expect(mocks.withRestTimerAt).not.toHaveBeenCalled();
     expect(mocks.setLogged).not.toHaveBeenCalled();
     expect(mocks.selection).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(within(updatedRows[0]!).getByRole('button', { name: 'Log Set 1' }));
+    expect(getExercise().potentialSets[0]!.set?.repsCompleted).toBe(7);
   });
 
   it('supports real zero on external and bodyweight rows and cross-unit conversion', () => {
@@ -246,16 +249,14 @@ describe('LiveSetTable previous weight shortcut', () => {
     });
 
     const rows = getAllByTestId('set-row');
-    fireEvent.click(within(rows[0]!).getByRole('button', { name: 'Previous BW × 12, copy BW to Set 1' }));
-    fireEvent.click(
-      within(rows[1]!).getByRole('button', { name: 'Previous BW +25 lbs × 10, copy BW +11.34 kg to Set 2' }),
-    );
+    fireEvent.click(within(rows[0]!).getByRole('button', { name: 'Copy previous BW and 12 reps to Set 1' }));
+    fireEvent.click(within(rows[1]!).getByRole('button', { name: 'Copy previous BW +11.34 kg and 10 reps to Set 2' }));
 
     expect(getExercise().potentialSets[0]!.weight).toEqual(kg(0));
     expect(getExercise().potentialSets[1]!.weight).toEqual(kg(11.34));
   });
 
-  it('does not render an interactive button for missing previous, completed sets, or resistance-none rows', () => {
+  it('does not render an interactive Previous button for missing history or completed sets', () => {
     const { getAllByTestId } = renderTable({
       todaySets: [loggedSlot(kg(87.5), 5), unloggedSlot(kg(87.5), 5)],
       previousSets: [loggedSlot(kg(85), 5)],
@@ -264,13 +265,13 @@ describe('LiveSetTable previous weight shortcut', () => {
     const rows = getAllByTestId('set-row');
     // Completed row keeps plain non-interactive text.
     expect(within(rows[0]!).getByText('85 × 5')).toBeTruthy();
-    expect(within(rows[0]!).queryByRole('button', { name: /Previous/ })).toBeNull();
+    expect(within(rows[0]!).queryByRole('button', { name: /copy .*previous/i })).toBeNull();
     // Row past previous set count shows "-" as plain text.
     expect(within(rows[1]!).getByText('-')).toBeTruthy();
-    expect(within(rows[1]!).queryByRole('button', { name: /Previous/ })).toBeNull();
+    expect(within(rows[1]!).queryByRole('button', { name: /copy .*previous/i })).toBeNull();
+  });
 
-    cleanup();
-
+  it('copies reps on a row with no load', () => {
     const noLoad = renderTable({
       resistance: 'none',
       todaySets: [unloggedSlot(Weight.NIL, 15)],
@@ -278,10 +279,11 @@ describe('LiveSetTable previous weight shortcut', () => {
     });
     const noLoadRow = noLoad.getAllByTestId('set-row')[0]!;
     expect(within(noLoadRow).getByText('12')).toBeTruthy();
-    expect(within(noLoadRow).queryByRole('button', { name: /Previous/ })).toBeNull();
+    fireEvent.click(within(noLoadRow).getByRole('button', { name: 'Copy 12 previous reps to Set 1' }));
+    expect(within(noLoadRow).getByRole('button', { name: 'Reps for Set 1: 12' })).toBeTruthy();
   });
 
-  it('copies previous warm-up weight into the warm-up row only', () => {
+  it('copies previous warm-up values into the warm-up row only', () => {
     const { getAllByTestId, getExercise } = renderTable({
       todayWarmups: [unloggedSlot(kg(60), 8, 'warmup')],
       todaySets: [unloggedSlot(kg(87.5), 5)],
@@ -290,10 +292,11 @@ describe('LiveSetTable previous weight shortcut', () => {
     });
 
     const rows = getAllByTestId('set-row');
-    fireEvent.click(within(rows[0]!).getByRole('button', { name: 'Previous 50 × 10, copy 50 kg to Warm-up set' }));
+    fireEvent.click(within(rows[0]!).getByRole('button', { name: 'Copy previous 50 kg and 10 reps to Warm-up set' }));
 
     expect(getExercise().warmupSets[0]!.weight).toEqual(kg(50));
     expect(getExercise().warmupSets[0]!.set).toBeUndefined();
     expect(getExercise().potentialSets[0]!.weight).toEqual(kg(87.5));
+    expect(within(rows[0]!).getByRole('button', { name: 'Reps for Warm-up set: 10' })).toBeTruthy();
   });
 });

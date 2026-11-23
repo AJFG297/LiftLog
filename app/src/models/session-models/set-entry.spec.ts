@@ -8,12 +8,12 @@ import { rpeAfterTap } from '@/models/session-models/rpe';
 import {
   canChangeSetKind,
   canRemoveSet,
-  copyablePreviousWeight,
+  copyablePreviousValues,
   setRowAt,
   setRowsOf,
   SetEntryState,
   withAddedSet,
-  withCopiedPreviousWeight,
+  withCopiedPreviousValues,
   withSetKind,
   withSetLogged,
   withSetRemoved,
@@ -417,19 +417,22 @@ describe('weightUnitOf', () => {
   });
 });
 
-describe('copying previous weight', () => {
-  it('resolves copyable previous weights for external, bodyweight, zero, and cross-unit sets', () => {
-    expect(copyablePreviousWeight(slot(82.5, 5, { logged: 5 }), 'external', 'kilograms')).toEqual(
-      new Weight(82.5, 'kilograms'),
-    );
-    expect(copyablePreviousWeight(slot(0, 10, { logged: 10 }), 'external', 'kilograms')).toEqual(
-      new Weight(0, 'kilograms'),
-    );
-    expect(copyablePreviousWeight(slot(0, 12, { logged: 12 }), 'bodyweight', 'kilograms')).toEqual(
-      new Weight(0, 'kilograms'),
-    );
+describe('copying previous set values', () => {
+  it('resolves reps and weights for external, bodyweight, zero, and cross-unit sets', () => {
+    expect(copyablePreviousValues(slot(82.5, 5, { logged: 5 }), 'external', 'kilograms')).toEqual({
+      weight: new Weight(82.5, 'kilograms'),
+      reps: 5,
+    });
+    expect(copyablePreviousValues(slot(0, 10, { logged: 10 }), 'external', 'kilograms')).toEqual({
+      weight: new Weight(0, 'kilograms'),
+      reps: 10,
+    });
+    expect(copyablePreviousValues(slot(0, 12, { logged: 12 }), 'bodyweight', 'kilograms')).toEqual({
+      weight: new Weight(0, 'kilograms'),
+      reps: 12,
+    });
     expect(
-      copyablePreviousWeight(
+      copyablePreviousValues(
         PotentialSet.of({
           weight: Weight.NIL,
           target: { min: 10, max: 10 },
@@ -438,12 +441,13 @@ describe('copying previous weight', () => {
         'bodyweight',
         'pounds',
       ),
-    ).toEqual(new Weight(0, 'pounds'));
-    expect(copyablePreviousWeight(slot(-15, 8, { logged: 8 }), 'bodyweight', 'kilograms')).toEqual(
-      new Weight(-15, 'kilograms'),
-    );
+    ).toEqual({ weight: new Weight(0, 'pounds'), reps: 10 });
+    expect(copyablePreviousValues(slot(-15, 8, { logged: 8 }), 'bodyweight', 'kilograms')).toEqual({
+      weight: new Weight(-15, 'kilograms'),
+      reps: 8,
+    });
     expect(
-      copyablePreviousWeight(
+      copyablePreviousValues(
         PotentialSet.of({
           weight: new Weight(135, 'pounds'),
           target: { min: 5, max: 5 },
@@ -452,15 +456,15 @@ describe('copying previous weight', () => {
         'external',
         'kilograms',
       ),
-    ).toEqual(new Weight(61.24, 'kilograms'));
+    ).toEqual({ weight: new Weight(61.24, 'kilograms'), reps: 5 });
   });
 
-  it('returns undefined when previous weight is missing, unlogged, nil on external, or resistance is none', () => {
-    expect(copyablePreviousWeight(undefined, 'external', 'kilograms')).toBeUndefined();
-    expect(copyablePreviousWeight(slot(85, 5), 'external', 'kilograms')).toBeUndefined();
-    expect(copyablePreviousWeight(slot(85, 5, { logged: 5 }), 'none', 'kilograms')).toBeUndefined();
+  it('omits missing sets and copies reps only when no recorded weight is available', () => {
+    expect(copyablePreviousValues(undefined, 'external', 'kilograms')).toBeUndefined();
+    expect(copyablePreviousValues(slot(85, 5), 'external', 'kilograms')).toBeUndefined();
+    expect(copyablePreviousValues(slot(85, 5, { logged: 0 }), 'none', 'kilograms')).toEqual({ reps: 0 });
     expect(
-      copyablePreviousWeight(
+      copyablePreviousValues(
         PotentialSet.of({
           weight: Weight.NIL,
           target: { min: 5, max: 5 },
@@ -469,9 +473,9 @@ describe('copying previous weight', () => {
         'external',
         'kilograms',
       ),
-    ).toBeUndefined();
+    ).toEqual({ reps: 5 });
     expect(
-      copyablePreviousWeight(
+      copyablePreviousValues(
         PotentialSet.of({
           weight: new Weight(Number.NaN, 'kilograms'),
           target: { min: 5, max: 5 },
@@ -480,26 +484,26 @@ describe('copying previous weight', () => {
         'external',
         'kilograms',
       ),
-    ).toBeUndefined();
+    ).toEqual({ reps: 5 });
   });
 
-  it('copies weight into only the same unlogged row without changing reps, other sets, or logging', () => {
+  it('copies weight and reps into only the same unlogged row without changing RPE or logging', () => {
     const withRepsAndRpe = withSetRpe(type(bench(), first, 'reps', 4), first, 8.5);
-    const copied = withCopiedPreviousWeight(withRepsAndRpe, first, kg(85), 'kilograms');
+    const copied = withCopiedPreviousValues(withRepsAndRpe, first, { weight: kg(85), reps: 7 });
     const rows = setRowsOf(copied);
 
     expect(rows.map((row) => row.weight.value.value.toNumber())).toEqual([60, 85, 87.5, 87.5]);
     expect(rows.map((row) => row.weight.entered)).toEqual([false, true, false, false]);
-    expect(setRowAt(copied, first)!.reps).toEqual({ value: 4, entered: true });
+    expect(setRowAt(copied, first)!.reps).toEqual({ value: 7, entered: true });
     expect(copied.exercise.potentialSets[0]!.rpe).toBe(8.5);
     expect(copied.exercise.potentialSets[0]!.set).toBeUndefined();
   });
 
   it('copies weight onto a warm-up, drop, or failure set without altering the blueprint', () => {
     const state = withSetKind(withSetKind(bench(), second, 'drop'), third, 'failure');
-    const withWarmup = withCopiedPreviousWeight(state, warmup, kg(55), 'kilograms');
-    const withDrop = withCopiedPreviousWeight(withWarmup, second, kg(70), 'kilograms');
-    const withFailure = withCopiedPreviousWeight(withDrop, third, kg(0), 'kilograms');
+    const withWarmup = withCopiedPreviousValues(state, warmup, { weight: kg(55), reps: 7 });
+    const withDrop = withCopiedPreviousValues(withWarmup, second, { weight: kg(70), reps: 7 });
+    const withFailure = withCopiedPreviousValues(withDrop, third, { weight: kg(0), reps: 7 });
 
     expect(withFailure.exercise.warmupSets[0]!.weight).toEqual(kg(55));
     expect(withFailure.exercise.blueprint.warmupSets[0]!.load).toEqual({ type: 'absolute', weight: kg(60) });
@@ -510,7 +514,9 @@ describe('copying previous weight', () => {
   });
 
   it('converts a cross-unit previous weight into the current row’s unit', () => {
-    const copied = withCopiedPreviousWeight(bench(), first, new Weight(135, 'pounds'), 'kilograms');
+    const previous = slot(0, 5, { logged: 6 }).with({ weight: new Weight(135, 'pounds') });
+    const values = copyablePreviousValues(previous, 'external', 'kilograms')!;
+    const copied = withCopiedPreviousValues(bench(), first, values);
 
     expect(copied.exercise.potentialSets[0]!.weight).toEqual(new Weight(61.24, 'kilograms'));
     expect(copied.exercise.potentialSets[1]!.weight).toEqual(kg(87.5));
@@ -535,7 +541,7 @@ describe('copying previous weight', () => {
 
     expect(initial.exercise.warmupSets[0]!.weight).toEqual(kg(50));
 
-    const copied = withCopiedPreviousWeight(initial, first, kg(120), 'kilograms');
+    const copied = withCopiedPreviousValues(initial, first, { weight: kg(120), reps: 7 });
     expect(copied.exercise.potentialSets[0]!.weight).toEqual(kg(120));
     expect(copied.exercise.potentialSets[1]!.weight).toEqual(kg(100));
     expect(copied.exercise.warmupSets[0]!.weight).toEqual(kg(50));
@@ -551,9 +557,9 @@ describe('copying previous weight', () => {
     expect(typedScaled.exercise.warmupSets[0]!.weight).toEqual(kg(60));
   });
 
-  it('leaves completed sets and resistance-none exercises untouched', () => {
+  it('leaves completed sets untouched and copies reps alone on a no-load exercise', () => {
     const logged = bench([slot(87.5, 5, { logged: 5 }), slot(87.5, 5)]);
-    expect(withCopiedPreviousWeight(logged, first, kg(85), 'kilograms')).toBe(logged);
+    expect(withCopiedPreviousValues(logged, first, { weight: kg(85), reps: 7 })).toBe(logged);
 
     const noLoadBlueprint = makeWeightedBlueprint({
       name: 'Plank',
@@ -564,6 +570,8 @@ describe('copying previous weight', () => {
       exercise: new RecordedWeightedExercise(noLoadBlueprint, [slot(0, 10)], undefined, []),
       drafts: {},
     };
-    expect(withCopiedPreviousWeight(noLoad, first, kg(20), 'kilograms')).toBe(noLoad);
+    const copied = withCopiedPreviousValues(noLoad, first, { reps: 7 });
+    expect(copied.exercise).toBe(noLoad.exercise);
+    expect(setRowAt(copied, first)!.reps).toEqual({ value: 7, entered: true });
   });
 });

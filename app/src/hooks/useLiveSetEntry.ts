@@ -16,6 +16,7 @@ import { RecordedWeightedExercise, Session } from '@/models/session-models';
 import { SetPosition } from '@/models/session-models/recorded-weighted-exercise';
 import { Rpe } from '@/models/session-models/rpe';
 import {
+  PreviousSetValues,
   RemovedSet,
   SetDrafts,
   SetEntryState,
@@ -23,7 +24,7 @@ import {
   SetRow,
   setRowAt,
   withAddedSet,
-  withCopiedPreviousWeight,
+  withCopiedPreviousValues,
   withSetLogged,
   withSetRemoved,
   withSetRestored,
@@ -32,7 +33,6 @@ import {
   withTypedValue,
   weightUnitOf,
 } from '@/models/session-models/set-entry';
-import { Weight } from '@/models/weight';
 import { useAppSelector } from '@/store';
 import { setLiveWorkoutDrafts } from '@/store/app';
 import { selectPreferredWeightUnit } from '@/store/settings';
@@ -241,16 +241,15 @@ export function useLiveSetEntry(session: Session, updateSession: UpdateSession, 
     setEditing(undefined);
   };
 
-  const copyPreviousWeight = (exerciseIndex: number, position: SetPosition, weight: Weight) => {
-    const typingSameWeight =
+  const copyPreviousValues = (exerciseIndex: number, position: SetPosition, previous: PreviousSetValues) => {
+    const replacesTypedField =
       editing?.exerciseIndex === exerciseIndex &&
-      editing.field === 'weight' &&
       editing.position.list === position.list &&
-      editing.position.index === position.index;
-    const change: SetEntryChange = (state) =>
-      withCopiedPreviousWeight(state, position, weight, weightUnitOf(state.exercise, preferredUnit));
+      editing.position.index === position.index &&
+      (editing.field === 'reps' || (editing.field === 'weight' && previous.weight !== undefined));
+    const change: SetEntryChange = (state) => withCopiedPreviousValues(state, position, previous);
     const current = stateFor(exerciseIndex);
-    const next = typingSameWeight
+    const next = replacesTypedField
       ? apply(exerciseIndex, change, { keepsRest: true })
       : applyAfterTyping(exerciseIndex, change, { keepsRest: true });
     if (editing) {
@@ -368,7 +367,7 @@ export function useLiveSetEntry(session: Session, updateSession: UpdateSession, 
     buffer,
     stateFor,
     open,
-    copyPreviousWeight,
+    copyPreviousValues,
     toggle,
     addSet,
     removeSet,
