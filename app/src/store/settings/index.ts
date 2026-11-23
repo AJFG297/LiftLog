@@ -78,6 +78,7 @@ export const {
   setShowBodyweight,
   setTipToShow,
   setLastSeenWhatsNewId,
+  setDismissedAndroidPreviewReleaseId,
   setShowFeed,
   setRestNotifications,
   setRestTimersEnabled,
