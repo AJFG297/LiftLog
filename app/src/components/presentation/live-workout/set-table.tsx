@@ -40,7 +40,7 @@ export interface SetTableRow {
   badgeAccessibilityLabel: string;
   onPressBadge: () => void;
   previous: string;
-  /** Copies the previous weight into this unlogged row. Undefined when there is no copyable weight or the set is logged. */
+  /** Copies the previous set’s values into this unlogged row. */
   previousAction?: { accessibilityLabel: string; onPress: () => void };
   /** Undefined for a movement that tracks no load. */
   weight: SetTableCell | undefined;

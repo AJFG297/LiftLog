@@ -132,58 +132,54 @@ export function withTypedValue(
   };
 }
 
-/**
- * The previous set's weight expressed in `targetUnit`, when it represents a real load that can be copied
- * into today's row. Returns `undefined` when there was no logged previous set, the movement tracks no load,
- * or the previous external-resistance set had no recorded weight unit (`nil`).
- */
-export function copyablePreviousWeight(
+export interface PreviousSetValues {
+  reps: number;
+  weight?: Weight;
+}
+
+/** The previous set's full reps and, when recorded, its weight in today's unit. */
+export function copyablePreviousValues(
   slot: PotentialSet | undefined,
   resistance: Resistance,
   targetUnit: LoadUnit,
-): Weight | undefined {
-  if (!slot?.set || resistance === 'none') {
+): PreviousSetValues | undefined {
+  if (!slot?.set) {
     return undefined;
   }
   const { weight } = slot;
-  if (!weight.value.isFinite()) {
-    return undefined;
+  const reps = slot.set.repsCompleted;
+  if (resistance === 'none' || !weight.value.isFinite() || (weight.unit === 'nil' && resistance === 'external')) {
+    return { reps };
   }
-  if (weight.unit === 'nil' && resistance === 'external') {
-    return undefined;
-  }
-  if (weight.unit === targetUnit || weight.unit === 'nil') {
-    return new Weight(weight.value, targetUnit);
-  }
-  return new Weight(weight.convertTo(targetUnit).value.decimalPlaces(2), targetUnit);
+  return {
+    reps,
+    weight:
+      weight.unit === targetUnit || weight.unit === 'nil'
+        ? new Weight(weight.value, targetUnit)
+        : new Weight(weight.convertTo(targetUnit).value.decimalPlaces(2), targetUnit),
+  };
 }
 
-/**
- * Copies a previous weight onto one unlogged set on the same row, leaving reps, other sets, and logging
- * state untouched. Completed sets and movements that track no load are left alone.
- */
-export function withCopiedPreviousWeight(
+/** Copies into one unlogged row without propagating its weight to later sets or scaling warm-ups. */
+export function withCopiedPreviousValues(
   state: SetEntryState,
   position: SetPosition,
-  previousWeight: Weight,
-  fallbackUnit: LoadUnit,
+  { reps, weight }: PreviousSetValues,
 ): SetEntryState {
   const slot = state.exercise.slotAt(position);
-  if (!slot || slot.set || !state.exercise.tracksResistance || !previousWeight.value.isFinite()) {
+  if (!slot || slot.set) {
     return state;
   }
-  const unit = slot.weight.unit === 'nil' ? fallbackUnit : slot.weight.unit;
-  const weight =
-    previousWeight.unit === unit || previousWeight.unit === 'nil'
-      ? new Weight(previousWeight.value, unit)
-      : new Weight(previousWeight.convertTo(unit).value.decimalPlaces(2), unit);
+  if (!weight) {
+    return { ...state, drafts: withDraft(state.drafts, position, { reps }) };
+  }
   const exercise =
     position.list === 'warmup'
       ? state.exercise.withWarmupWeight(position.index, weight)
       : state.exercise.withSet(position.index, (s) => s.with({ weight }));
   return {
     exercise,
-    drafts: withDraft(state.drafts, position, { weightTyped: true }),
+    drafts: withDraft(state.drafts, position, { reps, weightTyped: true }),
   };
 }
 

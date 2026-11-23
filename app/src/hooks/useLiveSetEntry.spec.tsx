@@ -101,10 +101,10 @@ describe('clearing a reopened assisted load', () => {
   );
 });
 
-describe('copying previous weight', () => {
-  it('copies weight into the same row without logging, starting rest, or changing later sets', () => {
+describe('copying previous set values', () => {
+  it('copies weight and reps into the same row without logging, starting rest, or changing later sets', () => {
     const { result } = openEntry(87.5, [undefined, undefined]);
-    act(() => result.current.entry.copyPreviousWeight(0, first, new Weight(85, 'kilograms')));
+    act(() => result.current.entry.copyPreviousValues(0, first, { weight: new Weight(85, 'kilograms'), reps: 6 }));
 
     const exercise = result.current.session.recordedExercises[0] as RecordedWeightedExercise;
     expect(exercise.potentialSets.map((s) => s.weight.value.toNumber())).toEqual([85, 87.5]);
@@ -113,35 +113,36 @@ describe('copying previous weight', () => {
     expect(mocks.withRestTimerAt).not.toHaveBeenCalled();
     expect(mocks.setLogged).not.toHaveBeenCalled();
     expect(mocks.selection).toHaveBeenCalledTimes(1);
+    expect(result.current.entry.stateFor(0)?.drafts).toEqual({ 'working:0': { reps: 6, weightTyped: true } });
   });
 
   it('drops an uncommitted weight buffer on the same row instead of moving following sets', () => {
     const { result } = openEntry(87.5, [undefined, undefined]);
     act(() => result.current.entry.open(0, first, 'weight'));
     act(() => result.current.entry.pad.onAction({ type: 'digit', digit: '9' }));
-    act(() => result.current.entry.copyPreviousWeight(0, first, new Weight(82.5, 'kilograms')));
+    act(() => result.current.entry.copyPreviousValues(0, first, { weight: new Weight(82.5, 'kilograms'), reps: 6 }));
 
     const exercise = result.current.session.recordedExercises[0] as RecordedWeightedExercise;
     expect(exercise.potentialSets.map((s) => s.weight.value.toNumber())).toEqual([82.5, 87.5]);
     expect(result.current.entry.editing).toBeUndefined();
   });
 
-  it('commits typed reps on the row before copying previous weight', () => {
+  it('commits typed reps on the row before copying previous set values', () => {
     const { result } = openEntry(87.5, [undefined, undefined]);
     act(() => result.current.entry.open(0, first, 'reps'));
     act(() => result.current.entry.pad.onAction({ type: 'digit', digit: '7' }));
-    act(() => result.current.entry.copyPreviousWeight(0, first, new Weight(80, 'kilograms')));
+    act(() => result.current.entry.copyPreviousValues(0, first, { weight: new Weight(80, 'kilograms'), reps: 6 }));
 
     const exercise = result.current.session.recordedExercises[0] as RecordedWeightedExercise;
     expect(exercise.potentialSets[0]!.weight.value.toNumber()).toBe(80);
     expect(exercise.potentialSets[0]!.set).toBeUndefined();
-    expect(result.current.entry.stateFor(0)?.drafts['working:0']).toEqual({ reps: 7, weightTyped: true });
+    expect(result.current.entry.stateFor(0)?.drafts['working:0']).toEqual({ reps: 6, weightTyped: true });
     expect(result.current.entry.editing).toBeUndefined();
   });
 
   it('does nothing for a completed set', () => {
     const { result } = openEntry(87.5, [5, undefined]);
-    act(() => result.current.entry.copyPreviousWeight(0, first, new Weight(80, 'kilograms')));
+    act(() => result.current.entry.copyPreviousValues(0, first, { weight: new Weight(80, 'kilograms'), reps: 6 }));
 
     const exercise = result.current.session.recordedExercises[0] as RecordedWeightedExercise;
     expect(exercise.potentialSets[0]!.weight.value.toNumber()).toBe(87.5);
@@ -149,7 +150,7 @@ describe('copying previous weight', () => {
     expect(mocks.selection).not.toHaveBeenCalled();
 
     // Still works on the next unlogged set.
-    act(() => result.current.entry.copyPreviousWeight(0, second, new Weight(80, 'kilograms')));
+    act(() => result.current.entry.copyPreviousValues(0, second, { weight: new Weight(80, 'kilograms'), reps: 6 }));
     const updated = result.current.session.recordedExercises[0] as RecordedWeightedExercise;
     expect(updated.potentialSets[1]!.weight.value.toNumber()).toBe(80);
     expect(mocks.selection).toHaveBeenCalledTimes(1);

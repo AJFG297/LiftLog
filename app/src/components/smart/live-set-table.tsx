@@ -12,7 +12,7 @@ import { SetPosition } from '@/models/session-models/recorded-weighted-exercise'
 import { formatRpe } from '@/models/session-models/rpe';
 import {
   canRemoveSet,
-  copyablePreviousWeight,
+  copyablePreviousValues,
   SetField,
   SetRow,
   setRowsOf,
@@ -92,21 +92,24 @@ export function LiveSetTable(props: LiveSetTableProps) {
     );
     const previousSlot = previousSlotAt(previous, row.position);
     const previousLabel = previousText(previousSlot, resistance, unit, bodyweightLabel);
-    const previousWeight = row.logged ? undefined : copyablePreviousWeight(previousSlot, resistance, unit);
+    const rowUnit = row.slot.weight.unit === 'nil' ? unit : row.slot.weight.unit;
+    const previousValues = row.logged ? undefined : copyablePreviousValues(previousSlot, resistance, rowUnit);
     return {
       key: `${row.position.list}-${row.position.index}`,
       badge,
       badgeAccessibilityLabel: t('live_workout.set_table.set_type.button', { set }),
       onPressBadge: () => entry.openSetType(exerciseIndex, row.position),
       previous: previousLabel,
-      previousAction: previousWeight
+      previousAction: previousValues
         ? {
-            accessibilityLabel: t('live_workout.set_table.copy_previous_weight.button', {
-              previous: previousLabel,
-              weight: formatWeightText(previousWeight, resistance === 'bodyweight', bodyweightLabel),
-              set,
-            }),
-            onPress: () => entry.copyPreviousWeight(exerciseIndex, row.position, previousWeight),
+            accessibilityLabel: previousValues.weight
+              ? t('live_workout.set_table.copy_previous_weight_and_reps.button', {
+                  set,
+                  weight: formatWeightText(previousValues.weight, resistance === 'bodyweight', bodyweightLabel),
+                  reps: previousValues.reps,
+                })
+              : t('live_workout.set_table.copy_previous_reps.button', { set, reps: previousValues.reps }),
+            onPress: () => entry.copyPreviousValues(exerciseIndex, row.position, previousValues),
           }
         : undefined,
       weight:
