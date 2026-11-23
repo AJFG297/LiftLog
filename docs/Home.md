@@ -44,7 +44,10 @@ can't be the focused one (expo-router throws in development and shows the first 
   exercises. The 7-day view adds a thin row for each day without one. A card opens
   `homeWorkoutHref(sessionId)`, the workout editor for now; the workout detail screen (PM-25) swaps in
   there. All history opens `/history`.
-- What's New and the welcome wizard render at the top as they did on the old Home.
+- What's New and the welcome wizard render at the top as they did on the old Home. On standalone Android
+  preview builds whose native runtime is explicitly listed as eligible in the preview release manifest,
+  a dismissible **New LiftLog version** banner (`components/smart/android-preview-update-banner.tsx`)
+  also appears there independently of What's New so older installs can download the newer signed APK.
 
 ### Where the numbers come from
 

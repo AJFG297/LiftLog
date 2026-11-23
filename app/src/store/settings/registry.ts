@@ -83,6 +83,7 @@ export const preferenceRegistry = {
   trueBlackDarkTheme: pref({ default: false, codec: boolCodec }),
   tipToShow: pref({ default: 1, codec: intCodec }),
   lastSeenWhatsNewId: pref({ default: 0, codec: intCodec }),
+  dismissedAndroidPreviewReleaseId: pref<string | undefined>({ default: undefined, codec: stringCodec }),
   colorSchemeSeed: pref<ColorSchemeSeed>({ default: 'default', codec: colorSchemeSeedCodec }),
   themeMode: pref<ThemeMode>({ default: 'system', codec: themeModeCodec }),
   plansSortOrder: pref<PlansSortOrder>({ default: 'name', codec: plansSortOrderCodec }),

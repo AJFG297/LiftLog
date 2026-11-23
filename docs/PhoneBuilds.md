@@ -92,6 +92,26 @@ existing app. Never uninstall first: that deletes the workouts. EAS keeps the si
 `preview` build installs over the last one. Builds from the `preview` profile listen on the `preview`
 channel.
 
+### Prompt older preview installs in the app
+
+EAS artifact links expire (typically after two weeks). Once a preview build finishes, mirror the
+signed APK and update the public release manifest on the `android-preview` GitHub prerelease:
+
+```bash
+node scripts/publish-android-preview-release.mjs \
+  --build-id <eas-build-id> \
+  --eligible <older-runtime-1,older-runtime-2>
+```
+
+The app checks `https://github.com/AJFG297/LiftLog/releases/download/android-preview/android-preview-release.json`
+only on standalone Android `preview` builds (`Updates.isEnabled && Updates.channel === 'preview'`).
+When the installed `Updates.runtimeVersion` is listed in `eligibleRuntimeVersions` (and does not
+match `targetRuntimeVersion`), Home shows a dismissible **New LiftLog version** banner with a
+**Download update** button that opens the validated HTTPS APK URL in the browser. Installing over
+LiftLog replaces the binary while preserving workouts, and the banner disappears automatically once
+the phone is on the new runtime. Expo credentials stay in `eas-cli` and are never embedded in the
+app or the release manifest.
+
 ## Keep both phones on the same version
 
 The phones exchange feed items and shared plans, and those formats are versioned. An older app drops

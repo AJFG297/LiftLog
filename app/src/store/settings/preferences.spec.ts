@@ -8,6 +8,7 @@ import { createAddEffectTestBed } from '@/utils/__test__/add-effect-testbed';
 import { applySettingsEffects } from '@/store/settings/effects';
 import {
   setColorSchemeSeed,
+  setDismissedAndroidPreviewReleaseId,
   setExportToHealthAggregator,
   setProToken,
   setScaleWarmupsWithWorkingWeight,
@@ -52,6 +53,11 @@ describe('settings effects - generic persistence', () => {
     const { testBed, preferenceService } = makeTestBed(true);
     await testBed.dispatchHandled(setColorSchemeSeed('#abcdef'));
     expect(preferenceService.setPreference).toHaveBeenCalledWith('colorSchemeSeed', '#abcdef');
+    await testBed.dispatchHandled(setDismissedAndroidPreviewReleaseId('2026-11-23-430c8168'));
+    expect(preferenceService.setPreference).toHaveBeenCalledWith(
+      'dismissedAndroidPreviewReleaseId',
+      '2026-11-23-430c8168',
+    );
   });
 
   it('does not persist before hydration', async () => {

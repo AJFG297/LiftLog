@@ -1529,5 +1529,9 @@
   "live_workout.set_table.previous_short.label": "Prev.",
   "number_pad.partial_reps.button": "Edit partial reps",
   "live_workout.set_table.partial_reps.label": "Partial reps for {set}: {reps}",
-  "workout_detail.partial_reps.spoken": "{reps} partial reps"
+  "workout_detail.partial_reps.spoken": "{reps} partial reps",
+  "android_preview_update.title": "New LiftLog version",
+  "android_preview_update.body": "A newer Android build is ready. Install it over LiftLog to keep your workouts.",
+  "android_preview_update.download.button": "Download update",
+  "android_preview_update.dismiss.button": "Dismiss update notice"
 }

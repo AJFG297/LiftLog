@@ -6,6 +6,7 @@ import { HistoryRangeCard, RangeDay, RangeView } from '@/components/presentation
 import { HistoryRestRow, HistoryWorkoutCard } from '@/components/presentation/home/history-workout-card';
 import { HomeHeader } from '@/components/presentation/home/home-header';
 import { UpNextCard } from '@/components/presentation/home/up-next-card';
+import { AndroidPreviewUpdateBanner } from '@/components/smart/android-preview-update-banner';
 import { homeWorkoutHref } from '@/components/smart/home-workout-href';
 import { namesText, UP_NEXT_PAST_WORKOUTS, upNextDetailText } from '@/components/smart/up-next-text';
 import { WelcomeWizard } from '@/components/smart/welcome-wizard';
@@ -188,6 +189,7 @@ export function Home() {
         streak={streak}
       />
       <WelcomeWizard />
+      <AndroidPreviewUpdateBanner />
       <WhatsNewBanner />
 
       {hasWorkoutInProgress ? null : nextSession ? (
