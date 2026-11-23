@@ -66,6 +66,8 @@ export interface WarmupsEditorProps {
   stepFor: (unit: LoadUnit) => BigNumber;
   /** Where the changes land: "Applies to today…". */
   scopeNote: string;
+  /** Whether percentage warm-ups rescale as working weight changes, or only set the starting weight. */
+  scaleWarmupsWithWorkingWeight?: boolean;
   onDone: () => void;
   bottomInset: number;
 }
@@ -159,18 +161,32 @@ export function WarmupsEditor(props: WarmupsEditorProps) {
     update(fn);
   };
 
+  const resolvedFor = (warmup: PlannedWarmupSet): Weight | undefined =>
+    resolvedWarmupWeight(
+      warmup,
+      props.workingWeight,
+      props.workingWeight && props.workingWeight.unit !== 'nil'
+        ? props.stepFor(props.workingWeight.unit)
+        : new BigNumber(0),
+    );
+
   const switchLoadType = (type: WarmupLoadType) => {
     if (!editing) {
       return;
     }
     const { index } = editing;
-    update((current) => withWarmupLoadTypeAt(current, index, type));
-    // Switching type starts the load over (50%, or an empty weight), so the typed value can't change it.
-    const warmup = withWarmupLoadTypeAt(exercise, index, type).warmupSets[index];
+    const currentWarmup = exercise.warmupSets[index];
+    const resolved = type === 'absolute' && currentWarmup ? resolvedFor(currentWarmup) : undefined;
+    update((current) => withWarmupLoadTypeAt(current, index, type, resolved));
+    // Switching type resets the load (50%, or the resolved fixed weight / empty), so the typed buffer starts fresh.
+    const warmup = withWarmupLoadTypeAt(exercise, index, type, resolved).warmupSets[index];
     if (warmup) {
       setBuffer(openNumberPad(padFieldFor(warmup, 'load')));
     }
   };
+
+  const scaleWarmupsWithWorkingWeight = props.scaleWarmupsWithWorkingWeight ?? false;
+  const hasPercentWarmups = warmups.some((w) => w.load?.type === 'percent');
 
   const liveValue = (index: number, field: PadField) =>
     editing?.index === index && editing.field === field ? numberPadValue(buffer) : undefined;
@@ -202,8 +218,12 @@ export function WarmupsEditor(props: WarmupsEditorProps) {
           {loadTypes.includes('percent') ? (
             <SurfaceText font="text-sm" style={{ color: tokens.muted }} testID="warmups-working-weight">
               {props.workingWeight
-                ? workingWeightNote(t, props.workingWeight)
-                : t('exercise_editor.warmups.working_weight_unknown.label')}
+                ? workingWeightNote(t, props.workingWeight, scaleWarmupsWithWorkingWeight)
+                : t(
+                    scaleWarmupsWithWorkingWeight
+                      ? 'exercise_editor.warmups.working_weight_unknown.label'
+                      : 'exercise_editor.warmups.working_weight_unknown_initial.label',
+                  )}
             </SurfaceText>
           ) : null}
         </View>
@@ -303,13 +323,7 @@ export function WarmupsEditor(props: WarmupsEditorProps) {
                     editingField={editing?.index === index ? editing.field : undefined}
                     cleared={buffer.typed === ''}
                     emptyBar={isEmptyBar(warmup, props.bar)}
-                    resolved={resolvedWarmupWeight(
-                      warmup,
-                      props.workingWeight,
-                      props.workingWeight && props.workingWeight.unit !== 'nil'
-                        ? props.stepFor(props.workingWeight.unit)
-                        : new BigNumber(0),
-                    )}
+                    resolved={resolvedFor(warmup)}
                     unit={loadUnitOf(warmup)}
                     onLoad={() => openField(index, 'load')}
                     onReps={() => openField(index, 'reps')}
@@ -348,6 +362,12 @@ export function WarmupsEditor(props: WarmupsEditorProps) {
               </View>
             </>
           )}
+
+          {!scaleWarmupsWithWorkingWeight && hasPercentWarmups ? (
+            <SurfaceText font="text-sm" style={{ color: tokens.muted }} testID="warmups-carry-over-note">
+              {t('exercise_editor.warmups.carry_over_note.body')}
+            </SurfaceText>
+          ) : null}
 
           <SurfaceText font="text-sm" style={{ color: tokens.muted }} testID="warmups-scope">
             {props.scopeNote}

@@ -167,7 +167,10 @@ performance Today's target compares against, by position, so a set past last tim
   session's plan loses the set, so finishing offers the lower count as a routine change. Percentage
   warm-ups follow the working weight that is left. A toast offers Undo, which puts the set back with what
   was logged and typed. Deleting doesn't restart rest, and whatever was being typed into the set goes with
-  it. The last working set can't be deleted. Screen readers get a delete action on the set's badge.
+  it. The last working set can't be deleted. Screen readers get a delete action on the set's badge. When
+  **Scale warm-ups with working weight** is on in Settings (or on a fresh exercise whose percentage warm-ups
+  start at zero), unlogged percentage warm-ups follow working-weight changes; otherwise already-seeded
+  warm-ups keep their weight.
 
 The rules are pure functions in `models/session-models/set-entry.ts` (`setRowsOf`, `withTypedValue`,
 `withSetToggled`, `withAddedSet`, `withSetKind`, `withSetRemoved`, `withSetRestored`); `useLiveSetEntry` holds what the pad is typing into and

@@ -81,6 +81,7 @@ function SheetContent(props: {
   const { back } = useRouter();
   const dispatch = useDispatch();
   const insets = useSafeAreaInsets();
+  const scaleWarmupsWithWorkingWeight = useAppSelector((x) => x.settings.scaleWarmupsWithWorkingWeight);
   const { stateFor, apply } = useSetEntryStore(session, (update) =>
     dispatch(updateStoredSession({ sessionId: session.id, update })),
   );
@@ -95,7 +96,7 @@ function SheetContent(props: {
       return;
     }
     haptics.selection();
-    apply(exerciseIndex, (current) => withSetKind(current, position, kind));
+    apply(exerciseIndex, (current) => withSetKind(current, position, kind, { scaleWarmupsWithWorkingWeight }));
     onPicked(kind);
   };
 

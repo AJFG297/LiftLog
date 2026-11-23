@@ -143,6 +143,7 @@ export function useLiveSetEntry(session: Session, updateSession: UpdateSession, 
   const toast = useToast();
   const preferredUnit = useAppSelector(selectPreferredWeightUnit);
   const logRpe = useAppSelector((x) => x.settings.logRpe);
+  const scaleWarmupsWithWorkingWeight = useAppSelector((x) => x.settings.scaleWarmupsWithWorkingWeight);
   const barWeight = useAppSelector((x) => x.settings.barWeight);
   const availablePlates = useAppSelector((x) => x.settings.availablePlates);
   const catalog = useAppSelector(selectExercises);
@@ -166,7 +167,9 @@ export function useLiveSetEntry(session: Session, updateSession: UpdateSession, 
     (state) => {
       const value = edit && buffer.typed !== null ? numberPadValue(buffer) : undefined;
       return edit && value
-        ? withTypedValue(state, edit.position, edit.field, value, weightUnitOf(state.exercise, preferredUnit))
+        ? withTypedValue(state, edit.position, edit.field, value, weightUnitOf(state.exercise, preferredUnit), {
+            scaleWarmupsWithWorkingWeight,
+          })
         : state;
     };
 
@@ -267,7 +270,7 @@ export function useLiveSetEntry(session: Session, updateSession: UpdateSession, 
   const removeSet = (exerciseIndex: number, position: SetPosition, setLabel: string) => {
     let removed: RemovedSet | undefined;
     const remove: SetEntryChange = (state) => {
-      const result = withSetRemoved(state, position);
+      const result = withSetRemoved(state, position, { scaleWarmupsWithWorkingWeight });
       removed ??= result.removed;
       return result.state;
     };
@@ -288,7 +291,10 @@ export function useLiveSetEntry(session: Session, updateSession: UpdateSession, 
         message: t('live_workout.set_table.deleted.message', { set: setLabel }),
         action: {
           label: t('generic.undo.button'),
-          onPress: () => apply(exerciseIndex, (state) => withSetRestored(state, undo), { keepsRest: true }),
+          onPress: () =>
+            apply(exerciseIndex, (state) => withSetRestored(state, undo, { scaleWarmupsWithWorkingWeight }), {
+              keepsRest: true,
+            }),
         },
       });
     }
