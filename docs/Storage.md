@@ -353,10 +353,14 @@ one queue inside the repository, so these reads see every write before them: the
 carry-over cache after a write, the plan position that finishing a workout asks for as soon as it has
 dispatched the write, and the editor or the feed reading a workout just written.
 
-`subscribe(listener)` is the one write notification: every `put`, `putMany`, `delete` and `setActive`
+`subscribe(listener)` is the general write notification: every `put`, `putMany`, `delete` and `setActive`
 calls the listeners after its transaction has committed, so a listener that re-queries sees the rows. It
 carries a `WorkoutWrite`: the ids touched, and whether the active flag changed (`setActive`). Screens
-ignore it and re-run their query, which is cheap; the stats effect uses it to skip the workout in progress.
+ignore it and re-run their query, which is cheap; the stats effect uses it to skip the workout in progress. The Progress
+cache additionally uses `subscribeFinishedHistory(listener)`: active-flag changes always notify; other
+writes check the committed active id inside the write queue and notify unless all touched ids are active.
+That classification query runs only while there is a finished-history subscriber. See
+[Progress.md](./Progress.md#where-it-loads) for the cache and invalidation contract.
 
 #### Reading from a screen: `useWorkoutQuery`
 

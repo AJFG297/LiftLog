@@ -173,6 +173,7 @@ type ImportWorkoutIntent = Map<
 
 export class WorkoutRepository {
   private readonly listeners = new Set<(write: WorkoutWrite) => void>();
+  private readonly finishedHistoryListeners = new Set<() => void>();
   // Writes and the reads the store builds on ({@link latestPerLineage}, {@link latestPlanned}, the point
   // lookups) run one after another, in the order they were issued: a read issued after a write must see
   // it, awaited or not. The device driver queues statements that way itself; the async driver under test
@@ -195,6 +196,14 @@ export class WorkoutRepository {
     this.listeners.add(listener);
     return () => {
       this.listeners.delete(listener);
+    };
+  }
+
+  /** Commit notifications for derived finished-history data; active-only content writes are excluded. */
+  subscribeFinishedHistory(listener: () => void): () => void {
+    this.finishedHistoryListeners.add(listener);
+    return () => {
+      this.finishedHistoryListeners.delete(listener);
     };
   }
 
@@ -787,7 +796,7 @@ export class WorkoutRepository {
         ...alsoWrite(tx),
       ]);
       if (stampedWorkoutIds.length) {
-        this.notify({ workoutIds: stampedWorkoutIds, activeChanged: false });
+        await this.notify({ workoutIds: stampedWorkoutIds, activeChanged: false });
       }
     });
   }
@@ -803,40 +812,43 @@ export class WorkoutRepository {
     alsoWrite: (tx: Transaction) => Statement[] = () => [],
     onCommitted: () => void = () => {},
   ): Promise<void> {
-    const workoutIds = await this.workoutIdsLogging([...survivorOf.keys()]);
     const { blueprint, movementKey, progressionKey } = workoutExercisesSchema;
     const survivorKeys = [...new Set(survivorOf.values())].flatMap((id) =>
       keysOfExercise(id).map((x) => x.movementKey),
     );
-    await this.write(
-      (tx) => [
-        ...[...survivorOf].flatMap(([from, to]) => {
-          const toKeys = keysOfExercise(to);
-          return keysOfExercise(from).map((fromKey, index) =>
-            tx
-              .update(workoutExercisesSchema)
-              .set({
-                movementKey: toKeys[index]!.movementKey,
-                progressionKey: toKeys[index]!.progressionKey,
-                blueprint: sql`json_set(${blueprint}, '$.exerciseId', ${to})`,
-              })
-              .where(and(eq(movementKey, fromKey.movementKey), eq(progressionKey, fromKey.progressionKey))),
-          );
-        }),
-        ...chunkedValues(survivorKeys, MAX_PARAMETERS).map((keys) =>
-          renumberLineages(
-            tx,
-            sql`${workoutExercisesSchema.workoutId} in (select ${workoutExercisesSchema.workoutId} from ${workoutExercisesSchema} where ${inArray(movementKey, keys)})`,
+    await this.inOrder(async () => {
+      const workoutIds = await this.workoutIdsLogging([...survivorOf.keys()]);
+      await writeAtomically(
+        this.db,
+        (tx) => [
+          ...[...survivorOf].flatMap(([from, to]) => {
+            const toKeys = keysOfExercise(to);
+            return keysOfExercise(from).map((fromKey, index) =>
+              tx
+                .update(workoutExercisesSchema)
+                .set({
+                  movementKey: toKeys[index]!.movementKey,
+                  progressionKey: toKeys[index]!.progressionKey,
+                  blueprint: sql`json_set(${blueprint}, '$.exerciseId', ${to})`,
+                })
+                .where(and(eq(movementKey, fromKey.movementKey), eq(progressionKey, fromKey.progressionKey))),
+            );
+          }),
+          ...chunkedValues(survivorKeys, MAX_PARAMETERS).map((keys) =>
+            renumberLineages(
+              tx,
+              sql`${workoutExercisesSchema.workoutId} in (select ${workoutExercisesSchema.workoutId} from ${workoutExercisesSchema} where ${inArray(movementKey, keys)})`,
+            ),
           ),
-        ),
-        ...alsoWrite(tx),
-      ],
-      { workoutIds, activeChanged: false },
-      () => {
-        this.exerciseRepoints.push(new Map(survivorOf));
-        onCommitted();
-      },
-    );
+          ...alsoWrite(tx),
+        ],
+        () => {
+          this.exerciseRepoints.push(new Map(survivorOf));
+          onCommitted();
+        },
+      );
+      await this.notify({ workoutIds, activeChanged: false });
+    });
   }
 
   /** Writes one workout's content. */
@@ -854,7 +866,7 @@ export class WorkoutRepository {
         if (session && session.id !== closedFallback?.id) this.supersedeImports([session.id], run, sequence);
         return session ? writeContent(tx, [toWorkoutRows(session)], { activate: false }) : [];
       });
-      if (session) this.notify({ workoutIds: [session.id], activeChanged: false });
+      if (session) await this.notify({ workoutIds: [session.id], activeChanged: false });
       return session;
     });
     if (closedFallback) this.supersedeImports([closedFallback.id], run, sequence);
@@ -873,7 +885,7 @@ export class WorkoutRepository {
           ...(session ? writeContent(tx, [toWorkoutRows(session)], { activate: true }) : []),
         ];
       });
-      this.notify({ workoutIds: session ? [session.id] : [], activeChanged: true });
+      await this.notify({ workoutIds: session ? [session.id] : [], activeChanged: true });
     });
     if (targetWorkoutId !== undefined) this.supersedeImports([targetWorkoutId], run, sequence);
     return run;
@@ -948,7 +960,7 @@ export class WorkoutRepository {
               workoutIds = current.map((session) => session.id);
               return current.length ? writeContent(tx, current.map(toWorkoutRows), { activate: false }) : [];
             });
-            if (workoutIds.length) this.notify({ workoutIds, activeChanged: false });
+            if (workoutIds.length) await this.notify({ workoutIds, activeChanged: false });
           });
           for (const completion of superseding) {
             const outcome = await completion;
@@ -984,7 +996,7 @@ export class WorkoutRepository {
   ): Promise<void> {
     await this.inOrder(async () => {
       await writeAtomically(this.db, build, onCommitted);
-      this.notify(write);
+      await this.notify(write);
     });
   }
 
@@ -999,7 +1011,34 @@ export class WorkoutRepository {
     );
   }
 
-  private notify(write: WorkoutWrite): void {
+  private async notify(write: WorkoutWrite): Promise<void> {
+    if (this.finishedHistoryListeners.size) {
+      let relevant = true;
+      if (!write.activeChanged) {
+        try {
+          // This runs inside the write queue, before the next commit. Redux may already describe a
+          // different active workout, so classify against the flag that was actually committed.
+          const [active] = await this.db
+            .select({ id: workoutsSchema.id })
+            .from(workoutsSchema)
+            .where(eq(workoutsSchema.active, true))
+            .limit(1);
+          relevant = write.workoutIds.some((id) => id !== active?.id);
+        } catch (error) {
+          // A failed classification must never leave a cached history stale or fail a committed write.
+          this.onNotificationError(error);
+        }
+      }
+      if (relevant) {
+        for (const listener of this.finishedHistoryListeners) {
+          try {
+            listener();
+          } catch (error) {
+            this.onNotificationError(error);
+          }
+        }
+      }
+    }
     for (const listener of this.listeners) {
       try {
         listener(write);
