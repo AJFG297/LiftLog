@@ -6,12 +6,20 @@ vi.mock('react-native-purchases', () => ({
 
 import { createAddEffectTestBed } from '@/utils/__test__/add-effect-testbed';
 import { applySettingsEffects } from '@/store/settings/effects';
-import { setColorSchemeSeed, setExportToHealthAggregator, setProToken, settingsReducer } from '@/store/settings';
+import {
+  setColorSchemeSeed,
+  setDismissedAndroidPreviewReleaseId,
+  setExportToHealthAggregator,
+  setProToken,
+  setScaleWarmupsWithWorkingWeight,
+  settingsReducer,
+} from '@/store/settings';
 
 describe('settings slice - generated preference actions', () => {
   it('applies a generated setter through the matcher reducer', () => {
     const state = settingsReducer(undefined, setColorSchemeSeed('#abcdef'));
     expect(state.colorSchemeSeed).toBe('#abcdef');
+    expect(settingsReducer(state, setScaleWarmupsWithWorkingWeight(true)).scaleWarmupsWithWorkingWeight).toBe(true);
   });
 
   it('keeps the historical action type string', () => {
@@ -22,6 +30,7 @@ describe('settings slice - generated preference actions', () => {
     const state = settingsReducer(undefined, { type: '@@init' });
     expect(state.notesExpandedByDefault).toBe(true);
     expect(state.keepScreenAwakeDuringWorkout).toBe(true);
+    expect(state.scaleWarmupsWithWorkingWeight).toBe(false);
     expect(state.isHydrated).toBe(false);
   });
 });
@@ -44,6 +53,11 @@ describe('settings effects - generic persistence', () => {
     const { testBed, preferenceService } = makeTestBed(true);
     await testBed.dispatchHandled(setColorSchemeSeed('#abcdef'));
     expect(preferenceService.setPreference).toHaveBeenCalledWith('colorSchemeSeed', '#abcdef');
+    await testBed.dispatchHandled(setDismissedAndroidPreviewReleaseId('2026-11-23-430c8168'));
+    expect(preferenceService.setPreference).toHaveBeenCalledWith(
+      'dismissedAndroidPreviewReleaseId',
+      '2026-11-23-430c8168',
+    );
   });
 
   it('does not persist before hydration', async () => {

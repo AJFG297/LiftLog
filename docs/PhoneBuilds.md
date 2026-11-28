@@ -16,13 +16,16 @@ channel, and never receive updates.
 
 A phone runs an update only when the update's **runtime version** matches its build's. The runtime
 version is a fingerprint of the native side of the app (`runtimeVersion: { policy: 'fingerprint' }` in
-`app/app.config.js`), so it changes whenever something native changes. That includes:
+`app/app.config.js`). Prefer an update when the native runtime is compatible. The fingerprint includes:
 
 - adding, removing or upgrading a dependency with native code in `package.json`;
 - anything in the Expo config (`app.json`, `app.config.js`), including plugins, the app icon and the
   splash screen;
 - anything under `app/modules/`, `app/plugins/` or `app/patches/`, and the `scripts` in `package.json`;
-- `eas.json`.
+- `eas.json`;
+- `docs/schemas/workout-worker/`, explicitly included by `app/fingerprint.config.js`, because Android
+  generates its native message decoder from these files. A storage-version change in this decoder is a
+  native change, even when no hand-written Kotlin changes.
 
 Print the current fingerprint with:
 
@@ -31,8 +34,31 @@ npx expo-updates runtimeversion:resolve --platform android
 ```
 
 Compare it with the runtime version of the build on the phones (on the build's page on expo.dev). If they
-match, publish an update. If they don't, make a build. An update published after a native change goes
-nowhere: no installed build has its runtime version.
+match, publish an update. If they differ, investigate the sources before deciding to make a build.
+
+### Investigate a fingerprint mismatch
+
+The fingerprint is conservative: development tooling can change it without changing the Android
+runtime. For example, at revision `1b39679d`, the five new `verify:browser` commands changed only the
+`packageJson:scripts` fingerprint source. Excluding those commands reproduced the installed preview's
+exact fingerprint, allowing an update without a new APK.
+
+1. Identify the installed preview runtime and the revision used by its last working build or update.
+2. Compare every fingerprint source with that baseline. `@expo/fingerprint` exposes
+   `createFingerprintAsync` and `diffFingerprints` for this; inspect the changed sources, not just the
+   final hashes. Use dependencies matching each revision's lock file when reconstructing a baseline.
+3. If every difference is verified non-native tooling, temporarily exclude only those inputs. For a
+   scripts-only difference, preserve the current app code and dependencies and exclude only the added
+   tooling commands. Keep native build and install scripts intact.
+4. Resolve the fingerprint again. Publish only if it exactly matches the installed runtime. Keep the
+   exclusions in place throughout publication so EAS computes the same fingerprint.
+5. Restore temporarily changed files after publication, including on failure, and verify that the
+   published update targets the intended runtime.
+
+Never force an old runtime ID or broadly disable fingerprint checks to bypass a mismatch. Genuine
+native changes, or differences whose compatibility cannot be established, require a new build. Explain
+the concrete reason when asking users to install an APK. Publishing an update with a runtime no
+installed build has will not reach those phones.
 
 ## Publish an update
 
@@ -65,6 +91,26 @@ It takes 15 to 45 minutes and ends with an install link. Open it on each phone a
 existing app. Never uninstall first: that deletes the workouts. EAS keeps the signing key, so every
 `preview` build installs over the last one. Builds from the `preview` profile listen on the `preview`
 channel.
+
+### Prompt older preview installs in the app
+
+EAS artifact links expire (typically after two weeks). Once a preview build finishes, mirror the
+signed APK and update the public release manifest on the `android-preview` GitHub prerelease:
+
+```bash
+node scripts/publish-android-preview-release.mjs \
+  --build-id <eas-build-id> \
+  --eligible <older-runtime-1,older-runtime-2>
+```
+
+The app checks `https://github.com/AJFG297/LiftLog/releases/download/android-preview/android-preview-release.json`
+only on standalone Android `preview` builds (`Updates.isEnabled && Updates.channel === 'preview'`).
+When the installed `Updates.runtimeVersion` is listed in `eligibleRuntimeVersions` (and does not
+match `targetRuntimeVersion`), Home shows a dismissible **New LiftLog version** banner with a
+**Download update** button that opens the validated HTTPS APK URL in the browser. Installing over
+LiftLog replaces the binary while preserving workouts, and the banner disappears automatically once
+the phone is on the new runtime. Expo credentials stay in `eas-cli` and are never embedded in the
+app or the release manifest.
 
 ## Keep both phones on the same version
 

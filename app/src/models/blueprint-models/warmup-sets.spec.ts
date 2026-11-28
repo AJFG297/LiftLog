@@ -113,8 +113,10 @@ describe('withWarmupLoadType', () => {
     expect(withWarmupLoadType(repsOnly(3), 'percent')).toEqual(percent(50, 3));
   });
 
-  it('starts a fixed weight empty, keeping the reps', () => {
+  it('starts a fixed weight empty when no resolved weight is given, or pre-fills a positive resolved weight', () => {
     expect(withWarmupLoadType(percent(70, 3), 'absolute')).toEqual(repsOnly(3));
+    expect(withWarmupLoadType(percent(70, 3), 'absolute', new Weight(0, 'kilograms'))).toEqual(repsOnly(3));
+    expect(withWarmupLoadType(percent(70, 3), 'absolute', new Weight(70, 'kilograms'))).toEqual(absolute(70, 3));
   });
 
   it('leaves a warm-up already planned that way alone', () => {

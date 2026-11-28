@@ -3,12 +3,12 @@ import type { ExercisePickerParams } from '@/hooks/useExerciseSearch';
 import { useLocalSearchParams } from 'expo-router';
 
 export default function ExerciseSearchPage() {
-  const { requestId, mode, exerciseName, contextName, contextIds } = useLocalSearchParams<ExercisePickerParams>();
+  const { requestId, mode, exerciseId, contextName, contextIds } = useLocalSearchParams<ExercisePickerParams>();
   return (
     <ExerciseSearch
       requestId={requestId}
       mode={mode === 'add' ? 'add' : 'swap'}
-      exerciseName={exerciseName ?? ''}
+      swapping={exerciseId || undefined}
       context={contextIds === undefined ? undefined : { name: contextName ?? '', exerciseIds: parseIds(contextIds) }}
     />
   );

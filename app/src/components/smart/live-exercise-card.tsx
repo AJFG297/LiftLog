@@ -130,7 +130,7 @@ export function LiveExerciseCard(props: LiveExerciseCardProps) {
       key: 'swap',
       label: t('live_workout.chip.swap.button'),
       icon: 'swapHoriz',
-      onPress: () => openSearch(blueprint.name),
+      onPress: () => openSearch(blueprint.exerciseId),
     },
   ];
 

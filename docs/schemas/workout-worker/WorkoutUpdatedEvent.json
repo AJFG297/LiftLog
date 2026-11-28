@@ -7,7 +7,7 @@
       "const": "WorkoutUpdatedEvent"
     },
     "workout": {
-      "$ref": "./Session.json"
+      "$ref": "./WorkerWorkout.json"
     },
     "restTimerInfo": {
       "$ref": "./RestTimerInfo.json"
@@ -25,10 +25,5 @@
       "$ref": "./Duration.json"
     }
   },
-  "required": [
-    "type",
-    "workout",
-    "totalWeightLifted",
-    "workoutDuration"
-  ]
+  "required": ["type", "workout", "totalWeightLifted", "workoutDuration"]
 }

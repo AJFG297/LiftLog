@@ -80,8 +80,18 @@ When the app broadcasts an event:
 ### External representation (cross-platform)
 
 For cross-platform communication (JS ↔ native, and parity with iOS), workout messages are serialized using **json** via the json schema we generate.
-JSON schemas are generated from our types via (in ./app dir) `npm run json-schema`. This will generate schemas in the docs directory.
-_Note this is currently broken, but may work in a future world_. Manually edit json schemas in the mean time.
+Run `npm run json-schema` from `app/` to regenerate the schemas in `docs/schemas/`. Do not edit generated schemas by hand.
+
+The worker snapshot always carries version 10 (`WORKER_WORKOUT_VERSION`), not the workout storage version.
+Android builds made before #68 reject any other value, and an over-the-air update can't replace them. The
+schema must not constrain the number either, because an over-the-air update can advance storage while the
+installed native decoder stays unchanged. The worker does not migrate or persist this snapshot. Its required
+fields still define the native contract.
+
+Android generates Kotlin models from `docs/schemas/workout-worker/` through a symlink inside the module.
+`app/fingerprint.config.js` includes the real schema directory explicitly, because fingerprint directory
+hashing skips symlinks. Changes to these schemas affect native code and require a compatible runtime;
+they are not development-tooling exclusions.
 
 ---
 

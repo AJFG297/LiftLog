@@ -97,14 +97,29 @@ describe('warm-up slots', () => {
     expect(weights(exercise.warmupSets)).toEqual([60, 85]);
   });
 
-  it('follow the heaviest working set when only one set changes', () => {
+  it('keep already-seeded weights steady when the working weight changes mid-workout by default', () => {
     const moved = withWarmups().withWeight(1, new Weight(120, 'kilograms'), 'thisSet');
+    expect(weights(moved.warmupSets)).toEqual([50, 70]);
+  });
+
+  it('keep a deliberate zero-weight override when the working weight changes mid-workout', () => {
+    const exercise = withWarmups().withWarmupWeight(0, new Weight(0, 'kilograms'));
+    const moved = exercise.withWeight(0, new Weight(120, 'kilograms'), 'allSets');
+    expect(weights(moved.warmupSets)).toEqual([0, 70]);
+  });
+
+  it('follow the heaviest working set when only one set changes and scaling is enabled', () => {
+    const moved = withWarmups().withWeight(1, new Weight(120, 'kilograms'), 'thisSet', {
+      scaleWarmupsWithWorkingWeight: true,
+    });
     expect(weights(moved.warmupSets)).toEqual([60, 85]);
   });
 
-  it('keep a logged weight, and a weight given for this session only, when the working weight changes', () => {
+  it('keep a logged weight, and a weight given for this session only, when the working weight changes with scaling enabled', () => {
     const exercise = withWarmups().withWarmupRepCount(0, 5, tick()).withWarmupWeight(1, new Weight(30, 'kilograms'));
-    const moved = exercise.withWeight(0, new Weight(140, 'kilograms'), 'allSets');
+    const moved = exercise.withWeight(0, new Weight(140, 'kilograms'), 'allSets', {
+      scaleWarmupsWithWorkingWeight: true,
+    });
     expect(weights(moved.warmupSets)).toEqual([50, 30]);
   });
 

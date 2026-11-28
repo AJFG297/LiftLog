@@ -132,8 +132,10 @@ the reps, and a check. Warm-ups come first, then the working list. Previous is t
 performance Today's target compares against, by position, so a set past last time's count has none.
 
 - **Placeholders.** An untouched weight and reps show today's target, `PotentialSet.weight` and the top of
-  `PotentialSet.target`, in the `placeholder` grey. Typed or logged values are ink and bold. The check logs
-  the set as the row shows it, so logging a set as planned is one tap. The next set is outlined.
+  `PotentialSet.target`, in the `placeholder` grey. Typed or logged values are ink and bold. Tapping Previous
+  on an unlogged set copies the previous full reps and any recorded weight into that row. The set stays
+  unlogged and rest keeps running as before. The check logs the set as the row shows it, so logging a set as
+  planned is one tap. The next set is outlined.
 - **Typing.** Tapping a field opens the [number pad](./NumberPad.md) with the field empty and its value as
   the placeholder. The pad takes the Up next dock's place, the page shrinks above it, and the screen
   scrolls the row into view if it is underneath. On weight the arrow moves to reps; on reps the check logs
@@ -165,7 +167,10 @@ performance Today's target compares against, by position, so a set past last tim
   session's plan loses the set, so finishing offers the lower count as a routine change. Percentage
   warm-ups follow the working weight that is left. A toast offers Undo, which puts the set back with what
   was logged and typed. Deleting doesn't restart rest, and whatever was being typed into the set goes with
-  it. The last working set can't be deleted. Screen readers get a delete action on the set's badge.
+  it. The last working set can't be deleted. Screen readers get a delete action on the set's badge. When
+  **Scale warm-ups with working weight** is on in Settings (or on a fresh exercise whose percentage warm-ups
+  start at zero), unlogged percentage warm-ups follow working-weight changes; otherwise already-seeded
+  warm-ups keep their weight.
 
 The rules are pure functions in `models/session-models/set-entry.ts` (`setRowsOf`, `withTypedValue`,
 `withSetToggled`, `withAddedSet`, `withSetKind`, `withSetRemoved`, `withSetRestored`); `useLiveSetEntry` holds what the pad is typing into and

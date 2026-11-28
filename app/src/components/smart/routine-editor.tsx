@@ -628,7 +628,7 @@ export function RoutineEditor({ programId, sessionIndex, isNew }: RoutineEditorP
         editing.position.index === row.position.index &&
         editing.field === field;
       const live = numberPadValue(buffer);
-      const liveText = live === undefined ? '' : localeFormatBigNumber(live);
+      const liveText = buffer.typed === '' || live === undefined ? '' : localeFormatBigNumber(live);
 
       const weightCell = (): RoutineSetTableRow['weight'] => {
         if (row.position.list === 'working' || exercise.resistance === 'none') {
@@ -646,9 +646,11 @@ export function RoutineEditor({ programId, sessionIndex, isNew }: RoutineEditorP
         const load = row.warmupLoad;
         const editingWeight = isEditing('weight');
         const text = editingWeight
-          ? load?.type === 'percent'
-            ? `${liveText}%`
-            : liveText || '-'
+          ? buffer.typed === ''
+            ? ''
+            : load?.type === 'percent'
+              ? `${liveText}%`
+              : liveText || '-'
           : load?.type === 'percent'
             ? `${load.percent}%`
             : load?.type === 'absolute'

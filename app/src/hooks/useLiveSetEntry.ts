@@ -16,6 +16,7 @@ import { RecordedWeightedExercise, Session } from '@/models/session-models';
 import { SetPosition } from '@/models/session-models/recorded-weighted-exercise';
 import { Rpe } from '@/models/session-models/rpe';
 import {
+  PreviousSetValues,
   RemovedSet,
   SetDrafts,
   SetEntryState,
@@ -23,6 +24,7 @@ import {
   SetRow,
   setRowAt,
   withAddedSet,
+  withCopiedPreviousValues,
   withSetLogged,
   withSetRemoved,
   withSetRestored,
@@ -141,6 +143,7 @@ export function useLiveSetEntry(session: Session, updateSession: UpdateSession, 
   const toast = useToast();
   const preferredUnit = useAppSelector(selectPreferredWeightUnit);
   const logRpe = useAppSelector((x) => x.settings.logRpe);
+  const scaleWarmupsWithWorkingWeight = useAppSelector((x) => x.settings.scaleWarmupsWithWorkingWeight);
   const barWeight = useAppSelector((x) => x.settings.barWeight);
   const availablePlates = useAppSelector((x) => x.settings.availablePlates);
   const catalog = useAppSelector(selectExercises);
@@ -164,7 +167,9 @@ export function useLiveSetEntry(session: Session, updateSession: UpdateSession, 
     (state) => {
       const value = edit && buffer.typed !== null ? numberPadValue(buffer) : undefined;
       return edit && value
-        ? withTypedValue(state, edit.position, edit.field, value, weightUnitOf(state.exercise, preferredUnit))
+        ? withTypedValue(state, edit.position, edit.field, value, weightUnitOf(state.exercise, preferredUnit), {
+            scaleWarmupsWithWorkingWeight,
+          })
         : state;
     };
 
@@ -236,6 +241,25 @@ export function useLiveSetEntry(session: Session, updateSession: UpdateSession, 
     setEditing(undefined);
   };
 
+  const copyPreviousValues = (exerciseIndex: number, position: SetPosition, previous: PreviousSetValues) => {
+    const replacesTypedField =
+      editing?.exerciseIndex === exerciseIndex &&
+      editing.position.list === position.list &&
+      editing.position.index === position.index &&
+      (editing.field === 'reps' || (editing.field === 'weight' && previous.weight !== undefined));
+    const change: SetEntryChange = (state) => withCopiedPreviousValues(state, position, previous);
+    const current = stateFor(exerciseIndex);
+    const next = replacesTypedField
+      ? apply(exerciseIndex, change, { keepsRest: true })
+      : applyAfterTyping(exerciseIndex, change, { keepsRest: true });
+    if (editing) {
+      setEditing(undefined);
+    }
+    if (current && next && (next.exercise !== current.exercise || next.drafts !== current.drafts)) {
+      haptics.selection();
+    }
+  };
+
   const addSet = (exerciseIndex: number) => {
     applyAfterTyping(exerciseIndex, (state) => withAddedSet(state, weightUnitOf(state.exercise, preferredUnit)));
     setEditing(undefined);
@@ -245,7 +269,7 @@ export function useLiveSetEntry(session: Session, updateSession: UpdateSession, 
   const removeSet = (exerciseIndex: number, position: SetPosition, setLabel: string) => {
     let removed: RemovedSet | undefined;
     const remove: SetEntryChange = (state) => {
-      const result = withSetRemoved(state, position);
+      const result = withSetRemoved(state, position, { scaleWarmupsWithWorkingWeight });
       removed ??= result.removed;
       return result.state;
     };
@@ -266,7 +290,10 @@ export function useLiveSetEntry(session: Session, updateSession: UpdateSession, 
         message: t('live_workout.set_table.deleted.message', { set: setLabel }),
         action: {
           label: t('generic.undo.button'),
-          onPress: () => apply(exerciseIndex, (state) => withSetRestored(state, undo), { keepsRest: true }),
+          onPress: () =>
+            apply(exerciseIndex, (state) => withSetRestored(state, undo, { scaleWarmupsWithWorkingWeight }), {
+              keepsRest: true,
+            }),
         },
       });
     }
@@ -335,7 +362,19 @@ export function useLiveSetEntry(session: Session, updateSession: UpdateSession, 
     };
   })();
 
-  return { editing, buffer, stateFor, open, toggle, addSet, removeSet, openSetType, close, pad };
+  return {
+    editing,
+    buffer,
+    stateFor,
+    open,
+    copyPreviousValues,
+    toggle,
+    addSet,
+    removeSet,
+    openSetType,
+    close,
+    pad,
+  };
 }
 
 export type LiveSetEntry = ReturnType<typeof useLiveSetEntry>;

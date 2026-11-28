@@ -142,9 +142,10 @@ describe('editing the planned warm-ups', () => {
     });
   });
 
-  it('switches a warm-up between a percentage and a fixed weight, keeping its reps', () => {
+  it('switches a warm-up between a percentage and a fixed weight, pre-filling a resolved weight when known', () => {
     expect(withWarmupLoadTypeAt(ramp, 0, 'percent').warmupSets[0]).toEqual(percent(50, 10));
     expect(withWarmupLoadTypeAt(ramp, 1, 'absolute').warmupSets[1]).toEqual({ load: undefined, reps: 8 });
+    expect(withWarmupLoadTypeAt(ramp, 1, 'absolute', kg(50)).warmupSets[1]).toEqual(absolute(50, 8));
   });
 });
 
@@ -213,8 +214,9 @@ describe('warmupsScopeNote', () => {
 });
 
 describe('the warm-up sheet weights', () => {
-  it('spaces the working weight from its unit, like the rest of the app', () => {
-    expect(workingWeightNote(t, kg(65))).toBe('Working weight 65 kg · % is of that');
+  it('spaces the working weight from its unit and reflects whether percentages keep scaling', () => {
+    expect(workingWeightNote(t, kg(65))).toBe('Working weight 65 kg · % sets the starting weight');
+    expect(workingWeightNote(t, kg(65), true)).toBe('Working weight 65 kg · % is of that');
   });
 
   it('says what a percentage works out to with a space before the unit', () => {

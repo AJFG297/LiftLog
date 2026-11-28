@@ -47,6 +47,15 @@ export function normalizeExerciseName(name: string): string {
   return folded.join(' ');
 }
 
+/**
+ * One lowercase word in the form search compares: its common spelling, made singular. Search folds every
+ * word, not just the last, so `Biceps` meets `bicep` too; the cost is that a few words fold where no plural
+ * was meant, the same on both sides.
+ */
+export function singularWord(word: string): string {
+  return singular(SPELLINGS[word] ?? word);
+}
+
 function singular(word: string): string {
   const irregular = IRREGULAR[word];
   if (irregular) {
