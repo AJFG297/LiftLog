@@ -143,17 +143,16 @@ export class HistoryImport {
               progress.stage = 'repair';
             },
           );
+          await linkRoutineIds(services.db, services.workoutRepository, {
+            updatePrograms: false,
+            recordMigration: false,
+          });
           durableStages.push('repair');
           progress.stage = 'flush';
           possibleWrites.push(progress.stage);
           await flushPrograms();
           await flushDescriptors();
           durableStages.push(progress.stage);
-          // The device may already have run LINK_ROUTINE_IDS, so a restored backup is not stamped on
-          // the next launch. Stamp it here, after the programs have been written with their ids.
-          if (request.kind === 'backup' || workouts.length) {
-            await linkRoutineIds(services.db);
-          }
           progress.stage = 'cache';
           const snapshot = store.getState().storedSessions.latestExercises;
           const latest = await services.workoutRepository.latestPerLineage();

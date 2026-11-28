@@ -210,13 +210,16 @@ A workout is stored across five tables (`db/schema.ts`), not as one payload:
   before ids were linked once by the `LINK_EXERCISE_IDS` data migration
   (`services/data-migrations/link-exercise-ids.ts`), which also rewrote every row's key columns.
 - **Routine identity**: a routine's `id` is optional on `SessionBlueprintJSON` (version 11) and copied onto
-  `workout.routine_id` when a workout is logged. Last performed, the round and "last time" match that id, so
-  renaming the routine keeps them. `routine_id` null is a workout from before the column: it matches a routine
-  of the same name, and so does a stamp whose routine is no longer saved. A stamp that still belongs to a
-  saved routine is not taken by a different routine that reuses the name. `LINK_ROUTINE_IDS`
-  (`services/data-migrations/link-routine-ids.ts`) assigns the missing ids and stamps a workout only when
-  its name belongs to exactly one saved routine. A backup restored after that migration has already run is
-  stamped again at the end of the restore, once the programs are written.
+  `workout.routine_id` when a workout is logged. Last performed, the round, upcoming plan position,
+  "last time", comparisons and plan diff match that id, so renaming the routine keeps them. `routine_id`
+  null is a workout from before the column: it matches a routine of the same name, and so does a stamp
+  whose routine is no longer saved. A stamp that still belongs to a saved routine is not taken by a
+  different routine that reuses the name. `LINK_ROUTINE_IDS` (`services/data-migrations/link-routine-ids.ts`)
+  assigns missing routine ids at startup and stamps unstamped workouts through `WorkoutRepository.stampRoutineIds`
+  when a name belongs to one routine id, or when exercise overlap (with a tie-break for a unique active-program
+  match) identifies one routine among built-ins or plans sharing a name. `HistoryImport` runs it inside the
+  `repair` stage after exercise merges without rewriting `programs` outside `ProgramWriter`, so restored
+  backups and imported workouts are stamped even on devices that already ran the startup migration.
 - **The name fold** (`normalizeExerciseName`, `models/blueprint-models/exercise-name.ts`) lowercases, trims
   and collapses spaces, folds the fly spellings (`Flye`, `Flyes`, `Flies`, `Flys`) to `fly`, and makes the
   last word singular: an irregulars table first (`abs` and `series` stay, `calves` is `calf`), then

@@ -29,12 +29,11 @@ import {
 } from '@/models/home/history-range';
 import { routineColorOf } from '@/models/home/routine-colors';
 import { ProgramBlueprint } from '@/models/blueprint-models';
-import { liveRoutineIdsOf } from '@/models/routine-identity';
 import { Session } from '@/models/session-models';
 import { Weight } from '@/models/weight';
 import { useAppSelector } from '@/store';
 import { publishUnpublishedSessions } from '@/store/feed';
-import { fetchUpcomingSessions, selectActiveProgram } from '@/store/program';
+import { fetchUpcomingSessions, selectActiveProgram, selectLiveRoutineIds } from '@/store/program';
 import { executeRemoteBackup } from '@/store/settings';
 import { selectActiveSessionId } from '@/store/stored-sessions';
 import { LocalDate } from '@js-joda/core';
@@ -85,8 +84,7 @@ export function Home() {
   // Undefined while the plans load, or once the active plan has been deleted.
   const plan: ProgramBlueprint | undefined = useAppSelector(selectActiveProgram);
   const nextSession = upcoming.map((x) => x.at(0)).unwrapOr(undefined);
-  const savedPrograms = useAppSelector((x) => x.program.savedPrograms);
-  const liveRoutineIds = liveRoutineIdsOf(Object.values(savedPrograms));
+  const liveRoutineIds = useAppSelector(selectLiveRoutineIds);
   const nextSessionName = nextSession?.blueprint.name;
   const nextRoutineId = nextSession?.blueprint.id;
   const pastRunsOfNext = useWorkoutQuery(

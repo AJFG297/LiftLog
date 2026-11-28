@@ -1,9 +1,9 @@
 import { useWorkoutQuery } from '@/hooks/useWorkoutQuery';
 import { MovementKey, ProgressionKey } from '@/models/blueprint-models';
-import { findRoutineIndex } from '@/models/routine-identity';
+import { findRoutine } from '@/models/routine-identity';
 import { RecordedExercise, Session } from '@/models/session-models';
 import { useAppSelector } from '@/store';
-import { selectActiveProgram } from '@/store/program';
+import { selectActiveProgram, selectLiveRoutineIds } from '@/store/program';
 import { createContext, ReactNode, useContext } from 'react';
 
 /** How many earlier performances of a movement a workout screen fetches: "last time" and a few before. */
@@ -30,8 +30,8 @@ const PreviousPerformancesContext = createContext<PreviousPerformances | undefin
  */
 export function PreviousPerformancesProvider({ session, children }: { session: Session; children: ReactNode }) {
   const program = useAppSelector(selectActiveProgram);
-  const routineIndex = findRoutineIndex(program.sessions, session.blueprint);
-  const routine = routineIndex >= 0 ? program.sessions[routineIndex] : undefined;
+  const liveRoutineIds = useAppSelector(selectLiveRoutineIds);
+  const routine = findRoutine(program.sessions, session.blueprint, new Set(liveRoutineIds));
   const movements = [...new Set(session.recordedExercises.map((x) => x.movementKey()))];
   // The lineages the session was built from (see `plannedLineageFor`) can come from the routine rather than
   // the session, when an exercise was swapped mid-workout.

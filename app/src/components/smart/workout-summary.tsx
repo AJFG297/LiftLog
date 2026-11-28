@@ -16,7 +16,7 @@ import { useOnDismiss } from '@/hooks/useOnDismiss';
 import { useWorkoutComparison } from '@/hooks/useWorkoutComparison';
 import { fontFamily, numberStyle, spacing, useAppTheme } from '@/hooks/useAppTheme';
 import { formatRepsTarget } from '@/models/blueprint-models';
-import { findRoutineIndex } from '@/models/routine-identity';
+import { findRoutine } from '@/models/routine-identity';
 import { SharedSession } from '@/models/feed-models';
 import { SESSION_FEELS, SessionFeel, Session } from '@/models/session-models';
 import { shortFormatWeightUnit, Weight, WeightUnit } from '@/models/weight';
@@ -32,7 +32,12 @@ import {
 } from '@/models/workout-summary';
 import { useAppSelector, useAppSelectorWithArg } from '@/store';
 import { encryptAndShare } from '@/store/feed';
-import { selectActiveProgram, selectRoutineUpdateReceipt, setRoutineUpdateReceipt } from '@/store/program';
+import {
+  selectActiveProgram,
+  selectLiveRoutineIds,
+  selectRoutineUpdateReceipt,
+  setRoutineUpdateReceipt,
+} from '@/store/program';
 import { SessionRecord } from '@/store/stats/personal-records';
 import {
   openSessionForSummary,
@@ -79,6 +84,7 @@ export function WorkoutSummary({ sessionId, finished }: WorkoutSummaryProps) {
   const activeSessionId = useAppSelector(selectActiveSessionId);
   const comparison = useWorkoutComparison(session);
   const program = useAppSelector(selectActiveProgram);
+  const liveRoutineIds = useAppSelector(selectLiveRoutineIds);
   const latestExercises = useAppSelector(selectLatestExercises);
   const unit: WeightUnit = useAppSelector((x) => x.settings.useImperialUnits) ? 'pounds' : 'kilograms';
   const finishWorkout = useFinishWorkout(sessionId);
@@ -164,8 +170,7 @@ export function WorkoutSummary({ sessionId, finished }: WorkoutSummaryProps) {
     dispatch(encryptAndShare({ item: new SharedSession(session), title: t('workout.shared_item.title') }));
 
   const routineName = session.blueprint.name;
-  const routineIndex = findRoutineIndex(program.sessions, session.blueprint);
-  const routine = routineIndex >= 0 ? program.sessions[routineIndex] : undefined;
+  const routine = findRoutine(program.sessions, session.blueprint, new Set(liveRoutineIds));
   // Programs repeat with no set length, so there is no honest "session N of M" to show: just the program.
   const dateLine = [
     formatDate(session.date, { weekday: 'long', month: 'short', day: 'numeric' }),

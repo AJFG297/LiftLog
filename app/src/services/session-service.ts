@@ -1,4 +1,5 @@
 import { SessionBlueprint } from '@/models/blueprint-models';
+import { findRoutineIndex, liveRoutineIdsOf } from '@/models/routine-identity';
 import { WeightUnit } from '@/models/weight';
 import { Session } from '@/models/session-models';
 import type { LatestByLineage } from '@/models/session-models/carry-over';
@@ -44,7 +45,9 @@ export class SessionService {
       index = 0;
       yield latestSession;
     } else {
-      index = sessionBlueprints.findIndex((x) => x.name === latestSession!.blueprint.name);
+      const savedPrograms = currentState.program?.savedPrograms;
+      const liveRoutineIds = savedPrograms ? new Set(liveRoutineIdsOf(Object.values(savedPrograms))) : undefined;
+      index = findRoutineIndex(sessionBlueprints, latestSession.blueprint, liveRoutineIds);
     }
 
     while (true) {

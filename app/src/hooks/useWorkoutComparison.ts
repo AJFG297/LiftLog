@@ -1,8 +1,8 @@
 import { listDep, useWorkoutQuery } from '@/hooks/useWorkoutQuery';
-import { liveRoutineIdsOf } from '@/models/routine-identity';
 import { Session } from '@/models/session-models';
 import { USUAL_DURATION_SAMPLE } from '@/models/workout-summary';
 import { useAppSelector } from '@/store';
+import { selectLiveRoutineIds } from '@/store/program';
 import { SessionRecord, sessionRecords } from '@/store/stats/personal-records';
 import { getSessionReferenceTime } from '@/store/stored-sessions';
 
@@ -23,7 +23,7 @@ export interface WorkoutComparison {
  */
 export function useWorkoutComparison(session: Session | undefined): WorkoutComparison | undefined {
   const referenceMs = session ? getSessionReferenceTime(session).toInstant().toEpochMilli() : undefined;
-  const liveRoutineIds = liveRoutineIdsOf(Object.values(useAppSelector((state) => state.program.savedPrograms)));
+  const liveRoutineIds = useAppSelector(selectLiveRoutineIds);
   const routineId = session?.blueprint.id;
   return useWorkoutQuery(
     async (repository) => {

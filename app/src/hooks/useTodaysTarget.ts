@@ -1,9 +1,9 @@
 import { usePreviousPerformances } from '@/components/smart/previous-performances';
 import { RecordedExercise, RecordedWeightedExercise, Session } from '@/models/session-models';
 import { carriedFrom, TodaysTarget, todaysTarget } from '@/models/session-models/todays-target';
-import { findRoutineIndex } from '@/models/routine-identity';
+import { findRoutine } from '@/models/routine-identity';
 import { useAppSelector } from '@/store';
-import { selectActiveProgram } from '@/store/program';
+import { selectActiveProgram, selectLiveRoutineIds } from '@/store/program';
 
 export interface PreviousPerformance {
   /** The performance an exercise of the session carries on from (see {@link carriedFrom}). */
@@ -22,8 +22,8 @@ export function usePreviousPerformance(
 ): ((exercise: RecordedWeightedExercise) => PreviousPerformance) | undefined {
   const { ofMovement, byLineage, loaded } = usePreviousPerformances();
   const program = useAppSelector(selectActiveProgram);
-  const routineIndex = findRoutineIndex(program.sessions, session.blueprint);
-  const routine = routineIndex >= 0 ? program.sessions[routineIndex] : undefined;
+  const liveRoutineIds = useAppSelector(selectLiveRoutineIds);
+  const routine = findRoutine(program.sessions, session.blueprint, new Set(liveRoutineIds));
   if (!loaded) {
     return undefined;
   }

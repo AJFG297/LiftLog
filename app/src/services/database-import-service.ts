@@ -2,6 +2,7 @@ import { ExpoSQLiteDatabase } from 'drizzle-orm/expo-sqlite';
 import { dataMigrationsSchema } from '@/db/schema';
 import { KeyValueStore } from './key-value-store';
 import { PreferenceService } from './preference-service';
+import { WorkoutRepository } from './workout-repository';
 
 import {
   dedupeBuiltInExercises,
@@ -29,6 +30,7 @@ export class DatabaseImportService implements DatabaseImporter {
     private readonly keyValueStore: KeyValueStore,
     private readonly preferenceService: PreferenceService,
     private readonly inWriteOrder: (operation: () => Promise<void>) => Promise<void> = (operation) => operation(),
+    private readonly workoutRepository: WorkoutRepository = new WorkoutRepository(db),
   ) {}
 
   async importOldData(): Promise<void> {
@@ -60,12 +62,12 @@ export class DatabaseImportService implements DatabaseImporter {
     }
     // After linking, which made the stubs it merges.
     if (!dataMigrationsRun.includes(mergeExerciseNamesDataMigration)) {
-      await mergeExerciseNames(this.db, await readHiddenBuiltInIds(this.keyValueStore));
+      await mergeExerciseNames(this.db, await readHiddenBuiltInIds(this.keyValueStore), this.workoutRepository);
     }
-    // After the plans are in their latest shape. A restored backup calls `linkRoutineIds` itself:
-    // this flag is already set on the device, and the backup's programs are not in the database yet.
+    // After the plans are in their latest shape and exercise merges have normalized movement keys.
+    // Runtime imports run `linkRoutineIds` inside `HistoryImport`'s repair stage.
     if (!dataMigrationsRun.includes(linkRoutineIdsDataMigration)) {
-      await linkRoutineIds(this.db);
+      await linkRoutineIds(this.db, this.workoutRepository);
     }
 
     console.info('Imported old data to DB in ' + (performance.now() - now) + 'ms');

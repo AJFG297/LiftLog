@@ -1128,4 +1128,32 @@ describe('HistoryImport', () => {
     });
     expect(f.app.getState().stats.isDirty).toBe(true);
   });
+
+  it('reports routine-id stamping failure under repair and stamps on retry', async () => {
+    const f = await fixture({ programs: { plan: program('Plan', lunge) } });
+    const routineId = f.app.getState().program.savedPrograms.plan?.sessions[0]?.id;
+    const error = new Error('stamp routine ids failed');
+    vi.spyOn(f.repository, 'stampRoutineIds').mockRejectedValueOnce(error);
+
+    const first = failed(
+      await f.owner.apply({ kind: 'external', data: { workouts: [workout('imported')], programs: {} } }),
+    );
+    expect(first).toMatchObject({
+      stage: 'repair',
+      error,
+      durableStages: ['descriptors', 'programs', 'workouts'],
+      pending: 'repair-and-cache',
+    });
+    expect((await f.repository.get('imported'))?.blueprint.id).toBeUndefined();
+
+    const writes: { workoutIds: readonly string[]; activeChanged: boolean }[] = [];
+    const unsubscribe = f.repository.subscribe((write) => writes.push(write));
+    expect(await f.owner.apply({ kind: 'external', data: { workouts: [workout('imported')], programs: {} } })).toEqual({
+      kind: 'unchanged',
+    });
+    unsubscribe();
+
+    expect((await f.repository.get('imported'))?.blueprint.id).toBe(routineId);
+    expect(writes).toEqual([{ workoutIds: ['imported'], activeChanged: false }]);
+  });
 });

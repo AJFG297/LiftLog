@@ -487,6 +487,17 @@ describe('WorkoutRepository', () => {
 
         expect(history.lastDone.get('push')?.toString()).toBe('2026-04-05');
       });
+
+      it('latestNamed matches a deleted-routine workout by name even when no routines are live', async () => {
+        const deleted = lifted('Push', april(5));
+        await repository.put(deleted.with({ blueprint: deleted.blueprint.with({ id: 'deleted-push' }) }));
+
+        expect((await repository.latestNamed('Push', 5, { liveRoutineIds: [] })).map((s) => s.id)).toEqual([
+          deleted.id,
+        ]);
+        expect(await repository.latestNamed('Push', 5, { liveRoutineIds: ['deleted-push'] })).toEqual([]);
+        expect(await repository.latestNamed('Push', 5)).toEqual([]);
+      });
     });
 
     describe('inExportOrder', () => {

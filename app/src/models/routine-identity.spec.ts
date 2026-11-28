@@ -1,6 +1,6 @@
 import { LocalDate } from '@js-joda/core';
 import { describe, expect, it } from 'vitest';
-import { findRoutineIndex, routineHistoryOf, routineKey } from '@/models/routine-identity';
+import { findRoutine, findRoutineIndex, routineHistoryOf, routineKey } from '@/models/routine-identity';
 
 const day = (n: number) => LocalDate.of(2026, 4, n);
 
@@ -77,9 +77,21 @@ describe('findRoutineIndex', () => {
 
   it('finds a renamed routine by id', () => {
     expect(findRoutineIndex(routines, { id: 'push', name: 'Push' })).toBe(0);
+    expect(findRoutine(routines, { id: 'push', name: 'Push' })).toEqual({ id: 'push', name: 'Press' });
   });
 
   it('falls back to the name when the workout has no id', () => {
     expect(findRoutineIndex(routines, { name: 'Pull' })).toBe(1);
+  });
+
+  it('does not claim a workout stamped to a live routine in another program', () => {
+    expect(
+      findRoutineIndex(routines, { id: 'other-pull', name: 'Pull' }, new Set(['push', 'pull', 'other-pull'])),
+    ).toBe(-1);
+    expect(findRoutineIndex(routines, { id: 'other-pull', name: 'Pull' })).toBe(-1);
+  });
+
+  it('falls back to the name when the stamped routine was deleted', () => {
+    expect(findRoutineIndex(routines, { id: 'deleted-pull', name: 'Pull' }, new Set(['push', 'pull']))).toBe(1);
   });
 });

@@ -60,8 +60,12 @@ export function createServices(store: Store<RootState>, db: ExpoSQLiteDatabase, 
   const databaseMigrationService = new DatabaseMigrationService(
     db,
     logger,
-    new DatabaseImportService(db, keyValueStore, preferenceService, (operation) =>
-      programWriter.run(() => descriptorWriter.run(operation)),
+    new DatabaseImportService(
+      db,
+      keyValueStore,
+      preferenceService,
+      (operation) => programWriter.run(() => descriptorWriter.run(operation)),
+      workoutRepository,
     ),
   );
 

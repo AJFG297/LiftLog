@@ -19,9 +19,10 @@ export function routineExerciseLocation(
   program: ProgramBlueprint,
   workout: SessionBlueprint,
   exerciseIndex: number,
+  liveRoutineIds?: ReadonlySet<string>,
 ): RoutineExerciseLocation | undefined {
   const exercise = workout.exercises[exerciseIndex];
-  const sessionIndex = findRoutineIndex(program.sessions, workout);
+  const sessionIndex = findRoutineIndex(program.sessions, workout, liveRoutineIds);
   if (!exercise || sessionIndex < 0) {
     return undefined;
   }

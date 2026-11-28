@@ -13,11 +13,17 @@ import { useFormatDate } from '@/hooks/useFormatDate';
 import { spacing, useAppTheme } from '@/hooks/useAppTheme';
 import { useStartWorkoutWithConfirmation } from '@/hooks/useStartWorkoutWithConfirmation';
 import { ProgramBlueprint, SessionBlueprint } from '@/models/blueprint-models';
-import { liveRoutineIdsOf, routineKey } from '@/models/routine-identity';
+import { routineKey } from '@/models/routine-identity';
 import { BuiltInPrograms, unsavedBuiltInPrograms } from '@/models/built-in-programs';
 import { Session } from '@/models/session-models';
 import { useAppSelector } from '@/store';
-import { fetchUpcomingSessions, linkPlanExercises, savePlan, selectAllPrograms } from '@/store/program';
+import {
+  fetchUpcomingSessions,
+  linkPlanExercises,
+  savePlan,
+  selectAllPrograms,
+  selectLiveRoutineIds,
+} from '@/store/program';
 import { setPlansSortOrder } from '@/store/settings';
 import { selectLatestExercises } from '@/store/stored-sessions';
 import { listDep, useWorkoutQuery } from '@/hooks/useWorkoutQuery';
@@ -64,7 +70,7 @@ export function RoutinesScreen({ focusProgramId }: { focusProgramId?: string }) 
   }, [active, dispatch]);
 
   const routineRefs = active ? active.sessions.map((routine) => ({ id: routine.id, name: routine.name })) : [];
-  const liveRoutineIds = liveRoutineIdsOf(Object.values(savedPrograms));
+  const liveRoutineIds = useAppSelector(selectLiveRoutineIds);
   const routineHistory = useWorkoutQuery(
     (repository) => repository.routineHistory(routineRefs, liveRoutineIds),
     [listDep(routineRefs.map((routine) => `${routine.id ?? ''}\u0001${routine.name}`)), listDep(liveRoutineIds)],

@@ -27,7 +27,7 @@ import {
   withRestStepped,
 } from '@/models/session-models/rest';
 import { useAppSelector } from '@/store';
-import { selectActiveProgram, updateProgram } from '@/store/program';
+import { selectActiveProgram, selectLiveRoutineIds, updateProgram } from '@/store/program';
 import { selectActiveSession, updateStoredSession } from '@/store/stored-sessions';
 import { formatCountdown, formatTimeSpan } from '@/utils/format-time-span';
 import { Duration, OffsetDateTime } from '@js-joda/core';
@@ -71,6 +71,7 @@ function RestSheetContent({ session }: { session: Session }) {
   const insets = useSafeAreaInsets();
   const program = useAppSelector(selectActiveProgram);
   const programId = useAppSelector((x) => x.program.activePlanId);
+  const liveRoutineIds = useAppSelector(selectLiveRoutineIds);
   const rest = useLiveRest(session);
   const now = useNow(REST_TICK_MS);
   const phase = restPhaseOf(rest.window, now);
@@ -99,7 +100,7 @@ function RestSheetContent({ session }: { session: Session }) {
   const picked = phase.kind === 'idle' ? undefined : session.restTimer?.length;
   const location =
     owner && rest.ownerIndex !== undefined && program
-      ? routineExerciseLocation(program, session.blueprint, rest.ownerIndex)
+      ? routineExerciseLocation(program, session.blueprint, rest.ownerIndex, new Set(liveRoutineIds))
       : undefined;
   const savedHere = saved && saved.ownerIndex === rest.ownerIndex ? saved : undefined;
   const offerSave =

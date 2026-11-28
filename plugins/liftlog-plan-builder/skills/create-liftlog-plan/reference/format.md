@@ -6,7 +6,7 @@ A `.liftlogplan` file is a single JSON object. `ProgramBlueprint.json` in this d
 
 Read these first. They are the reason most generated plans fail to import.
 
-1. **Assume every field is required.** Only six are optional - `ceiling` and `onCeiling` on a progression rule, `restBetweenSets` on a cardio set, `load` on a warm-up set, `exerciseId` on an exercise, and `color` on a session. Everything else must be present, including `notes` and `link` when empty - use `""`. Leave `exerciseId` out: the app links each exercise to the user's own by its `name`.
+1. **Assume every field is required.** Only seven are optional - `ceiling` and `onCeiling` on a progression rule, `restBetweenSets` on a cardio set, `load` on a warm-up set, `exerciseId` on an exercise, and `color` and `id` on a session. Everything else must be present, including `notes` and `link` when empty - use `""`. Leave `exerciseId` and `id` out: the app links each exercise to the user's own by its `name` and assigns each session a stable `id` on import.
 2. **`"version": 3`** goes on the root object, and **`"version": 11`** on every session. These are not the plan's own version number; they are the format's, and they differ from each other. Leave `id` off a session. The app assigns one on import, and that is what keeps a routine's history when it is renamed.
 3. **Weights and steps are strings, not numbers.** `"step": "2.5"`, never `"step": 2.5`. Rep counts (`min`, `max`) are the exception: those are plain integers.
 4. **Rests and times are ISO-8601 durations.** `"PT3M"` is three minutes, `"PT90S"` is ninety seconds, `"PT1M30S"` also works. A bare `"90"` or `90` is invalid.
@@ -44,11 +44,12 @@ Read these first. They are the reason most generated plans fail to import.
 
 | Field       | Type   | Notes                                              |
 | ----------- | ------ | -------------------------------------------------- |
-| `version`   | number | Always `10`. Not `3` - a session versions on its own. |
+| `version`   | number | Always `11`. Not `3` - a session versions on its own. |
 | `name`      | string | e.g. `"Push"`, `"Upper A"`, `"Leg Day"`.           |
 | `notes`     | string | `""` if there's nothing to say.                    |
 | `exercises` | array  | Weighted and cardio exercises can be mixed freely. |
 | `color`     | string | Optional: `vermilion`, `green`, `blue`, `ochre`, `purple` or `stone`. Leave it out to let the app pick by the session's place. |
+| `id`        | string | Optional. Leave it out: the app assigns one on import. |
 
 ## Weighted exercise
 

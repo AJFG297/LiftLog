@@ -349,12 +349,14 @@ export class WorkoutRepository {
     }: { before?: Session; includeUnstarted?: boolean; routineId?: string; liveRoutineIds?: readonly string[] } = {},
   ): Promise<Session[]> {
     const named =
-      liveRoutineIds && liveRoutineIds.length
-        ? and(
-            eq(workoutsSchema.name, name),
-            or(isNull(workoutsSchema.routineId), notInArray(workoutsSchema.routineId, [...liveRoutineIds])),
-          )
-        : and(eq(workoutsSchema.name, name), isNull(workoutsSchema.routineId));
+      liveRoutineIds === undefined
+        ? and(eq(workoutsSchema.name, name), isNull(workoutsSchema.routineId))
+        : liveRoutineIds.length === 0
+          ? eq(workoutsSchema.name, name)
+          : and(
+              eq(workoutsSchema.name, name),
+              or(isNull(workoutsSchema.routineId), notInArray(workoutsSchema.routineId, [...liveRoutineIds])),
+            );
     const workouts = await this.db
       .select(readColumns.workout)
       .from(workoutsSchema)
@@ -722,6 +724,72 @@ export class WorkoutRepository {
       }
     }
     return records;
+  }
+
+  /** Non-freeform workouts whose `routine_id` is still null. Queued behind earlier writes. */
+  unstampedRoutineWorkouts(): Promise<{ id: string; name: string }[]> {
+    return this.inOrder(() =>
+      this.db
+        .select({ id: workoutsSchema.id, name: workoutsSchema.name })
+        .from(workoutsSchema)
+        .where(and(isNull(workoutsSchema.routineId), sql`${workoutsSchema.name} != ${FREEFORM_WORKOUT_NAME}`)),
+    );
+  }
+
+  /** Distinct `movement_key` values logged in each workout of `workoutIds`. */
+  movementKeysOf(workoutIds: readonly string[]): Promise<Map<string, Set<MovementKey>>> {
+    return this.inOrder(async () => {
+      const byWorkout = new Map<string, Set<MovementKey>>();
+      if (!workoutIds.length) {
+        return byWorkout;
+      }
+      const rows = await children([...workoutIds], workoutExercisesSchema.workoutId, (where) =>
+        this.db
+          .select({ workoutId: workoutExercisesSchema.workoutId, movementKey: workoutExercisesSchema.movementKey })
+          .from(workoutExercisesSchema)
+          .where(where),
+      );
+      for (const row of rows) {
+        const keys = byWorkout.get(row.workoutId) ?? new Set<MovementKey>();
+        keys.add(row.movementKey as MovementKey);
+        byWorkout.set(row.workoutId, keys);
+      }
+      return byWorkout;
+    });
+  }
+
+  /**
+   * Stamps `routine_id` onto workouts that still have none, together with `alsoWrite` in one
+   * transaction. Runs on the repository's write queue and notifies listeners when any workout row
+   * was stamped.
+   */
+  async stampRoutineIds(
+    routineIdByWorkoutId: ReadonlyMap<string, string>,
+    alsoWrite: (tx: Transaction) => Statement[] = () => [],
+  ): Promise<void> {
+    const workoutIdsByRoutine = new Map<string, string[]>();
+    for (const [workoutId, routineId] of routineIdByWorkoutId) {
+      const ids = workoutIdsByRoutine.get(routineId) ?? [];
+      ids.push(workoutId);
+      workoutIdsByRoutine.set(routineId, ids);
+    }
+    const stampedWorkoutIds = [...routineIdByWorkoutId.keys()];
+    await this.inOrder(async () => {
+      await writeAtomically(this.db, (tx) => [
+        ...[...workoutIdsByRoutine].flatMap(([routineId, ids]) =>
+          chunkedValues(ids, MAX_PARAMETERS - 1).map((chunk) =>
+            tx
+              .update(workoutsSchema)
+              .set({ routineId })
+              .where(and(isNull(workoutsSchema.routineId), inArray(workoutsSchema.id, chunk))),
+          ),
+        ),
+        ...alsoWrite(tx),
+      ]);
+      if (stampedWorkoutIds.length) {
+        this.notify({ workoutIds: stampedWorkoutIds, activeChanged: false });
+      }
+    });
   }
 
   /**

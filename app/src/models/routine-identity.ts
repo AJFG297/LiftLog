@@ -50,15 +50,35 @@ export function sameRoutine(routine: RoutineRef, workout: RoutineRef): boolean {
   return routine.name === workout.name;
 }
 
-/** The routine a workout was started from: its id, then the first routine of its name. */
-export function findRoutineIndex(routines: readonly RoutineRef[], workout: RoutineRef): number {
+/**
+ * The routine a workout was started from: its id, then the first routine of its name when the
+ * workout was never stamped or its routine was deleted (`liveRoutineIds` does not contain it).
+ */
+export function findRoutineIndex(
+  routines: readonly RoutineRef[],
+  workout: RoutineRef,
+  liveRoutineIds?: ReadonlySet<string>,
+): number {
   if (workout.id) {
     const byId = routines.findIndex((routine) => routine.id === workout.id);
     if (byId >= 0) {
       return byId;
     }
+    if (liveRoutineIds === undefined || liveRoutineIds.has(workout.id)) {
+      return -1;
+    }
   }
   return routines.findIndex((routine) => routine.name === workout.name);
+}
+
+/** The matching routine from `routines`, or `undefined` when none matches. */
+export function findRoutine<T extends RoutineRef>(
+  routines: readonly T[],
+  workout: RoutineRef,
+  liveRoutineIds?: ReadonlySet<string>,
+): T | undefined {
+  const index = findRoutineIndex(routines, workout, liveRoutineIds);
+  return index >= 0 ? routines[index] : undefined;
 }
 
 export interface RoutineHistoryResult {

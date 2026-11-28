@@ -7,9 +7,8 @@ import { useFormatDate } from '@/hooks/useFormatDate';
 import { useStartWorkoutWithConfirmation } from '@/hooks/useStartWorkoutWithConfirmation';
 import { useToday } from '@/hooks/useToday';
 import { routineColorOf } from '@/models/home/routine-colors';
-import { liveRoutineIdsOf } from '@/models/routine-identity';
 import { useAppSelector } from '@/store';
-import { selectActiveProgram } from '@/store/program';
+import { selectActiveProgram, selectLiveRoutineIds } from '@/store/program';
 import { listDep, useWorkoutQuery } from '@/hooks/useWorkoutQuery';
 import { useTranslate } from '@tolgee/react';
 import { useNavigation, useRouter } from 'expo-router';
@@ -36,8 +35,7 @@ export function OtherWorkoutSheet() {
   const others = useAppSelector((x) => x.program.upcomingSessions)
     .map((x) => x.slice(1))
     .unwrapOr([]);
-  const savedPrograms = useAppSelector((x) => x.program.savedPrograms);
-  const liveRoutineIds = liveRoutineIdsOf(Object.values(savedPrograms));
+  const liveRoutineIds = useAppSelector(selectLiveRoutineIds);
   const pastRuns = useWorkoutQuery(
     async (repository) =>
       new Map(

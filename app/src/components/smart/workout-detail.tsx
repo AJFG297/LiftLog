@@ -38,6 +38,7 @@ import {
   fetchUpcomingSessions,
   removeSessionFromProgram,
   selectActiveProgram,
+  selectLiveRoutineIds,
 } from '@/store/program';
 import { deleteStoredSession, putStoredSession, sessionFinished } from '@/store/stored-sessions';
 import { uuid } from '@/utils/uuid';
@@ -74,6 +75,7 @@ export function WorkoutDetail({ sessionId }: { sessionId: string }) {
   const session = loaded?.session;
   const comparison = useWorkoutComparison(session);
   const program = useAppSelector(selectActiveProgram);
+  const liveRoutineIds = useAppSelector(selectLiveRoutineIds);
   const programId = useAppSelector((x) => x.program.activePlanId);
   const receivedReactions = useAppSelector(selectReceivedReactionsByEvent);
   const sentReactions = useAppSelector(selectSentReactionsByEvent);
@@ -153,7 +155,7 @@ export function WorkoutDetail({ sessionId }: { sessionId: string }) {
     });
   };
 
-  const routineIndex = findRoutineIndex(program.sessions, session.blueprint);
+  const routineIndex = findRoutineIndex(program.sessions, session.blueprint, new Set(liveRoutineIds));
   const routineLine =
     routineIndex === -1
       ? undefined
