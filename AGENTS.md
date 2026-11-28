@@ -84,6 +84,24 @@ evidence, and its feature map. It uses Chromium and disk SQLite without an emula
 excludes native navigation, system controls, and services. The Android checks and UI PR screenshot
 requirements below still apply. See [the prototype's boundaries](docs/BrowserVerification.md).
 
+## Publishing preview updates
+
+Prefer an EAS Update to the existing app when the native runtime is compatible. Before publishing an
+update or starting a preview build, read [PhoneBuilds.md](docs/PhoneBuilds.md).
+
+A changed fingerprint does not automatically mean users need a new APK. Before starting a build:
+
+- Compare the fingerprint sources with the last working preview runtime.
+- Check whether the difference comes only from development tooling, such as browser-test commands in
+  `package.json`.
+- If so, exclude only those verified non-native inputs during publication. Confirm that the resulting
+  fingerprint exactly matches the installed runtime.
+- Restore any temporarily changed files afterward, including when publication fails.
+
+Never force an old runtime ID or ignore genuine native changes to make an update publish. If native
+compatibility cannot be established, create a new build. Explain the concrete reason whenever an APK
+installation is required.
+
 ## Screenshots on UI pull requests
 
 Every PR that changes what users see embeds screenshots in its description.

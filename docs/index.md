@@ -55,7 +55,8 @@ work to find the docs relevant to your area, and update it whenever you add, rem
   overflow menu's edit, share and delete with Undo.
 - [ExercisePicker.md](./ExercisePicker.md) - choosing exercises for a routine or a workout: add (many, in
   tap order, optionally as a superset) and swap (one), how the pick comes back through the store, the list
-  (Recent, fuzzy matches, muscle and equipment chips), creating a custom exercise, and the catalog's limits.
+  (Similar when swapping, Recent, how search matches and ranks, muscle and equipment chips), creating a
+  custom exercise, and the catalog's limits.
 - [Progress.md](./Progress.md) - the Progress tab, Records, All exercises and the exercise page (its chart,
   record dots, Next time, best weight by reps, and where it opens from), pinned lifts, and the model they share:
   `buildProgressHistory`'s one walk over the finished history (points per movement and workout, dated
@@ -90,8 +91,8 @@ work to find the docs relevant to your area, and update it whenever you add, rem
   Codex cloud agents: Regular and Large viewport checks, commands, evidence, adapters, coverage, long-press strip reordering, and native exclusions.
 
 - [PhoneBuilds.md](./PhoneBuilds.md) - getting a change onto the two Android phones: when a change needs a
-  new build and when an EAS Update is enough (the fingerprint runtime version), the commands for each,
-  rollback, and keeping both phones on the same version.
+  new build and when an EAS Update is enough (including tooling-only fingerprint mismatches), the
+  commands for each, rollback, and keeping both phones on the same version.
 - [SelfHosting.md](./SelfHosting.md) — quickstart for running your own backend: a copy-paste Docker
   Compose file, how to point the app at it, and the environment variables that switch on the feed,
   remote backup, and AI planner. Pairs with the [backend README](../backend/README.md).

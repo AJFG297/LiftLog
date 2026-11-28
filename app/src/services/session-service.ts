@@ -75,7 +75,9 @@ export class SessionService {
     return new Session(
       uuid(),
       sessionBlueprint,
-      nextSessionExercises(sessionBlueprint, latestRecordedExercises, this.getDefaultWeightUnit()),
+      nextSessionExercises(sessionBlueprint, latestRecordedExercises, this.getDefaultWeightUnit(), {
+        scaleWarmupsWithWorkingWeight: this.getState().settings.scaleWarmupsWithWorkingWeight,
+      }),
       LocalDate.now(),
       undefined,
       undefined,

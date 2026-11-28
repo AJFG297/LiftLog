@@ -1,8 +1,8 @@
 import {
+  alignWarmupPlans,
   CardioExerciseBlueprint,
   ExerciseBlueprint,
   plannedWarmupSetEqual,
-  PlannedWarmupSet,
   repsTargetsEqual,
   SessionBlueprint,
   WeightedExerciseBlueprint,
@@ -579,49 +579,6 @@ function withWarmupsForEditedPlan(
       return exercise.warmupSlotFor(warmup, fallbackUnit);
     }),
   });
-}
-
-/**
- * For each warm-up in `after`, the index it had in `before`, or undefined for one the edit added. The
- * longest run of warm-ups left unchanged anchors the match; between two anchors, warm-ups pair up in
- * order as edits of each other, and whatever is left over on either side was added or removed.
- */
-function alignWarmupPlans(before: PlannedWarmupSet[], after: PlannedWarmupSet[]): (number | undefined)[] {
-  // lcs[i][j]: the longest common run of before[i..] and after[j..].
-  const lcs = Array.from({ length: before.length + 1 }, () => Array.from({ length: after.length + 1 }, () => 0));
-  for (let i = before.length - 1; i >= 0; i--) {
-    for (let j = after.length - 1; j >= 0; j--) {
-      lcs[i]![j] = plannedWarmupSetEqual(before[i]!, after[j]!)
-        ? lcs[i + 1]![j + 1]! + 1
-        : Math.max(lcs[i + 1]![j]!, lcs[i]![j + 1]!);
-    }
-  }
-  const anchors: [number, number][] = [];
-  for (let i = 0, j = 0; i < before.length && j < after.length; ) {
-    if (plannedWarmupSetEqual(before[i]!, after[j]!)) {
-      anchors.push([i++, j++]);
-    } else if (lcs[i + 1]![j]! >= lcs[i]![j + 1]!) {
-      i++;
-    } else {
-      j++;
-    }
-  }
-  anchors.push([before.length, after.length]);
-
-  const result = Array.from<number | undefined>({ length: after.length });
-  let i = 0;
-  let j = 0;
-  for (const [anchorBefore, anchorAfter] of anchors) {
-    for (; i < anchorBefore && j < anchorAfter; i++, j++) {
-      result[j] = i;
-    }
-    if (anchorAfter < after.length) {
-      result[anchorAfter] = anchorBefore;
-    }
-    i = anchorBefore + 1;
-    j = anchorAfter + 1;
-  }
-  return result;
 }
 
 export const EmptySession: Session = new Session(

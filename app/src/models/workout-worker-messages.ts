@@ -25,9 +25,17 @@ export interface WorkoutStartedEvent {
   type: 'WorkoutStartedEvent';
 }
 
+export type WorkerWorkout = Omit<SessionJSON, 'version'> & { version: number };
+
+/**
+ * The version the notification gets, whatever the storage version. Android builds made before #68 reject any
+ * workout whose version isn't exactly 10, and only an APK can replace them. The worker never reads the number.
+ */
+export const WORKER_WORKOUT_VERSION = 10;
+
 export interface WorkoutUpdatedEvent {
   type: 'WorkoutUpdatedEvent';
-  workout: SessionJSON;
+  workout: WorkerWorkout;
   restTimerInfo: RestTimerInfo | undefined;
   cardioTimerInfo: CardioTimerInfo | undefined;
 

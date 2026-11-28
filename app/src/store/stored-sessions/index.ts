@@ -411,7 +411,11 @@ export function selectCarryOver(state: RootState, sessionId: string): CarryOver 
   const latest = Object.fromEntries(
     Object.entries(latestExercises).filter(([key]) => latestExerciseWorkoutIds[key as ProgressionKey] !== sessionId),
   );
-  return { latest, unit: state.settings.useImperialUnits ? 'pounds' : 'kilograms' };
+  return {
+    latest,
+    unit: state.settings.useImperialUnits ? 'pounds' : 'kilograms',
+    scaleWarmupsWithWorkingWeight: state.settings.scaleWarmupsWithWorkingWeight,
+  };
 }
 
 /** Fired when a session is done being edited: publish it, export it, and re-derive what depends on it. */

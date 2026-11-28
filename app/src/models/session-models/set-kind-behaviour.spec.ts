@@ -88,16 +88,22 @@ describe('what each set kind counts towards', () => {
 });
 
 describe('the next session', () => {
-  function service() {
-    const state = { settings: { useImperialUnits: false }, storedSessions: { sessions: {} } } as unknown as RootState;
+  function service(scaleWarmupsWithWorkingWeight = false) {
+    const state = {
+      settings: { useImperialUnits: false, scaleWarmupsWithWorkingWeight },
+      storedSessions: { sessions: {} },
+    } as unknown as RootState;
     return new SessionService({ latestPlanned: () => Promise.resolve(undefined) }, () => state);
   }
 
-  function nextAfter(last: RecordedWeightedExercise) {
+  function nextAfter(last: RecordedWeightedExercise, scaleWarmupsWithWorkingWeight = false) {
     const blueprint = last.blueprint.with({ progression: [] });
-    const session: Session = service().hydrateSessionFromBlueprint(new SessionBlueprint('Legs', [blueprint], ''), {
-      [blueprint.progressionKey()]: last.with({ blueprint }),
-    });
+    const session: Session = service(scaleWarmupsWithWorkingWeight).hydrateSessionFromBlueprint(
+      new SessionBlueprint('Legs', [blueprint], ''),
+      {
+        [blueprint.progressionKey()]: last.with({ blueprint }),
+      },
+    );
     return session.recordedExercises[0] as RecordedWeightedExercise;
   }
 
@@ -117,7 +123,7 @@ describe('the next session', () => {
     ]);
   });
 
-  it('carry-over: a warm-up is rebuilt from the plan, not from what was lifted', () => {
+  it('carry-over: a warm-up keeps last session’s weight by default, and rebuilds from the plan when scaling is enabled', () => {
     const last = exerciseWith(slot('warmup', 70, 8, 8, 0));
     const withPlannedWarmup = last.with({
       blueprint: last.blueprint.with({
@@ -125,9 +131,12 @@ describe('the next session', () => {
       }),
     });
 
-    const next = nextAfter(withPlannedWarmup);
-
-    expect(next.warmupSets.map((s) => [s.kind, s.weight.value.toNumber()])).toEqual([['warmup', 20]]);
+    expect(nextAfter(withPlannedWarmup).warmupSets.map((s) => [s.kind, s.weight.value.toNumber()])).toEqual([
+      ['warmup', 70],
+    ]);
+    expect(nextAfter(withPlannedWarmup, true).warmupSets.map((s) => [s.kind, s.weight.value.toNumber()])).toEqual([
+      ['warmup', 20],
+    ]);
   });
 
   it('carry-over: a drop set keeps its weight but not a rep target a reps rule won', () => {

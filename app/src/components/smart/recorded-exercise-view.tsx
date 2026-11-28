@@ -56,6 +56,7 @@ export function RecordedExerciseView(props: RecordedExerciseViewProps) {
   const { session, exerciseIndex, isActiveWorkout } = props;
   const { push } = useRouter();
   const logRpe = useAppSelector((x) => x.settings.logRpe);
+  const scaleWarmupsWithWorkingWeight = useAppSelector((x) => x.settings.scaleWarmupsWithWorkingWeight);
   const { ofMovement: recentlyCompletedExercises } = usePreviousPerformances();
   const isReadonly = !props.updateSession;
   const updateSession = (reducer: (session: Session) => Session) => props.updateSession?.(reducer);
@@ -84,6 +85,7 @@ export function RecordedExerciseView(props: RecordedExerciseViewProps) {
         onRemoveExercise={onRemoveExercise}
         isReadonly={isReadonly}
         rpeEnabled={logRpe}
+        scaleWarmupsWithWorkingWeight={scaleWarmupsWithWorkingWeight}
         showPreviousButton={!!isActiveWorkout}
         previousRecordedExercises={recentlyCompletedExercises(item.movementKey()) as RecordedWeightedExercise[]}
         variant={props.variant}

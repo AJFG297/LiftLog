@@ -935,19 +935,29 @@ export function nextWarmupSet(resistance: Resistance, existing: PlannedWarmupSet
 
 /**
  * The warm-up with its load planned as `type` instead, keeping its reps. A percentage starts at 50%. A
- * fixed weight starts empty: nothing in the plan says what a sensible one is, so it is entered next.
+ * fixed weight starts at `resolvedWeight` when one is known and positive, or empty otherwise.
  */
-export function withWarmupLoadType(warmup: PlannedWarmupSet, type: WarmupLoadType): PlannedWarmupSet {
+export function withWarmupLoadType(
+  warmup: PlannedWarmupSet,
+  type: WarmupLoadType,
+  resolvedWeight?: Weight,
+): PlannedWarmupSet {
   if (warmup.load?.type === type || (type === 'absolute' && !warmup.load)) {
     return warmup;
   }
+  if (type === 'percent') {
+    return { load: { type: 'percent', percent: 50 }, reps: warmup.reps };
+  }
   return {
-    load: type === 'percent' ? { type: 'percent', percent: 50 } : undefined,
+    load:
+      resolvedWeight && resolvedWeight.value.isGreaterThan(0)
+        ? { type: 'absolute', weight: resolvedWeight }
+        : undefined,
     reps: warmup.reps,
   };
 }
 
-function warmupLoadsEqual(a: WarmupLoad | undefined, b: WarmupLoad | undefined): boolean {
+export function warmupLoadsEqual(a: WarmupLoad | undefined, b: WarmupLoad | undefined): boolean {
   if (!a || !b) {
     return a === b;
   }
@@ -963,6 +973,51 @@ export function plannedWarmupSetEqual(a: PlannedWarmupSet, b: PlannedWarmupSet):
 
 export function plannedWarmupSetsEqual(a: PlannedWarmupSet[], b: PlannedWarmupSet[]): boolean {
   return a.length === b.length && a.every((w, i) => plannedWarmupSetEqual(w, b[i]!));
+}
+
+/**
+ * For each warm-up in `after`, the index it had in `before`, or undefined for one added between them. The
+ * longest run of warm-ups left unchanged anchors the match; between two anchors, warm-ups pair up in
+ * order as edits of each other, and whatever is left over on either side was added or removed.
+ */
+export function alignWarmupPlans(
+  before: PlannedWarmupSet[],
+  after: PlannedWarmupSet[],
+  same: (a: PlannedWarmupSet, b: PlannedWarmupSet) => boolean = plannedWarmupSetEqual,
+): (number | undefined)[] {
+  // lcs[i][j]: the longest common run of before[i..] and after[j..].
+  const lcs = Array.from({ length: before.length + 1 }, () => Array.from({ length: after.length + 1 }, () => 0));
+  for (let i = before.length - 1; i >= 0; i--) {
+    for (let j = after.length - 1; j >= 0; j--) {
+      lcs[i]![j] = same(before[i]!, after[j]!) ? lcs[i + 1]![j + 1]! + 1 : Math.max(lcs[i + 1]![j]!, lcs[i]![j + 1]!);
+    }
+  }
+  const anchors: [number, number][] = [];
+  for (let i = 0, j = 0; i < before.length && j < after.length; ) {
+    if (same(before[i]!, after[j]!)) {
+      anchors.push([i++, j++]);
+    } else if (lcs[i + 1]![j]! >= lcs[i]![j + 1]!) {
+      i++;
+    } else {
+      j++;
+    }
+  }
+  anchors.push([before.length, after.length]);
+
+  const result = Array.from<number | undefined>({ length: after.length });
+  let i = 0;
+  let j = 0;
+  for (const [anchorBefore, anchorAfter] of anchors) {
+    for (; i < anchorBefore && j < anchorAfter; i++, j++) {
+      result[j] = i;
+    }
+    if (anchorAfter < after.length) {
+      result[anchorAfter] = anchorBefore;
+    }
+    i = anchorBefore + 1;
+    j = anchorAfter + 1;
+  }
+  return result;
 }
 
 /**

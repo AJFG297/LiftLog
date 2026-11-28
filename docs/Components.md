@@ -71,6 +71,11 @@ A new toast replaces the current one. It stays for five seconds, longer on Andro
 for more time to act, and is announced to screen readers. Pressing the action runs it and dismisses the
 toast.
 
+Swiping a toast sideways in either direction dismisses it, so one over the number pad can be cleared
+without waiting. It follows the finger; a drag past about a third of its width, or a fast fling, dismisses
+it, and a shorter drag springs back. The thresholds are `swipeDismisses` in `toast/toast-state.ts`. The
+gesture only starts after a clear horizontal move, so a tap on the action still presses.
+
 With a screen reader on (VoiceOver or TalkBack), a toast with an action doesn't time out, since reaching the
 action can take longer than any timer. It stays until the action is pressed or a new toast replaces it, and
 offers a Dismiss accessibility action and, on iOS, the escape gesture (a two-finger scrub). A toast without

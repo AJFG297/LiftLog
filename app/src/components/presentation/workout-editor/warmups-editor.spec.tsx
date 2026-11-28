@@ -1,9 +1,9 @@
-import { act, cleanup, fireEvent, render } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, within } from '@testing-library/react';
 import BigNumber from 'bignumber.js';
 import { type PropsWithChildren, useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { WarmupsEditor, type WarmupsEditorProps } from './warmups-editor';
-import { type NumberPadAction } from '@/components/presentation/foundation/number-pad/number-pad-buffer';
+import { type NumberPadAction, type Digit } from '@/components/presentation/foundation/number-pad/number-pad-buffer';
 import { makeWeightedBlueprint } from '@/models/session-models/__test__/helpers';
 import { Weight } from '@/models/weight';
 
@@ -60,7 +60,9 @@ vi.mock('@/hooks/useAppTheme', () => ({
   spacing: { 0.5: 2, 1: 4, 2: 8, 3: 12, 4: 16, 5: 20, pageHorizontalMargin: 20 },
 }));
 vi.mock('@/components/presentation/foundation/surface-text', () => ({
-  SurfaceText: ({ children }: PropsWithChildren) => <span>{children}</span>,
+  SurfaceText: ({ children, testID }: PropsWithChildren<{ testID?: string }>) => (
+    <span data-testid={testID}>{children}</span>
+  ),
 }));
 vi.mock('@/components/presentation/foundation/header-pill-button', () => ({
   HeaderPillButton: ({ testID, label, onPress }: { testID: string; label: string; onPress: () => void }) => (
@@ -70,7 +72,25 @@ vi.mock('@/components/presentation/foundation/header-pill-button', () => ({
   ),
 }));
 vi.mock('@/components/presentation/foundation/chip', () => ({ Chip: () => null }));
-vi.mock('@/components/presentation/foundation/segmented-control', () => ({ SegmentedControl: () => null }));
+vi.mock('@/components/presentation/foundation/segmented-control', () => ({
+  SegmentedControl: ({
+    testID,
+    options,
+    onChange,
+  }: {
+    testID?: string;
+    options: { value: string; label: string }[];
+    onChange: (value: string) => void;
+  }) => (
+    <div data-testid={testID}>
+      {options.map((option) => (
+        <button key={option.value} data-testid={`${testID}-${option.value}`} onClick={() => onChange(option.value)}>
+          {option.label}
+        </button>
+      ))}
+    </div>
+  ),
+}));
 vi.mock('@/components/presentation/foundation/ms-icon-source', () => ({ MsIconSrc: () => null }));
 vi.mock('@/components/presentation/foundation/haptics', () => ({ haptics: { selection: () => {} } }));
 vi.mock('@/components/presentation/foundation/number-pad', async () => ({
@@ -78,7 +98,11 @@ vi.mock('@/components/presentation/foundation/number-pad', async () => ({
   NumberPad: ({ visible, onAction }: { visible: boolean; onAction: (action: NumberPadAction) => void }) =>
     visible ? (
       <>
-        <button onClick={() => onAction({ type: 'digit', digit: '8' })}>8</button>
+        {(['0', '1', '2', '8', '9'] satisfies Digit[]).map((digit) => (
+          <button key={digit} onClick={() => onAction({ type: 'digit', digit })}>
+            {digit}
+          </button>
+        ))}
         <button onClick={() => onAction({ type: 'backspace' })}>Backspace</button>
       </>
     ) : null,
@@ -86,9 +110,13 @@ vi.mock('@/components/presentation/foundation/number-pad', async () => ({
 
 afterEach(cleanup);
 
-function openEditor(initial: WarmupsEditorProps['exercise']) {
+function openEditor(
+  initial: WarmupsEditorProps['exercise'],
+  options?: { workingWeight?: Weight | undefined; scaleWarmupsWithWorkingWeight?: boolean },
+) {
   let draft = initial;
   let saved = initial;
+  const workingWeight = options && 'workingWeight' in options ? options.workingWeight : new Weight(100, 'kilograms');
   function Harness() {
     const [exercise, setExercise] = useState(initial);
     const [open, setOpen] = useState(true);
@@ -99,11 +127,12 @@ function openEditor(initial: WarmupsEditorProps['exercise']) {
           draft = fn(draft);
           setExercise(draft);
         }}
-        workingWeight={new Weight(100, 'kilograms')}
+        workingWeight={workingWeight}
         bar={new Weight(20, 'kilograms')}
         preferredUnit="kilograms"
         stepFor={() => new BigNumber(2.5)}
         scopeNote="Applies to today"
+        scaleWarmupsWithWorkingWeight={options?.scaleWarmupsWithWorkingWeight}
         bottomInset={0}
         onDone={() => {
           saved = draft;
@@ -149,14 +178,14 @@ describe('warm-up sheet dismissal', () => {
     expect(editor.draft().warmupSets[0]?.load).toEqual({ type: 'absolute', weight: new Weight(8, 'kilograms') });
   });
 
-  it('restores the displayed opening value when the typed buffer is erased', () => {
+  it('keeps the minimum planned reps when the typed buffer is cleared', () => {
     const editor = openEditor(makeWeightedBlueprint({ warmupSets: [{ load: undefined, reps: 10 }] }));
     fireEvent.click(editor.view.getByTestId('warmups-reps-0'));
     fireEvent.click(editor.view.getByText('8'));
     expect(editor.draft().warmupSets[0]?.reps).toBe(8);
     fireEvent.click(editor.view.getByText('Backspace'));
     fireEvent.click(editor.view.getByTestId('warmups-done'));
-    expect(editor.saved().warmupSets[0]?.reps).toBe(10);
+    expect(editor.saved().warmupSets[0]?.reps).toBe(1);
   });
 
   it('clears a typed load when it had no opening weight', () => {
@@ -224,5 +253,97 @@ describe('warm-up sheet tap outside the pad', () => {
     fireEvent.click(editor.view.getByText('8'));
     fireEvent.click(editor.view.getByText('Backspace'));
     expect(editor.view.getByText('Backspace')).toBeTruthy();
+  });
+});
+
+describe('warm-up sheet cleared fields', () => {
+  it('leaves reps blank through repeated backspace and saves the minimum planned reps', () => {
+    const editor = openEditor(makeWeightedBlueprint({ warmupSets: [{ load: undefined, reps: 10 }] }));
+    const cell = editor.view.getByTestId('warmups-reps-0');
+    fireEvent.click(cell);
+    for (let press = 0; press < 4; press += 1) {
+      fireEvent.click(editor.view.getByText('Backspace'));
+    }
+    expect.soft(within(cell).queryByText(/\S/)).toBeNull();
+    expect(editor.draft().warmupSets[0]?.reps).toBe(1);
+    fireEvent.click(editor.view.getByTestId('warmups-done'));
+    expect(editor.saved().warmupSets[0]?.reps).toBe(1);
+  });
+
+  it.each(['absolute', 'percent'] as const)('leaves a cleared %s load blank and saves its zero meaning', (type) => {
+    const load = type === 'percent' ? { type, percent: 50 } : { type, weight: new Weight(20, 'kilograms') };
+    const editor = openEditor(makeWeightedBlueprint({ warmupSets: [{ load, reps: 10 }] }));
+    const cell = editor.view.getByTestId('warmups-load-0');
+    fireEvent.click(cell);
+    for (let press = 0; press < 4; press += 1) {
+      fireEvent.click(editor.view.getByText('Backspace'));
+    }
+    expect.soft(within(cell).queryByText(/\S/)).toBeNull();
+    fireEvent.click(editor.view.getByTestId('warmups-done'));
+    expect(editor.saved().warmupSets[0]?.load).toEqual(type === 'percent' ? { type, percent: 0 } : undefined);
+  });
+
+  it('limits the saved percentage to 100', () => {
+    const editor = openEditor(
+      makeWeightedBlueprint({ warmupSets: [{ load: { type: 'percent', percent: 50 }, reps: 10 }] }),
+    );
+    fireEvent.click(editor.view.getByTestId('warmups-load-0'));
+    for (const digit of ['9', '9', '9']) {
+      fireEvent.click(editor.view.getByText(digit));
+    }
+    fireEvent.click(editor.view.getByTestId('warmups-done'));
+    expect(editor.saved().warmupSets[0]?.load).toEqual({ type: 'percent', percent: 100 });
+  });
+});
+
+describe('warm-up sheet load type switch and scaling copy', () => {
+  it('pre-fills the resolved weight when switching a percentage warm-up to a fixed weight', () => {
+    const editor = openEditor(
+      makeWeightedBlueprint({ warmupSets: [{ load: { type: 'percent', percent: 50 }, reps: 8 }] }),
+      { workingWeight: new Weight(105, 'kilograms') },
+    );
+    fireEvent.click(editor.view.getByTestId('warmups-load-0'));
+    fireEvent.click(editor.view.getByTestId('warmups-load-type-absolute'));
+    fireEvent.click(editor.view.getByTestId('warmups-done'));
+    expect(editor.saved().warmupSets[0]?.load).toEqual({ type: 'absolute', weight: new Weight(52.5, 'kilograms') });
+  });
+
+  it('starts a fixed weight empty when switching without a known working weight', () => {
+    const editor = openEditor(
+      makeWeightedBlueprint({ warmupSets: [{ load: { type: 'percent', percent: 50 }, reps: 8 }] }),
+      { workingWeight: undefined },
+    );
+    fireEvent.click(editor.view.getByTestId('warmups-load-0'));
+    fireEvent.click(editor.view.getByTestId('warmups-load-type-absolute'));
+    fireEvent.click(editor.view.getByTestId('warmups-done'));
+    expect(editor.saved().warmupSets[0]?.load).toBeUndefined();
+  });
+
+  it('shows the carry-over note only when auto-scaling is off and percentage warm-ups exist', () => {
+    const percentPlan = makeWeightedBlueprint({ warmupSets: [{ load: { type: 'percent', percent: 50 }, reps: 8 }] });
+    const fixedPlan = makeWeightedBlueprint({
+      warmupSets: [{ load: { type: 'absolute', weight: new Weight(20, 'kilograms') }, reps: 8 }],
+    });
+
+    const offPercent = openEditor(percentPlan, { scaleWarmupsWithWorkingWeight: false });
+    expect(offPercent.view.getByTestId('warmups-carry-over-note')).toBeTruthy();
+    expect(
+      within(offPercent.view.getByTestId('warmups-working-weight')).getByText(
+        'exercise_editor.warmups.working_weight_initial.label',
+      ),
+    ).toBeTruthy();
+    offPercent.view.unmount();
+
+    const onPercent = openEditor(percentPlan, { scaleWarmupsWithWorkingWeight: true });
+    expect(onPercent.view.queryByTestId('warmups-carry-over-note')).toBeNull();
+    expect(
+      within(onPercent.view.getByTestId('warmups-working-weight')).getByText(
+        'exercise_editor.warmups.working_weight.label',
+      ),
+    ).toBeTruthy();
+    onPercent.view.unmount();
+
+    const offFixed = openEditor(fixedPlan, { scaleWarmupsWithWorkingWeight: false });
+    expect(offFixed.view.queryByTestId('warmups-carry-over-note')).toBeNull();
   });
 });

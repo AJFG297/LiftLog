@@ -2,6 +2,7 @@ import { SurfaceText } from '@/components/presentation/foundation/surface-text';
 import {
   hiddenToast,
   toastReducer,
+  swipeDismisses,
   toastTimeoutMs,
   type Toast,
   type ToastContent,
@@ -11,6 +12,7 @@ import { spacing, useAppTheme } from '@/hooks/useAppTheme';
 import { useTranslate } from '@tolgee/react';
 import { createContext, ReactNode, useContext, useEffect, useReducer, useRef, useState } from 'react';
 import { AccessibilityActionEvent, AccessibilityInfo, Pressable, View } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { scheduleOnRN } from 'react-native-worklets';
@@ -21,6 +23,7 @@ const ENTER_MS = 200;
 const EXIT_MS = 150;
 /** Can't measure the tab bar from above the navigator, so assume an 80pt bar plus an 8pt gap. */
 const TAB_BAR_CLEARANCE = 88;
+const SETTLE_MS = 180;
 
 interface ToastApi {
   /** Shows `content`, replacing any toast already on screen. */
@@ -111,6 +114,8 @@ function ToastView({
   const { t } = useTranslate();
   const insets = useSafeAreaInsets();
   const presence = useSharedValue(0);
+  const drag = useSharedValue(0);
+  const width = useSharedValue(0);
   // Offered wherever screen-reader focus is in the toast, since an actionable one doesn't time out for them.
   const dismissAction = {
     accessibilityActions: [{ name: 'dismiss', label: t('generic.dismiss.button') }],
@@ -137,9 +142,28 @@ function ToastView({
     }
   }, [leaving, presence, onExited]);
 
+  // Fails on a vertical move and activates only after a clear horizontal one, so a tap on Undo still presses.
+  const swipe = Gesture.Pan()
+    .enabled(!leaving)
+    .activeOffsetX([-12, 12])
+    .failOffsetY([-12, 12])
+    .onUpdate((event) => {
+      drag.set(event.translationX);
+    })
+    // `success` is false when the system cancels the pan (say, the notification shade takes the touch), which
+    // shouldn't throw away the toast's Undo.
+    .onEnd((event, success) => {
+      if (success && swipeDismisses(event.translationX, event.velocityX, width.get())) {
+        drag.set(withTiming(Math.sign(event.translationX) * width.get(), { duration: EXIT_MS }));
+        scheduleOnRN(onDismiss);
+      } else {
+        drag.set(withTiming(0, { duration: SETTLE_MS }));
+      }
+    });
+
   const animatedStyle = useAnimatedStyle(() => ({
     opacity: presence.get(),
-    transform: [{ translateY: (1 - presence.get()) * spacing[4] }],
+    transform: [{ translateY: (1 - presence.get()) * spacing[4] }, { translateX: drag.get() }],
   }));
 
   return (
@@ -152,56 +176,59 @@ function ToastView({
         bottom: insets.bottom + TAB_BAR_CLEARANCE,
       }}
     >
-      <Animated.View
-        pointerEvents={leaving ? 'none' : 'auto'}
-        onAccessibilityEscape={onDismiss}
-        style={[
-          {
-            flexDirection: 'row',
-            alignItems: 'center',
-            minHeight: spacing[12],
-            paddingLeft: spacing[4],
-            paddingRight: toast.action ? spacing[1] : spacing[4],
-            paddingVertical: spacing[1],
-            gap: spacing[2],
-            borderRadius: 14,
-            backgroundColor: tokens.inverse,
-          },
-          animatedStyle,
-        ]}
-      >
-        <SurfaceText
-          {...dismissAction}
-          font="text-sm"
-          style={{ flex: 1, color: tokens.inverseInk, paddingVertical: spacing[2] }}
-        >
-          {toast.message}
-        </SurfaceText>
-        {toast.action && (
-          <Pressable
-            onPress={() => {
-              toast.action?.onPress();
-              onDismiss();
-            }}
-            {...dismissAction}
-            accessibilityRole="button"
-            accessibilityLabel={toast.action.label}
-            style={({ pressed }) => ({
-              minHeight: MIN_TOUCH_TARGET,
-              minWidth: MIN_TOUCH_TARGET,
-              paddingHorizontal: spacing[3],
-              borderRadius: 10,
+      <GestureDetector gesture={swipe}>
+        <Animated.View
+          pointerEvents={leaving ? 'none' : 'auto'}
+          onLayout={(event) => width.set(event.nativeEvent.layout.width)}
+          onAccessibilityEscape={onDismiss}
+          style={[
+            {
+              flexDirection: 'row',
               alignItems: 'center',
-              justifyContent: 'center',
-              backgroundColor: pressed ? tokens.inverseRaised : 'transparent',
-            })}
+              minHeight: spacing[12],
+              paddingLeft: spacing[4],
+              paddingRight: toast.action ? spacing[1] : spacing[4],
+              paddingVertical: spacing[1],
+              gap: spacing[2],
+              borderRadius: 14,
+              backgroundColor: tokens.inverse,
+            },
+            animatedStyle,
+          ]}
+        >
+          <SurfaceText
+            {...dismissAction}
+            font="text-sm"
+            style={{ flex: 1, color: tokens.inverseInk, paddingVertical: spacing[2] }}
           >
-            <SurfaceText font="text-sm" weight="600" style={{ color: tokens.invAccent }}>
-              {toast.action.label}
-            </SurfaceText>
-          </Pressable>
-        )}
-      </Animated.View>
+            {toast.message}
+          </SurfaceText>
+          {toast.action && (
+            <Pressable
+              onPress={() => {
+                toast.action?.onPress();
+                onDismiss();
+              }}
+              {...dismissAction}
+              accessibilityRole="button"
+              accessibilityLabel={toast.action.label}
+              style={({ pressed }) => ({
+                minHeight: MIN_TOUCH_TARGET,
+                minWidth: MIN_TOUCH_TARGET,
+                paddingHorizontal: spacing[3],
+                borderRadius: 10,
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: pressed ? tokens.inverseRaised : 'transparent',
+              })}
+            >
+              <SurfaceText font="text-sm" weight="600" style={{ color: tokens.invAccent }}>
+                {toast.action.label}
+              </SurfaceText>
+            </Pressable>
+          )}
+        </Animated.View>
+      </GestureDetector>
     </View>
   );
 }

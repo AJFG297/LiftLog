@@ -1,5 +1,5 @@
 import { lineageKeys, MovementKey, SessionBlueprint, WeightedExerciseBlueprint } from '@/models/blueprint-models';
-import { LatestByLineage, nextRecordedExercise } from '@/models/session-models/carry-over';
+import { CarryOverOptions, LatestByLineage, nextRecordedExercise } from '@/models/session-models/carry-over';
 import type { RecordedExercise } from '@/models/session-models/recorded-exercise';
 import { RecordedWeightedExercise } from '@/models/session-models/recorded-weighted-exercise';
 import { carriedFrom, TodaysTarget, todaysTarget } from '@/models/session-models/todays-target';
@@ -10,9 +10,12 @@ export function nextSessionExercises(
   routine: SessionBlueprint,
   latest: LatestByLineage,
   unit: WeightUnit,
+  options?: CarryOverOptions,
 ): RecordedExercise[] {
   const lineages = lineageKeys(routine.exercises);
-  return routine.exercises.map((planned, index) => nextRecordedExercise(planned, lineages[index]!, latest, unit));
+  return routine.exercises.map((planned, index) =>
+    nextRecordedExercise(planned, lineages[index]!, latest, unit, options),
+  );
 }
 
 /** What the next session that plans an exercise opens it on, and why. */

@@ -1,4 +1,5 @@
 import {
+  alignWarmupPlans,
   MovementKey,
   PlannedWarmupSet,
   ProgressionKey,
@@ -8,6 +9,7 @@ import {
   roundWarmupWeight,
   uniformTarget,
   warmupIncrementFor,
+  warmupLoadsEqual,
 } from '@/models/blueprint-models';
 import { RecordedExercise } from '@/models/session-models/recorded-exercise';
 
@@ -61,9 +63,10 @@ export class RecordedWeightedExercise {
   readonly type = 'RecordedWeightedExercise';
 
   /**
-   * One slot per planned warm-up, done before the working sets. Rebuilt from the plan at session
-   * start rather than carried over (see {@link withWarmupsFromPlan}), and never given an RPE. Every
-   * slot here is a warm-up whatever it was built as.
+   * One slot per planned warm-up, done before the working sets. Carried over from last session's warm-up
+   * weight by default (see {@link withWarmupsCarriedFrom}), or rebuilt from the plan when scaling warm-ups
+   * with working weight is enabled (see {@link withWarmupsFromPlan}), and never given an RPE. Every slot
+   * here is a warm-up whatever it was built as.
    */
   readonly warmupSets: PotentialSet[];
 
@@ -123,6 +126,41 @@ export class RecordedWeightedExercise {
   withWarmupsFromPlan(fallbackUnit: WeightUnit): RecordedWeightedExercise {
     return this.with({
       warmupSets: this.blueprint.warmupSets.map((warmup) => this.warmupSlotFor(warmup, fallbackUnit)),
+    });
+  }
+
+  /**
+   * The warm-up slots for a new session that keeps last session's warm-up weights: each planned warm-up
+   * aligned with an unchanged load from `last` carries that slot's weight (whether logged or skipped,
+   * provided it had a weight), while new or re-planned warm-ups resolve from the plan. Reps always come
+   * from the plan.
+   */
+  withWarmupsCarriedFrom(last: RecordedWeightedExercise, fallbackUnit: WeightUnit): RecordedWeightedExercise {
+    const heaviest = this.heaviestWorkingWeight;
+    const sessionUnit = heaviest && heaviest.unit !== 'nil' ? heaviest.unit : fallbackUnit;
+    const planned = this.blueprint.warmupSets;
+    const aligned = alignWarmupPlans(last.blueprint.warmupSets, planned, (a, b) => warmupLoadsEqual(a.load, b.load));
+    return this.with({
+      warmupSets: planned.map((warmup, index) => {
+        const lastIndex = aligned[index];
+        const plannedBefore = lastIndex !== undefined ? last.blueprint.warmupSets[lastIndex] : undefined;
+        const lastSlot = lastIndex !== undefined ? last.warmupSets[lastIndex] : undefined;
+        if (
+          this.tracksResistance &&
+          lastSlot &&
+          plannedBefore &&
+          warmupLoadsEqual(warmup.load, plannedBefore.load) &&
+          (lastSlot.set !== undefined || !lastSlot.weight.value.isZero())
+        ) {
+          const unit = lastSlot.weight.unit === 'nil' ? sessionUnit : lastSlot.weight.unit;
+          return PotentialSet.of({
+            weight: new Weight(lastSlot.weight.value, unit),
+            target: { min: warmup.reps, max: warmup.reps },
+            kind: 'warmup',
+          });
+        }
+        return this.warmupSlotFor(warmup, fallbackUnit);
+      }),
     });
   }
 
@@ -252,8 +290,9 @@ export class RecordedWeightedExercise {
   }
 
   /**
-   * A warm-up's weight for this session only. The plan is left alone, so the edit never reaches the
-   * save-to-plan prompt, and the next session rebuilds the warm-up from the plan.
+   * Updates a warm-up's weight for this session without altering the routine blueprint (so it never
+   * triggers the save-to-routine prompt). The next session carries this weight forward unless scaling
+   * warm-ups with working weight is enabled.
    */
   withWarmupWeight(warmupIndex: number, weight: Weight): RecordedWeightedExercise {
     return this.withSlot({ list: 'warmup', index: warmupIndex }, (s) => s.with({ weight }));
@@ -291,28 +330,43 @@ export class RecordedWeightedExercise {
     });
   }
 
-  withWeight(setIndex: number, weight: Weight, applyTo: WeightAppliesTo) {
+  withWeight(
+    setIndex: number,
+    weight: Weight,
+    applyTo: WeightAppliesTo,
+    options: { scaleWarmupsWithWorkingWeight?: boolean } = {},
+  ) {
     return match(applyTo)
       .with('thisSet', () => this.withSet(setIndex, (s) => s.with({ weight })))
       .with('uncompletedSets', () => this.withAllSets((s) => s.with({ weight: s.set ? s.weight : weight })))
       .with('allSets', () => this.withAllSets((s) => s.with({ weight })))
       .exhaustive()
-      .withPercentWarmupsFollowing(this, weight.unit);
+      .withPercentWarmupsFollowing(this, weight.unit, options.scaleWarmupsWithWorkingWeight ?? false);
   }
 
   /**
-   * Unlogged percentage warm-ups follow the working weight as it changes during the workout - on an
-   * exercise's first session it starts at zero, so they would otherwise stay at zero. A warm-up whose
-   * weight no longer matches what the plan made of `before` was given one of its own, and keeps it.
+   * Updates unlogged percentage warm-ups when the working weight changes during the workout.
+   * When `scaleWithWorkingWeight` is true, any unlogged percentage warm-up still matching what the plan
+   * made of `before` tracks the new working weight (a manually overridden one keeps its weight).
+   * When `scaleWithWorkingWeight` is false, already-seeded warm-ups stay put; only a fresh zero-weight
+   * percentage warm-up (first session, before any working weight existed) populates from the plan.
    */
-  withPercentWarmupsFollowing(before: RecordedWeightedExercise, fallbackUnit: WeightUnit) {
+  withPercentWarmupsFollowing(
+    before: RecordedWeightedExercise,
+    fallbackUnit: WeightUnit,
+    scaleWithWorkingWeight = false,
+  ) {
     return this.with({
       warmupSets: this.warmupSets.map((slot, index) => {
         const planned = this.blueprint.warmupSets[index];
         if (slot.set || planned?.load?.type !== 'percent') {
           return slot;
         }
-        if (!slot.weight.equals(before.warmupSlotFor(planned, fallbackUnit).weight)) {
+        const beforePlanned = before.warmupSlotFor(planned, fallbackUnit).weight;
+        if (!slot.weight.equals(beforePlanned)) {
+          return slot;
+        }
+        if (!scaleWithWorkingWeight && !slot.weight.value.isZero()) {
           return slot;
         }
         return slot.with({ weight: this.warmupSlotFor(planned, fallbackUnit).weight });

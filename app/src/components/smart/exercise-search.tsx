@@ -11,7 +11,7 @@ import {
   pickerListOf,
   type PickerRow,
   type PickerSection,
-  recentExerciseIds,
+  loggedExerciseIds,
   toggledPick,
 } from '@/components/presentation/workout-editor/exercise-picker';
 import { type ChipOption, ChipRow } from '@/components/presentation/foundation/chip-row';
@@ -22,7 +22,6 @@ import {
   ExercisePickerRow,
   ExercisePickerSectionHeader,
 } from '@/components/presentation/workout-editor/exercise-picker-row';
-import { searchSeedFor } from '@/components/presentation/workout-editor/filter-exercises';
 import { spacing, useAppTheme } from '@/hooks/useAppTheme';
 import { MUSCLE_GROUPS, type MuscleGroup, musclesForGroup } from '@/models/muscle-groups';
 import type { ExercisePickerMode } from '@/hooks/useExerciseSearch';
@@ -45,8 +44,8 @@ type TranslateFn = ReturnType<typeof useTranslate>['t'];
 interface ExerciseSearchProps {
   requestId: string;
   mode: ExercisePickerMode;
-  /** The exercise being swapped out, if any. */
-  exerciseName: string;
+  /** The id of the exercise being swapped out, if any. */
+  swapping: string | undefined;
   /** The routine or workout the pick lands in, for "already in Push". */
   context: { name: string; exerciseIds: string[] } | undefined;
 }
@@ -62,7 +61,7 @@ interface CreateDraft {
  * exercises in order and the bottom buttons add them, one after another or as a superset. Swapping, one tap
  * picks. New (or Create "X" when nothing matches) makes a custom exercise and picks it.
  */
-export function ExerciseSearch({ requestId, mode, exerciseName, context }: ExerciseSearchProps) {
+export function ExerciseSearch({ requestId, mode, swapping, context }: ExerciseSearchProps) {
   const { t } = useTranslate();
   const { tokens } = useAppTheme();
   const dispatch = useDispatch();
@@ -76,8 +75,7 @@ export function ExerciseSearch({ requestId, mode, exerciseName, context }: Exerc
   const catalogMuscles = useAppSelector(selectMuscles);
   const multiSelect = mode === 'add';
 
-  // Swapping opens on the exercise's own name when it names one, so the list starts on it.
-  const [query, setQuery] = useState(() => searchSeedFor(exercises, exerciseName));
+  const [query, setQuery] = useState('');
   const [muscle, setMuscle] = useState<MuscleGroup | undefined>(undefined);
   const [equipment, setEquipment] = useState<EquipmentChoice | undefined>(undefined);
   const [picked, setPicked] = useState<string[]>([]);
@@ -95,8 +93,8 @@ export function ExerciseSearch({ requestId, mode, exerciseName, context }: Exerc
     return () => subscription.remove();
   }, [creating]);
 
-  const recentIds = recentExerciseIds(Object.values(latestExercises), exercises);
-  const list = pickerListOf(exercises, recentIds, { query, muscle, equipment });
+  const loggedIds = loggedExerciseIds(Object.values(latestExercises), exercises);
+  const list = pickerListOf(exercises, loggedIds, { query, muscle, equipment }, { swapping });
   const alreadyIn = new Set(context?.exerciseIds ?? []);
 
   const finish = (chosen: PickedExercise[], asSuperset: boolean) => {
@@ -472,6 +470,8 @@ function HeaderTextButton({ label, color, onPress, disabled, accessibilityHint, 
 
 function sectionLabel(t: TranslateFn, section: PickerSection): string {
   switch (section) {
+    case 'similar':
+      return t('exercise_picker.section.similar');
     case 'recent':
       return t('exercise_picker.section.recent');
     case 'all':

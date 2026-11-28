@@ -127,12 +127,15 @@ export function withWarmupLoadTypeAt(
   exercise: WeightedExerciseBlueprint,
   index: number,
   type: WarmupLoadType,
+  resolvedWeight?: Weight,
 ): WeightedExerciseBlueprint {
   const warmup = exercise.warmupSets[index];
   if (!warmup || !warmupLoadTypesFor(exercise.resistance).includes(type)) {
     return exercise;
   }
-  return exercise.with({ warmupSets: exercise.warmupSets.with(index, withWarmupLoadType(warmup, type)) });
+  return exercise.with({
+    warmupSets: exercise.warmupSets.with(index, withWarmupLoadType(warmup, type, resolvedWeight)),
+  });
 }
 
 /**
@@ -159,9 +162,14 @@ export function workingWeightOf(sets: readonly { weight: Weight }[]): Weight | u
   return heaviest && heaviest.value.isGreaterThan(0) ? heaviest : undefined;
 }
 
-/** `Working weight 65 kg · % is of that`: the warm-up sheet's line under its title. */
-export function workingWeightNote(t: TranslateFn, working: Weight): string {
-  return t('exercise_editor.warmups.working_weight.label', { weight: spacedWeight(working) });
+/** The warm-up sheet's line under its title: what percentages resolve against, and whether they keep scaling. */
+export function workingWeightNote(t: TranslateFn, working: Weight, scaleWithWorkingWeight = false): string {
+  return t(
+    scaleWithWorkingWeight
+      ? 'exercise_editor.warmups.working_weight.label'
+      : 'exercise_editor.warmups.working_weight_initial.label',
+    { weight: spacedWeight(working) },
+  );
 }
 
 /** `= 32.5 kg`: what a percentage warm-up works out to. */

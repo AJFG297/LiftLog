@@ -139,6 +139,7 @@ function WarmupsSheet(props: {
   const insets = useSafeAreaInsets();
   const catalog = useAppSelector(selectExercises);
   const barWeight = useAppSelector((x) => x.settings.barWeight);
+  const scaleWarmupsWithWorkingWeight = useAppSelector((x) => x.settings.scaleWarmupsWithWorkingWeight);
   const preferred = usePreferredWeightUnit();
   const preferredUnit: LoadUnit = preferred === 'pounds' ? 'pounds' : 'kilograms';
   // A second tap while the sheet animates away would go back past what opened it.
@@ -155,6 +156,7 @@ function WarmupsSheet(props: {
         preferredUnit={preferredUnit}
         stepFor={(unit) => weightStepFor(equipment, unit, props.exercise.weightIncrement)}
         scopeNote={warmupsScopeNote(t, props.scope)}
+        scaleWarmupsWithWorkingWeight={scaleWarmupsWithWorkingWeight}
         bottomInset={insets.bottom}
         onDone={() => {
           if (closing) {

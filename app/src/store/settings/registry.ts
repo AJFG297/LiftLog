@@ -78,9 +78,12 @@ export const preferenceRegistry = {
   // On by default: the summary is where a finished workout shows its progress.
   showPostWorkoutSummary: pref({ default: true, codec: boolCodec }),
   logRpe: pref({ default: false, codec: boolCodec }),
+  // Off by default: keep last session's warm-up weights instead of rescaling % warm-ups on progression.
+  scaleWarmupsWithWorkingWeight: pref({ default: false, codec: boolCodec }),
   trueBlackDarkTheme: pref({ default: false, codec: boolCodec }),
   tipToShow: pref({ default: 1, codec: intCodec }),
   lastSeenWhatsNewId: pref({ default: 0, codec: intCodec }),
+  dismissedAndroidPreviewReleaseId: pref<string | undefined>({ default: undefined, codec: stringCodec }),
   colorSchemeSeed: pref<ColorSchemeSeed>({ default: 'default', codec: colorSchemeSeedCodec }),
   themeMode: pref<ThemeMode>({ default: 'system', codec: themeModeCodec }),
   plansSortOrder: pref<PlansSortOrder>({ default: 'name', codec: plansSortOrderCodec }),

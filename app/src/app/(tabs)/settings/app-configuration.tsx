@@ -8,6 +8,7 @@ import {
   setShowFeed,
   setShowPostWorkoutSummary,
   setLogRpe,
+  setScaleWarmupsWithWorkingWeight,
   setThemeMode,
   setTrueBlackDarkTheme,
   setWelcomeWizardCompleted,
@@ -58,6 +59,14 @@ export default function AppConfigurationPage() {
           supportingText={t('workout.log_rpe.subtitle')}
           value={settings.logRpe}
           onValueChange={(value) => dispatch(setLogRpe(value))}
+        />
+        <SegmentedListSwitch
+          testID="setScaleWarmupsWithWorkingWeight"
+          label={t('workout.scale_warmups_with_working_weight.label')}
+          icon={'localFireDepartment'}
+          supportingText={t('workout.scale_warmups_with_working_weight.subtitle')}
+          value={settings.scaleWarmupsWithWorkingWeight}
+          onValueChange={(value) => dispatch(setScaleWarmupsWithWorkingWeight(value))}
         />
         <SegmentedListSwitch
           label={t('workout.notes_expanded_by_default.label')}

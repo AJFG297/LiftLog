@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   hiddenToast,
   toastReducer,
+  swipeDismisses,
   toastTimeoutMs,
   type ToastEvent,
   type ToastState,
@@ -101,5 +102,23 @@ describe('toastTimeoutMs', () => {
   it('keeps an actionable toast up for a screen reader, and times out one without an action', () => {
     expect(toastTimeoutMs(undo, true)).toBeUndefined();
     expect(toastTimeoutMs(plain, true)).toBe(5000);
+  });
+});
+
+describe('swipeDismisses', () => {
+  it('dismisses a drag past a third of the width, in either direction', () => {
+    expect(swipeDismisses(-150, 0, 340)).toBe(true);
+    expect(swipeDismisses(150, 0, 340)).toBe(true);
+  });
+
+  it('springs back from a short, slow drag', () => {
+    expect(swipeDismisses(60, 100, 340)).toBe(false);
+    expect(swipeDismisses(-60, -100, 340)).toBe(false);
+  });
+
+  it('dismisses a fast fling from a short drag, but not a twitch or a fling back against the drag', () => {
+    expect(swipeDismisses(-60, -1500, 340)).toBe(true);
+    expect(swipeDismisses(-10, -1500, 340)).toBe(false);
+    expect(swipeDismisses(-60, 1500, 340)).toBe(false);
   });
 });
