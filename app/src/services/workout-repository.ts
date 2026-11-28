@@ -796,7 +796,7 @@ export class WorkoutRepository {
         ...alsoWrite(tx),
       ]);
       if (stampedWorkoutIds.length) {
-        this.notify({ workoutIds: stampedWorkoutIds, activeChanged: false });
+        await this.notify({ workoutIds: stampedWorkoutIds, activeChanged: false });
       }
     });
   }
