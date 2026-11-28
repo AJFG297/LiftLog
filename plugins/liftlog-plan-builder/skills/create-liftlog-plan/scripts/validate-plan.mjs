@@ -2030,8 +2030,8 @@ var require_validate_schema = __commonJS({
             }
             errors++;
           }
-          if (10 !== data0) {
-            const err5 = { instancePath: instancePath + "/version", schemaPath: "#/properties/version/const", keyword: "const", params: { allowedValue: 10 }, message: "must be equal to constant" };
+          if (11 !== data0) {
+            const err5 = { instancePath: instancePath + "/version", schemaPath: "#/properties/version/const", keyword: "const", params: { allowedValue: 11 }, message: "must be equal to constant" };
             if (vErrors === null) {
               vErrors = [err5];
             } else {
@@ -2051,18 +2051,9 @@ var require_validate_schema = __commonJS({
             errors++;
           }
         }
-        if (data.exercises !== void 0) {
-          let data2 = data.exercises;
-          if (Array.isArray(data2)) {
-            const len0 = data2.length;
-            for (let i0 = 0; i0 < len0; i0++) {
-              if (!validate12(data2[i0], { instancePath: instancePath + "/exercises/" + i0, parentData: data2, parentDataProperty: i0, rootData })) {
-                vErrors = vErrors === null ? validate12.errors : vErrors.concat(validate12.errors);
-                errors = vErrors.length;
-              }
-            }
-          } else {
-            const err7 = { instancePath: instancePath + "/exercises", schemaPath: "#/properties/exercises/type", keyword: "type", params: { type: "array" }, message: "must be array" };
+        if (data.id !== void 0) {
+          if (typeof data.id !== "string") {
+            const err7 = { instancePath: instancePath + "/id", schemaPath: "#/properties/id/type", keyword: "type", params: { type: "string" }, message: "must be string" };
             if (vErrors === null) {
               vErrors = [err7];
             } else {
@@ -2071,9 +2062,18 @@ var require_validate_schema = __commonJS({
             errors++;
           }
         }
-        if (data.notes !== void 0) {
-          if (typeof data.notes !== "string") {
-            const err8 = { instancePath: instancePath + "/notes", schemaPath: "#/properties/notes/type", keyword: "type", params: { type: "string" }, message: "must be string" };
+        if (data.exercises !== void 0) {
+          let data3 = data.exercises;
+          if (Array.isArray(data3)) {
+            const len0 = data3.length;
+            for (let i0 = 0; i0 < len0; i0++) {
+              if (!validate12(data3[i0], { instancePath: instancePath + "/exercises/" + i0, parentData: data3, parentDataProperty: i0, rootData })) {
+                vErrors = vErrors === null ? validate12.errors : vErrors.concat(validate12.errors);
+                errors = vErrors.length;
+              }
+            }
+          } else {
+            const err8 = { instancePath: instancePath + "/exercises", schemaPath: "#/properties/exercises/type", keyword: "type", params: { type: "array" }, message: "must be array" };
             if (vErrors === null) {
               vErrors = [err8];
             } else {
@@ -2082,9 +2082,9 @@ var require_validate_schema = __commonJS({
             errors++;
           }
         }
-        if (data.color !== void 0) {
-          if (typeof data.color !== "string") {
-            const err9 = { instancePath: instancePath + "/color", schemaPath: "#/properties/color/type", keyword: "type", params: { type: "string" }, message: "must be string" };
+        if (data.notes !== void 0) {
+          if (typeof data.notes !== "string") {
+            const err9 = { instancePath: instancePath + "/notes", schemaPath: "#/properties/notes/type", keyword: "type", params: { type: "string" }, message: "must be string" };
             if (vErrors === null) {
               vErrors = [err9];
             } else {
@@ -2093,12 +2093,23 @@ var require_validate_schema = __commonJS({
             errors++;
           }
         }
+        if (data.color !== void 0) {
+          if (typeof data.color !== "string") {
+            const err10 = { instancePath: instancePath + "/color", schemaPath: "#/properties/color/type", keyword: "type", params: { type: "string" }, message: "must be string" };
+            if (vErrors === null) {
+              vErrors = [err10];
+            } else {
+              vErrors.push(err10);
+            }
+            errors++;
+          }
+        }
       } else {
-        const err10 = { instancePath, schemaPath: "#/type", keyword: "type", params: { type: "object" }, message: "must be object" };
+        const err11 = { instancePath, schemaPath: "#/type", keyword: "type", params: { type: "object" }, message: "must be object" };
         if (vErrors === null) {
-          vErrors = [err10];
+          vErrors = [err11];
         } else {
-          vErrors.push(err10);
+          vErrors.push(err11);
         }
         errors++;
       }

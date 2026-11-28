@@ -5,6 +5,7 @@ import { openDatabaseAsync } from 'expo-sqlite';
 import { LocalDate, OffsetDateTime, ZoneOffset } from '@js-joda/core';
 import { DatabaseMigrationService } from '@/services/database-migration-service';
 import { DatabaseImportService } from '@/services/database-import-service';
+import { linkRoutineIds } from '@/services/data-migrations/link-routine-ids';
 import { WorkoutRepository } from '@/services/workout-repository';
 import { SessionService } from '@/services/session-service';
 import {
@@ -302,6 +303,7 @@ describe('mergeExerciseNames', () => {
       { id: 'user-lunge', payload: toExerciseDescriptorJSON(stubDescriptor('Lunge')) },
       { id: stubExerciseId('Sissy Squat'), payload: toExerciseDescriptorJSON(stubDescriptor('Sissy Squat')) },
     ]);
+    await linkRoutineIds(db);
     const before = await tables(db);
     const repoint = vi.spyOn(WorkoutRepository.prototype, 'repointExercises');
 

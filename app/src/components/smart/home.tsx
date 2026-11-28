@@ -17,7 +17,7 @@ import { useOwnActivity, usePersonalRecords, useStreakStats } from '@/hooks/useO
 import { usePreferredWeightSuffix } from '@/hooks/usePreferredWeightUnit';
 import { useStartWorkoutWithConfirmation } from '@/hooks/useStartWorkoutWithConfirmation';
 import { useToday } from '@/hooks/useToday';
-import { useWorkoutQuery } from '@/hooks/useWorkoutQuery';
+import { listDep, useWorkoutQuery } from '@/hooks/useWorkoutQuery';
 import {
   HistoryDay,
   HistoryRange,
@@ -33,7 +33,7 @@ import { Session } from '@/models/session-models';
 import { Weight } from '@/models/weight';
 import { useAppSelector } from '@/store';
 import { publishUnpublishedSessions } from '@/store/feed';
-import { fetchUpcomingSessions, selectActiveProgram } from '@/store/program';
+import { fetchUpcomingSessions, selectActiveProgram, selectLiveRoutineIds } from '@/store/program';
 import { executeRemoteBackup } from '@/store/settings';
 import { selectActiveSessionId } from '@/store/stored-sessions';
 import { LocalDate } from '@js-joda/core';
@@ -84,13 +84,18 @@ export function Home() {
   // Undefined while the plans load, or once the active plan has been deleted.
   const plan: ProgramBlueprint | undefined = useAppSelector(selectActiveProgram);
   const nextSession = upcoming.map((x) => x.at(0)).unwrapOr(undefined);
+  const liveRoutineIds = useAppSelector(selectLiveRoutineIds);
   const nextSessionName = nextSession?.blueprint.name;
+  const nextRoutineId = nextSession?.blueprint.id;
   const pastRunsOfNext = useWorkoutQuery(
     (repository) =>
       nextSessionName === undefined
         ? Promise.resolve([])
-        : repository.latestNamed(nextSessionName, UP_NEXT_PAST_WORKOUTS),
-    [nextSessionName],
+        : repository.latestNamed(nextSessionName, UP_NEXT_PAST_WORKOUTS, {
+            routineId: nextRoutineId,
+            liveRoutineIds,
+          }),
+    [nextSessionName, nextRoutineId, listDep(liveRoutineIds)],
   );
 
   useFocusEffect(() => {

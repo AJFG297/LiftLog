@@ -74,8 +74,10 @@ describe('finishing from the workout notification', () => {
     tapNotificationFinish();
 
     const pending = store.getState().program.pendingPlanDiff;
+    const saved = store.getState().program.savedPrograms[PLAN_ID]?.sessions[0];
     expect(pending).toMatchObject({ type: 'diff', programId: PLAN_ID, sessionIndex: 0 });
-    expect(pending?.diff.originalSession).toBe(routine);
+    expect(pending?.diff.originalSession).toBe(saved);
+    expect(saved?.equals(routine)).toBe(true);
     expect(pending?.diff.newSession).toBe(session.blueprint);
     expect(pending?.diff.addedExercises.map((x) => [x.exercise.name, x.newIndex])).toEqual([['Deadlift', 2]]);
     expect(offers.map((stillPending) => stillPending())).toEqual([true]);

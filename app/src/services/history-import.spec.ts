@@ -431,10 +431,13 @@ describe('HistoryImport', () => {
         data: { workouts: [restored], programs: { restored: restoredProgram }, exercises: {} },
       }),
     ).toEqual({ kind: 'complete', count: 1 });
-    expect((await f.repository.get('restored'))?.toJSON()).toEqual(restored.toJSON());
+    const saved = f.app.getState().program.savedPrograms.restored;
+    const got = await f.repository.get('restored');
+    expect(got?.equals(restored)).toBe(true);
+    expect(got?.blueprint.id).toBe(saved?.sessions[0]?.id);
     expect((await f.repository.active())?.id).toBe('current');
     expect(f.app.getState().storedSessions.activeSessionId).toBe('current');
-    expect(f.app.getState().program.savedPrograms.restored?.toJSON()).toEqual(restoredProgram.toJSON());
+    expect(saved?.equals(restoredProgram)).toBe(true);
     expect((await f.db.select().from(workoutsSchema)).map((row) => [row.id, row.active])).toEqual([
       ['current', true],
       ['restored', false],
@@ -1124,5 +1127,33 @@ describe('HistoryImport', () => {
       count: 1,
     });
     expect(f.app.getState().stats.isDirty).toBe(true);
+  });
+
+  it('reports routine-id stamping failure under repair and stamps on retry', async () => {
+    const f = await fixture({ programs: { plan: program('Plan', lunge) } });
+    const routineId = f.app.getState().program.savedPrograms.plan?.sessions[0]?.id;
+    const error = new Error('stamp routine ids failed');
+    vi.spyOn(f.repository, 'stampRoutineIds').mockRejectedValueOnce(error);
+
+    const first = failed(
+      await f.owner.apply({ kind: 'external', data: { workouts: [workout('imported')], programs: {} } }),
+    );
+    expect(first).toMatchObject({
+      stage: 'repair',
+      error,
+      durableStages: ['descriptors', 'programs', 'workouts'],
+      pending: 'repair-and-cache',
+    });
+    expect((await f.repository.get('imported'))?.blueprint.id).toBeUndefined();
+
+    const writes: { workoutIds: readonly string[]; activeChanged: boolean }[] = [];
+    const unsubscribe = f.repository.subscribe((write) => writes.push(write));
+    expect(await f.owner.apply({ kind: 'external', data: { workouts: [workout('imported')], programs: {} } })).toEqual({
+      kind: 'unchanged',
+    });
+    unsubscribe();
+
+    expect((await f.repository.get('imported'))?.blueprint.id).toBe(routineId);
+    expect(writes).toEqual([{ workoutIds: ['imported'], activeChanged: false }]);
   });
 });

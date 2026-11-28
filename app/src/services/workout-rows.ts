@@ -140,6 +140,7 @@ export function toWorkoutRows(session: Session): WorkoutRows {
       blueprintVersion: session.blueprint.toJSON().version,
       date: json.date,
       name: json.blueprint.name,
+      routineId: session.blueprint.id ?? null,
       notes: json.blueprint.notes,
       bodyweightValue: json.bodyweight?.value ?? null,
       bodyweightUnit: json.bodyweight?.unit ?? null,
@@ -190,10 +191,13 @@ export function fromWorkoutRows(rows: StoredWorkoutRows): Session {
     ),
   };
   const session = Session.fromJSON(json);
+  const withRoutine = workout.routineId
+    ? session.with({ blueprint: session.blueprint.with({ id: workout.routineId }) })
+    : session;
   const feel = isSessionFeel(workout.feel) ? workout.feel : undefined;
   return feel || workout.reflectionNote
-    ? session.with({ reflection: { feel, note: workout.reflectionNote ?? '' } })
-    : session;
+    ? withRoutine.with({ reflection: { feel, note: workout.reflectionNote ?? '' } })
+    : withRoutine;
 }
 
 function toRecordedExerciseJSON(

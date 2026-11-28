@@ -27,10 +27,14 @@
       "properties": {
         "version": {
           "type": "number",
-          "const": 10
+          "const": 11
         },
         "name": {
           "type": "string"
+        },
+        "id": {
+          "type": "string",
+          "description": "Stable id of this routine. Everything the app saves has one. Leave it out of a hand-written plan: the app assigns one on import. Workouts logged before routines had ids are linked by name until that assignment can stamp them."
         },
         "exercises": {
           "type": "array",

@@ -1,4 +1,4 @@
-import { selectActiveProgram, setPendingPlanDiff } from '@/store/program';
+import { selectActiveProgram, selectLiveRoutineIds, setPendingPlanDiff } from '@/store/program';
 import { getPlanDiff } from '@/store/program/helpers';
 import { selectSession, sessionFinished } from '@/store/stored-sessions';
 import type { RootState } from '@/store/store';
@@ -16,7 +16,12 @@ export function finishWorkout(sessionId: string) {
     if (!session) {
       return false;
     }
-    const diff = getPlanDiff(selectActiveProgram(state), session, state.program.activePlanId);
+    const diff = getPlanDiff(
+      selectActiveProgram(state),
+      session,
+      state.program.activePlanId,
+      new Set(selectLiveRoutineIds(state)),
+    );
     if (diff) {
       dispatch(setPendingPlanDiff(diff));
     }

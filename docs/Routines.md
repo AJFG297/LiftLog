@@ -31,7 +31,9 @@ Saving an import leaves the import screens first, so Keep editing goes back to t
   Home also uses. A day counts as done only if a set was logged, and freeform workouts don't count.
 - Programs repeat with no set length, so there is no "week 4 of 6". Progress is the place in the current
   round instead: "Day 2 of 3 · 12 workouts done", with a bar for the routines done this round. Workouts are
-  counted by routine name, like the last-done dates (`workoutsDoneOf`).
+  counted by routine, like the last-done dates (`routineHistory`). A workout belongs to the routine it
+  was started from. One logged before routines had ids, or after its routine was deleted, still belongs
+  to a routine of the same name.
 - **My routines**: the active program's routines, each with its colour, exercises, set count, estimated time
   and last done. Tap to edit, ▶ to start that routine now (asking first if another workout is in progress).
 - **Start an empty workout**: a freeform workout.
