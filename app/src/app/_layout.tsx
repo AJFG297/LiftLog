@@ -3,7 +3,7 @@ import { I18nManager, LogBox, Platform } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AppStateProvider } from '@/components/smart/app-state-provider';
 import { PlanImportGate } from '@/components/smart/plan-import-gate';
-import SnackbarProvider from '@/components/smart/snackbar-provider';
+import { SnackbarToasts } from '@/components/smart/snackbar-toasts';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import ServicesProvider from '@/components/smart/services-provider';
@@ -43,13 +43,12 @@ export default function RootLayout() {
           <ServicesProvider>
             <AppThemeProvider>
               <AppStateProvider>
-                <SnackbarProvider>
-                  <ToastProvider>
-                    {Platform.OS === 'android' && <StatusBar style="auto" />}
-                    <PlanImportGate />
-                    <Layout />
-                  </ToastProvider>
-                </SnackbarProvider>
+                <ToastProvider>
+                  {Platform.OS === 'android' && <StatusBar style="auto" />}
+                  <PlanImportGate />
+                  <Layout />
+                  <SnackbarToasts />
+                </ToastProvider>
               </AppStateProvider>
             </AppThemeProvider>
           </ServicesProvider>

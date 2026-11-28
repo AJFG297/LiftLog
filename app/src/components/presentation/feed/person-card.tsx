@@ -1,10 +1,10 @@
 import { PersonAvatar } from '@/components/presentation/feed/person-avatar';
+import { Card } from '@/components/presentation/foundation/card';
 import { SurfaceText } from '@/components/presentation/foundation/surface-text';
-import { spacing } from '@/hooks/useAppTheme';
+import { spacing, useAppTheme } from '@/hooks/useAppTheme';
 import { useTranslate } from '@tolgee/react';
 import { ReactNode } from 'react';
 import { View } from 'react-native';
-import { Card } from 'react-native-paper';
 
 interface PersonCardProps {
   userId: string;
@@ -18,29 +18,28 @@ interface PersonCardProps {
 /** The one row shape the Following and Followers tabs share, so they can't drift apart again. */
 export function PersonCard({ userId, name, subtitle, trailing, children }: PersonCardProps) {
   const { t } = useTranslate();
+  const { tokens } = useAppTheme();
 
   return (
-    <Card mode="contained">
-      <Card.Content style={{ gap: spacing[3] }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[3] }}>
-          <PersonAvatar userId={userId} name={name} />
+    <Card style={{ gap: spacing[3] }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[3] }}>
+        <PersonAvatar userId={userId} name={name} />
 
-          <View style={{ flex: 1, gap: spacing[0.5] }}>
-            <SurfaceText font="text-lg" weight="bold" numberOfLines={1}>
-              {name || t('feed.anonymous_user.label')}
+        <View style={{ flex: 1, gap: spacing[0.5] }}>
+          <SurfaceText font="text-lg" weight="bold" numberOfLines={1}>
+            {name || t('feed.anonymous_user.label')}
+          </SurfaceText>
+          {subtitle ? (
+            <SurfaceText font="text-sm" numberOfLines={1} style={{ color: tokens.muted }}>
+              {subtitle}
             </SurfaceText>
-            {subtitle ? (
-              <SurfaceText font="text-sm" color="onSurfaceVariant" numberOfLines={1}>
-                {subtitle}
-              </SurfaceText>
-            ) : null}
-          </View>
-
-          {trailing}
+          ) : null}
         </View>
 
-        {children}
-      </Card.Content>
+        {trailing}
+      </View>
+
+      {children}
     </Card>
   );
 }

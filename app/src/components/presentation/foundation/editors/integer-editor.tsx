@@ -1,18 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { TextStyle } from 'react-native';
-import { TextInput, TextInputProps } from 'react-native-paper';
+import { TextField, TextFieldProps } from '@/components/presentation/foundation/text-field';
 import { numberStyle } from '@/hooks/useAppTheme';
+import { splitTextStyle } from '@/components/presentation/foundation/editors/split-text-style';
 
 interface IntegerEditorProps {
   value: number;
   onChange: (val: number) => void;
-  noUnderline?: boolean | undefined;
+  /** Text properties (colour, alignment) style the number; the rest style the field's box. */
   style?: TextStyle;
   testID?: string;
 }
 
-export function IntegerEditor(props: IntegerEditorProps & Partial<Omit<TextInputProps, keyof IntegerEditorProps>>) {
-  const { value, onChange, noUnderline, style, contentStyle, testID, ...rest } = props;
+export function IntegerEditor(props: IntegerEditorProps & Partial<Omit<TextFieldProps, keyof IntegerEditorProps>>) {
+  const { value, onChange, style, contentStyle, testID, ...rest } = props;
+  const { boxStyle, textStyle } = splitTextStyle(style);
   const [text, setText] = useState(props.value.toString());
   const [editorValue, setEditorValue] = useState(value);
 
@@ -38,19 +40,15 @@ export function IntegerEditor(props: IntegerEditorProps & Partial<Omit<TextInput
     }
   }, [value, editorValue]);
   return (
-    <TextInput
+    <TextField
       testID={testID}
       value={text}
       inputMode={'numeric'}
       keyboardType={'numeric'}
       onChangeText={handleTextChange}
-      underlineStyle={noUnderline ? { display: 'none' } : {}}
       selectTextOnFocus
-      style={[style]}
-      // Paper applies a font family only through contentStyle; `style` styles the container.
-      contentStyle={[numberStyle, contentStyle]}
-      // oxlint-disable-next-line typescript/no-non-null-asserted-optional-chain
-      textColor={style?.color! as string}
+      style={boxStyle}
+      contentStyle={[numberStyle, textStyle, contentStyle]}
       onBlur={() => {
         if (text === '') {
           setText('0');

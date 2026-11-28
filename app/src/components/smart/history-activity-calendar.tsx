@@ -1,5 +1,6 @@
 import { ActivityCalendar } from '@/components/presentation/calendar/activity-calendar';
 import { ActivityLegend } from '@/components/presentation/calendar/activity-legend';
+import { Card } from '@/components/presentation/foundation/card';
 import IconButton from '@/components/presentation/foundation/icon-button';
 import { SurfaceText } from '@/components/presentation/foundation/surface-text';
 import { rounding, spacing, useAppTheme } from '@/hooks/useAppTheme';
@@ -11,7 +12,6 @@ import { LocalDate, Year, YearMonth } from '@js-joda/core';
 import { useTranslate } from '@tolgee/react';
 import { useCallback, useMemo } from 'react';
 import { I18nManager, View } from 'react-native';
-import { Card } from 'react-native-paper';
 
 interface HistoryActivityCalendarProps {
   /** From `useOwnActivity` on the screen, shared with its streak card. */
@@ -30,7 +30,7 @@ export function HistoryActivityCalendar({
   onDateSelect,
 }: HistoryActivityCalendarProps) {
   const { t } = useTranslate();
-  const { colors } = useAppTheme();
+  const { tokens } = useAppTheme();
   const formatDate = useFormatDate();
   const today = useToday();
   const firstDayOfWeek = useAppSelector((x) => x.settings.firstDayOfWeek);
@@ -57,11 +57,12 @@ export function HistoryActivityCalendar({
         <IconButton
           testID="calendar-nav-previous-month"
           icon="chevronLeft"
+          accessibilityLabel={t('generic.previous.button')}
           onPress={() => onMonthChange(currentYearMonth.minusMonths(1))}
         />
       </View>
       <View style={{ flex: 5, justifyContent: 'center', alignItems: 'center' }}>
-        <SurfaceText testID="calendar-month">
+        <SurfaceText testID="calendar-month" font="text-base" weight="600">
           {formatDate(firstOfMonth, {
             month: 'long',
             year: currentYearMonth.year() === Year.now().value() ? undefined : 'numeric',
@@ -72,6 +73,7 @@ export function HistoryActivityCalendar({
         <IconButton
           testID="calendar-nav-next-month"
           icon="chevronRight"
+          accessibilityLabel={t('generic.next.button')}
           onPress={() => onMonthChange(currentYearMonth.plusMonths(1))}
           disabled={isCurrentMonth}
         />
@@ -91,11 +93,11 @@ export function HistoryActivityCalendar({
             marginTop: spacing[3],
             padding: spacing[3],
             borderRadius: rounding.roundedRectangleRadius,
-            backgroundColor: colors.surfaceContainerHighest,
+            backgroundColor: tokens.wash,
           }}
         >
-          <View style={{ width: 3, borderRadius: 2, backgroundColor: colors.tertiary }} />
-          <SurfaceText font="text-xs" color="onSurfaceVariant" style={{ flex: 1 }}>
+          <View style={{ width: 3, borderRadius: 2, backgroundColor: tokens.accent }} />
+          <SurfaceText font="text-xs" style={{ flex: 1, color: tokens.muted }}>
             {t('history.calendar.feed_horizon.message')}
           </SurfaceText>
         </View>
@@ -104,18 +106,16 @@ export function HistoryActivityCalendar({
   );
 
   return (
-    <Card mode="contained">
-      <Card.Content>
-        <ActivityCalendar
-          density="month"
-          rows={rows}
-          firstDayOfWeek={firstDayOfWeek}
-          selectedDate={selectedDate}
-          header={header}
-          footer={footer}
-          onCellPress={handleCellPress}
-        />
-      </Card.Content>
+    <Card>
+      <ActivityCalendar
+        density="month"
+        rows={rows}
+        firstDayOfWeek={firstDayOfWeek}
+        selectedDate={selectedDate}
+        header={header}
+        footer={footer}
+        onCellPress={handleCellPress}
+      />
     </Card>
   );
 }

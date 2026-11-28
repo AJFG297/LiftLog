@@ -1,13 +1,14 @@
 import { numberStyle, spacing, useAppTheme } from '@/hooks/useAppTheme';
+import { Dialog } from '@/components/presentation/foundation/dialog';
+import { SurfaceText } from '@/components/presentation/foundation/surface-text';
+import { TextField } from '@/components/presentation/foundation/text-field';
 import { RpeChips } from '@/components/presentation/workout/weighted/rpe-picker';
 import { Rpe } from '@/models/session-models/rpe';
 import { PotentialSet } from '@/models/session-models';
-import { T } from '@tolgee/react';
+import { T, useTranslate } from '@tolgee/react';
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
-import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import IconButton from '@/components/presentation/foundation/icon-button';
-import { Dialog, Portal, Text, TextInput } from 'react-native-paper';
 import Button from '@/components/presentation/foundation/button';
 
 interface PotentialSetAdditionalActionsDialogProps {
@@ -31,6 +32,7 @@ export default function PotentialSetAdditionalActionsDialog({
   updateRpe,
 }: PotentialSetAdditionalActionsDialogProps) {
   const { colors } = useAppTheme();
+  const { t } = useTranslate();
   const originalReps = set?.set?.repsCompleted;
 
   const [repCountText, setRepCountText] = useState<string>(originalReps?.toString() ?? '');
@@ -50,68 +52,70 @@ export default function PotentialSetAdditionalActionsDialog({
   };
   return (
     open && (
-      <Portal>
-        <KeyboardAvoidingView behavior={'height'} style={{ flex: 1, pointerEvents: open ? 'box-none' : 'none' }}>
-          <Dialog visible={open} onDismiss={close}>
-            <Dialog.Title>
-              <T keyName="exercise.select_reps.title" />
-            </Dialog.Title>
-            <Dialog.Content>
-              <TextInput
-                label={<T keyName="exercise.reps.label" />}
-                inputMode="numeric"
-                value={repCountText}
-                selectTextOnFocus
-                error={!isValid}
-                contentStyle={numberStyle}
-                onChangeText={setRepCountText}
-                autoFocus
-              />
+      <Dialog visible={open} onDismiss={close}>
+        <Dialog.Title>
+          <T keyName="exercise.select_reps.title" />
+        </Dialog.Title>
+        <Dialog.Content>
+          <TextField
+            label={<T keyName="exercise.reps.label" />}
+            inputMode="numeric"
+            value={repCountText}
+            selectTextOnFocus
+            error={!isValid}
+            contentStyle={numberStyle}
+            onChangeText={setRepCountText}
+            autoFocus
+          />
 
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-                {Array.from({ length: repTarget + 3 }).map((_, i) => (
-                  <IconButton
-                    key={i}
-                    mode="outlined"
-                    icon={() => <Text style={numberStyle}>{i}</Text>}
-                    onPress={() => {
-                      setRepCountText(i.toString());
-                      updateRepCount(i);
-                      close();
-                    }}
-                  />
-                ))}
-                <IconButton
-                  mode="contained"
-                  iconColor={colors.error}
-                  containerColor={colors.errorContainer}
-                  icon={'close'}
-                  onPress={() => {
-                    setRepCountText('');
-                    updateRepCount(undefined);
-                    close();
-                  }}
-                />
-              </View>
-              {updateRpe && (
-                <View style={{ gap: spacing[2], marginTop: spacing[4] }}>
-                  <Text variant="labelLarge">
-                    <T keyName="workout.rpe.label" />
-                  </Text>
-                  {/* Unlike the rep buttons this doesn't close: RPE is set alongside the reps, not instead of them. */}
-                  <RpeChips value={rpe} onChange={updateRpe} />
-                </View>
-              )}
-            </Dialog.Content>
-            <Dialog.Actions>
-              <Button onPress={close}>{<T keyName="generic.cancel.button" />}</Button>
-              <Button disabled={!isValid} onPress={save}>
-                {<T keyName="generic.save.button" />}
-              </Button>
-            </Dialog.Actions>
-          </Dialog>
-        </KeyboardAvoidingView>
-      </Portal>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+            {Array.from({ length: repTarget + 3 }).map((_, i) => (
+              <IconButton
+                key={i}
+                mode="outlined"
+                icon={() => (
+                  <SurfaceText font="text-sm" numeric>
+                    {i}
+                  </SurfaceText>
+                )}
+                accessibilityLabel={i.toString()}
+                onPress={() => {
+                  setRepCountText(i.toString());
+                  updateRepCount(i);
+                  close();
+                }}
+              />
+            ))}
+            <IconButton
+              mode="contained"
+              iconColor={colors.error}
+              containerColor={colors.errorContainer}
+              icon={'close'}
+              accessibilityLabel={t('generic.clear.button')}
+              onPress={() => {
+                setRepCountText('');
+                updateRepCount(undefined);
+                close();
+              }}
+            />
+          </View>
+          {updateRpe && (
+            <View style={{ gap: spacing[2], marginTop: spacing[4] }}>
+              <SurfaceText font="text-sm" weight="500">
+                <T keyName="workout.rpe.label" />
+              </SurfaceText>
+              {/* Unlike the rep buttons this doesn't close: RPE is set alongside the reps, not instead of them. */}
+              <RpeChips value={rpe} onChange={updateRpe} />
+            </View>
+          )}
+        </Dialog.Content>
+        <Dialog.Actions>
+          <Button onPress={close}>{<T keyName="generic.cancel.button" />}</Button>
+          <Button disabled={!isValid} onPress={save}>
+            {<T keyName="generic.save.button" />}
+          </Button>
+        </Dialog.Actions>
+      </Dialog>
     )
   );
 }

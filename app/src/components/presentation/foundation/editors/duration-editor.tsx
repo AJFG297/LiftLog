@@ -1,4 +1,4 @@
-import { spacing, numberStyle } from '@/hooks/useAppTheme';
+import { spacing, numberStyle, useAppTheme } from '@/hooks/useAppTheme';
 import { SurfaceText } from '@/components/presentation/foundation/surface-text';
 import {
   getDurationComponents,
@@ -9,7 +9,7 @@ import {
 import { Duration } from '@js-joda/core';
 import { useCallback, useEffect, useState } from 'react';
 import { View } from 'react-native';
-import { TextInput } from 'react-native-paper';
+import { TextField } from '@/components/presentation/foundation/text-field';
 
 interface DurationEditorProps {
   label?: string;
@@ -116,20 +116,24 @@ function DurationField(props: {
   onChangeText: (text: string) => void;
   onBlur: () => void;
 }) {
+  const { tokens } = useAppTheme();
   return (
-    <TextInput
-      mode="outlined"
+    <TextField
       testID={props.testID}
       inputMode="numeric"
       readOnly={props.readOnly}
       submitBehavior="blurAndSubmit"
       returnKeyType="done"
-      style={{ width: spacing[24], textAlign: 'center' }}
-      contentStyle={numberStyle}
+      style={{ width: spacing[24] }}
+      contentStyle={[numberStyle, { textAlign: 'center' }]}
       value={props.value}
       onChangeText={props.onChangeText}
       onBlur={props.onBlur}
-      right={<TextInput.Affix text={props.unit} />}
+      right={
+        <SurfaceText font="text-base" style={{ color: tokens.muted, paddingRight: spacing[2] }}>
+          {props.unit}
+        </SurfaceText>
+      }
     />
   );
 }

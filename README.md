@@ -24,7 +24,7 @@
 - Entirely device local workouts, no waiting for sign in or downloads
 - 📱 Runs on Android and iOS. Web support was removed in [this commit](https://github.com/LiamMorrow/LiftLog/commit/d77d94e5eeffd3a9a81af6f61f47e9c57fb91738)
 - 🔒 End-to-end encrypted social feeds (opt-in, privacy-first)
-- 🎨 Material Design 3 via React Native Paper
+- 🎨 Its own visual language, with native system controls
 - 🌐 Internationalization with Tolgee/Weblate (10+ languages)
 - 🏋️‍♂️ Publish workouts, follow other users, and control your feed privacy
 - 🧠 AI planner tailors gym plans to your goals and body

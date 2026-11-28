@@ -76,8 +76,7 @@
           },
           {
             "name": "react-native-paper",
-            "importNames": ["IconButton", "TouchableRipple", "Button"],
-            "message": "Use our wrappers in @/components/presentation/foundation/ - they are more reliable as they use GestureHandler"
+            "message": "Paper was removed (ADR-0002). Use the token-built components in @/components/presentation/foundation/"
           }
         ]
       }

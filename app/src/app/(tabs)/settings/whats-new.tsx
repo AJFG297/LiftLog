@@ -10,7 +10,9 @@ import { routinesHref } from '@/components/smart/routines-href';
 import { useGoToRoutines } from '@/hooks/useGoToRoutines';
 import { useEffect } from 'react';
 import { View } from 'react-native';
-import { Card, Icon, Text } from 'react-native-paper';
+import { Card } from '@/components/presentation/foundation/card';
+import Icon from '@/components/presentation/foundation/icon';
+import { SurfaceText } from '@/components/presentation/foundation/surface-text';
 import { useDispatch } from 'react-redux';
 
 export default function WhatsNew() {
@@ -39,42 +41,40 @@ export default function WhatsNew() {
 }
 
 function WhatsNewCard({ entry }: { entry: WhatsNewEntry }) {
-  const { colors } = useAppTheme();
+  const { tokens } = useAppTheme();
   const { push } = useRouter();
   const goToRoutines = useGoToRoutines();
   const goToFeature = (route: Href) => (route === routinesHref() ? goToRoutines() : push(route));
 
   return (
-    <Card mode="contained">
-      <Card.Content style={{ gap: spacing[2] }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[3] }}>
-          <View
-            style={{
-              width: 40,
-              height: 40,
-              borderRadius: 12,
-              alignItems: 'center',
-              justifyContent: 'center',
-              backgroundColor: colors.secondaryContainer,
-            }}
-          >
-            <Icon source={entry.icon} size={24} color={colors.onSecondaryContainer} />
-          </View>
-          <Text variant="titleMedium" style={{ flexShrink: 1 }}>
-            <T keyName={entry.titleKey} />
-          </Text>
+    <Card style={{ gap: spacing[2] }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[3] }}>
+        <View
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: 12,
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: tokens.accentSoft,
+          }}
+        >
+          <Icon source={entry.icon} size={24} color={tokens.accentSoftInk} />
         </View>
-        <Text variant="bodyMedium" style={{ color: colors.onSurfaceVariant }}>
-          <T keyName={entry.bodyKey} />
-        </Text>
-        {entry.cta && (
-          <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
-            <Button mode="text" onPress={() => goToFeature(entry.cta!.route)}>
-              {entry.cta.labelKey && <T keyName={entry.cta.labelKey} />}
-            </Button>
-          </View>
-        )}
-      </Card.Content>
+        <SurfaceText font="text-base" weight="600" style={{ flexShrink: 1, color: tokens.ink }}>
+          <T keyName={entry.titleKey} />
+        </SurfaceText>
+      </View>
+      <SurfaceText font="text-sm" style={{ color: tokens.muted }}>
+        <T keyName={entry.bodyKey} />
+      </SurfaceText>
+      {entry.cta && (
+        <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
+          <Button mode="text" onPress={() => goToFeature(entry.cta!.route)}>
+            {entry.cta.labelKey && <T keyName={entry.cta.labelKey} />}
+          </Button>
+        </View>
+      )}
     </Card>
   );
 }

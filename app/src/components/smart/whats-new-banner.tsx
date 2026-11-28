@@ -5,18 +5,20 @@ import { spacing, useAppTheme } from '@/hooks/useAppTheme';
 import { latestWhatsNewId, WhatsNewEntry } from '@/models/whats-new';
 import { useAppSelector } from '@/store';
 import { selectUnseenWhatsNew, setLastSeenWhatsNewId } from '@/store/settings';
-import { T } from '@tolgee/react';
+import { T, useTranslate } from '@tolgee/react';
 import { Href, useRouter } from 'expo-router';
 import { routinesHref } from '@/components/smart/routines-href';
 import { useGoToRoutines } from '@/hooks/useGoToRoutines';
 import { StyleSheet, View } from 'react-native';
-import { Icon, Text } from 'react-native-paper';
+import Icon from '@/components/presentation/foundation/icon';
+import { SurfaceText } from '@/components/presentation/foundation/surface-text';
 import { shallowEqual, useDispatch } from 'react-redux';
 
 export function WhatsNewBanner() {
   const unseen = useAppSelector(selectUnseenWhatsNew, shallowEqual);
   const dispatch = useDispatch();
-  const { colors } = useAppTheme();
+  const { t } = useTranslate();
+  const { tokens } = useAppTheme();
   const { push } = useRouter();
   const goToRoutines = useGoToRoutines();
 
@@ -35,15 +37,21 @@ export function WhatsNewBanner() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.tertiaryContainer }]}>
+    <View style={[styles.container, { backgroundColor: tokens.accentSoft }]}>
       <View style={styles.header}>
-        <Text variant="labelSmall" style={{ color: colors.onTertiaryContainer, letterSpacing: 1 }}>
+        <SurfaceText font="text-2xs" weight="600" style={{ color: tokens.accentSoftInk, letterSpacing: 1 }}>
           <T keyName="whats_new.eyebrow" />
-        </Text>
-        <IconButton icon="close" size={18} onPress={dismiss} iconColor={colors.onTertiaryContainer} />
+        </SurfaceText>
+        <IconButton
+          icon="close"
+          size={18}
+          accessibilityLabel={t('generic.close.button')}
+          onPress={dismiss}
+          iconColor={tokens.accentSoftInk}
+        />
       </View>
 
-      <Pager indicatorColor={colors.onTertiaryContainer}>
+      <Pager indicatorColor={tokens.accentSoftInk}>
         {unseen.map((entry) => (
           <Feature key={entry.id} entry={entry} onPress={goToFeature} />
         ))}
@@ -53,23 +61,23 @@ export function WhatsNewBanner() {
 }
 
 function Feature({ entry, onPress }: { entry: WhatsNewEntry; onPress: (route: Href) => void }) {
-  const { colors } = useAppTheme();
+  const { tokens } = useAppTheme();
   return (
     <>
       <View style={styles.featureRow}>
-        <View style={[styles.iconWell, { backgroundColor: colors.tertiary }]}>
-          <Icon source={entry.icon} size={22} color={colors.onTertiary} />
+        <View style={[styles.iconWell, { backgroundColor: tokens.accent }]}>
+          <Icon source={entry.icon} size={22} color={tokens.onAccent} />
         </View>
-        <Text variant="titleMedium" style={{ color: colors.onTertiaryContainer, flexShrink: 1 }}>
+        <SurfaceText font="text-base" weight="600" style={{ color: tokens.accentSoftInk, flexShrink: 1 }}>
           <T keyName={entry.titleKey} />
-        </Text>
+        </SurfaceText>
       </View>
-      <Text variant="bodySmall" style={{ color: colors.onTertiaryContainer, marginTop: spacing[2], opacity: 0.9 }}>
+      <SurfaceText font="text-xs" style={{ color: tokens.accentSoftInk, marginTop: spacing[2] }}>
         <T keyName={entry.bodyKey} />
-      </Text>
+      </SurfaceText>
       {entry.cta && (
         <View style={styles.ctaRow}>
-          <Button mode="text" textColor={colors.onTertiaryContainer} onPress={() => onPress(entry.cta!.route)}>
+          <Button mode="text" textColor={tokens.accentSoftInk} onPress={() => onPress(entry.cta!.route)}>
             <T keyName={entry.cta.labelKey} />
           </Button>
         </View>

@@ -1,11 +1,11 @@
 import ConfirmationDialog from '@/components/presentation/foundation/confirmation-dialog';
 import EmptyInfo from '@/components/presentation/foundation/empty-info';
 import LimitedHtml from '@/components/presentation/foundation/limited-html';
-import CardActions from '@/components/presentation/foundation/card-actions';
+import { Card } from '@/components/presentation/foundation/card';
 import Menu from '@/components/presentation/foundation/menu';
 import { PersonCard } from '@/components/presentation/feed/person-card';
 import { SurfaceText } from '@/components/presentation/foundation/surface-text';
-import { spacing } from '@/hooks/useAppTheme';
+import { spacing, useAppTheme } from '@/hooks/useAppTheme';
 import { useScroll } from '@/hooks/useScrollListener';
 import { FeedUser, FollowRequestInboxMessage } from '@/models/feed-models';
 import { useAppSelector } from '@/store';
@@ -23,7 +23,6 @@ import {
 import { T, useTranslate } from '@tolgee/react';
 import React, { useState } from 'react';
 import { View } from 'react-native';
-import { Card } from 'react-native-paper';
 import Button from '@/components/presentation/foundation/button';
 import IconButton from '@/components/presentation/foundation/icon-button';
 import { useDispatch } from 'react-redux';
@@ -90,12 +89,13 @@ export function FeedFollowers() {
 }
 
 function SectionHeader(props: { label: string; count: number }) {
+  const { tokens } = useAppTheme();
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[2], paddingTop: spacing[1] }}>
-      <SurfaceText font="text-sm" weight="bold" color="onSurfaceVariant" style={{ letterSpacing: 0.6 }}>
+      <SurfaceText font="text-sm" weight="bold" style={{ color: tokens.muted, letterSpacing: 0.6 }}>
         {props.label.toUpperCase()}
       </SurfaceText>
-      <SurfaceText font="text-sm" color="onSurfaceVariant" numeric>
+      <SurfaceText font="text-sm" style={{ color: tokens.muted }} numeric>
         {props.count.toString()}
       </SurfaceText>
     </View>
@@ -107,14 +107,12 @@ function FollowersEmpty() {
   const identity = useAppSelector((x) => x.feed.identity.unwrapOr(undefined));
 
   return (
-    <Card mode="contained">
-      <Card.Content>
-        <EmptyInfo icon="personAdd" style={{ paddingVertical: spacing[4] }}>
-          <T keyName="feed.share_link_to_get_followers.body" />
-        </EmptyInfo>
-      </Card.Content>
+    <Card style={{ gap: spacing[2] }}>
+      <EmptyInfo icon="personAdd" style={{ paddingVertical: spacing[4] }}>
+        <T keyName="feed.share_link_to_get_followers.body" />
+      </EmptyInfo>
       {identity ? (
-        <CardActions>
+        <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: spacing[2] }}>
           <Button
             testID="followers-share-button"
             mode="contained"
@@ -130,7 +128,7 @@ function FollowersEmpty() {
           >
             <T keyName="generic.share.button" />
           </Button>
-        </CardActions>
+        </View>
       ) : null}
     </Card>
   );

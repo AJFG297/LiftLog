@@ -1,7 +1,8 @@
-import { Card, Icon, Text } from 'react-native-paper';
 import { View } from 'react-native';
+import { Card } from '@/components/presentation/foundation/card';
 import EmptyInfo from '@/components/presentation/foundation/empty-info';
-import { useAppTheme, spacing, font, tabularText } from '@/hooks/useAppTheme';
+import Icon from '@/components/presentation/foundation/icon';
+import { spacing, tabularText } from '@/hooks/useAppTheme';
 import { T, useTranslate } from '@tolgee/react';
 import ItemList from '@/components/presentation/foundation/item-list';
 import { RecordedExercise, Session } from '@/models/session-models';
@@ -29,7 +30,6 @@ export default function SessionComponent(props: {
   header?: ReactNode;
 }) {
   const { session } = props;
-  const { colors } = useAppTheme();
   const { t } = useTranslate();
   const isReadonly = !props.updateSession;
   const editableSessionId = isReadonly ? undefined : session.id;
@@ -39,24 +39,18 @@ export default function SessionComponent(props: {
 
   const notesComponent = session.blueprint.notes ? (
     <Card
-      mode="contained"
       style={{
         marginVertical: spacing[2],
         marginHorizontal: spacing.pageHorizontalMargin,
+        gap: spacing[4],
+        flexDirection: 'row',
+        alignItems: 'center',
       }}
     >
-      <Card.Content
-        style={{
-          gap: spacing[4],
-          flexDirection: 'row',
-          alignItems: 'center',
-        }}
-      >
-        <Icon source={'text'} size={20} />
-        <View style={{ paddingRight: spacing[2] }}>
-          <SurfaceText>{session.blueprint.notes}</SurfaceText>
-        </View>
-      </Card.Content>
+      <Icon source={'text'} size={20} />
+      <View style={{ paddingRight: spacing[2], flexShrink: 1 }}>
+        <SurfaceText>{session.blueprint.notes}</SurfaceText>
+      </View>
     </Card>
   ) : null;
 
@@ -80,31 +74,25 @@ export default function SessionComponent(props: {
   );
 
   const bodyweight = props.showBodyweight ? (
-    <Card style={{ marginHorizontal: spacing.pageHorizontalMargin }} mode="contained" testID="bodyweight-card">
-      <Card.Content
-        style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-        }}
-      >
-        <Text
-          style={{
-            ...font['text-xl'],
-            fontWeight: 'bold',
-            color: colors.onSurface,
-          }}
-        >
-          {t('exercise.bodyweight.label')}
-        </Text>
-        <WeightDisplay
-          allowNull={true}
-          weight={session.bodyweight}
-          updateWeight={(bodyweight) => updateSession((s) => s.with({ bodyweight }))}
-          increment={new BigNumber('0.1')}
-          label={t('exercise.bodyweight.label')}
-        />
-      </Card.Content>
+    <Card
+      style={{
+        marginHorizontal: spacing.pageHorizontalMargin,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+      }}
+      testID="bodyweight-card"
+    >
+      <SurfaceText font="text-xl" weight="bold">
+        {t('exercise.bodyweight.label')}
+      </SurfaceText>
+      <WeightDisplay
+        allowNull={true}
+        weight={session.bodyweight}
+        updateWeight={(bodyweight) => updateSession((s) => s.with({ bodyweight }))}
+        increment={new BigNumber('0.1')}
+        label={t('exercise.bodyweight.label')}
+      />
     </Card>
   ) : null;
 
@@ -121,35 +109,33 @@ export default function SessionComponent(props: {
   );
 
   const workoutSummary = (
-    <Card mode="contained" style={{ margin: spacing.pageHorizontalMargin }}>
-      <Card.Content>
-        <View
-          style={{
-            flexDirection: 'row',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-          }}
-        >
-          <Text variant="bodyMedium">
-            <T keyName="workout.total_weight_lifted.label" />
-          </Text>
-          <WeightFormat fontWeight="bold" color="primary" weight={session.totalWeightLifted} decimalPlaces={0} />
-        </View>
-        <View
-          style={{
-            flexDirection: 'row',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-          }}
-        >
-          <Text variant="bodyMedium">
-            <T keyName="workout.total_time.label" />
-          </Text>
-          <Text variant="bodyMedium" style={{ ...tabularText, color: colors.primary, fontWeight: 'bold' }}>
-            {(session.duration && formatDuration(session.duration, 'hours-mins')) || '-'}
-          </Text>
-        </View>
-      </Card.Content>
+    <Card style={{ margin: spacing.pageHorizontalMargin }}>
+      <View
+        style={{
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        }}
+      >
+        <SurfaceText font="text-sm">
+          <T keyName="workout.total_weight_lifted.label" />
+        </SurfaceText>
+        <WeightFormat fontWeight="bold" color="primary" weight={session.totalWeightLifted} decimalPlaces={0} />
+      </View>
+      <View
+        style={{
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        }}
+      >
+        <SurfaceText font="text-sm">
+          <T keyName="workout.total_time.label" />
+        </SurfaceText>
+        <SurfaceText font="text-sm" weight="bold" color="primary" style={tabularText}>
+          {(session.duration && formatDuration(session.duration, 'hours-mins')) || '-'}
+        </SurfaceText>
+      </View>
     </Card>
   );
 

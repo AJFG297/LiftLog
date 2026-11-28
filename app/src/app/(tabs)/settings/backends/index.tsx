@@ -16,7 +16,7 @@ import { putBackend, selectAllBackends, switchFeedBackend } from '@/store/backen
 import { useAppTheme } from '@/hooks/useAppTheme';
 import { uuid } from '@/utils/uuid';
 import { useState } from 'react';
-import { Text } from 'react-native-paper';
+import { SurfaceText } from '@/components/presentation/foundation/surface-text';
 import { useDispatch } from 'react-redux';
 import AddIcon from '@expo/material-symbols/add.xml';
 import { SegmentedGroup, SegmentListFormElement } from '@/components/presentation/foundation/segmented-list';
@@ -28,7 +28,7 @@ export default function BackendsPage() {
   const { push } = useRouter();
   const dispatch = useDispatch();
   const backends = useAppSelector(selectAllBackends);
-  const { colors } = useAppTheme();
+  const { tokens } = useAppTheme();
   const [pendingFeedBackend, setPendingFeedBackend] = useState<string | undefined>(undefined);
 
   // The editor edits a backend rather than filling in a form, so one exists before it opens. An
@@ -98,7 +98,9 @@ export default function BackendsPage() {
                 isBackendComplete(backend) ? (
                   describe(backend)
                 ) : (
-                  <Text style={{ color: colors.error }}>{t('backends.incomplete.label')}</Text>
+                  <SurfaceText font="text-xs" style={{ color: tokens.danger }}>
+                    {t('backends.incomplete.label')}
+                  </SurfaceText>
                 )
               }
               icon={isBackendComplete(backend) ? 'dnsFill' : 'error'}

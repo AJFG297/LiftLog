@@ -4,8 +4,8 @@ import type { HexColor } from '@/utils/color';
 
 /**
  * The "Clarity" palette (docs/plans/redesign.md, D2): a fixed warm neutral scale per mode plus one
- * accent family generated from the colour the user picks. Redesigned screens read these tokens; the
- * Paper scheme for unconverted screens is mapped from them in `paperSchemeFromTokens`.
+ * accent family generated from the colour the user picks. Screens read these tokens; the Material 3
+ * scheme behind the older `colors` roles and the navigation theme is mapped from them in `m3SchemeFromTokens`.
  */
 
 export type ThemeVariant = 'light' | 'dark' | 'trueBlack';
@@ -323,15 +323,11 @@ export function themeTokens(source: HexColor, variant: ThemeVariant): ThemeToken
 }
 
 /**
- * Map the tokens onto Material 3 roles so Paper components and unconverted screens pick up the new
- * palette. `base` is a full M3 scheme generated from the same source; it supplies the roles the tokens
+ * Map the tokens onto Material 3 roles, so code that still reads `colors` and the navigation theme get the
+ * same palette. `base` is a full M3 scheme generated from the same source; it supplies the roles the tokens
  * don't have an opinion on (secondary, tertiary, the error containers), already harmonised with the accent.
  */
-export function paperSchemeFromTokens(
-  tokens: ThemeTokens,
-  base: Material3Scheme,
-  variant: ThemeVariant,
-): Material3Scheme {
+export function m3SchemeFromTokens(tokens: ThemeTokens, base: Material3Scheme, variant: ThemeVariant): Material3Scheme {
   const perMode =
     variant === 'light'
       ? {
@@ -342,7 +338,7 @@ export function paperSchemeFromTokens(
         }
       : {
           // M3 expects `primary` to work as text on the page as well as a fill. In dark mode the fill is too
-          // dark for text, so Paper gets the text colour, with dark ink on it for contained buttons.
+          // dark for text, so `primary` is the text colour, with dark ink on it.
           primary: tokens.accentInk,
           onPrimary: tokens.inverseInk,
           surfaceContainerHighest: tokens.track,
@@ -361,8 +357,7 @@ export function paperSchemeFromTokens(
     onBackground: tokens.ink,
     surface: tokens.bg,
     onSurface: tokens.ink,
-    // Paper paints contained Cards with `surfaceVariant`, and nearly every card in the unconverted screens
-    // is one, so this is what makes them white (dark: raised) cards on the page, as in the design.
+    // Older code paints card-like wells with `surfaceVariant`, so it is the card colour.
     surfaceVariant: tokens.card,
     onSurfaceVariant: tokens.muted,
     // M3 uses `outline` for boundaries that must stay visible (field borders, focus rings), which need 3:1.

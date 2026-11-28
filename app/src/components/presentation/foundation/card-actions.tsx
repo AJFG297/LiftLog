@@ -8,27 +8,7 @@ type Props = React.ComponentPropsWithRef<typeof View> & {
   children: React.ReactNode;
 };
 
-/**
- * A component to show a list of actions inside a Card.
- *
- * ## Usage
- * ```js
- * import * as React from 'react';
- * import { Card  } from 'react-native-paper';
-import Button from '@/components/presentation/gesture-wrappers/button';
- *
- * const MyComponent = () => (
- *   <Card>
- *     <CardActions>
- *       <Button>Cancel</Button>
- *       <Button>Ok</Button>
- *     </CardActions>
- *   </Card>
- * );
- *
- * export default MyComponent;
- * ```
- */
+/** A right-aligned row of buttons at the foot of a card. */
 const CardActions = ({ children, style, ...rest }: Props) => {
   const containerStyle = [styles.container, style];
 

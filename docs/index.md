@@ -24,7 +24,7 @@ work to find the docs relevant to your area, and update it whenever you add, rem
 
 - [Theming.md](./Theming.md) - the colour tokens in `useAppTheme().tokens`: fixed warm neutrals plus an
   accent family generated from the user's colour, which token to use for what, the contrast guarantees,
-  Match wallpaper, and how the Paper scheme for unconverted screens is mapped from them. Also the type:
+  Match wallpaper, and how the Material 3 `colors` scheme is mapped from them. Also the type:
   Geist and Geist Mono embedded at build time, and when to use `numeric` / `numberStyle` / `tabularText`.
 - [Components.md](./Components.md) - the redesign's own primitives in `components/presentation/foundation/`
   (Card, Chip, ChipRow, SearchField, SegmentedControl, RoundIconButton, ListRow, SetBadge, ProgressBar,
@@ -107,7 +107,7 @@ work to find the docs relevant to your area, and update it whenever you add, rem
     formats, backups, hosted service); what that frees up and what still must stay compatible.
 - [adr/0002-own-visual-language.md](./adr/0002-own-visual-language.md) - content surfaces are
   our own components on the theme tokens; system chrome (tabs, sheets, menus, switches, pickers) stays
-  native via expo-ui; react-native-paper is phased out screen by screen.
+  native via expo-ui; react-native-paper has been removed.
 - [adr/0003-relational-workout-storage.md](./adr/0003-relational-workout-storage.md) - workouts are
   relational rows with the blueprint as JSON, exercises have stable ids, history is read on demand through
   `WorkoutRepository`, and Redux holds only the workout in progress, an editing slot and small caches

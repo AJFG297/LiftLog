@@ -30,10 +30,16 @@ screen isn't linked from the app. Its theme controls change the real theme setti
 | `ToastProvider`, `useToast` | `toast/` | One short message at a time over the app, with an optional action such as Undo. |
 | `WheelPicker` | `wheel-picker.tsx` | Side-by-side wheels, one per column, each with a unit beside it (the exercise rest sheet's minutes and seconds). Three 44pt rows, the middle one picked; a column commits when the finger lifts. Each column takes its share of the full width, unit and margins included. Each column is a pan gesture rather than a scroll view, so an Android sheet can't take over its drag. Our own on both platforms, since Material 3 has no wheel. Screen readers hear each column as adjustable. |
 | `SheetHeader`, `formSheetOptions` | `sheet-header.tsx`, `form-sheet-options.ts` | Native sheets. See below. |
+| `Button`, `IconButton` | `button.tsx`, `icon-button.tsx` | Inline buttons for content that isn't a sheet's closing action: `mode` text, outlined, contained or contained-tonal. Both take taps through gesture-handler, so they work inside gesture-handler scroll views. Give an icon-only `IconButton` an `accessibilityLabel`. |
+| `Icon` | `icon.tsx` | A Material Symbol (or a custom SVG) by name, `ink` unless coloured. Hidden from screen readers; label the control around it. |
+| `TextField` | `text-field.tsx` | A labelled text input on a card background with a hairline border, the accent when focused and `danger` with `error`. `right` puts a unit or a button inside the field; `style` is the box, `contentStyle` the text. |
+| `DateField` | `editors/date-field.tsx` | A date typed in the locale's numeric order (MM/DD/YYYY in en-US) or picked with the native calendar (`date-picker-button/`, a Compose dialog on Android and SwiftUI's compact picker on iOS). |
+| `Dialog` | `dialog.tsx` | A centred card over a scrim for a short task with fields or a choice (a weight, a note, RPE), with `Dialog.Title`, `Content`, `ScrollArea` and `Actions`. It is a React Native `Modal`, so it shows over sheets and the tab bar and needs no portal. `ConfirmationDialog` is built on it. |
+| `Divider` | `divider.tsx` | A `line` hairline between items. |
 | `haptics` | `haptics.ts` | `setLogged()`, `restOver()`, `selection()`. |
 
-`RoundIconButton` isn't called `IconButton` because the Paper-based `IconButton` default export in
-`icon-button.tsx` is still used by most screens.
+`RoundIconButton` is the outlined 44pt circle of the redesigned screens; `IconButton` is the plainer inline
+one older screens use.
 
 ## Accessibility
 
@@ -92,7 +98,7 @@ A toast sits just above the tab bar, where a screen's own bottom button would be
 the workout summary and its Done, shows the message in its content instead, so nothing covers the button:
 the summary's `RoutineUpdatedBanner` (`presentation/summary/`) is the update-routine sheet's toast there.
 
-The older Paper snackbar (`SnackbarProvider`, `setCurrentSnackbar`) still serves unconverted screens.
+Store effects that can't call `useToast` raise `showSnackbar`; `SnackbarToasts` in the root layout shows those as toasts.
 
 ## Sheets
 

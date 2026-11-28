@@ -2,12 +2,13 @@ import { PotentialSet, WeightAppliesTo } from '@/models/session-models';
 import { Resistance, RepsTarget } from '@/models/blueprint-models';
 import BigNumber from 'bignumber.js';
 import { useEffect, useState } from 'react';
-import { Text as PaperText, Chip } from 'react-native-paper';
+import { Chip } from '@/components/presentation/foundation/chip';
+import { SurfaceText } from '@/components/presentation/foundation/surface-text';
 import { Keyboard, View } from 'react-native';
 import WeightDialog from '@/components/presentation/foundation/editors/weight-dialog';
 import { spacing, rounding } from '@/hooks/useAppTheme';
 import FocusRing from '@/components/presentation/foundation/focus-ring';
-import { T } from '@tolgee/react';
+import { T, useTranslate } from '@tolgee/react';
 import Holdable from '@/components/presentation/foundation/holdable';
 import { Weight } from '@/models/weight';
 import PotentialSetAdditionalActionsDialog from '@/components/presentation/workout/weighted/potential-sets-addition-actions-dialog';
@@ -42,6 +43,7 @@ interface PotentialSetCounterProps {
 }
 
 export default function PotentialSetCounter(props: PotentialSetCounterProps) {
+  const { t } = useTranslate();
   const [isWeightDialogOpen, setIsWeightDialogOpen] = useState(false);
   const [isRepsDialogOpen, setIsRepsDialogOpen] = useState(false);
   const [isRpeDialogOpen, setIsRpeDialogOpen] = useState(false);
@@ -86,14 +88,14 @@ export default function PotentialSetCounter(props: PotentialSetCounterProps) {
           updateWeight={(w) => props.onUpdateWeight(w, props.warmup ? 'thisSet' : applyTo)}
         >
           {props.warmup ? (
-            <PaperText variant="bodyMedium">
+            <SurfaceText font="text-sm">
               <T keyName="workout.warmup_set.weight_session_only.body" />
-            </PaperText>
+            </SurfaceText>
           ) : (
             <View style={{ gap: spacing[2] }}>
-              <PaperText variant="labelLarge">
+              <SurfaceText font="text-sm" weight="500">
                 <T keyName="weight.apply_to.label" />
-              </PaperText>
+              </SurfaceText>
               <View
                 style={{
                   flexDirection: 'row',
@@ -102,26 +104,23 @@ export default function PotentialSetCounter(props: PotentialSetCounterProps) {
                 }}
               >
                 <Chip
+                  label={t('exercise.this_set.label')}
                   selected={applyTo === 'thisSet'}
                   testID="repcount-apply-weight-to-this-set"
                   onPress={() => setApplyTo('thisSet')}
-                >
-                  <T keyName="exercise.this_set.label" />
-                </Chip>
+                />
                 <Chip
+                  label={t('exercise.uncompleted_sets.label')}
                   selected={applyTo === 'uncompletedSets'}
                   testID="repcount-apply-weight-to-uncompleted-sets"
                   onPress={() => setApplyTo('uncompletedSets')}
-                >
-                  <T keyName="exercise.uncompleted_sets.label" />
-                </Chip>
+                />
                 <Chip
+                  label={t('exercise.all_sets.label')}
                   selected={applyTo === 'allSets'}
                   testID="repcount-apply-weight-to-all-sets"
                   onPress={() => setApplyTo('allSets')}
-                >
-                  <T keyName="exercise.all_sets.label" />
-                </Chip>
+                />
               </View>
             </View>
           )}

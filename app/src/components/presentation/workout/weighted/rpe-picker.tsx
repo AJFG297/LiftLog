@@ -1,10 +1,11 @@
-import { numberStyle, spacing, useAppTheme } from '@/hooks/useAppTheme';
+import { spacing, useAppTheme } from '@/hooks/useAppTheme';
 import { RPE_VALUES, Rpe } from '@/models/session-models/rpe';
 import IconButton from '@/components/presentation/foundation/icon-button';
 import Button from '@/components/presentation/foundation/button';
 import { T, useTranslate } from '@tolgee/react';
 import { View } from 'react-native';
-import { Chip, Dialog, Portal } from 'react-native-paper';
+import { Chip } from '@/components/presentation/foundation/chip';
+import { Dialog } from '@/components/presentation/foundation/dialog';
 
 interface RpeChipsProps {
   value: Rpe | undefined;
@@ -21,12 +22,11 @@ export function RpeChips(props: RpeChipsProps) {
         <Chip
           key={rpe}
           testID={`rpe-${rpe}`}
+          label={String(rpe)}
+          numeric
           selected={props.value === rpe}
           onPress={() => props.onChange(rpe)}
-          textStyle={numberStyle}
-        >
-          {rpe}
-        </Chip>
+        />
       ))}
       <IconButton
         mode="contained"
@@ -52,27 +52,25 @@ interface RpePickerDialogProps {
 export function RpePickerDialog(props: RpePickerDialogProps) {
   return (
     props.open && (
-      <Portal>
-        <Dialog visible={props.open} onDismiss={props.close}>
-          <Dialog.Title>
-            <T keyName="workout.rpe.title" />
-          </Dialog.Title>
-          <Dialog.Content>
-            <RpeChips
-              value={props.value}
-              onChange={(rpe) => {
-                props.onChange(rpe);
-                props.close();
-              }}
-            />
-          </Dialog.Content>
-          <Dialog.Actions>
-            <Button onPress={props.close}>
-              <T keyName="generic.cancel.button" />
-            </Button>
-          </Dialog.Actions>
-        </Dialog>
-      </Portal>
+      <Dialog visible={props.open} onDismiss={props.close}>
+        <Dialog.Title>
+          <T keyName="workout.rpe.title" />
+        </Dialog.Title>
+        <Dialog.Content>
+          <RpeChips
+            value={props.value}
+            onChange={(rpe) => {
+              props.onChange(rpe);
+              props.close();
+            }}
+          />
+        </Dialog.Content>
+        <Dialog.Actions>
+          <Button onPress={props.close}>
+            <T keyName="generic.cancel.button" />
+          </Button>
+        </Dialog.Actions>
+      </Dialog>
     )
   );
 }

@@ -7,7 +7,7 @@ export interface PageMenuProps {
   /**
    * Buttons sitting inline in the header, before the overflow affordance. Each platform declares
    * its header as a whole, so these are platform native nodes: `Stack.Toolbar` children on iOS,
-   * anything the header renders (an `Appbar.Action`, say) on Android.
+   * anything the header renders (an `IconButton`, say) on Android.
    */
   actions?: ReactNode;
   /** Identifies the overflow affordance itself, not the menu it opens. */

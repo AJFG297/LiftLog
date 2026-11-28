@@ -55,15 +55,15 @@ The `colorSchemeSeed` preference:
 - `'default'` means **Match wallpaper** on Android 12+: the system Material You primary becomes the
   source. Elsewhere `'default'` is vermilion.
 
-## Paper and unconverted screens
+## The `colors` scheme
 
-Until every screen is redesigned, `colors` (and Paper's theme) is a Material 3 scheme mapped from the
-tokens by `paperSchemeFromTokens`, so old screens get the new palette. A few things to know:
+`colors` is a Material 3 scheme mapped from the tokens by `m3SchemeFromTokens`. The navigation theme (stack
+headers) reads it, and so does older code that hasn't moved to `tokens` yet. A few things to know:
 
 - `primary` is `accent` in light mode but `accentInk` in dark mode, with dark `onPrimary`. That's how M3
   expects `primary` to behave (it's used for text as well as fills).
 - Several M3 roles collapse to one token. `background` and `surface` are both `bg`. `surfaceVariant`
-  (which Paper paints contained Cards with), every `surfaceContainer*` level except `Highest`, and every
+  (older code paints card-like wells with it), every `surfaceContainer*` level except `Highest`, and every
   `elevation` level are all `card`. `surfaceContainerHighest` is the one step up for wells inside a card.
   Don't rely on the difference between collapsed roles.
 - `outline` is the `placeholder` grey, the lightest neutral that clears 3:1 for field borders and focus
@@ -104,9 +104,8 @@ it in Geist. A word in a number's place, such as "same", stays in Geist.
   its parent's family.
 - A raw `Text` from `react-native` has no family, so it renders in the system font. Use `SurfaceText`, or
   set `fontFamily` yourself where a raw `Text` is unavoidable (`WeightFormat`, `LimitedHtml`, chart labels).
-- Paper's `fonts` and the navigation theme's `fonts` are Geist, so Paper `Text`, unconverted screens and
-  stack headers get it with their existing sizes and weights.
-- Paper's `TextInput` takes a font only through `contentStyle`; `style` reaches the container.
+- The navigation theme's `fonts` are Geist, so stack headers get it with their own sizes and weights.
+- `TextField` sets Geist on its input; `contentStyle` styles the text and `style` the field's box.
 - Native chrome (tabs, menus, switches, pickers in expo-ui) keeps the system font.
 - Chart point labels drawn as SVG by `react-native-gifted-charts` have no font prop and stay in the system
   font.

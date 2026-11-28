@@ -1,10 +1,10 @@
 import Button from '@/components/presentation/foundation/button';
-import { font, numberStyle, rounding, spacing, useAppTheme } from '@/hooks/useAppTheme';
+import { rounding, spacing, useAppTheme } from '@/hooks/useAppTheme';
+import { Dialog } from '@/components/presentation/foundation/dialog';
+import { SurfaceText } from '@/components/presentation/foundation/surface-text';
 import { T } from '@tolgee/react';
 import { ReactNode, useState } from 'react';
 import { StyleSheet, View, ViewStyle } from 'react-native';
-import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
-import { Portal, Dialog, Text } from 'react-native-paper';
 import TouchableRipple from '@/components/presentation/foundation/touchable-ripple';
 
 const emptyDisplay = '-';
@@ -49,10 +49,16 @@ export function CardioValueTile<T>({
 
   const face = (
     <View style={{ alignItems: 'center' }}>
-      <Text style={[styles.value, { color: filled ? colors.onSecondaryContainer : colors.outline }]}>
+      <SurfaceText
+        font="text-xl"
+        numeric
+        style={[styles.centered, { color: filled ? colors.onSecondaryContainer : colors.outline }]}
+      >
         {filled ? format(value) : emptyDisplay}
-      </Text>
-      <Text style={[styles.label, { color: colors.onSurfaceVariant }]}>{label}</Text>
+      </SurfaceText>
+      <SurfaceText font="text-xs" style={[styles.centered, { color: colors.onSurfaceVariant }]}>
+        {label}
+      </SurfaceText>
     </View>
   );
   const tileStyle = [
@@ -81,30 +87,26 @@ export function CardioValueTile<T>({
         </TouchableRipple>
       )}
       {dialogOpen && dialogValue !== undefined && (
-        <Portal>
-          <KeyboardAvoidingView behavior={'height'} style={{ flex: 1, pointerEvents: 'box-none' }}>
-            <Dialog visible={dialogOpen} onDismiss={() => setDialogOpen(false)}>
-              <Dialog.Title>{label}</Dialog.Title>
-              <Dialog.Content style={[{ flexDirection: 'row', alignItems: 'center' }, dialogStyle]}>
-                {children?.(dialogValue, setDialogValue)}
-              </Dialog.Content>
-              <Dialog.Actions>
-                <Button onPress={() => setDialogOpen(false)}>
-                  <T keyName="generic.cancel.button" />
-                </Button>
-                <Button
-                  testID="cardio-value-save"
-                  onPress={() => {
-                    setDialogOpen(false);
-                    onSave?.(dialogValue);
-                  }}
-                >
-                  <T keyName="generic.save.button" />
-                </Button>
-              </Dialog.Actions>
-            </Dialog>
-          </KeyboardAvoidingView>
-        </Portal>
+        <Dialog visible={dialogOpen} onDismiss={() => setDialogOpen(false)}>
+          <Dialog.Title>{label}</Dialog.Title>
+          <Dialog.Content style={[{ flexDirection: 'row', alignItems: 'center' }, dialogStyle]}>
+            {children?.(dialogValue, setDialogValue)}
+          </Dialog.Content>
+          <Dialog.Actions>
+            <Button onPress={() => setDialogOpen(false)}>
+              <T keyName="generic.cancel.button" />
+            </Button>
+            <Button
+              testID="cardio-value-save"
+              onPress={() => {
+                setDialogOpen(false);
+                onSave?.(dialogValue);
+              }}
+            >
+              <T keyName="generic.save.button" />
+            </Button>
+          </Dialog.Actions>
+        </Dialog>
       )}
     </View>
   );
@@ -118,13 +120,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  value: {
+  centered: {
     textAlign: 'center',
-    ...font['text-xl'],
-    ...numberStyle,
-  },
-  label: {
-    textAlign: 'center',
-    ...font['text-xs'],
   },
 });

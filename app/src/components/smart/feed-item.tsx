@@ -1,3 +1,4 @@
+import { Card } from '@/components/presentation/foundation/card';
 import EmptyInfo from '@/components/presentation/foundation/empty-info';
 import { PersonAvatar } from '@/components/presentation/feed/person-avatar';
 import { SurfaceText } from '@/components/presentation/foundation/surface-text';
@@ -13,14 +14,13 @@ import { T, useTranslate } from '@tolgee/react';
 import { LocalDate } from '@js-joda/core';
 import { Href, Stack } from 'expo-router';
 import { View } from 'react-native';
-import { Card } from 'react-native-paper';
 
 export function getFeedItemHref(eventId: string): Href {
   return `/feed/item/${encodeURIComponent(eventId)}` as Href;
 }
 
 export function FeedItem({ eventId }: { eventId: string }) {
-  const { colors } = useAppTheme();
+  const { tokens } = useAppTheme();
   const feedItem = useAppSelector(selectFeedSessionItems).find((x) => x.eventId === eventId);
   const users = useAppSelector(selectFeedFollowing);
   const ownUserId = useAppSelector(selectOwnFeedUserId);
@@ -58,30 +58,28 @@ export function FeedItem({ eventId }: { eventId: string }) {
         session={session}
         showBodyweight={showBodyweight && !!session.bodyweight}
         header={
-          <Card mode="contained" style={{ margin: spacing.pageHorizontalMargin }}>
-            <Card.Content>
-              <View style={{ gap: spacing[2] }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[3] }}>
-                  <PersonAvatar userId={feedItem.userId} name={authorName} size={40} />
-                  <View style={{ gap: spacing[1], flexShrink: 1 }}>
-                    <SurfaceText>
-                      <SurfaceText weight="bold">{userName}</SurfaceText> completed a workout
-                    </SurfaceText>
-                    <SurfaceText font="text-sm" color="onSurfaceVariant">
-                      {formattedDate}
-                    </SurfaceText>
-                  </View>
-                </View>
-                <FeedPrBadges eventId={feedItem.eventId} />
-                <View style={{ paddingTop: spacing[2], borderTopWidth: 1, borderTopColor: colors.outlineVariant }}>
-                  {isOwnItem ? (
-                    <ReactionSummary eventId={feedItem.eventId} animateOnMount />
-                  ) : (
-                    <ReactionBar eventId={feedItem.eventId} animateOnMount />
-                  )}
+          <Card style={{ margin: spacing.pageHorizontalMargin }}>
+            <View style={{ gap: spacing[2] }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[3] }}>
+                <PersonAvatar userId={feedItem.userId} name={authorName} size={40} />
+                <View style={{ gap: spacing[1], flexShrink: 1 }}>
+                  <SurfaceText>
+                    <SurfaceText weight="bold">{userName}</SurfaceText> completed a workout
+                  </SurfaceText>
+                  <SurfaceText font="text-sm" style={{ color: tokens.muted }}>
+                    {formattedDate}
+                  </SurfaceText>
                 </View>
               </View>
-            </Card.Content>
+              <FeedPrBadges eventId={feedItem.eventId} />
+              <View style={{ paddingTop: spacing[2], borderTopWidth: 1, borderTopColor: tokens.line }}>
+                {isOwnItem ? (
+                  <ReactionSummary eventId={feedItem.eventId} animateOnMount />
+                ) : (
+                  <ReactionBar eventId={feedItem.eventId} animateOnMount />
+                )}
+              </View>
+            </View>
           </Card>
         }
       />

@@ -26,7 +26,7 @@ These are judgment calls, not a checklist (and also mostly for you to get the vi
 ## Where work happens
 
 The vast majority of work is in **`app/`** - an **Expo ~57 / React Native 0.86 / React 19** app.
-Stack: expo-router (file-based routes in `app/src/app/`), Redux Toolkit, React Native Paper (Material 3),
+Stack: expo-router (file-based routes in `app/src/app/`), Redux Toolkit, our own token-built components plus native expo-ui chrome,
 Drizzle ORM + expo-sqlite, Tolgee i18n, React Compiler, TypeScript ~6.
 
 `backend/` is a **.NET / C# Web API** (end-to-end-encrypted feeds + AI planner). It **usually does not
@@ -152,7 +152,7 @@ the wizard is how new users get the chance to enable it.
   - For native controls, use the platform-split convention: `foo.tsx` + `foo.android.tsx` + shared
     `foo-props.ts`. Seed `Host`s with `colors.seedColor` (not `colors.primary`), let native components
     own their slot colors, and use `@expo/material-symbols` XML icons inside Compose.
-  - react-native-paper is being phased out. Don't add new Paper usage.
+  - react-native-paper has been removed; the lint bans importing it again.
 - The **React Compiler** is enabled, so it auto-memoizes render output - don't reach for `useMemo`,
   `useCallback`, or `React.memo` by default. Write plain values, functions, and inline objects; only add
   manual memoization for a proven need the compiler can't cover (e.g. a stable identity a non-React API

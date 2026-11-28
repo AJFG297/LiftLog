@@ -7,7 +7,7 @@ import { T, useTranslate } from '@tolgee/react';
 import { Link, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Platform, View } from 'react-native';
-import { Text, Badge, Dialog, Icon, Portal } from 'react-native-paper';
+import { Dialog } from '@/components/presentation/foundation/dialog';
 import Button from '@/components/presentation/foundation/button';
 import * as Application from 'expo-application';
 import * as Updates from 'expo-updates';
@@ -22,7 +22,7 @@ import { selectFollowRequestCount } from '@/store/feed';
 
 export default function SettingsPageIndex() {
   const { t } = useTranslate();
-  const { colors } = useAppTheme();
+  const { tokens } = useAppTheme();
   const { push } = useRouter();
   const [appInfoOpen, setAppInfoOpen] = useState(false);
   const dispatch = useDispatch();
@@ -138,8 +138,10 @@ export default function SettingsPageIndex() {
           onPress={() => push('/settings/whats-new')}
           right={
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[2] }}>
-              {hasUnseenWhatsNew ? <Badge size={10} /> : undefined}
-              <AppIcon source="chevronRight" size={20} color={colors.onSurfaceVariant} />
+              {hasUnseenWhatsNew ? (
+                <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: tokens.accent }} />
+              ) : undefined}
+              <AppIcon source="chevronRight" size={20} color={tokens.muted} />
             </View>
           }
         />
@@ -150,33 +152,31 @@ export default function SettingsPageIndex() {
         />
       </SegmentedGroup>
 
-      <Portal>
-        <Dialog visible={appInfoOpen} onDismiss={() => setAppInfoOpen(false)}>
-          <Dialog.Title>
-            <T keyName="settings.app_info.title" />
-          </Dialog.Title>
-          <Dialog.Content>
-            <Text>
-              LiftLog is an entirely open source app, licensed under the AGPL-3.0 license. You can find the source code
-              on{' '}
-              <Link style={{ color: colors.primary, fontWeight: 'bold' }} href="https://github.com/LiamMorrow/LiftLog">
-                <Icon size={16} source={'share'} color={colors.primary} />
-                GitHub
-              </Link>
-              .
-            </Text>
-            <Text>LiftLog is currently version {appVersion}</Text>
-            <SurfaceText testID="app-info-update" font="text-sm" selectable style={{ color: colors.onSurfaceVariant }}>
-              {updateText}
-            </SurfaceText>
-          </Dialog.Content>
-          <Dialog.Actions>
-            <Button onPress={() => setAppInfoOpen(false)}>
-              <T keyName="generic.close.button" />
-            </Button>
-          </Dialog.Actions>
-        </Dialog>
-      </Portal>
+      <Dialog visible={appInfoOpen} onDismiss={() => setAppInfoOpen(false)}>
+        <Dialog.Title>
+          <T keyName="settings.app_info.title" />
+        </Dialog.Title>
+        <Dialog.Content style={{ gap: spacing[2] }}>
+          <SurfaceText font="text-sm" style={{ color: tokens.ink }}>
+            LiftLog is an entirely open source app, licensed under the AGPL-3.0 license. You can find the source code on{' '}
+            <Link style={{ color: tokens.accentInk, fontWeight: '600' }} href="https://github.com/LiamMorrow/LiftLog">
+              GitHub
+            </Link>
+            .
+          </SurfaceText>
+          <SurfaceText font="text-sm" style={{ color: tokens.ink }}>
+            LiftLog is currently version {appVersion}
+          </SurfaceText>
+          <SurfaceText testID="app-info-update" font="text-sm" selectable style={{ color: tokens.muted }}>
+            {updateText}
+          </SurfaceText>
+        </Dialog.Content>
+        <Dialog.Actions>
+          <Button onPress={() => setAppInfoOpen(false)}>
+            <T keyName="generic.close.button" />
+          </Button>
+        </Dialog.Actions>
+      </Dialog>
     </SettingsPage>
   );
 }

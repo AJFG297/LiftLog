@@ -1,6 +1,6 @@
 # ADR-0002: Our own components for content, native controls for system chrome
 
-Status: accepted (2026-09-27)
+Status: accepted (2026-09-27). Paper was removed on 2026-11-28; see "react-native-paper is on the way out" below.
 
 ## Context
 

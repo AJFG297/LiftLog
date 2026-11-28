@@ -97,7 +97,6 @@ import { msMonitorWeightFill } from '@material-symbols-react-native/outlined-400
 import { msPerson } from '@material-symbols-react-native/outlined-400/msPerson';
 import { msPersonFill } from '@material-symbols-react-native/outlined-400/msPersonFill';
 import { MsIcon } from 'material-symbols-react-native';
-import { IconProps } from 'react-native-paper/lib/typescript/components/MaterialCommunityIcon';
 import { Platform } from 'react-native';
 import { msReplay } from '@material-symbols-react-native/outlined-400/msReplay';
 import { msAssignmentAdd } from '@material-symbols-react-native/outlined-400/msAssignmentAdd';
@@ -306,8 +305,7 @@ export type AppIconSource = keyof typeof MaterialSymbols | keyof typeof CustomIc
 
 export type AppIconName = keyof typeof MaterialSymbols;
 
-// Paper passes its full IconProps; only these are needed, so it can also be used directly.
-export function MsIconSrc({ name, ...rest }: Pick<IconProps, 'name' | 'size' | 'color'>) {
+export function MsIconSrc({ name, ...rest }: { name: string; size: number; color?: string }) {
   if ((name as keyof typeof CustomIcons) in CustomIcons) {
     return (
       <SvgXml

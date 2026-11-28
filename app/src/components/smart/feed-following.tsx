@@ -1,3 +1,4 @@
+import { Card } from '@/components/presentation/foundation/card';
 import EmptyInfo from '@/components/presentation/foundation/empty-info';
 import ConfirmationDialog from '@/components/presentation/foundation/confirmation-dialog';
 import LimitedHtml from '@/components/presentation/foundation/limited-html';
@@ -15,7 +16,6 @@ import { fetchInboxItems, selectFeedFollowing, unfollowFeedUser } from '@/store/
 import { T, useTranslate } from '@tolgee/react';
 import React, { useState } from 'react';
 import { View } from 'react-native';
-import { Card } from 'react-native-paper';
 import Menu from '@/components/presentation/foundation/menu';
 import { useDispatch } from 'react-redux';
 import IconButton from '@/components/presentation/foundation/icon-button';
@@ -37,12 +37,10 @@ export function FeedFollowing() {
         dispatch(fetchInboxItems({ fromUserAction: true }));
       }}
       ListEmptyComponent={
-        <Card mode="contained">
-          <Card.Content>
-            <EmptyInfo icon="personAdd" style={{ paddingVertical: spacing[4] }}>
-              <T keyName="feed.not_following_anyone.message" />
-            </EmptyInfo>
-          </Card.Content>
+        <Card>
+          <EmptyInfo icon="personAdd" style={{ paddingVertical: spacing[4] }}>
+            <T keyName="feed.not_following_anyone.message" />
+          </EmptyInfo>
         </Card>
       }
       refreshing={fetchingFeedItems}

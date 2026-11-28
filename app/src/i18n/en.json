@@ -1534,5 +1534,6 @@
   "android_preview_update.title": "New LiftLog version",
   "android_preview_update.body": "A newer Android build is ready. Install it over LiftLog to keep your workouts.",
   "android_preview_update.download.button": "Download update",
-  "android_preview_update.dismiss.button": "Dismiss update notice"
+  "android_preview_update.dismiss.button": "Dismiss update notice",
+  "generic.more_options.button": "More options"
 }

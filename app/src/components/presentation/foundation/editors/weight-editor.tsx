@@ -5,7 +5,8 @@ import BigNumber from 'bignumber.js';
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import IconButton from '@/components/presentation/foundation/icon-button';
-import { Text, TextInput, Tooltip, useTheme } from 'react-native-paper';
+import { SurfaceText } from '@/components/presentation/foundation/surface-text';
+import { TextField } from '@/components/presentation/foundation/text-field';
 import { shortFormatWeightUnit, Weight, WeightUnit } from '@/models/weight';
 import { usePreferredWeightUnit } from '@/hooks/usePreferredWeightUnit';
 
@@ -27,7 +28,6 @@ type WeightEditorProps = {
 );
 
 export function WeightEditor(props: WeightEditorProps) {
-  const theme = useTheme();
   const { t } = useTranslate();
   const preferredWeightUnit = usePreferredWeightUnit();
   const [text, setText] = useState(localeFormatBigNumber(props.weight?.value));
@@ -101,26 +101,23 @@ export function WeightEditor(props: WeightEditorProps) {
           alignItems: 'center',
         }}
       >
-        <TextInput
+        <TextField
           testID="weight-input"
           selectTextOnFocus
-          mode="outlined"
           inputMode="decimal"
           keyboardType="decimal-pad"
           autoFocus
           value={text}
           onChangeText={handleTextChange}
           contentStyle={numberStyle}
-          style={{
-            backgroundColor: theme.colors.elevation.level3,
-            flex: 1,
-          }}
+          style={{ flex: 1 }}
         />
 
         <IconButton
           mode="outlined"
           testID="weight-dialog-unit-selector"
-          icon={() => <Text>{shortFormatWeightUnit(editorWeightUnit)}</Text>}
+          accessibilityLabel={shortFormatWeightUnit(editorWeightUnit)}
+          icon={() => <SurfaceText font="text-sm">{shortFormatWeightUnit(editorWeightUnit)}</SurfaceText>}
           onPress={() => {
             const unit = editorWeightUnit === 'kilograms' ? 'pounds' : 'kilograms';
             setEditorWeightUnit(unit);
@@ -136,17 +133,16 @@ export function WeightEditor(props: WeightEditorProps) {
         }}
       >
         {props.allowNegative && (
-          <Tooltip title={t('exercise.toggle_negative.button')}>
-            <IconButton
-              mode="outlined"
-              icon={'plusMinus'}
-              onPress={() => {
-                setEditorWeightValue(editorWeightValue?.multipliedBy(-1));
-                setText(localeFormatBigNumber(editorWeightValue?.multipliedBy(-1)));
-                emitCurrentValues(editorWeightValue?.multipliedBy(-1), editorWeightUnit);
-              }}
-            />
-          </Tooltip>
+          <IconButton
+            mode="outlined"
+            icon={'plusMinus'}
+            accessibilityLabel={t('exercise.toggle_negative.button')}
+            onPress={() => {
+              setEditorWeightValue(editorWeightValue?.multipliedBy(-1));
+              setText(localeFormatBigNumber(editorWeightValue?.multipliedBy(-1)));
+              emitCurrentValues(editorWeightValue?.multipliedBy(-1), editorWeightUnit);
+            }}
+          />
         )}
         <IconButton icon={'minus'} mode="outlined" testID="decrement-weight" onPress={decrementWeight} />
         <IconButton icon={'plus'} mode="outlined" testID="increment-weight" onPress={incrementWeight} />

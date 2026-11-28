@@ -1,7 +1,7 @@
+import { Divider } from '@/components/presentation/foundation/divider';
 import { spacing } from '@/hooks/useAppTheme';
 import { Fragment, ReactNode } from 'react';
 import { View, ViewProps } from 'react-native';
-import { Divider } from 'react-native-paper';
 
 export default function ItemList<T>(
   props: {
@@ -25,7 +25,7 @@ export default function ItemList<T>(
       {items.map((item, index) => (
         <Fragment key={index}>
           <View>{renderItem(item, index)}</View>
-          {items.length - 1 !== index && <Divider style={{}} />}
+          {items.length - 1 !== index && <Divider />}
         </Fragment>
       ))}
     </View>

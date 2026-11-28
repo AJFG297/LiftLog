@@ -1,10 +1,10 @@
+import Icon from '@/components/presentation/foundation/icon';
 import { FormRow } from '@/components/presentation/foundation/form-row';
 import { AppIconSource } from '@/components/presentation/foundation/ms-icon-source';
 import { SurfaceText } from '@/components/presentation/foundation/surface-text';
 import { spacing, useAppTheme } from '@/hooks/useAppTheme';
 import { ReactNode } from 'react';
 import { View } from 'react-native';
-import { Icon } from 'react-native-paper';
 
 export default function LabelledFormRow(props: {
   icon: Extract<AppIconSource, `${string}Fill`>;

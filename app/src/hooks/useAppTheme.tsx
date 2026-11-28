@@ -7,11 +7,9 @@ import {
 } from '@pchmn/expo-material3-theme';
 import React, { createContext, ReactNode, useContext, useEffect } from 'react';
 import { Appearance, AppState, Platform, TextStyle, useColorScheme } from 'react-native';
-import { configureFonts, MD3DarkTheme, MD3LightTheme, PaperProvider } from 'react-native-paper';
 import { DarkTheme, ThemeProvider as NavigationThemeProvider, DefaultTheme } from 'expo-router';
-import { MsIconSrc } from '@/components/presentation/foundation/ms-icon-source';
 import { argbFromHex, Blend, Hct, hexFromArgb } from '@material/material-color-utilities';
-import { paperSchemeFromTokens, themeTokens, VERMILION, type ThemeTokens } from '@/utils/theme-tokens';
+import { m3SchemeFromTokens, themeTokens, VERMILION, type ThemeTokens } from '@/utils/theme-tokens';
 import type { HexColor } from '@/utils/color';
 
 export const rounding = {
@@ -182,9 +180,7 @@ export interface AppTheme {
   colorScheme: 'light' | 'dark';
 }
 
-// Unconverted screens read type from Paper, and headers from the navigation theme; both keep their own
-// sizes and weights but switch to Geist.
-const PAPER_FONTS = configureFonts({ config: { fontFamily: fontFamily.text } });
+// Stack headers read type from the navigation theme; they keep their own sizes and weights but use Geist.
 const NAVIGATION_FONTS = {
   regular: { fontFamily: fontFamily.text, fontWeight: '400' },
   medium: { fontFamily: fontFamily.text, fontWeight: '500' },
@@ -251,9 +247,8 @@ export const AppThemeProvider: React.FC<AppThemeProviderProps> = ({ children }) 
   // The roles the tokens don't cover (secondary, tertiary, error containers) come from a full M3 scheme on
   // the same source: the system's own when matching the wallpaper, so those stay exact.
   const baseScheme = (matchWallpaper ? systemTheme : createMaterial3Theme(accentSource))[colorScheme];
-  const schemedTheme = paperSchemeFromTokens(tokens, baseScheme, variant);
+  const schemedTheme = m3SchemeFromTokens(tokens, baseScheme, variant);
 
-  const paperTheme = { ...(isDark ? MD3DarkTheme : MD3LightTheme), colors: schemedTheme, fonts: PAPER_FONTS };
   /* The seedColor is passed into the expo-ui Hosts and means something different per platform.
    * On Android it seeds Compose's tonal palette, so it's the accent fill; undefined when matching the
    * wallpaper, which lets Compose use the same system palette we derived the accent from.
@@ -292,25 +287,18 @@ export const AppThemeProvider: React.FC<AppThemeProviderProps> = ({ children }) 
     ...baseNavigationThem,
     fonts: NAVIGATION_FONTS,
     colors: {
-      background: paperTheme.colors.background,
-      border: paperTheme.colors.outlineVariant,
-      card: paperTheme.colors.surfaceContainer,
-      notification: paperTheme.colors.surface,
-      primary: paperTheme.colors.primary,
-      text: paperTheme.colors.onSurface,
+      background: schemedTheme.background,
+      border: schemedTheme.outlineVariant,
+      card: schemedTheme.surfaceContainer,
+      notification: schemedTheme.surface,
+      primary: schemedTheme.primary,
+      text: schemedTheme.onSurface,
     },
   };
 
   return (
     <AppThemeContext.Provider value={appTheme}>
-      <PaperProvider
-        theme={paperTheme}
-        settings={{
-          icon: (props) => <MsIconSrc {...props} color={props.color ?? appTheme.colors.onSurface} />,
-        }}
-      >
-        <NavigationThemeProvider value={navigationTheme}>{children}</NavigationThemeProvider>
-      </PaperProvider>
+      <NavigationThemeProvider value={navigationTheme}>{children}</NavigationThemeProvider>
     </AppThemeContext.Provider>
   );
 };

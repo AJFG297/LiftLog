@@ -1,6 +1,6 @@
 # Plan: app redesign ("Clarity")
 
-Status: **in progress**. Phases 0 and 1 are done: ADR-0002 is accepted, and the theme tokens, fonts, core components, number pad and new set types are merged (see [Theming.md](../Theming.md)). Phase 2, the gym loop, is done: focus mode and the All exercises sheet (PM-23), set logging (PM-29), rest in the header (PM-30) and finishing a workout (PM-31) are merged, with a pass to match the canvas. Phase 3 is next. The Linear parent issue is PM-16, "Spec: App redesign (Clarity)".
+Status: **in progress**. Phases 0 and 1 are done: ADR-0002 is accepted, and the theme tokens, fonts, core components, number pad and new set types are merged (see [Theming.md](../Theming.md)). Phase 2, the gym loop, is done: focus mode and the All exercises sheet (PM-23), set logging (PM-29), rest in the header (PM-30) and finishing a workout (PM-31) are merged, with a pass to match the canvas. Phase 3 is next. react-native-paper is gone: the screens left on it (You, Backends, the AI planner, the feed, history, the welcome wizard, Manage exercises and the remaining dialogs) moved to the token components, and the package was removed. The Linear parent issue is PM-16, "Spec: App redesign (Clarity)".
 
 The prototypes live on a private claude.ai design canvas owned by the author
 (<https://claude.ai/artifact/47zQyGzQ5NcrAP7Yw4Szwx>). It holds 28 clickable phone screens: the chosen
