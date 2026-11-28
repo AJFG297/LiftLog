@@ -712,40 +712,43 @@ export class WorkoutRepository {
     alsoWrite: (tx: Transaction) => Statement[] = () => [],
     onCommitted: () => void = () => {},
   ): Promise<void> {
-    const workoutIds = await this.workoutIdsLogging([...survivorOf.keys()]);
     const { blueprint, movementKey, progressionKey } = workoutExercisesSchema;
     const survivorKeys = [...new Set(survivorOf.values())].flatMap((id) =>
       keysOfExercise(id).map((x) => x.movementKey),
     );
-    await this.write(
-      (tx) => [
-        ...[...survivorOf].flatMap(([from, to]) => {
-          const toKeys = keysOfExercise(to);
-          return keysOfExercise(from).map((fromKey, index) =>
-            tx
-              .update(workoutExercisesSchema)
-              .set({
-                movementKey: toKeys[index]!.movementKey,
-                progressionKey: toKeys[index]!.progressionKey,
-                blueprint: sql`json_set(${blueprint}, '$.exerciseId', ${to})`,
-              })
-              .where(and(eq(movementKey, fromKey.movementKey), eq(progressionKey, fromKey.progressionKey))),
-          );
-        }),
-        ...chunkedValues(survivorKeys, MAX_PARAMETERS).map((keys) =>
-          renumberLineages(
-            tx,
-            sql`${workoutExercisesSchema.workoutId} in (select ${workoutExercisesSchema.workoutId} from ${workoutExercisesSchema} where ${inArray(movementKey, keys)})`,
+    await this.inOrder(async () => {
+      const workoutIds = await this.workoutIdsLogging([...survivorOf.keys()]);
+      await writeAtomically(
+        this.db,
+        (tx) => [
+          ...[...survivorOf].flatMap(([from, to]) => {
+            const toKeys = keysOfExercise(to);
+            return keysOfExercise(from).map((fromKey, index) =>
+              tx
+                .update(workoutExercisesSchema)
+                .set({
+                  movementKey: toKeys[index]!.movementKey,
+                  progressionKey: toKeys[index]!.progressionKey,
+                  blueprint: sql`json_set(${blueprint}, '$.exerciseId', ${to})`,
+                })
+                .where(and(eq(movementKey, fromKey.movementKey), eq(progressionKey, fromKey.progressionKey))),
+            );
+          }),
+          ...chunkedValues(survivorKeys, MAX_PARAMETERS).map((keys) =>
+            renumberLineages(
+              tx,
+              sql`${workoutExercisesSchema.workoutId} in (select ${workoutExercisesSchema.workoutId} from ${workoutExercisesSchema} where ${inArray(movementKey, keys)})`,
+            ),
           ),
-        ),
-        ...alsoWrite(tx),
-      ],
-      { workoutIds, activeChanged: false },
-      () => {
-        this.exerciseRepoints.push(new Map(survivorOf));
-        onCommitted();
-      },
-    );
+          ...alsoWrite(tx),
+        ],
+        () => {
+          this.exerciseRepoints.push(new Map(survivorOf));
+          onCommitted();
+        },
+      );
+      await this.notify({ workoutIds, activeChanged: false });
+    });
   }
 
   /** Writes one workout's content. */

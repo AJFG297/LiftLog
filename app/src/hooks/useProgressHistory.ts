@@ -8,7 +8,9 @@ import { useToday } from '@/hooks/useToday';
 /** Finished history shared by all Progress routes, refreshed after relevant committed writes. */
 export function useProgressHistory(): ProgressHistory | undefined {
   const today = useToday();
-  return useWorkoutQuery((repository) => loadProgressHistory(repository, today), [today.toString()]);
+  return useWorkoutQuery((repository) => loadProgressHistory(repository, today), [today.toString()], {
+    keepPrevious: true,
+  });
 }
 
 export function loadProgressHistory(repository: WorkoutRepository, today = LocalDate.now()): Promise<ProgressHistory> {

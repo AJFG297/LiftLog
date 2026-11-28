@@ -324,7 +324,7 @@ Every read below covers _finished_ workouts only: the one in progress (`active =
   set as `effective_weight_kg * (30 + reps)` (Epley without the division), keeps the best per exercise
   and then per movement and workout with `GROUP BY ... MAX()` (SQLite takes the other columns from the
   winning row, so nothing is sorted), and runs `MAX() OVER (PARTITION BY movement_key ORDER BY
-reference_time_ms ROWS ... 1 PRECEDING)`; only the rows that beat the running max come back, with the
+  reference_time_ms ROWS ... 1 PRECEDING)`; only the rows that beat the running max come back, with the
   set that did, and the exact 1RM is rebuilt in JS (`effectiveLoad`, `oneRepMaxOf`) so it reads in the
   unit it was lifted in. A `personal_record` table was not needed: about 130 ms under Node over 5,000
   workouts (75k sets), off the render path and only re-run after a write.

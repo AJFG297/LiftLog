@@ -70,36 +70,39 @@ screen.
 (see [Storage.md](./Storage.md#reading-from-a-screen-useworkoutquery)). The loader uses
 `services/progress-history-cache.ts`: one lazy cache per `WorkoutRepository`, shared by the Progress tab,
 Records, All exercises and exercise details. The first read queries `earliestDate()` and
-`finishedBetween(earliest, today)`, then reverses and builds the model as before. Subsequent reads return
-the same model, and concurrent readers await one promise. The cache retains the derived model, not the
-hydrated `Session[]`.
+`finishedBetween(earliest, today)`, then reverses and builds the model as before. Subsequent reads for
+the same date return the same model, and concurrent readers for the same date await one promise.
+Concurrent reads for different dates stay isolated so an earlier-date caller never receives a newer
+date's model. The cache retains the derived model, not the hydrated `Session[]`.
 
 `WorkoutRepository.subscribeFinishedHistory` invalidates it after committed history changes: inserts,
 edits, deletes, imports, exercise repoints and active-flag changes (including workout completion). While
 the cache exists, content writes use one small active-id query inside the repository's write queue to
 classify the write against SQLite's committed flag, rather than Redux state that may already have moved
-on. Content writes touching only the active workout do not invalidate it. Classification failure
-conservatively invalidates; a rolled-back transaction sends no notification. No classification query is
-added before the cache is first requested.
+on. `repointExercises` also resolves its affected workout ids inside the write queue so queued writes
+cannot slip past invalidation. Content writes touching only the active workout do not invalidate it.
+Classification failure conservatively invalidates; a rolled-back transaction sends no notification. No
+classification query is added before the cache is first requested.
 
 A generation check discards a read interrupted by invalidation and retries before resolving any waiting
-reader. A failed read releases the pending promise so a later request can retry. The cache also expires
-when the requested date changes; the hook uses `useToday` to refresh mounted screens after returning to
-the foreground on a later day.
+reader. The in-flight slot clears synchronously before settlement so an immediate write or retry cannot
+reuse a settled promise. The cache also expires when the requested date changes; the hook uses `useToday`
+with `keepPrevious: true` to refresh mounted screens after returning to the foreground on a later day
+without flashing `undefined`.
 
 The hook is undefined on first mount until its query resolves (even for a warm cache). It keeps the old
-answer visible while refreshing and defers work while unfocused, as `useWorkoutQuery` already does.
-Invalidation itself does not rebuild anything. One model remains cached for the repository's lifetime or
-until invalidated; this trades longer retention after leaving Progress for avoiding multiple copies
-across mounted screens. The first uncached load and a relevant-write refresh still rebuild the full
-history; this change does not optimize their SQL or model-building algorithm.
+answer visible while refreshing (after writes or date rollovers) and defers work while unfocused, as
+`useWorkoutQuery` already does. Invalidation itself does not rebuild anything. One model remains cached
+for the repository's lifetime or until invalidated; this trades longer retention after leaving Progress
+for avoiding multiple copies across mounted screens. The first uncached load and a relevant-write refresh
+still rebuild the full history; this change does not optimize their SQL or model-building algorithm.
 
 ### Measuring the cache
 
 From `app/`, run `npm run bench:progress`; `LIFTLOG_BENCH_RUNS` sets the measured trial count (default 5).
 The opt-in benchmark uses deterministic 500- and 5,000-workout histories. It alternates the original
 uncached loader and the cached loader against the same seeded database, discards a warm-up trial, and
-reports median first-load, subsequent-route and post-write-refresh times, SQL SELECT counts and model
+reports median and min/max range for first-load, subsequent-route and post-write-refresh times, SQL SELECT counts and model
 build counts. Each trial models four route consumers; warm-route medians pool the three subsequent
 reads per trial. Refresh is timed after inserting a finished workout has committed, so it excludes write
 time and the cache's classification query. Assertions check fresh results and zero warm-cache SQL reads

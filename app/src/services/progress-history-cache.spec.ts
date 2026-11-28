@@ -4,10 +4,11 @@ import { openDatabaseAsync } from 'expo-sqlite';
 import { LocalDate } from '@js-joda/core';
 import { WorkoutRepository } from '@/services/workout-repository';
 import { DatabaseMigrationService } from '@/services/database-migration-service';
-import { progressHistoryCacheFor, ProgressHistoryCache } from '@/services/progress-history-cache';
+import { progressHistoryCacheFor, type ProgressHistoryCache } from '@/services/progress-history-cache';
 import { generateSyntheticHistory } from '@/utils/__test__/synthetic-history';
 import { buildProgressHistory } from '@/store/stats/progress-history';
 import { stubExerciseId } from '@/models/blueprint-models';
+import { RecordedWeightedExercise } from '@/models/session-models';
 
 const today = LocalDate.parse('2026-06-01');
 const logger = { info() {}, warn() {}, error() {}, debug() {} };
@@ -139,5 +140,109 @@ describe('ProgressHistoryCache', () => {
     const value = await empty.read(today);
     expect(value.workouts).toEqual([]);
     expect(await empty.read(today)).toBe(value);
+  });
+
+  it('invalidates after a repointExercises queued behind a workout insert', async () => {
+    const oldId = stubExerciseId('Queued old movement');
+    const newId = stubExerciseId('Queued merged movement');
+    const base = history[0]!;
+    const withOld = base.with({
+      id: 'queued-repoint',
+      recordedExercises: base.recordedExercises.map((ex, index) =>
+        index === 0 && ex instanceof RecordedWeightedExercise
+          ? ex.with({ blueprint: ex.blueprint.with({ exerciseId: oldId }) })
+          : ex,
+      ),
+    });
+
+    const actualLookup = repository.workoutIdsLogging.bind(repository);
+    let releaseRepoint!: () => void;
+    const repointStarted = new Promise<void>((resolve) => {
+      vi.spyOn(repository, 'workoutIdsLogging').mockImplementationOnce(async (exerciseIds) => {
+        const ids = await actualLookup(exerciseIds);
+        resolve();
+        await new Promise<void>((done) => {
+          releaseRepoint = done;
+        });
+        return ids;
+      });
+    });
+
+    const putPromise = repository.put(withOld);
+    const repointPromise = repository.repointExercises(new Map([[oldId, newId]]));
+    await putPromise;
+    await repointStarted;
+
+    const beforeRepoint = await cache.read(today);
+    expect([...beforeRepoint.exercises.values()].some((e) => e.blueprint.exerciseId === oldId)).toBe(true);
+
+    releaseRepoint();
+    await repointPromise;
+
+    const afterRepoint = await cache.read(today);
+    expect(afterRepoint).not.toBe(beforeRepoint);
+    expect([...afterRepoint.exercises.values()].some((e) => e.blueprint.exerciseId === oldId)).toBe(false);
+    expect([...afterRepoint.exercises.values()].some((e) => e.blueprint.exerciseId === newId)).toBe(true);
+  });
+
+  it('clears the in-flight slot before settling so an immediate retry or date change cannot reuse a settled promise', async () => {
+    const tomorrow = today.plusDays(1);
+    const future = history[0]!.with({ id: 'microtask-gap-tomorrow', date: tomorrow });
+    await repository.put(future);
+
+    const old = await repository.finishedBetween(today.minusYears(1), today);
+    let resolveRead!: (value: typeof old) => void;
+    const readGate = new Promise<typeof old>((yes) => {
+      resolveRead = yes;
+    });
+    const reads = vi.spyOn(repository, 'finishedBetween').mockImplementationOnce(() => readGate);
+    const first = cache.read(today);
+    await vi.waitFor(() => expect(reads).toHaveBeenCalledTimes(1));
+
+    const nextDay = readGate.then(() => cache.read(tomorrow));
+    resolveRead(old);
+    expect((await first).workouts.some((w) => w.workoutId === future.id)).toBe(false);
+    expect((await nextDay).workouts.some((w) => w.workoutId === future.id)).toBe(true);
+
+    let rejectEarliest!: (reason?: unknown) => void;
+    const failGate = new Promise<LocalDate | undefined>((_, no) => {
+      rejectEarliest = no;
+    });
+    vi.spyOn(repository, 'earliestDate').mockImplementationOnce(() => failGate);
+    const failed = cache.read(today);
+    const retry = failGate.then(
+      () => {
+        throw new Error('expected failure');
+      },
+      () => cache.read(today),
+    );
+    rejectEarliest(new Error('transient read error'));
+    await expect(failed).rejects.toThrow('transient read error');
+    expect((await retry).workouts).toHaveLength(history.length);
+  });
+
+  it('isolates concurrent reads for different dates instead of resolving an earlier date with a newer date', async () => {
+    const tomorrow = today.plusDays(1);
+    const future = history[0]!.with({ id: 'tomorrow-concurrent', date: tomorrow });
+    await repository.put(future);
+
+    const todaySessions = await repository.finishedBetween(today.minusYears(1), today);
+    let resolveToday!: (value: typeof todaySessions) => void;
+    const gate = new Promise<typeof todaySessions>((yes) => {
+      resolveToday = yes;
+    });
+    const reads = vi.spyOn(repository, 'finishedBetween').mockImplementationOnce(() => gate);
+
+    const readToday = cache.read(today);
+    await vi.waitFor(() => expect(reads).toHaveBeenCalledTimes(1));
+    const readTomorrow = cache.read(tomorrow);
+
+    const tomorrowResult = await readTomorrow;
+    expect(tomorrowResult.workouts.some((w) => w.workoutId === future.id)).toBe(true);
+
+    resolveToday(todaySessions);
+    const todayResult = await readToday;
+    expect(todayResult.workouts.some((w) => w.workoutId === future.id)).toBe(false);
+    expect(await cache.read(tomorrow)).toBe(tomorrowResult);
   });
 });

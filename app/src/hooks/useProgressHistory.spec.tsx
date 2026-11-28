@@ -117,13 +117,16 @@ describe('useProgressHistory', () => {
     expect(reads).toHaveBeenCalledTimes(2);
   });
 
-  it('refreshes a mounted screen when today changes', async () => {
+  it('refreshes a mounted screen when today changes without flashing undefined', async () => {
     screen.day = '2026-03-01';
     await repository.put(workout('future', LocalDate.of(2026, 3, 2), 100));
     const view = renderHook(() => useProgressHistory());
+    expect(view.result.current).toBeUndefined();
     await waitFor(() => expect(view.result.current?.workouts).toHaveLength(0));
+    const previous = view.result.current;
     screen.day = '2026-03-02';
     view.rerender();
+    expect(view.result.current).toBe(previous);
     await waitFor(() => expect(view.result.current?.workouts).toHaveLength(1));
   });
 });

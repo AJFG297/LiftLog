@@ -14,44 +14,69 @@ export function progressHistoryCacheFor(repository: WorkoutRepository): Progress
   return cache;
 }
 
-export class ProgressHistoryCache {
+interface CachedEntry {
+  readonly day: string;
+  readonly value: ProgressHistory;
+}
+
+interface InFlightEntry {
+  readonly day: string;
+  readonly token: object;
+  readonly promise: Promise<ProgressHistory>;
+}
+
+class ProgressHistoryCache {
   private generation = 0;
-  private day: LocalDate | undefined;
-  private value: ProgressHistory | undefined;
-  private pending: Promise<ProgressHistory> | undefined;
+  private cached: CachedEntry | undefined;
+  private inFlight: InFlightEntry | undefined;
 
   constructor(private readonly repository: WorkoutRepository) {
     repository.subscribeFinishedHistory(() => this.invalidate());
   }
 
   read(today = LocalDate.now()): Promise<ProgressHistory> {
-    if (!this.day?.equals(today)) {
-      this.day = today;
-      this.invalidate();
+    const day = today.toString();
+    if (this.cached?.day === day) return Promise.resolve(this.cached.value);
+    if (this.inFlight?.day === day) return this.inFlight.promise;
+
+    this.cached = undefined;
+    const token = {};
+    let settled = false;
+    const promise = this.load(today, day, token, () => {
+      settled = true;
+    });
+    if (!settled) {
+      this.inFlight = { day, token, promise };
     }
-    if (this.value) return Promise.resolve(this.value);
-    // Keep callers on the same promise even if a write interrupts its read. The loop below retries
-    // against the newest generation before any caller can receive an obsolete result.
-    return (this.pending ??= this.load().finally(() => {
-      this.pending = undefined;
-    }));
+    return promise;
   }
 
   private invalidate(): void {
     this.generation++;
-    this.value = undefined;
+    this.cached = undefined;
   }
 
-  private async load(): Promise<ProgressHistory> {
-    for (;;) {
-      const generation = this.generation;
-      const today = this.day!;
-      const earliest = await this.repository.earliestDate();
-      const sessions = earliest ? await this.repository.finishedBetween(earliest, today) : [];
-      if (generation !== this.generation) continue;
-      const value = buildProgressHistory(sessions.reverse());
-      this.value = value;
-      return value;
+  private async load(today: LocalDate, day: string, token: object, onSettled: () => void): Promise<ProgressHistory> {
+    try {
+      for (;;) {
+        const generation = this.generation;
+        const earliest = await this.repository.earliestDate();
+        const sessions = earliest ? await this.repository.finishedBetween(earliest, today) : [];
+        if (generation !== this.generation) continue;
+        const value = buildProgressHistory(sessions.reverse());
+        if (this.inFlight?.token === token) {
+          this.cached = { day, value };
+        }
+        return value;
+      }
+    } finally {
+      // Run inside load() so the in-flight slot clears synchronously before callers observe settlement.
+      onSettled();
+      if (this.inFlight?.token === token) {
+        this.inFlight = undefined;
+      }
     }
   }
 }
+
+export type { ProgressHistoryCache };

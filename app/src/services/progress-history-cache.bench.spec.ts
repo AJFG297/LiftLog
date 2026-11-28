@@ -81,6 +81,8 @@ describe.skipIf(!process.env.LIFTLOG_BENCH)('Progress navigation benchmark', () 
           name,
           {
             ms: round(median(values.map((v) => v.ms))),
+            minMs: round(Math.min(...values.map((v) => v.ms))),
+            maxMs: round(Math.max(...values.map((v) => v.ms))),
             sqlReads: median(values.map((v) => v.sqlReads)),
             modelBuilds: median(values.map((v) => v.modelBuilds)),
             samples: values.length,
