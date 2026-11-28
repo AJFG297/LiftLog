@@ -7,7 +7,7 @@ import { useFinishWorkout } from '@/hooks/useFinishWorkout';
 import { LocalDate } from '@js-joda/core';
 import { useRouter, Stack } from 'expo-router';
 import { View } from 'react-native';
-import { DatePickerInput } from 'react-native-paper-dates';
+import { DateField } from '@/components/presentation/foundation/editors/date-field';
 import { useDispatch } from 'react-redux';
 import { useOnDismiss } from '@/hooks/useOnDismiss';
 import { useStartWorkoutWithConfirmation } from '@/hooks/useStartWorkoutWithConfirmation';
@@ -87,19 +87,16 @@ export function PastWorkoutEditor({ sessionId, close }: { sessionId: string; clo
         showBodyweight={showBodyweight}
         header={
           <View style={{ paddingHorizontal: spacing.pageHorizontalMargin }}>
-            <DatePickerInput
+            <DateField
               testID="session-date-input"
-              locale="default"
-              inputMode="start"
-              onChange={(e) => {
-                if (e)
-                  dispatch(
-                    updateStoredSession({
-                      sessionId,
-                      update: (s) => s.withUpdatedDate(LocalDate.of(e.getFullYear(), e.getMonth() + 1, e.getDate())),
-                    }),
-                  );
-              }}
+              onChange={(e) =>
+                dispatch(
+                  updateStoredSession({
+                    sessionId,
+                    update: (s) => s.withUpdatedDate(LocalDate.of(e.getFullYear(), e.getMonth() + 1, e.getDate())),
+                  }),
+                )
+              }
               value={jsDate}
             />
           </View>

@@ -7,7 +7,7 @@ import {
   ACCENT_PRESETS,
   MIN_TEXT_CONTRAST,
   NEUTRALS,
-  paperSchemeFromTokens,
+  m3SchemeFromTokens,
   themeTokens,
   VERMILION,
   type ThemeTokens,
@@ -126,14 +126,14 @@ describe('themeTokens', () => {
   });
 });
 
-describe('paperSchemeFromTokens', () => {
-  it('gives Paper a primary that works both as a fill and as text', () => {
+describe('m3SchemeFromTokens', () => {
+  it('gives `colors` a primary that works both as a fill and as text', () => {
     fc.assert(
       fc.property(hexArb, fc.constantFrom(...VARIANTS), (source, variant) => {
         const isDark = variant !== 'light';
         const tokens = themeTokens(source, variant);
         const base = createThemeFromSourceColor(source)[isDark ? 'dark' : 'light'];
-        const scheme = paperSchemeFromTokens(tokens, base, variant);
+        const scheme = m3SchemeFromTokens(tokens, base, variant);
         expect(wcag(scheme.onPrimary, scheme.primary)).toBeGreaterThanOrEqual(MIN_TEXT_CONTRAST);
         expect(wcag(scheme.primary, scheme.background)).toBeGreaterThanOrEqual(MIN_TEXT_CONTRAST);
         expect(wcag(scheme.primary, scheme.surfaceContainer)).toBeGreaterThanOrEqual(MIN_TEXT_CONTRAST);

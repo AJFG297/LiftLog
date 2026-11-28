@@ -44,7 +44,6 @@ export default function ExerciseSearchAndFilters({
           right={() => (
             <IconButton
               icon={filtersExpanded ? 'expandCircleUp' : 'expandCircleDown'}
-              animated
               testID="expand-filters-btn"
               mode="contained-tonal"
               onPress={() => {

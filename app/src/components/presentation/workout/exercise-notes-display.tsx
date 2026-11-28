@@ -73,7 +73,6 @@ export default function ExerciseNotesDisplay(props: ExerciseNotesDisplayProps) {
             marginLeft: -spacing[3],
             alignSelf: 'flex-start',
           }}
-          animated
           onPress={handleToggleExpanded}
         />
 

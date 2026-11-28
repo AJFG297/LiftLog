@@ -2,7 +2,7 @@ import { SurfaceText } from '@/components/presentation/foundation/surface-text';
 import { T } from '@tolgee/react';
 import { ReactNode } from 'react';
 import { View } from 'react-native';
-import { Dialog, Portal } from 'react-native-paper';
+import { Dialog } from '@/components/presentation/foundation/dialog';
 import Button from '@/components/presentation/foundation/button';
 
 type ConfirmationDialogWithoutAdditionalActionProps = {
@@ -79,22 +79,20 @@ export default function ConfirmationDialog(props: ConfirmationDialogProps) {
   );
 
   return (
-    <Portal>
-      <Dialog
-        visible={open}
-        dismissable={!preventCancel}
-        onDismiss={() => {
-          if (!preventCancel) {
-            onCancel();
-          }
-        }}
-      >
-        <Dialog.Title>{headline}</Dialog.Title>
-        <Dialog.Content>
-          <SurfaceText>{textContent}</SurfaceText>
-        </Dialog.Content>
-        {buttons}
-      </Dialog>
-    </Portal>
+    <Dialog
+      visible={open}
+      dismissable={!preventCancel}
+      onDismiss={() => {
+        if (!preventCancel) {
+          onCancel();
+        }
+      }}
+    >
+      <Dialog.Title>{headline}</Dialog.Title>
+      <Dialog.Content>
+        <SurfaceText>{textContent}</SurfaceText>
+      </Dialog.Content>
+      {buttons}
+    </Dialog>
   );
 }

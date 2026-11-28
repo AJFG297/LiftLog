@@ -1,33 +1,41 @@
+import { useGesturePress } from '@/components/presentation/foundation/gesture-press';
 import { GesturePressableProps } from '@/components/presentation/foundation/pressable-props';
-import { isNotNullOrUndefined } from '@/utils/null';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-// oxlint-disable-next-line no-restricted-imports
-import { TouchableRippleProps, TouchableRipple as NativeTouchableRipple } from 'react-native-paper';
+import { useAppTheme } from '@/hooks/useAppTheme';
+import { ReactNode } from 'react';
+import { AccessibilityProps, StyleProp, View, ViewStyle } from 'react-native';
+import { GestureDetector } from 'react-native-gesture-handler';
 
+type TouchableRippleProps = AccessibilityProps & {
+  children: ReactNode;
+  disabled?: boolean;
+  style?: StyleProp<ViewStyle>;
+  testID?: string;
+};
+
+/** A pressable area with no look of its own beyond the pressed tint. */
 export default function TouchableRipple({
+  children,
+  disabled,
+  style,
+  testID,
   onPress,
   onLongPress,
-  disabled,
-  ...rest
+  ...accessibility
 }: GesturePressableProps<TouchableRippleProps>) {
-  const tap = Gesture.Tap()
-    .runOnJS(true)
-    .onStart(() => !disabled && onPress?.());
-  const longPress = onLongPress
-    ? Gesture.LongPress()
-        .runOnJS(true)
-        .onStart(() => !disabled && onLongPress())
-    : undefined;
-  const gesture = Gesture.Race(...[tap, longPress].filter(isNotNullOrUndefined));
+  const { tokens } = useAppTheme();
+  const { gesture, pressed } = useGesturePress({ onPress, onLongPress, disabled });
   return (
     <GestureDetector gesture={gesture}>
-      <NativeTouchableRipple
-        disabled={disabled}
-        onPress={onPress ? () => {} : undefined!}
-        // Disable long press since we should be using Holdable for this
-        onLongPress={onLongPress || onPress ? () => {} : undefined!}
-        {...rest}
-      />
+      <View
+        testID={testID}
+        accessible
+        accessibilityRole="button"
+        {...accessibility}
+        collapsable={false}
+        style={[style, pressed && !disabled && { backgroundColor: tokens.track }]}
+      >
+        {children}
+      </View>
     </GestureDetector>
   );
 }
