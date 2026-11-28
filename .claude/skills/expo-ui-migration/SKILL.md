@@ -1,7 +1,7 @@
 ---
 name: expo-ui-migration
 description: >-
-  Use when moving a react-native-paper system-chrome control (sheet, menu, switch, picker, alert) to
+  Use when adding a system-chrome control (sheet, menu, switch, picker, alert) with
   native expo-ui (SwiftUI on iOS / Jetpack Compose on Android), or authoring any new platform-split native
   control - i.e. creating a `foo.tsx` +
   `foo.android.tsx` + `foo-props.ts` triple that renders `@expo/ui` `Host`s. Covers the seedColor rule,
@@ -10,7 +10,7 @@ description: >-
 
 # Migrating a component to expo-ui (native)
 
-LiftLog is moving off `react-native-paper`. Per [ADR-0002](../../../docs/adr/0002-own-visual-language.md),
+LiftLog no longer uses `react-native-paper`. Per [ADR-0002](../../../docs/adr/0002-own-visual-language.md),
 **system chrome** goes native via `@expo/ui`: SwiftUI on iOS, Jetpack Compose (M3 expressive) on Android.
 That covers tabs, sheets, menus, switches, pickers and alerts. **Content surfaces** don't use this
 skill. Cards, set rows, the number pad and summaries are our own components built on the theme tokens
@@ -34,7 +34,7 @@ Metro picks `.android.tsx` on Android and `.tsx` elsewhere. **Reference exemplar
 - On every `Host`, pass **`seedColor={colors.seedColor}`** from `useAppTheme()` - **never**
   `colors.primary`. `seedColor` is the accent built for native hosts (see `docs/Theming.md`): on Android
   the accent fill that seeds Compose's palette, on iOS the tint (the fill in light mode, the lighter
-  accent ink in dark mode). `colors.primary` is a Paper role mapped for unconverted screens, and differs
+  accent ink in dark mode). `colors.primary` is a Material 3 role mapped from the tokens, and differs
   from both. `seedColor` is `undefined` when the user matches the wallpaper, which lets Compose use the
   same Material You palette the accent was derived from.
 - **Let native components own their slot colours.** Don't pass a `colors={{ containerColor, contentColor,
@@ -50,7 +50,7 @@ checked… }}` object to a native control, and don't `tint`/`foregroundStyle` an
 ## Icons inside Compose must be native
 
 Import an XML vector drawable per icon from `@expo/material-symbols` and render it with expo-ui's own
-`Icon` - **not** the RN Paper / `@material-symbols-react-native` wrapper:
+`Icon` - **not** the RN `Icon` / `@material-symbols-react-native` wrapper:
 
 ```tsx
 import { Icon } from "@expo/ui/jetpack-compose";

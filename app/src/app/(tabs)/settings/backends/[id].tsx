@@ -24,9 +24,12 @@ import { putBackend, removeBackend } from '@/store/backends';
 import { T, TranslationKey, useTranslate } from '@tolgee/react';
 import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
+import { View } from 'react-native';
 import ExperimentIcon from '@expo/material-symbols/experiment.xml';
 import DeleteIcon from '@expo/material-symbols/delete.xml';
-import { HelperText, TextInput } from 'react-native-paper';
+import { SurfaceText } from '@/components/presentation/foundation/surface-text';
+import { TextField } from '@/components/presentation/foundation/text-field';
+import { spacing, useAppTheme } from '@/hooks/useAppTheme';
 import { useDispatch } from 'react-redux';
 
 const kindOptions = [
@@ -57,6 +60,7 @@ export default function BackendEditorPage() {
 
 function BackendEditor({ backend }: { backend: Backend }) {
   const { t } = useTranslate();
+  const { tokens } = useAppTheme();
   const dispatch = useDispatch();
   const router = useRouter();
   const [probe, setProbe] = useState<ProbeState>({ status: 'idle' });
@@ -181,30 +185,40 @@ function BackendEditor({ backend }: { backend: Backend }) {
         />
       }
     >
-      <FormRow noGap>
-        <TextInput
-          mode="outlined"
-          label={t('backends.name.label')}
-          value={backend.name}
-          error={!!nameError}
-          onChangeText={(name) => update({ name })}
-          onBlur={() => update({ name: backend.name.trim() })}
-          autoCorrect={false}
-        />
-        <HelperText type="error">{nameError}</HelperText>
-        <TextInput
-          mode="outlined"
-          label={t('backends.url.label')}
-          placeholder="https://liftlog.example.com"
-          value={backend.url}
-          error={!!urlError}
-          onChangeText={(url) => update({ url })}
-          onBlur={() => update({ url: normalizeBackendUrl(backend.url) })}
-          autoCorrect={false}
-          autoCapitalize="none"
-          keyboardType="url"
-        />
-        <HelperText type="error">{urlError}</HelperText>
+      <FormRow>
+        <View style={{ gap: spacing[1] }}>
+          <TextField
+            label={t('backends.name.label')}
+            value={backend.name}
+            error={!!nameError}
+            onChangeText={(name) => update({ name })}
+            onBlur={() => update({ name: backend.name.trim() })}
+            autoCorrect={false}
+          />
+          {nameError ? (
+            <SurfaceText font="text-xs" style={{ color: tokens.danger }}>
+              {nameError}
+            </SurfaceText>
+          ) : null}
+        </View>
+        <View style={{ gap: spacing[1] }}>
+          <TextField
+            label={t('backends.url.label')}
+            placeholder="https://liftlog.example.com"
+            value={backend.url}
+            error={!!urlError}
+            onChangeText={(url) => update({ url })}
+            onBlur={() => update({ url: normalizeBackendUrl(backend.url) })}
+            autoCorrect={false}
+            autoCapitalize="none"
+            keyboardType="url"
+          />
+          {urlError ? (
+            <SurfaceText font="text-xs" style={{ color: tokens.danger }}>
+              {urlError}
+            </SurfaceText>
+          ) : null}
+        </View>
       </FormRow>
 
       <SegmentedGroup>
@@ -221,9 +235,13 @@ function BackendEditor({ backend }: { backend: Backend }) {
       <BackendHeaderEditor headers={backend.headers} onChange={(headers) => update({ headers })} />
 
       {probe.status === 'idle' ? null : (
-        <HelperText type={probe.status === 'done' && !probe.ok ? 'error' : 'info'}>
+        <SurfaceText
+          font="text-xs"
+          selectable
+          style={{ color: probe.status === 'done' && !probe.ok ? tokens.danger : tokens.muted }}
+        >
           {probe.status === 'checking' ? t('backends.test.checking') : probe.message}
-        </HelperText>
+        </SurfaceText>
       )}
 
       <ConfirmationDialog

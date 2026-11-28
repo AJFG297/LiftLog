@@ -6,7 +6,7 @@ import { useTranslate } from '@tolgee/react';
 import { Href, Stack, useRouter } from 'expo-router';
 import { useContext, useEffect, useRef, useState } from 'react';
 import { Platform, View } from 'react-native';
-import { TextInput } from 'react-native-paper';
+import { TextField } from '@/components/presentation/foundation/text-field';
 import { useDispatch } from 'react-redux';
 import { useOnDismiss } from '@/hooks/useOnDismiss';
 import { HeaderHeightContext } from 'expo-router/react-navigation';
@@ -64,14 +64,14 @@ export function SessionWorkoutEditor(props: { sessionId: string }) {
       <Stack.Screen options={{ title }} />
       {workout ? (
         <View style={{ gap: spacing[2] }}>
-          <TextInput
+          <TextField
             label={t('workout.name.label')}
             testID="workout-name"
             style={{ marginBottom: spacing[2] }}
             value={name}
             onChangeText={(name) => updateBlueprint({ name })}
           />
-          <TextInput
+          <TextField
             label={t('plan.notes.label')}
             testID="workout-notes"
             style={{ marginBottom: spacing[2] }}

@@ -1,7 +1,7 @@
 import { spacing } from '@/hooks/useAppTheme';
 import { Key, ReactElement, ReactNode } from 'react';
-import { View, ViewProps } from 'react-native';
-import { Card, CardProps } from 'react-native-paper';
+import { Pressable, StyleProp, View, ViewProps, ViewStyle } from 'react-native';
+import { Card } from '@/components/presentation/foundation/card';
 
 interface CardListProps<T> extends ViewProps {
   items: readonly T[];
@@ -12,7 +12,8 @@ interface CardListProps<T> extends ViewProps {
   onPress?: (item: T, index: number) => void;
   onLongPress?: (item: T, index: number) => void;
   shouldHighlight?: (item: T, index: number) => boolean;
-  cardStyle?: CardProps['style'];
+  cardStyle?: StyleProp<ViewStyle>;
+  /** Kept for callers; every card draws the same token card now. */
   cardType: 'elevated' | 'outlined' | 'contained';
   keySelector?: (item: T) => Key;
   emptyTemplate?: ReactNode;
@@ -28,7 +29,7 @@ export default function CardList<T>(props: CardListProps<T>) {
     onLongPress,
     shouldHighlight,
     cardStyle,
-    cardType,
+    cardType: _cardType,
     keySelector,
     emptyTemplate,
     ...rest
@@ -55,15 +56,29 @@ export default function CardList<T>(props: CardListProps<T>) {
           ...renderItemActions(item, i),
           key: 'actions',
         };
-        return (
-          <Card
-            key={keySelector?.(item) ?? i}
-            style={[cardStyle, shouldHighlight?.(item, i) ? highlightStyle : undefined]}
-            mode={cardType}
-            onLongPress={onLongPress ? () => onLongPress(item, i) : undefined}
-            onPress={onPress ? () => onPress(item, i) : undefined}
-          >
-            {[title, content, actions].filter(Boolean)}
+        const key = keySelector?.(item) ?? i;
+        const style = [cardStyle, shouldHighlight?.(item, i) ? highlightStyle : undefined];
+        const children = [title, content, actions].filter(Boolean);
+        // Our Card only takes a tap, so a long press needs its own Pressable around it.
+        if (onLongPress) {
+          return (
+            <Pressable
+              key={key}
+              accessibilityRole="button"
+              onPress={onPress ? () => onPress(item, i) : undefined}
+              onLongPress={() => onLongPress(item, i)}
+            >
+              <Card style={style}>{children}</Card>
+            </Pressable>
+          );
+        }
+        return onPress ? (
+          <Card key={key} style={style} onPress={() => onPress(item, i)}>
+            {children}
+          </Card>
+        ) : (
+          <Card key={key} style={style}>
+            {children}
           </Card>
         );
       })}

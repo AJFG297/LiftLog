@@ -1,9 +1,10 @@
+import { AppIconSource } from '@/components/presentation/foundation/ms-icon-source';
+import Icon from '@/components/presentation/foundation/icon';
 import { SurfaceText } from '@/components/presentation/foundation/surface-text';
 import { spacing } from '@/hooks/useAppTheme';
 import { View, ViewProps } from 'react-native';
-import { Icon } from 'react-native-paper';
 
-export default function EmptyInfo(props: ViewProps & { icon?: string }) {
+export default function EmptyInfo(props: ViewProps & { icon?: AppIconSource }) {
   const { icon, style, ...rest } = props;
   return (
     <View

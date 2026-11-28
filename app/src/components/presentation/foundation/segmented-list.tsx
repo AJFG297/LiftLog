@@ -1,11 +1,12 @@
+import { Card } from '@/components/presentation/foundation/card';
 import Icon from '@/components/presentation/foundation/icon';
+import { SurfaceText } from '@/components/presentation/foundation/surface-text';
 import TouchableRipple from '@/components/presentation/foundation/touchable-ripple';
 import { AppIconSource } from '@/components/presentation/foundation/ms-icon-source';
 import { rounding, spacing, useAppTheme } from '@/hooks/useAppTheme';
 import { LegendList } from '@legendapp/list';
 import { Children, isValidElement, ReactNode } from 'react';
 import { StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
-import { Card, Text } from 'react-native-paper';
 import { match } from 'ts-pattern';
 type TupleKeysNum<T extends readonly unknown[]> = Exclude<Partial<T>['length'], T['length']>;
 
@@ -84,7 +85,7 @@ export function SegmentListFormElement(props: {
   right?: ReactNode | string;
   style?: StyleProp<ViewStyle>;
 }) {
-  const { colors } = useAppTheme();
+  const { tokens } = useAppTheme();
   const pressable = props.onPress ?? props.onLongPress;
   const Wrapper = pressable ? TouchableRipple : View;
   return (
@@ -106,14 +107,22 @@ export function SegmentListFormElement(props: {
             }}
           >
             {props.icon ? <Icon size={20} source={props.icon} /> : undefined}
-            <Text variant="labelLarge">{props.label}</Text>
+            <SurfaceText font="text-sm" weight="500">
+              {props.label}
+            </SurfaceText>
           </View>
-          {typeof props.right === 'string' ? <Text variant="labelLarge">{props.right}</Text> : props.right}
+          {typeof props.right === 'string' ? (
+            <SurfaceText font="text-sm" weight="500">
+              {props.right}
+            </SurfaceText>
+          ) : (
+            props.right
+          )}
         </View>
         {props.supportingText ? (
-          <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant, marginBlockStart: spacing[2] }}>
+          <SurfaceText font="text-xs" style={{ color: tokens.muted, marginBlockStart: spacing[2] }}>
             {props.supportingText}
-          </Text>
+          </SurfaceText>
         ) : undefined}
         {props.line2}
       </View>
@@ -138,11 +147,7 @@ function SegmentedListItem(props: { isFirst: boolean; isLast: boolean; children:
     .with({ isLast: true }, () => styles.lastItem)
     .with({ isFirst: false, isLast: false }, () => styles.middleItem)
     .exhaustive();
-  return (
-    <Card mode="contained" style={[style, { padding: 0, overflow: 'hidden' }]}>
-      {props.children}
-    </Card>
-  );
+  return <Card style={[style, { padding: 0, overflow: 'hidden' }]}>{props.children}</Card>;
 }
 
 const styles = StyleSheet.create({

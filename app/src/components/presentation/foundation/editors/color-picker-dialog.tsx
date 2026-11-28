@@ -8,7 +8,7 @@ import { accentTokens } from '@/utils/theme-tokens';
 import { T } from '@tolgee/react';
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
-import { Dialog, Portal } from 'react-native-paper';
+import { Dialog } from '@/components/presentation/foundation/dialog';
 
 interface ColorPickerDialogProps {
   open: boolean;
@@ -35,33 +35,31 @@ export default function ColorPickerDialog(props: ColorPickerDialogProps) {
   }
 
   return (
-    <Portal>
-      <Dialog visible={props.open} onDismiss={props.onClose}>
-        <Dialog.Title>
-          <T keyName="settings.theme.custom.title" />
-        </Dialog.Title>
-        <Dialog.Content>
-          <View style={{ gap: spacing[5] }}>
-            <ColorSliders value={draft} onChange={setDraft} />
-            <AccentPreview seed={draft} />
-          </View>
-        </Dialog.Content>
-        <Dialog.Actions>
-          <Button onPress={props.onClose} testID="color-picker-close">
-            <T keyName="generic.close.button" />
-          </Button>
-          <Button
-            testID="color-picker-save"
-            onPress={() => {
-              props.onConfirm(draft);
-              props.onClose();
-            }}
-          >
-            <T keyName="generic.save.button" />
-          </Button>
-        </Dialog.Actions>
-      </Dialog>
-    </Portal>
+    <Dialog visible={props.open} onDismiss={props.onClose}>
+      <Dialog.Title>
+        <T keyName="settings.theme.custom.title" />
+      </Dialog.Title>
+      <Dialog.Content>
+        <View style={{ gap: spacing[5] }}>
+          <ColorSliders value={draft} onChange={setDraft} />
+          <AccentPreview seed={draft} />
+        </View>
+      </Dialog.Content>
+      <Dialog.Actions>
+        <Button onPress={props.onClose} testID="color-picker-close">
+          <T keyName="generic.close.button" />
+        </Button>
+        <Button
+          testID="color-picker-save"
+          onPress={() => {
+            props.onConfirm(draft);
+            props.onClose();
+          }}
+        >
+          <T keyName="generic.save.button" />
+        </Button>
+      </Dialog.Actions>
+    </Dialog>
   );
 }
 

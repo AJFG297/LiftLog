@@ -1,4 +1,4 @@
-import CardActions from '@/components/presentation/foundation/card-actions';
+import { Card } from '@/components/presentation/foundation/card';
 import ConfirmationDialog from '@/components/presentation/foundation/confirmation-dialog';
 import EmptyInfo from '@/components/presentation/foundation/empty-info';
 import IconButton from '@/components/presentation/foundation/icon-button';
@@ -28,7 +28,6 @@ import { useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { LegendList } from '@legendapp/list';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Card, Tooltip } from 'react-native-paper';
 import Button from '@/components/presentation/foundation/button';
 import { useDispatch } from 'react-redux';
 import { useFormatDate } from '@/hooks/useFormatDate';
@@ -145,43 +144,58 @@ export default function History() {
           </View>
         }
         renderItem={({ item: session }) => (
-          <Card mode="contained">
-            <Card.Content>
-              {/* The summary opens the workout, not the whole card: an accessible card would hide its own buttons
-                  from VoiceOver. */}
-              <Pressable
-                testID="history-open-workout"
-                accessibilityRole="button"
-                accessibilityLabel={t('workout_detail.open.label', {
-                  name: session.blueprint.name,
-                  date: formatDate(session.date, { weekday: 'long', month: 'short', day: 'numeric' }),
-                })}
-                accessibilityHint={t('workout_detail.open.hint')}
-                onPress={() => push(`/workout-detail?sessionId=${encodeURIComponent(session.id)}`)}
-                style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
-              >
-                <SplitCardControl
-                  titleContent={<SessionSummaryTitle showDate session={session} />}
-                  mainContent={
-                    <View style={{ gap: spacing[2] }}>
-                      <SessionSummary isFilled showWeight session={session} />
-                      <HistoryPrBadges records={personalRecords.get(session.id)} />
-                    </View>
-                  }
-                />
-                <ReactionSummary eventId={session.id} />
-              </Pressable>
-            </Card.Content>
-            <CardActions style={{ marginTop: spacing[2] }}>
-              <Tooltip title={t('workout.share_workout.button')}>
-                <IconButton icon={'share'} mode="contained" onPress={() => handleSharePress(session)} />
-              </Tooltip>
-              <Tooltip title={t('workout.start_this.button')}>
-                <IconButton mode="contained" icon={'playCircle'} onPress={() => startWorkout(session)} />
-              </Tooltip>
-              <Tooltip title={t('generic.delete.button')}>
-                <IconButton mode="contained" icon={'delete'} onPress={() => deleteWorkout(session)} />
-              </Tooltip>
+          <Card>
+            {/* The summary opens the workout, not the whole card: an accessible card would hide its own buttons
+                from VoiceOver. */}
+            <Pressable
+              testID="history-open-workout"
+              accessibilityRole="button"
+              accessibilityLabel={t('workout_detail.open.label', {
+                name: session.blueprint.name,
+                date: formatDate(session.date, { weekday: 'long', month: 'short', day: 'numeric' }),
+              })}
+              accessibilityHint={t('workout_detail.open.hint')}
+              onPress={() => push(`/workout-detail?sessionId=${encodeURIComponent(session.id)}`)}
+              style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
+            >
+              <SplitCardControl
+                titleContent={<SessionSummaryTitle showDate session={session} />}
+                mainContent={
+                  <View style={{ gap: spacing[2] }}>
+                    <SessionSummary isFilled showWeight session={session} />
+                    <HistoryPrBadges records={personalRecords.get(session.id)} />
+                  </View>
+                }
+              />
+              <ReactionSummary eventId={session.id} />
+            </Pressable>
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'flex-end',
+                gap: spacing[2],
+                marginTop: spacing[3],
+              }}
+            >
+              <IconButton
+                icon={'share'}
+                mode="contained"
+                accessibilityLabel={t('workout.share_workout.button')}
+                onPress={() => handleSharePress(session)}
+              />
+              <IconButton
+                mode="contained"
+                icon={'playCircle'}
+                accessibilityLabel={t('workout.start_this.button')}
+                onPress={() => startWorkout(session)}
+              />
+              <IconButton
+                mode="contained"
+                icon={'delete'}
+                accessibilityLabel={t('generic.delete.button')}
+                onPress={() => deleteWorkout(session)}
+              />
               <Button
                 onPress={() => onSelectSession(session)}
                 icon="edit"
@@ -190,7 +204,7 @@ export default function History() {
               >
                 <T keyName="workout.edit.button" />
               </Button>
-            </CardActions>
+            </View>
           </Card>
         )}
         ListEmptyComponent={

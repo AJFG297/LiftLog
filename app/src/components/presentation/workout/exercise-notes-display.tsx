@@ -4,7 +4,9 @@ import { RecordedExercise } from '@/models/session-models';
 import { useAppSelector } from '@/store';
 import { useCallback, useState } from 'react';
 import { View } from 'react-native';
-import { Card, Divider, Text } from 'react-native-paper';
+import { Card } from '@/components/presentation/foundation/card';
+import { Divider } from '@/components/presentation/foundation/divider';
+import { SurfaceText } from '@/components/presentation/foundation/surface-text';
 import IconButton from '@/components/presentation/foundation/icon-button';
 
 interface ExerciseNotesDisplayProps {
@@ -41,21 +43,21 @@ export default function ExerciseNotesDisplay(props: ExerciseNotesDisplayProps) {
     return (
       <>
         {renderNotes && (
-          <Text testID="exercise-notes" numberOfLines={maxNumberOfLines}>
+          <SurfaceText font="text-sm" testID="exercise-notes" numberOfLines={maxNumberOfLines}>
             {notes}
-          </Text>
+          </SurfaceText>
         )}
         {renderNotes && (renderPreviousNotes || renderBlueprintNotes) && <Divider />}
         {renderBlueprintNotes && (
-          <Text testID="exercise-blueprint-notes" numberOfLines={maxNumberOfLines}>
+          <SurfaceText font="text-sm" testID="exercise-blueprint-notes" numberOfLines={maxNumberOfLines}>
             {blueprintNotes}
-          </Text>
+          </SurfaceText>
         )}
         {renderPreviousNotes && renderBlueprintNotes && <Divider />}
         {renderPreviousNotes && (
-          <Text testID="exercise-previous-notes" numberOfLines={maxNumberOfLines}>
+          <SurfaceText font="text-sm" testID="exercise-previous-notes" numberOfLines={maxNumberOfLines}>
             {previousNotes}
-          </Text>
+          </SurfaceText>
         )}
       </>
     );
@@ -64,41 +66,39 @@ export default function ExerciseNotesDisplay(props: ExerciseNotesDisplayProps) {
     return undefined;
   }
   return (
-    <Card mode="contained" style={[{ marginTop: spacing[4] }]}>
-      <Card.Content style={{ flexDirection: 'row' }}>
-        <IconButton
-          icon={expanded ? 'unfoldLess' : 'unfoldMore'}
-          style={{
-            margin: 0,
-            marginLeft: -spacing[3],
-            alignSelf: 'flex-start',
-          }}
-          onPress={handleToggleExpanded}
-        />
+    <Card style={{ marginTop: spacing[4], flexDirection: 'row' }}>
+      <IconButton
+        icon={expanded ? 'unfoldLess' : 'unfoldMore'}
+        style={{
+          margin: 0,
+          marginLeft: -spacing[3],
+          alignSelf: 'flex-start',
+        }}
+        onPress={handleToggleExpanded}
+      />
 
-        <View style={{ flex: 1 }}>
-          <AccordionItem
-            isExpanded={expanded}
-            startsExpanded={expandByDefault}
-            onToggled={handleAccordionToggle}
-            unexpandedHeight={iconButtonHeight}
+      <View style={{ flex: 1 }}>
+        <AccordionItem
+          isExpanded={expanded}
+          startsExpanded={expandByDefault}
+          onToggled={handleAccordionToggle}
+          unexpandedHeight={iconButtonHeight}
+        >
+          <View
+            style={{
+              flexDirection: 'row',
+              gap: spacing[2],
+              marginTop: spacing[3],
+            }}
           >
-            <View
-              style={{
-                flexDirection: 'row',
-                gap: spacing[2],
-                marginTop: spacing[3],
-              }}
-            >
-              <View style={{ flex: 1, paddingRight: spacing[2] }}>
-                <View style={{ position: 'absolute', gap: spacing[2] }}>{renderText(maxNumberOfLines)}</View>
-                {/* Render this so it doesn't jump around when expanding - need to always reserve the full text space */}
-                <View style={{ visibility: 'hidden', opacity: 0, gap: spacing[2] }}>{renderText(undefined)}</View>
-              </View>
+            <View style={{ flex: 1, paddingRight: spacing[2] }}>
+              <View style={{ position: 'absolute', gap: spacing[2] }}>{renderText(maxNumberOfLines)}</View>
+              {/* Render this so it doesn't jump around when expanding - need to always reserve the full text space */}
+              <View style={{ visibility: 'hidden', opacity: 0, gap: spacing[2] }}>{renderText(undefined)}</View>
             </View>
-          </AccordionItem>
-        </View>
-      </Card.Content>
+          </View>
+        </AccordionItem>
+      </View>
     </Card>
   );
 }

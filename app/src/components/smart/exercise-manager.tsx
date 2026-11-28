@@ -1,8 +1,10 @@
 import { spacing, useAppTheme } from '@/hooks/useAppTheme';
 import { useTranslate } from '@tolgee/react';
 import { useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { Platform, View } from 'react-native';
-import { Icon, List, TextInput } from 'react-native-paper';
+import { Platform, Pressable, View } from 'react-native';
+import Icon from '@/components/presentation/foundation/icon';
+import { SurfaceText } from '@/components/presentation/foundation/surface-text';
+import { TextField } from '@/components/presentation/foundation/text-field';
 import { PageActions } from '@/components/presentation/foundation/page-actions';
 import AddIcon from '@expo/material-symbols/add.xml';
 import TouchableRipple from '@/components/presentation/foundation/touchable-ripple';
@@ -41,7 +43,7 @@ function ExerciseListItem({
   expand: boolean;
   onDelete: () => void;
 }) {
-  const { colors } = useAppTheme();
+  const { tokens } = useAppTheme();
   const { t } = useTranslate();
   const exercise = useAppSelectorWithArg(selectExerciseById, exerciseId);
   const [expanded, setExpanded] = useState(expand);
@@ -71,52 +73,75 @@ function ExerciseListItem({
           style={{
             height: '100%',
             width: 70,
-            backgroundColor: colors.error,
+            backgroundColor: tokens.danger,
             justifyContent: 'center',
             alignItems: 'center',
           }}
           testID={`exercise-delete-btn`}
+          accessibilityLabel={t('generic.delete.button')}
         >
-          <Icon source={'delete'} size={30} color={colors.onError} />
+          <Icon source={'delete'} size={30} color={tokens.bg} />
         </TouchableRipple>
       </View>
-      <List.Accordion
-        title={exercise.name || t('exercise.name.untitled')}
-        // Important to have a space to ensure they are all the same size
-        // Otherwise delete button can show through when there is no desc
-        description={
-          musclesOf(exercise)
-            .map((m) => translateExerciseMeta(t, 'muscle', m))
-            .join(', ') || ' '
-        }
-        descriptionNumberOfLines={1}
-        expanded={listExpanded}
-        onPress={() => {
-          if (rowRef.current?.isOpen) {
-            return;
-          }
-          if (!expanded) {
-            setListExpanded(true);
-            setExpanded(true);
-          } else {
-            setExpanded(false);
-          }
-        }}
-        testID={`exercise-accordion`}
-      >
-        <AccordionItem
-          isExpanded={expanded}
-          onToggled={(isOpen) => {
-            setExpanded(isOpen);
-            if (!isOpen) {
-              // Wait until collapse finishes before unmounting
-              setListExpanded(false);
+      {/* Opaque, so the delete action behind it only shows once the row is swiped. */}
+      <View style={{ backgroundColor: tokens.bg }}>
+        <Pressable
+          testID={`exercise-accordion`}
+          accessibilityRole="button"
+          accessibilityState={{ expanded: listExpanded }}
+          onPress={() => {
+            if (rowRef.current?.isOpen) {
+              return;
+            }
+            if (!expanded) {
+              setListExpanded(true);
+              setExpanded(true);
+            } else {
+              setExpanded(false);
             }
           }}
+          style={({ pressed }) => ({
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: spacing[3],
+            minHeight: spacing[14],
+            paddingVertical: spacing[2],
+            paddingHorizontal: spacing[4],
+            backgroundColor: pressed ? tokens.track : undefined,
+          })}
         >
-          <ExerciseEditSheet exercise={exercise} exerciseId={exerciseId} />
-        </AccordionItem>
-      </List.Accordion>
+          <View style={{ flex: 1, gap: spacing[0.5] }}>
+            <SurfaceText font="text-base" weight="600" numberOfLines={1} style={{ color: tokens.ink }}>
+              {exercise.name || t('exercise.name.untitled')}
+            </SurfaceText>
+            {/* A space keeps every row the same height, so the delete action can't show through. */}
+            <SurfaceText font="text-sm" numberOfLines={1} style={{ color: tokens.muted }}>
+              {musclesOf(exercise)
+                .map((m) => translateExerciseMeta(t, 'muscle', m))
+                .join(', ') || ' '}
+            </SurfaceText>
+          </View>
+          <Icon
+            source={'expandMore'}
+            color={tokens.muted}
+            style={listExpanded ? { transform: [{ rotate: '180deg' }] } : undefined}
+          />
+        </Pressable>
+        {listExpanded ? (
+          <AccordionItem
+            isExpanded={expanded}
+            onToggled={(isOpen) => {
+              setExpanded(isOpen);
+              if (!isOpen) {
+                // Wait until collapse finishes before unmounting
+                setListExpanded(false);
+              }
+            }}
+          >
+            <ExerciseEditSheet exercise={exercise} exerciseId={exerciseId} />
+          </AccordionItem>
+        ) : null}
+      </View>
     </SwipeRow>
   );
 }
@@ -247,7 +272,7 @@ function ExerciseEditSheet({ exercise, exerciseId }: { exercise: ExerciseDescrip
         gap: spacing[2],
       }}
     >
-      <TextInput
+      <TextField
         label={t('exercise.name.label')}
         placeholder={t('exercise.name.placeholder')}
         value={exercise.name}
@@ -255,7 +280,7 @@ function ExerciseEditSheet({ exercise, exerciseId }: { exercise: ExerciseDescrip
         autoFocus={!exercise.name}
         testID="exercise-name-input"
       />
-      <TextInput
+      <TextField
         label={t('generic.instructions.label')}
         value={exercise.instructions}
         onChangeText={(instructions) => update({ instructions })}

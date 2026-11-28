@@ -1,3 +1,4 @@
+import Icon from '@/components/presentation/foundation/icon';
 import { SurfaceText } from '@/components/presentation/foundation/surface-text';
 import { rounding, spacing, useAppTheme } from '@/hooks/useAppTheme';
 import { useAppSelector } from '@/store';
@@ -5,7 +6,6 @@ import { selectFeedPersonalRecords } from '@/store/activity';
 import { PersonalRecord } from '@/store/stats/personal-records';
 import { useTranslate } from '@tolgee/react';
 import { View } from 'react-native';
-import { Icon } from 'react-native-paper';
 
 export function FeedPrBadges({ eventId }: { eventId: string }) {
   const records = useAppSelector(selectFeedPersonalRecords).get(eventId);
@@ -27,7 +27,7 @@ function PrBadges({
   labelKey: 'feed.pr_badge.label' | 'history.pr_badge.label';
 }) {
   const { t } = useTranslate();
-  const { colors } = useAppTheme();
+  const { tokens } = useAppTheme();
 
   if (!records?.length) {
     return null;
@@ -45,11 +45,11 @@ function PrBadges({
             paddingVertical: spacing[1],
             paddingHorizontal: spacing[2],
             borderRadius: rounding.roundedRectangleRadius,
-            backgroundColor: colors.tertiaryContainer,
+            backgroundColor: tokens.accentSoft,
           }}
         >
-          <Icon source="trendingUp" size={14} color={colors.onTertiaryContainer} />
-          <SurfaceText font="text-xs" color="onTertiaryContainer">
+          <Icon source="trendingUp" size={14} color={tokens.accentSoftInk} />
+          <SurfaceText font="text-xs" style={{ color: tokens.accentSoftInk }}>
             {t(labelKey, { exercise: record.exerciseName })}
           </SurfaceText>
         </View>

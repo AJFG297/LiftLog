@@ -1,4 +1,4 @@
-import CardActions from '@/components/presentation/foundation/card-actions';
+import { Card } from '@/components/presentation/foundation/card';
 import { PersonAvatar } from '@/components/presentation/feed/person-avatar';
 import EmptyInfo from '@/components/presentation/foundation/empty-info';
 import { Remote } from '@/components/presentation/foundation/remote';
@@ -30,7 +30,6 @@ import {
 import { T, useTranslate } from '@tolgee/react';
 import { useRouter } from 'expo-router';
 import { View } from 'react-native';
-import { Card } from 'react-native-paper';
 import Button from '@/components/presentation/foundation/button';
 import { useDispatch } from 'react-redux';
 import { LegendList, LegendListRef } from '@legendapp/list';
@@ -93,6 +92,7 @@ function FeedProfileHeader() {
 function FeedProfile({ identity }: { identity: FeedIdentity }) {
   const dispatch = useDispatch();
   const { push } = useRouter();
+  const { tokens } = useAppTheme();
   const following = useAppSelector(selectFeedFollowing);
   const followers = useAppSelector(selectFeedFollowers);
   const shareUrl = getFeedShareUrl(identity);
@@ -108,38 +108,35 @@ function FeedProfile({ identity }: { identity: FeedIdentity }) {
       />
 
       {identity.publishWorkouts ? undefined : (
-        <Card mode="contained" style={{ marginBottom: spacing[2] }}>
-          <Card.Content
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              flexWrap: 'wrap',
-              gap: spacing[2],
-            }}
+        <Card
+          style={{
+            marginBottom: spacing[2],
+            flexDirection: 'row',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: spacing[2],
+          }}
+        >
+          <SurfaceText style={{ color: tokens.danger }}>
+            <T keyName="feed.not_publishing_workouts.error" />
+          </SurfaceText>
+          <Button
+            style={{ marginLeft: 'auto' }}
+            testID="feed-fix-button"
+            onPress={() => push(getFeedProfileEditorHref({ focusPublish: true }))}
+            mode="outlined"
           >
-            <SurfaceText color="error">
-              <T keyName="feed.not_publishing_workouts.error" />
-            </SurfaceText>
-            <Button
-              style={{ marginLeft: 'auto' }}
-              testID="feed-fix-button"
-              onPress={() => push(getFeedProfileEditorHref({ focusPublish: true }))}
-              mode="outlined"
-            >
-              <T keyName="generic.fix.button" />
-            </Button>
-          </Card.Content>
+            <T keyName="generic.fix.button" />
+          </Button>
         </Card>
       )}
 
       {isAlone && (
-        <Card mode="contained" style={{ marginBottom: spacing[2] }}>
-          <Card.Content style={{ gap: spacing[2] }}>
-            <SurfaceText>
-              <T keyName="feed.explanation.body" />
-            </SurfaceText>
-          </Card.Content>
-          <CardActions>
+        <Card style={{ marginBottom: spacing[2], gap: spacing[3] }}>
+          <SurfaceText>
+            <T keyName="feed.explanation.body" />
+          </SurfaceText>
+          <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: spacing[2] }}>
             <Button
               testID="feed-share-button"
               mode="contained"
@@ -155,7 +152,7 @@ function FeedProfile({ identity }: { identity: FeedIdentity }) {
             >
               <T keyName="generic.share.button" />
             </Button>
-          </CardActions>
+          </View>
         </Card>
       )}
     </>
@@ -166,7 +163,7 @@ function FeedItemRenderer(props: { feedItem: SessionUserEvent }) {
   const users = useAppSelector(selectFeedFollowing);
   const ownUserId = useAppSelector(selectOwnFeedUserId);
   const identity = useAppSelector((x) => x.feed.identity.unwrapOr(undefined));
-  const { colors } = useAppTheme();
+  const { tokens } = useAppTheme();
   const { t } = useTranslate();
   const { push } = useRouter();
   const isOwnItem = props.feedItem.userId === ownUserId;
@@ -175,40 +172,38 @@ function FeedItemRenderer(props: { feedItem: SessionUserEvent }) {
       const authorName = isOwnItem ? identity?.name : users.find((x) => x.userId === props.feedItem.userId)?.user.name;
       const byline = isOwnItem ? t('feed.you.label') : (authorName ?? t('feed.anonymous_user.label'));
       return (
-        <Card mode="contained" testID="feed-view-workout" onPress={() => push(getFeedItemHref(props.feedItem.eventId))}>
-          <Card.Content>
-            <SplitCardControl
-              titleContent={
-                <SessionSummaryTitle
-                  showDate
-                  showVolume
-                  byline={byline}
-                  bylineLeading={<PersonAvatar userId={props.feedItem.userId} name={authorName} size={24} />}
-                  session={props.feedItem.session}
-                />
-              }
-              mainContent={
-                <View style={{ gap: spacing[2] }}>
-                  <SessionSummary session={props.feedItem.session} isFilled showWeight />
-                  <FeedPrBadges eventId={props.feedItem.eventId} />
-                </View>
-              }
-            />
-            <View
-              style={{
-                marginTop: spacing[3],
-                paddingTop: spacing[3],
-                borderTopWidth: 1,
-                borderTopColor: colors.outlineVariant,
-              }}
-            >
-              {isOwnItem ? (
-                <ReactionSummary compact eventId={props.feedItem.eventId} animateOnMount />
-              ) : (
-                <ReactionBar eventId={props.feedItem.eventId} animateOnMount />
-              )}
-            </View>
-          </Card.Content>
+        <Card testID="feed-view-workout" onPress={() => push(getFeedItemHref(props.feedItem.eventId))}>
+          <SplitCardControl
+            titleContent={
+              <SessionSummaryTitle
+                showDate
+                showVolume
+                byline={byline}
+                bylineLeading={<PersonAvatar userId={props.feedItem.userId} name={authorName} size={24} />}
+                session={props.feedItem.session}
+              />
+            }
+            mainContent={
+              <View style={{ gap: spacing[2] }}>
+                <SessionSummary session={props.feedItem.session} isFilled showWeight />
+                <FeedPrBadges eventId={props.feedItem.eventId} />
+              </View>
+            }
+          />
+          <View
+            style={{
+              marginTop: spacing[3],
+              paddingTop: spacing[3],
+              borderTopWidth: 1,
+              borderTopColor: tokens.line,
+            }}
+          >
+            {isOwnItem ? (
+              <ReactionSummary compact eventId={props.feedItem.eventId} animateOnMount />
+            ) : (
+              <ReactionBar eventId={props.feedItem.eventId} animateOnMount />
+            )}
+          </View>
         </Card>
       );
     }

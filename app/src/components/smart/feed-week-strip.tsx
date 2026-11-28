@@ -1,19 +1,20 @@
 import { ActivityCalendar } from '@/components/presentation/calendar/activity-calendar';
+import { Card } from '@/components/presentation/foundation/card';
 import { SurfaceText } from '@/components/presentation/foundation/surface-text';
-import { spacing } from '@/hooks/useAppTheme';
+import { spacing, useAppTheme } from '@/hooks/useAppTheme';
 import { useOwnActivity, useStreakStats } from '@/hooks/useOwnActivity';
 import { useToday } from '@/hooks/useToday';
 import { useAppSelector, useAppSelectorWithArg } from '@/store';
 import { selectActivityWeek, selectFollowsOtherUsers } from '@/store/activity';
 import { useTranslate } from '@tolgee/react';
 import { View } from 'react-native';
-import { Card } from 'react-native-paper';
 
 /** Beyond this the strip stops being a glance and starts being a list. */
 const MAX_ROWS = 8;
 
 export function FeedWeekStrip() {
   const { t } = useTranslate();
+  const { tokens } = useAppTheme();
   const today = useToday();
   const own = useOwnActivity();
   const rows = useAppSelectorWithArg(selectActivityWeek, { own, today });
@@ -34,40 +35,38 @@ export function FeedWeekStrip() {
   ];
 
   return (
-    <Card mode="contained" style={{ marginBottom: spacing[2] }}>
-      <Card.Content style={{ gap: spacing[2] }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing[2] }}>
-          <SurfaceText font="text-lg" weight="bold" numberOfLines={1}>
-            {t('feed.this_week.title')}
-          </SurfaceText>
-          {streak.state !== 'none' && (
-            <SurfaceText font="text-sm" color="onSurfaceVariant" numberOfLines={1} style={{ flexShrink: 1 }}>
-              {streak.weeks + (streak.state === 'secured' ? 1 : 0) === 1
-                ? t('stats.streak.weeks.one')
-                : t('stats.streak.weeks.other', {
-                    weeks: (streak.weeks + (streak.state === 'secured' ? 1 : 0)).toString(),
-                  })}
-            </SurfaceText>
-          )}
-        </View>
-
-        <ActivityCalendar
-          density="week"
-          rows={labelledRows}
-          renderRowTrailing={(row) => {
-            const days = row.cells.filter((cell) => cell.level > 0).length;
-            return days === 1
-              ? t('feed.this_week.workouts.one')
-              : t('feed.this_week.workouts.other', { count: days.toString() });
-          }}
-        />
-
-        {overflow > 0 && (
-          <SurfaceText font="text-sm" color="onSurfaceVariant">
-            {t('feed.this_week.more_people', { count: overflow.toString() })}
+    <Card style={{ marginBottom: spacing[2], gap: spacing[2] }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing[2] }}>
+        <SurfaceText font="text-lg" weight="bold" numberOfLines={1}>
+          {t('feed.this_week.title')}
+        </SurfaceText>
+        {streak.state !== 'none' && (
+          <SurfaceText font="text-sm" numberOfLines={1} style={{ flexShrink: 1, color: tokens.muted }}>
+            {streak.weeks + (streak.state === 'secured' ? 1 : 0) === 1
+              ? t('stats.streak.weeks.one')
+              : t('stats.streak.weeks.other', {
+                  weeks: (streak.weeks + (streak.state === 'secured' ? 1 : 0)).toString(),
+                })}
           </SurfaceText>
         )}
-      </Card.Content>
+      </View>
+
+      <ActivityCalendar
+        density="week"
+        rows={labelledRows}
+        renderRowTrailing={(row) => {
+          const days = row.cells.filter((cell) => cell.level > 0).length;
+          return days === 1
+            ? t('feed.this_week.workouts.one')
+            : t('feed.this_week.workouts.other', { count: days.toString() });
+        }}
+      />
+
+      {overflow > 0 && (
+        <SurfaceText font="text-sm" style={{ color: tokens.muted }}>
+          {t('feed.this_week.more_people', { count: overflow.toString() })}
+        </SurfaceText>
+      )}
     </Card>
   );
 }

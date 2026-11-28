@@ -15,9 +15,9 @@ import { useTranslate } from '@tolgee/react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { DecimalEditor } from '@/components/presentation/foundation/editors/decimal-editor';
 import { IntegerEditor } from '@/components/presentation/foundation/editors/integer-editor';
-import { Dialog } from 'react-native-paper';
+import { Dialog } from '@/components/presentation/foundation/dialog';
 import { SurfaceText } from '@/components/presentation/foundation/surface-text';
-import { AppThemeColors, spacing, useAppTheme } from '@/hooks/useAppTheme';
+import { spacing, useAppTheme } from '@/hooks/useAppTheme';
 import Button from '@/components/presentation/foundation/button';
 import IconButton from '@/components/presentation/foundation/icon-button';
 import TouchableRipple from '@/components/presentation/foundation/touchable-ripple';
@@ -27,7 +27,6 @@ import { PotentialSet, RecordedSet, RecordedWeightedExercise } from '@/models/se
 import { usePreferredWeightUnit } from '@/hooks/usePreferredWeightUnit';
 import PotentialSetCounter from '@/components/presentation/workout/weighted/potential-set-counter';
 import BigNumber from 'bignumber.js';
-import { Portal } from 'react-native-paper';
 import { OffsetDateTime } from '@js-joda/core';
 import { Weight } from '@/models/weight';
 import Icon from '@/components/presentation/foundation/icon';
@@ -152,7 +151,7 @@ function RuleEditor(props: {
   onChange: (rule: ProgressionRule) => void;
 }) {
   const { t } = useTranslate();
-  const { colors, tokens } = useAppTheme();
+  const { tokens } = useAppTheme();
   const { rule } = props;
 
   const axisOptions: SelectPickerOption<ProgressionAxis>[] = [
@@ -199,13 +198,13 @@ function RuleEditor(props: {
       >
         {rule.axis === 'reps' ? (
           <IntegerEditor
-            {...numberInputStyle(colors)}
+            {...numberInputStyle(tokens.accentInk)}
             value={rule.step.toNumber()}
             onChange={(step) => props.onChange(rule.with({ step: BigNumber(step) }))}
           />
         ) : (
           <DecimalEditor
-            {...numberInputStyle(colors)}
+            {...numberInputStyle(tokens.accentInk)}
             value={rule.step}
             onChange={(step) => props.onChange(rule.with({ step }))}
           />
@@ -231,7 +230,7 @@ function RuleEditor(props: {
           {rule.ceiling !== undefined && (
             <Row label={t('exercise.progression.ceiling.label')}>
               <IntegerEditor
-                {...numberInputStyle(colors)}
+                {...numberInputStyle(tokens.accentInk)}
                 value={rule.ceiling.toNumber()}
                 onChange={(ceiling) => props.onChange(rule.with({ ceiling: BigNumber(ceiling) }))}
               />
@@ -253,12 +252,10 @@ function RuleEditor(props: {
 }
 
 /** Reads as a value on the right of its row, like the pickers beside it, rather than as a filled field. */
-function numberInputStyle(colors: AppThemeColors) {
+function numberInputStyle(accentInk: string) {
   return {
-    dense: true,
-    textColor: colors.primary,
-    underlineStyle: { display: 'none' as const },
-    style: { flex: 1, textAlign: 'right' as const, backgroundColor: 'transparent' },
+    style: { flex: 1 },
+    contentStyle: { textAlign: 'right' as const, color: accentInk },
   };
 }
 
@@ -337,33 +334,31 @@ function ProgressionExample(props: { exercise: WeightedExerciseBlueprint }) {
       <Button style={{ flex: 1 }} onPress={() => setExampleOpen(true)}>
         {t('exercise.progressive_overload.example.label')}
       </Button>
-      <Portal>
-        <Dialog visible={exampleOpen} onDismiss={() => setExampleOpen(false)}>
-          <Dialog.Title>{t('exercise.progressive_overload.example.label')}</Dialog.Title>
-          <Dialog.Content style={{ height: 400 }}>
-            <ScrollView contentContainerStyle={{ gap: spacing[4], alignItems: 'center' }} style={{ flex: 1 }}>
-              {rungs.map((rung, index) => (
-                <View key={index} style={{ gap: spacing[4], alignItems: 'center' }}>
-                  {index > 0 && <Icon source={'arrowDownward'} size={24} />}
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: spacing[2] }}>
-                    {rung.potentialSets.map((set, setIndex) => (
-                      <DummySet
-                        key={setIndex}
-                        set={set}
-                        resistance={resistance}
-                        repsTarget={rung.repsTargetForSet(setIndex)}
-                      />
-                    ))}
-                  </View>
+      <Dialog visible={exampleOpen} onDismiss={() => setExampleOpen(false)}>
+        <Dialog.Title>{t('exercise.progressive_overload.example.label')}</Dialog.Title>
+        <Dialog.Content style={{ height: 400 }}>
+          <ScrollView contentContainerStyle={{ gap: spacing[4], alignItems: 'center' }} style={{ flex: 1 }}>
+            {rungs.map((rung, index) => (
+              <View key={index} style={{ gap: spacing[4], alignItems: 'center' }}>
+                {index > 0 && <Icon source={'arrowDownward'} size={24} />}
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: spacing[2] }}>
+                  {rung.potentialSets.map((set, setIndex) => (
+                    <DummySet
+                      key={setIndex}
+                      set={set}
+                      resistance={resistance}
+                      repsTarget={rung.repsTargetForSet(setIndex)}
+                    />
+                  ))}
                 </View>
-              ))}
-            </ScrollView>
-          </Dialog.Content>
-          <Dialog.Actions>
-            <Button onPress={() => setExampleOpen(false)}>{t('generic.ok.button')}</Button>
-          </Dialog.Actions>
-        </Dialog>
-      </Portal>
+              </View>
+            ))}
+          </ScrollView>
+        </Dialog.Content>
+        <Dialog.Actions>
+          <Button onPress={() => setExampleOpen(false)}>{t('generic.ok.button')}</Button>
+        </Dialog.Actions>
+      </Dialog>
     </>
   );
 }

@@ -4,6 +4,7 @@ import Form from '@/components/presentation/foundation/form';
 import LabelledFormRow from '@/components/presentation/foundation/labelled-form-row';
 import ListSwitch from '@/components/presentation/foundation/list-switch';
 import { Remote } from '@/components/presentation/foundation/remote';
+import { TextField } from '@/components/presentation/foundation/text-field';
 import { spacing } from '@/hooks/useAppTheme';
 import { FeedIdentity } from '@/models/feed-models';
 import { useAppSelector } from '@/store';
@@ -12,7 +13,6 @@ import { useTranslate } from '@tolgee/react';
 import { Href, Stack } from 'expo-router';
 import { useState } from 'react';
 import { View } from 'react-native';
-import { List, TextInput } from 'react-native-paper';
 import Button from '@/components/presentation/foundation/button';
 import { useDispatch } from 'react-redux';
 
@@ -53,16 +53,15 @@ function FeedProfileForm({ identity, focusPublish }: { identity: FeedIdentity; f
     >
       <Form>
         <LabelledFormRow icon={'personFill'} label={t('feed.your_name.label')}>
-          <TextInput
+          <TextField
             placeholder={t('generic.optional.label')}
+            accessibilityLabel={t('feed.your_name.label')}
             value={identity.name ?? ''}
-            label={t('generic.optional.label')}
-            mode="outlined"
             onChangeText={(name) => updateProfile({ name })}
           />
         </LabelledFormRow>
       </Form>
-      <List.Section>
+      <View>
         <ListSwitch
           testID="feed-publish-workouts-switch"
           focus={focusPublish}
@@ -83,7 +82,7 @@ function FeedProfileForm({ identity, focusPublish }: { identity: FeedIdentity; f
           value={identity.publishPlan}
           onValueChange={(publishPlan) => updateProfile({ publishPlan })}
         />
-      </List.Section>
+      </View>
       <Button onPress={() => setResetAccountDialogOpen(true)}>{t('feed.reset_account.button')}</Button>
       <ConfirmationDialog
         headline={t('feed.reset_account.button')}

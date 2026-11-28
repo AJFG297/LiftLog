@@ -8,7 +8,7 @@ import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import { useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller';
 import { useDispatch } from 'react-redux';
 import IconButton from '@/components/presentation/foundation/icon-button';
-import { Appbar, TextInput, Tooltip } from 'react-native-paper';
+import { TextField } from '@/components/presentation/foundation/text-field';
 import { useAppSelector } from '@/store';
 import {
   addMessage,
@@ -28,7 +28,7 @@ const COMPOSER_GAP = spacing[2];
 
 export default function AiPlanner() {
   const { t } = useTranslate();
-  const { colors } = useAppTheme();
+  const { tokens } = useAppTheme();
   const dispatch = useDispatch();
   const messages = useAppSelector((x) => x.aiPlanner.plannerChat);
   const { handleScroll } = useScroll(true);
@@ -96,9 +96,7 @@ export default function AiPlanner() {
           headerBlurEffect: 'systemMaterial',
           title: t('ai.planner.title'),
           headerRight: () => (
-            <Tooltip title={t('ai.restart_chat.button')}>
-              <Appbar.Action icon={'replay'} onPress={reset}></Appbar.Action>
-            </Tooltip>
+            <IconButton icon={'replay'} accessibilityLabel={t('ai.restart_chat.button')} onPress={reset} />
           ),
         }}
       />
@@ -139,32 +137,27 @@ export default function AiPlanner() {
           collapsable={false}
           onLayout={onComposerLayout}
           style={{
-            backgroundColor: colors.surface,
+            backgroundColor: tokens.bg,
             paddingHorizontal: spacing.pageHorizontalMargin,
             paddingTop: COMPOSER_GAP,
             paddingBottom: insets.bottom + COMPOSER_GAP,
             flexDirection: 'row',
             alignItems: 'center',
+            gap: spacing[1],
           }}
         >
           <ShareProgramButton disabled={isLoadingResponse || isOutOfDate} />
 
-          <TextInput
+          <TextField
             value={messageText}
             editable={!isOutOfDate}
-            style={{
-              flex: 1,
-              borderRadius: 30,
-              borderTopLeftRadius: 30,
-              borderTopRightRadius: 30,
-            }}
+            style={{ flex: 1 }}
             onChangeText={setMessageText}
             multiline
             placeholder={t('ai.type_your_message.placeholder')}
             onSubmitEditing={(e) => setMessageText(e.nativeEvent.text + '\n')}
             submitBehavior="submit"
             returnKeyType="default"
-            underlineStyle={{ display: 'none' }}
           />
 
           {isLoadingResponse && (

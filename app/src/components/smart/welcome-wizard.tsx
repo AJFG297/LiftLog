@@ -27,8 +27,9 @@ import { getDateOnDay } from '@/utils/format-date';
 import { DayOfWeek } from '@js-joda/core';
 import { useTranslate } from '@tolgee/react';
 import { ReactNode, useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
-import { Portal, Text } from 'react-native-paper';
+import { Modal, ScrollView, StyleSheet, View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { SurfaceText } from '@/components/presentation/foundation/surface-text';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch } from 'react-redux';
 import { openUrl } from '@/utils/open-url';
@@ -82,7 +83,7 @@ export function WelcomeWizard() {
   const dispatch = useDispatch();
   const settings = useAppSelector((state) => state.settings);
   const welcomeWizardCompleted = settings.welcomeWizardCompleted;
-  const { colors } = useAppTheme();
+  const { tokens } = useAppTheme();
   const [currentPage, setCurrentPage] = useState(0);
   const canExportHealth = useCanExportHealth();
 
@@ -120,19 +121,26 @@ export function WelcomeWizard() {
   const renderCrashReportsPage = () => (
     <WizardPage>
       <View style={styles.headerSection}>
-        <Text variant="headlineMedium" style={styles.pageTitle}>
+        <SurfaceText
+          font="text-2xl"
+          weight="600"
+          accessibilityRole="header"
+          style={[styles.pageTitle, { color: tokens.ink }]}
+        >
           {t('onboarding.welcome.title')}
-        </Text>
-        <Text variant="bodyLarge" style={styles.pageSubtitle}>
+        </SurfaceText>
+        <SurfaceText font="text-base" style={[styles.pageSubtitle, { color: tokens.muted }]}>
           {t('onboarding.welcome.subtitle')}
-        </Text>
+        </SurfaceText>
       </View>
 
       <View style={styles.settingsSection}>
-        <Text variant="titleMedium">{t('onboarding.open_source.title')}</Text>
-        <Text variant="bodyMedium" style={styles.sectionDescription}>
+        <SurfaceText font="text-base" weight="600" style={{ color: tokens.ink }}>
+          {t('onboarding.open_source.title')}
+        </SurfaceText>
+        <SurfaceText font="text-sm" style={{ color: tokens.muted }}>
           {t('onboarding.open_source.body')}
-        </Text>
+        </SurfaceText>
         <SegmentedGroup>
           <SegmentListFormElement
             label={t('onboarding.open_source.button')}
@@ -154,12 +162,17 @@ export function WelcomeWizard() {
   const renderLocalizationPage = () => (
     <WizardPage>
       <View style={styles.headerSection}>
-        <Text variant="headlineMedium" style={styles.pageTitle}>
+        <SurfaceText
+          font="text-2xl"
+          weight="600"
+          accessibilityRole="header"
+          style={[styles.pageTitle, { color: tokens.ink }]}
+        >
           {t('settings.localisation.title')}
-        </Text>
-        <Text variant="bodyLarge" style={styles.pageSubtitle}>
+        </SurfaceText>
+        <SurfaceText font="text-base" style={[styles.pageSubtitle, { color: tokens.muted }]}>
           {t('settings.localisation.subtitle')}
-        </Text>
+        </SurfaceText>
       </View>
 
       <View style={styles.settingsSection}>
@@ -203,16 +216,23 @@ export function WelcomeWizard() {
   const renderNotificationsAndFeedPage = () => (
     <WizardPage>
       <View style={styles.headerSection}>
-        <Text variant="headlineMedium" style={styles.pageTitle}>
+        <SurfaceText
+          font="text-2xl"
+          weight="600"
+          accessibilityRole="header"
+          style={[styles.pageTitle, { color: tokens.ink }]}
+        >
           {t('onboarding.notifications_and_feed.title')}
-        </Text>
-        <Text variant="bodyLarge" style={styles.pageSubtitle}>
+        </SurfaceText>
+        <SurfaceText font="text-base" style={[styles.pageSubtitle, { color: tokens.muted }]}>
           {t('onboarding.notifications_and_feed.subtitle')}
-        </Text>
+        </SurfaceText>
       </View>
 
       <View style={styles.settingsSection}>
-        <Text variant="titleMedium">{t('settings.notifications.title')}</Text>
+        <SurfaceText font="text-base" weight="600" style={{ color: tokens.ink }}>
+          {t('settings.notifications.title')}
+        </SurfaceText>
         <SegmentedGroup>
           <SegmentedListSwitch
             label={t('rest.notifications.title')}
@@ -223,9 +243,9 @@ export function WelcomeWizard() {
           />
         </SegmentedGroup>
 
-        <Text variant="titleMedium" style={styles.topSpacing}>
+        <SurfaceText font="text-base" weight="600" style={[styles.topSpacing, { color: tokens.ink }]}>
           {t('onboarding.workout.title')}
-        </Text>
+        </SurfaceText>
         <SegmentedGroup>
           <SegmentedListSwitch
             label={t('workout.log_rpe.label')}
@@ -236,9 +256,9 @@ export function WelcomeWizard() {
           />
         </SegmentedGroup>
 
-        <Text variant="titleMedium" style={styles.topSpacing}>
+        <SurfaceText font="text-base" weight="600" style={[styles.topSpacing, { color: tokens.ink }]}>
           {t('feed.feed.title')}
-        </Text>
+        </SurfaceText>
         <SegmentedGroup>
           <SegmentedListSwitch
             label={t('feed.show_feed.label')}
@@ -255,28 +275,31 @@ export function WelcomeWizard() {
 
   return (
     !welcomeWizardCompleted && (
-      <Portal>
-        <SafeAreaView style={{ flex: 1, backgroundColor: colors.surface }}>
-          <View style={[styles.container]}>
-            <Pager fill page={currentPage} onPageChange={setCurrentPage}>
-              {renderCrashReportsPage()}
-              {renderLocalizationPage()}
-              {renderNotificationsAndFeedPage()}
-            </Pager>
+      // A modal of its own, so the first run covers the tab bar as well as Home.
+      <Modal visible animationType="none" statusBarTranslucent navigationBarTranslucent onRequestClose={() => {}}>
+        <GestureHandlerRootView style={{ flex: 1 }}>
+          <SafeAreaView style={{ flex: 1, backgroundColor: tokens.bg }}>
+            <View style={[styles.container]}>
+              <Pager fill page={currentPage} onPageChange={setCurrentPage}>
+                {renderCrashReportsPage()}
+                {renderLocalizationPage()}
+                {renderNotificationsAndFeedPage()}
+              </Pager>
 
-            <View style={styles.footer}>
-              <View style={styles.buttonRow}>
-                <Button mode="text" onPress={handlePrevious} disabled={currentPage === 0} style={styles.button}>
-                  {t('generic.previous.button')}
-                </Button>
-                <Button mode="contained" onPress={() => void handleNext()} style={styles.button}>
-                  {currentPage === totalPages - 1 ? t('onboarding.get_started.button') : t('generic.next.button')}
-                </Button>
+              <View style={styles.footer}>
+                <View style={styles.buttonRow}>
+                  <Button mode="text" onPress={handlePrevious} disabled={currentPage === 0} style={styles.button}>
+                    {t('generic.previous.button')}
+                  </Button>
+                  <Button mode="contained" onPress={() => void handleNext()} style={styles.button}>
+                    {currentPage === totalPages - 1 ? t('onboarding.get_started.button') : t('generic.next.button')}
+                  </Button>
+                </View>
               </View>
             </View>
-          </View>
-        </SafeAreaView>
-      </Portal>
+          </SafeAreaView>
+        </GestureHandlerRootView>
+      </Modal>
     )
   );
 }
@@ -302,14 +325,10 @@ const styles = StyleSheet.create({
   },
   pageSubtitle: {
     textAlign: 'center',
-    opacity: 0.7,
   },
   settingsSection: {
     paddingHorizontal: spacing.pageHorizontalMargin,
     gap: spacing[4],
-  },
-  sectionDescription: {
-    opacity: 0.7,
   },
   topSpacing: {
     marginTop: spacing[6],

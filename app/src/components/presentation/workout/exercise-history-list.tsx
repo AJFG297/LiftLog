@@ -1,3 +1,4 @@
+import { Divider } from '@/components/presentation/foundation/divider';
 import EmptyInfo from '@/components/presentation/foundation/empty-info';
 import { SurfaceText } from '@/components/presentation/foundation/surface-text';
 import { PotentialSetDisplay } from '@/components/presentation/workout/weighted/potential-set-display';
@@ -14,7 +15,6 @@ import { localeFormatBigNumber } from '@/utils/locale-bignumber';
 import { T, useTranslate } from '@tolgee/react';
 import { LegendList } from '@legendapp/list';
 import { StyleProp, View, ViewStyle } from 'react-native';
-import { Divider } from 'react-native-paper';
 import { match, P } from 'ts-pattern';
 
 export function ExerciseHistoryList(props: {

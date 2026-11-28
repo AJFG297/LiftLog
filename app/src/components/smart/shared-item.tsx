@@ -4,13 +4,12 @@ import SessionSummary from '@/components/presentation/summary/session-summary';
 import SessionSummaryTitle from '@/components/presentation/summary/session-summary-title';
 import SplitCardControl from '@/components/presentation/foundation/split-card-control';
 import { SurfaceText } from '@/components/presentation/foundation/surface-text';
-import { spacing } from '@/hooks/useAppTheme';
+import { spacing, useAppTheme } from '@/hooks/useAppTheme';
 import { SharedItem, SharedProgramBlueprint, SharedSession } from '@/models/feed-models';
 import { addProgramSession, linkPlanExercises, savePlan } from '@/store/program';
 import { showSnackbar } from '@/store/app';
 import { T } from '@tolgee/react';
 import { Animated, View } from 'react-native';
-import { Card, Text } from 'react-native-paper';
 import Button from '@/components/presentation/foundation/button';
 import { useDispatch } from 'react-redux';
 import { uuid } from '@/utils/uuid';
@@ -33,6 +32,7 @@ function SharedProgramBlueprintContent({ sharedItem }: { sharedItem: SharedProgr
   const dispatch = useDispatch();
   const preferredWeightUnit = usePreferredWeightUnit();
   const goToRoutines = useGoToRoutines();
+  const { tokens } = useAppTheme();
 
   // Convert session blueprints to sessions for display
   const sessions = program.sessions.map((sessionBlueprint) =>
@@ -73,10 +73,12 @@ function SharedProgramBlueprintContent({ sharedItem }: { sharedItem: SharedProgr
           }}
         >
           <View style={{ flex: 1 }}>
-            <Text variant="titleLarge">{program.name}</Text>
-            <Text variant="bodyMedium" style={{ opacity: 0.7 }}>
+            <SurfaceText font="text-xl" weight="600">
+              {program.name}
+            </SurfaceText>
+            <SurfaceText font="text-sm" style={{ color: tokens.muted }}>
               {program.sessions.length} {program.sessions.length === 1 ? 'workout' : 'workouts'}
-            </Text>
+            </SurfaceText>
           </View>
           <Button mode="contained" icon="save" style={{ alignSelf: 'center' }} onPress={handleSave}>
             <T keyName="generic.save.button" />
@@ -85,19 +87,17 @@ function SharedProgramBlueprintContent({ sharedItem }: { sharedItem: SharedProgr
       </View>
 
       <View style={{ flex: 1, gap: spacing[2] }}>
-        <Text variant="titleMedium">
+        <SurfaceText font="text-base" weight="600">
           <T keyName="workout.all.title" />
-        </Text>
+        </SurfaceText>
         <CardList
           cardType="contained"
           items={sessions}
           renderItemContent={(session) => (
-            <Card.Content>
-              <SplitCardControl
-                titleContent={<SessionSummaryTitle session={session} />}
-                mainContent={<SessionSummary session={session} />}
-              />
-            </Card.Content>
+            <SplitCardControl
+              titleContent={<SessionSummaryTitle session={session} />}
+              mainContent={<SessionSummary session={session} />}
+            />
           )}
           keySelector={(session) => session.id}
           emptyTemplate={

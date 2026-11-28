@@ -1,7 +1,8 @@
 import { localeFormatBigNumber, localeParseBigNumber } from '@/utils/locale-bignumber';
 import React, { useState, useEffect } from 'react';
 import { TextStyle } from 'react-native';
-import { TextInput, TextInputProps } from 'react-native-paper';
+import { TextField, TextFieldProps } from '@/components/presentation/foundation/text-field';
+import { splitTextStyle } from '@/components/presentation/foundation/editors/split-text-style';
 import { numberStyle } from '@/hooks/useAppTheme';
 import BigNumber from 'bignumber.js';
 
@@ -9,12 +10,14 @@ interface DecimalEditorProps {
   value: BigNumber;
   onChange: (val: BigNumber) => void;
   label?: string;
+  /** Text properties (colour, alignment) style the number; the rest style the field's box. */
   style?: TextStyle;
   testID?: string;
 }
 
-export function DecimalEditor(props: DecimalEditorProps & Partial<Omit<TextInputProps, keyof DecimalEditorProps>>) {
+export function DecimalEditor(props: DecimalEditorProps & Partial<Omit<TextFieldProps, keyof DecimalEditorProps>>) {
   const { value, onChange, testID, label, style, contentStyle, ...rest } = props;
+  const { boxStyle, textStyle } = splitTextStyle(style);
   const [text, setText] = useState(localeFormatBigNumber(props.value) || '-');
   const [editorValue, setEditorValue] = useState(value);
 
@@ -40,7 +43,7 @@ export function DecimalEditor(props: DecimalEditorProps & Partial<Omit<TextInput
     }
   }, [value, editorValue]);
   return (
-    <TextInput
+    <TextField
       testID={testID}
       value={text}
       inputMode={'decimal'}
@@ -50,9 +53,8 @@ export function DecimalEditor(props: DecimalEditorProps & Partial<Omit<TextInput
       submitBehavior="blurAndSubmit"
       returnKeyType="done"
       selectTextOnFocus
-      style={[style]}
-      // Paper applies a font family only through contentStyle; `style` styles the container.
-      contentStyle={[numberStyle, contentStyle]}
+      style={boxStyle}
+      contentStyle={[numberStyle, textStyle, contentStyle]}
       onBlur={() => {
         if (text === '') {
           setText('0');

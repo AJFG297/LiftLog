@@ -2,7 +2,7 @@ import FullHeightScrollView from '@/components/layout/full-height-scroll-view';
 import LimitedHtml from '@/components/presentation/foundation/limited-html';
 import { Remote } from '@/components/presentation/foundation/remote';
 import { SurfaceText } from '@/components/presentation/foundation/surface-text';
-import { spacing } from '@/hooks/useAppTheme';
+import { spacing, useAppTheme } from '@/hooks/useAppTheme';
 import { PendingFeedUser } from '@/models/feed-models';
 import { RemoteData } from '@/models/remote';
 import { useAppSelector } from '@/store';
@@ -11,8 +11,9 @@ import { useTranslate } from '@tolgee/react';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect } from 'react';
 import { View } from 'react-native';
-import { Card, Icon } from 'react-native-paper';
 import Button from '@/components/presentation/foundation/button';
+import { Card } from '@/components/presentation/foundation/card';
+import Icon from '@/components/presentation/foundation/icon';
 import { useDispatch } from 'react-redux';
 
 export default function FeedSharePage() {
@@ -23,6 +24,7 @@ export default function FeedSharePage() {
   }>();
   const dispatch = useDispatch();
   const { back } = useRouter();
+  const { tokens } = useAppTheme();
 
   const fetchUser = useCallback(() => {
     if (!id) {
@@ -57,33 +59,27 @@ export default function FeedSharePage() {
         value={sharedProfileRemote}
         success={(sharedProfile) => (
           <View style={{ padding: spacing.pageHorizontalMargin }}>
-            <Card mode="contained">
-              <Card.Title
-                left={({ size }) => <Icon source={'personFill'} size={size} />}
-                title={t('feed.profile_share_request.title')}
-                titleVariant="headlineSmall"
-              />
-              <Card.Content style={{ gap: spacing[4] }}>
-                <SurfaceText style={{ textAlign: 'center' }}>
-                  <LimitedHtml
-                    value={t('feed.user_wants_to_share_profile.message', {
-                      user: sharedProfile.name || 'Anonymous user',
-                    })}
-                  />
+            <Card style={{ gap: spacing[4] }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[3] }}>
+                <Icon source={'personFill'} size={28} />
+                <SurfaceText font="text-2xl" weight="600" style={{ flexShrink: 1 }}>
+                  {t('feed.profile_share_request.title')}
                 </SurfaceText>
+              </View>
+              <SurfaceText style={{ textAlign: 'center' }}>
+                <LimitedHtml
+                  value={t('feed.user_wants_to_share_profile.message', {
+                    user: sharedProfile.name || 'Anonymous user',
+                  })}
+                />
+              </SurfaceText>
 
-                <SurfaceText style={{ textAlign: 'center' }} color="onSurfaceVariant">
-                  {t('feed.accept_to_follow.explanation')}
-                </SurfaceText>
-              </Card.Content>
+              <SurfaceText style={{ textAlign: 'center', color: tokens.muted }}>
+                {t('feed.accept_to_follow.explanation')}
+              </SurfaceText>
 
-              <Card.Actions
-                style={{
-                  justifyContent: 'center',
-                  padding: spacing[4],
-                }}
-              >
-                <Button mode="outlined" onPress={() => back()} style={{ marginRight: spacing[2] }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'center', gap: spacing[2] }}>
+                <Button mode="outlined" onPress={() => back()}>
                   {t('generic.cancel.button')}
                 </Button>
                 <Button
@@ -94,7 +90,7 @@ export default function FeedSharePage() {
                 >
                   {t('generic.accept.button')}
                 </Button>
-              </Card.Actions>
+              </View>
             </Card>
           </View>
         )}

@@ -7,8 +7,10 @@ import { T, useTranslate } from '@tolgee/react';
 import SegmentedPicker from '@/components/presentation/foundation/segmented-picker';
 import { useState } from 'react';
 import { View } from 'react-native';
-import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
-import { Chip, Dialog, Portal, Text, TextInput } from 'react-native-paper';
+import { Chip } from '@/components/presentation/foundation/chip';
+import { Dialog } from '@/components/presentation/foundation/dialog';
+import { SurfaceText } from '@/components/presentation/foundation/surface-text';
+import { TextField } from '@/components/presentation/foundation/text-field';
 
 const commonHeaderNames = ['Authorization', 'Proxy-Authorization', 'X-API-Key'];
 
@@ -32,10 +34,10 @@ interface EditingHeader {
 export function BackendHeaderEditor(props: { headers: BackendHeader[]; onChange: (headers: BackendHeader[]) => void }) {
   const { headers, onChange } = props;
   const { t } = useTranslate();
-  const { colors } = useAppTheme();
+  const { tokens } = useAppTheme();
   const [editing, setEditing] = useState<EditingHeader | undefined>(undefined);
 
-  const bodyStyle = { color: colors.onSurfaceVariant, marginBlockStart: spacing[2] };
+  const bodyStyle = { color: tokens.muted, marginBlockStart: spacing[2] };
 
   return (
     <>
@@ -61,9 +63,9 @@ export function BackendHeaderEditor(props: { headers: BackendHeader[]; onChange:
                 />
               }
               line2={
-                <Text variant="bodySmall" numberOfLines={1} style={bodyStyle}>
+                <SurfaceText font="text-xs" numberOfLines={1} style={bodyStyle}>
                   {isSecretHeader(header.name) ? maskedValue : header.value}
-                </Text>
+                </SurfaceText>
               }
             />
           )),
@@ -119,7 +121,7 @@ function HeaderDialog(props: {
     });
 
   const revealIcon = (
-    <TextInput.Icon
+    <IconButton
       icon={revealed ? 'visibilityOff' : 'visibility'}
       accessibilityLabel={t(revealed ? 'generic.hide.button' : 'generic.show.button')}
       onPress={() => setRevealed(!revealed)}
@@ -127,93 +129,80 @@ function HeaderDialog(props: {
   );
 
   return (
-    <Portal>
-      <KeyboardAvoidingView behavior="height" style={{ flex: 1, pointerEvents: 'box-none' }}>
-        <Dialog visible onDismiss={props.onCancel}>
-          <Dialog.Title>
-            {props.isNew ? t('backends.headers.add.title') : t('backends.headers.edit.title')}
-          </Dialog.Title>
-          <Dialog.Content style={{ gap: spacing[2] }}>
-            <TextInput
-              mode="outlined"
-              label={t('backends.header_name.label')}
-              value={name}
-              onChangeText={setName}
-              autoFocus={props.isNew}
+    <Dialog visible onDismiss={props.onCancel}>
+      <Dialog.Title>{props.isNew ? t('backends.headers.add.title') : t('backends.headers.edit.title')}</Dialog.Title>
+      <Dialog.Content style={{ gap: spacing[2] }}>
+        <TextField
+          label={t('backends.header_name.label')}
+          value={name}
+          onChangeText={setName}
+          autoFocus={props.isNew}
+          autoCorrect={false}
+          autoCapitalize="none"
+        />
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing[2] }}>
+          {commonHeaderNames.map((suggestion) => (
+            <Chip
+              key={suggestion}
+              label={suggestion}
+              selected={name.trim().toLowerCase() === suggestion.toLowerCase()}
+              onPress={() => setName(suggestion)}
+            />
+          ))}
+        </View>
+        {takesBasicAuth(name) && (
+          <View style={{ width: '100%' }}>
+            <SegmentedPicker
+              value={scheme}
+              onChange={setScheme}
+              options={[
+                { value: 'basic', label: t('backends.header_scheme.basic') },
+                { value: 'raw', label: t('backends.header_scheme.raw') },
+              ]}
+            />
+          </View>
+        )}
+        {isBasic ? (
+          <>
+            <TextField
+              label={t('backends.basic_auth.username.label')}
+              value={username}
+              onChangeText={setUsername}
               autoCorrect={false}
               autoCapitalize="none"
+              textContentType="username"
             />
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing[2] }}>
-              {commonHeaderNames.map((suggestion) => (
-                <Chip
-                  key={suggestion}
-                  compact
-                  showSelectedCheck={false}
-                  selected={name.trim().toLowerCase() === suggestion.toLowerCase()}
-                  onPress={() => setName(suggestion)}
-                >
-                  {suggestion}
-                </Chip>
-              ))}
-            </View>
-            {takesBasicAuth(name) && (
-              <View style={{ width: '100%' }}>
-                <SegmentedPicker
-                  value={scheme}
-                  onChange={setScheme}
-                  options={[
-                    { value: 'basic', label: t('backends.header_scheme.basic') },
-                    { value: 'raw', label: t('backends.header_scheme.raw') },
-                  ]}
-                />
-              </View>
-            )}
-            {isBasic ? (
-              <>
-                <TextInput
-                  mode="outlined"
-                  label={t('backends.basic_auth.username.label')}
-                  value={username}
-                  onChangeText={setUsername}
-                  autoCorrect={false}
-                  autoCapitalize="none"
-                  textContentType="username"
-                />
-                <TextInput
-                  mode="outlined"
-                  label={t('backends.basic_auth.password.label')}
-                  value={password}
-                  onChangeText={setPassword}
-                  secureTextEntry={!revealed}
-                  autoCorrect={false}
-                  autoCapitalize="none"
-                  textContentType="password"
-                  right={revealIcon}
-                />
-              </>
-            ) : (
-              <TextInput
-                mode="outlined"
-                label={t('backends.header_value.label')}
-                value={value}
-                onChangeText={setValue}
-                secureTextEntry={isSecretHeader(name) && !revealed}
-                autoCorrect={false}
-                autoCapitalize="none"
-                right={isSecretHeader(name) ? revealIcon : undefined}
-              />
-            )}
-          </Dialog.Content>
-          <Dialog.Actions>
-            <Button onPress={props.onCancel}>
-              <T keyName="generic.cancel.button" />
-            </Button>
-            <Button disabled={!canConfirm} onPress={confirm}>
-              <T keyName="generic.save.button" />
-            </Button>
-          </Dialog.Actions>
-        </Dialog>
-      </KeyboardAvoidingView>
-    </Portal>
+            <TextField
+              label={t('backends.basic_auth.password.label')}
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={!revealed}
+              autoCorrect={false}
+              autoCapitalize="none"
+              textContentType="password"
+              right={revealIcon}
+            />
+          </>
+        ) : (
+          <TextField
+            label={t('backends.header_value.label')}
+            value={value}
+            onChangeText={setValue}
+            secureTextEntry={isSecretHeader(name) && !revealed}
+            autoCorrect={false}
+            autoCapitalize="none"
+            right={isSecretHeader(name) ? revealIcon : undefined}
+          />
+        )}
+      </Dialog.Content>
+      <Dialog.Actions>
+        <Button onPress={props.onCancel}>
+          <T keyName="generic.cancel.button" />
+        </Button>
+        <Button disabled={!canConfirm} onPress={confirm}>
+          <T keyName="generic.save.button" />
+        </Button>
+      </Dialog.Actions>
+    </Dialog>
   );
 }
