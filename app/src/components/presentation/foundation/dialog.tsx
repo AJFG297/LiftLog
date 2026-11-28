@@ -2,6 +2,7 @@ import { SurfaceText } from '@/components/presentation/foundation/surface-text';
 import { spacing, useAppTheme } from '@/hooks/useAppTheme';
 import { ReactNode } from 'react';
 import { KeyboardAvoidingView, Modal, Platform, Pressable, StyleProp, View, ViewStyle } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 interface DialogProps {
   visible: boolean;
@@ -33,38 +34,42 @@ function DialogRoot({ visible, onDismiss, dismissable = true, children, style, t
       navigationBarTranslucent
       onRequestClose={dismiss}
     >
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={{ flex: 1, justifyContent: 'center', padding: spacing[6] }}
-      >
-        <Pressable
-          style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, backgroundColor: 'rgba(0,0,0,0.45)' }}
-          onPress={dismiss}
-          accessibilityRole="button"
-          accessible={dismissable}
-          importantForAccessibility={dismissable ? 'auto' : 'no-hide-descendants'}
-        />
-        <View
-          testID={testID}
-          accessibilityViewIsModal
-          style={[
-            {
-              alignSelf: 'center',
-              width: '100%',
-              maxWidth: 560,
-              maxHeight: '90%',
-              backgroundColor: tokens.card,
-              borderRadius: 24,
-              borderWidth: 1,
-              borderColor: tokens.line,
-              paddingVertical: spacing[6],
-            },
-            style,
-          ]}
+      {/* An Android modal is its own native root, outside the app's gesture root, so the gesture-handler
+          buttons inside it need one of their own. */}
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={{ flex: 1, justifyContent: 'center', padding: spacing[6] }}
         >
-          {children}
-        </View>
-      </KeyboardAvoidingView>
+          <Pressable
+            style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, backgroundColor: 'rgba(0,0,0,0.45)' }}
+            onPress={dismiss}
+            accessibilityRole="button"
+            accessible={dismissable}
+            importantForAccessibility={dismissable ? 'auto' : 'no-hide-descendants'}
+          />
+          <View
+            testID={testID}
+            accessibilityViewIsModal
+            style={[
+              {
+                alignSelf: 'center',
+                width: '100%',
+                maxWidth: 560,
+                maxHeight: '90%',
+                backgroundColor: tokens.card,
+                borderRadius: 24,
+                borderWidth: 1,
+                borderColor: tokens.line,
+                paddingVertical: spacing[6],
+              },
+              style,
+            ]}
+          >
+            {children}
+          </View>
+        </KeyboardAvoidingView>
+      </GestureHandlerRootView>
     </Modal>
   );
 }

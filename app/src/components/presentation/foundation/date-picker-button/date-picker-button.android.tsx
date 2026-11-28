@@ -18,9 +18,14 @@ export function DatePickerButton({ value, onChange, accessibilityLabel }: DatePi
           <DatePickerDialog
             // Compose reads the date in UTC, so pass the local calendar day at UTC midnight.
             initialDate={new Date(Date.UTC(value.getFullYear(), value.getMonth(), value.getDate())).toISOString()}
+            // The field beside the button already takes typed dates, so the dialog only offers the calendar.
+            showVariantToggle={false}
             onDateSelected={(date) => {
               setOpen(false);
-              onChange(new Date(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+              // Confirming with no day picked reports null, which arrives as the epoch.
+              if (date && !Number.isNaN(date.getTime()) && date.getTime() !== 0) {
+                onChange(new Date(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+              }
             }}
             onDismissRequest={() => setOpen(false)}
           />

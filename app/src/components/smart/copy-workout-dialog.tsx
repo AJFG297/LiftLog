@@ -5,7 +5,6 @@ import { showSnackbar } from '@/store/app';
 import { addProgramSession, selectAllPrograms } from '@/store/program';
 import { T, useTranslate } from '@tolgee/react';
 import { useState } from 'react';
-// RN's own list: a gesture-handler one needs its own root view to scroll inside the dialog's modal.
 import { FlatList, Pressable, View } from 'react-native';
 import { Dialog } from '@/components/presentation/foundation/dialog';
 import { RadioMark } from '@/components/presentation/foundation/radio-mark';
