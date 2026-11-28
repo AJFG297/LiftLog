@@ -10,7 +10,7 @@ card's summary (the summary is the button, so the card's own buttons stay reacha
 
 - **Header.** A routine swatch and the program day ("PPL · Day 1"), the workout's name, and the date with the time
   range from the first logged set to the last, saying a shared AM or PM once (`formatTimeRange`). The program day is the routine's position in the active program,
-  matched by name, and is left out when the routine isn't in it. Routines have no colour of their own yet, so the
+  matched by the routine the workout was started from, then by name, and is left out when the routine isn't in it. Routines have no colour of their own yet, so the
   swatch is the accent, as on the canvas.
 - **Stats row.** Duration, volume in the preferred unit, working sets (warm-ups left out), and PRs. The figures come
   from `models/workout-summary.ts` and `sessionRecords`, the same as the workout summary, so the two screens agree.

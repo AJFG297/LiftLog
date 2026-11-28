@@ -13,10 +13,17 @@ import { useFormatDate } from '@/hooks/useFormatDate';
 import { spacing, useAppTheme } from '@/hooks/useAppTheme';
 import { useStartWorkoutWithConfirmation } from '@/hooks/useStartWorkoutWithConfirmation';
 import { ProgramBlueprint, SessionBlueprint } from '@/models/blueprint-models';
+import { routineKey } from '@/models/routine-identity';
 import { BuiltInPrograms, unsavedBuiltInPrograms } from '@/models/built-in-programs';
 import { Session } from '@/models/session-models';
 import { useAppSelector } from '@/store';
-import { fetchUpcomingSessions, linkPlanExercises, savePlan, selectAllPrograms } from '@/store/program';
+import {
+  fetchUpcomingSessions,
+  linkPlanExercises,
+  savePlan,
+  selectAllPrograms,
+  selectLiveRoutineIds,
+} from '@/store/program';
 import { setPlansSortOrder } from '@/store/settings';
 import { selectLatestExercises } from '@/store/stored-sessions';
 import { listDep, useWorkoutQuery } from '@/hooks/useWorkoutQuery';
@@ -62,10 +69,11 @@ export function RoutinesScreen({ focusProgramId }: { focusProgramId?: string }) 
     dispatch(fetchUpcomingSessions());
   }, [active, dispatch]);
 
-  const routineNames = active ? active.sessions.map((routine) => routine.name) : [];
+  const routineRefs = active ? active.sessions.map((routine) => ({ id: routine.id, name: routine.name })) : [];
+  const liveRoutineIds = useAppSelector(selectLiveRoutineIds);
   const routineHistory = useWorkoutQuery(
-    (repository) => repository.routineHistory(routineNames),
-    [listDep(routineNames)],
+    (repository) => repository.routineHistory(routineRefs, liveRoutineIds),
+    [listDep(routineRefs.map((routine) => `${routine.id ?? ''}\u0001${routine.name}`)), listDep(liveRoutineIds)],
   );
   const lastDone = routineHistory?.lastDone ?? new Map<string, LocalDate>();
   const nextSession = upcoming.isSuccess() ? upcoming.data[0] : undefined;
@@ -172,7 +180,7 @@ export function RoutinesScreen({ focusProgramId }: { focusProgramId?: string }) 
                 key={`${index}-${routine.name}`}
                 routine={routine}
                 index={index}
-                lastDone={lastDone.get(routine.name)}
+                lastDone={lastDone.get(routineKey(routine))}
                 onEdit={() => router.push(routineEditorHref(activePlanId, index))}
                 onStart={() => startRoutine(routine)}
               />
@@ -341,7 +349,7 @@ function ActiveProgramCard(props: {
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing[2] }}>
           {program.sessions.map((routine, index) => {
             const isNext = index === nextIndex;
-            const done = props.lastDone.get(routine.name);
+            const done = props.lastDone.get(routineKey(routine));
             return (
               <View
                 key={`${index}-${routine.name}`}

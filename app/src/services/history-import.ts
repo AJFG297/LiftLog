@@ -6,6 +6,7 @@ import type { ExerciseDescriptor } from '@/models/exercise-models';
 import { ExerciseResolver, logAmbiguousInDev } from '@/models/exercise-resolver';
 import { applyHistoryImport, reconcileHistoryMerge } from '@/store/history-import-actions';
 import { loadBuiltInExerciseNames } from '@/services/exercise-catalog';
+import { linkRoutineIds } from '@/services/data-migrations/link-routine-ids';
 import { mergeExerciseNames, repointProgram, repointSession } from '@/services/data-migrations/merge-exercise-names';
 import { setLatestExercisesFor } from '@/store/stored-sessions';
 import type { ProgramWriter } from '@/services/program-writer';
@@ -142,6 +143,10 @@ export class HistoryImport {
               progress.stage = 'repair';
             },
           );
+          await linkRoutineIds(services.db, services.workoutRepository, {
+            updatePrograms: false,
+            recordMigration: false,
+          });
           durableStages.push('repair');
           progress.stage = 'flush';
           possibleWrites.push(progress.stage);

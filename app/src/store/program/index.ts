@@ -1,6 +1,7 @@
 import { applyHistoryImport, reconcileHistoryMerge } from '@/store/history-import-actions';
 import { applySessionBlueprintDiff, PlanDiff } from '@/models/blueprint-diff';
-import { ProgramBlueprint, SessionBlueprint } from '@/models/blueprint-models';
+import { ProgramBlueprint, SessionBlueprint, withAssignedRoutineIds } from '@/models/blueprint-models';
+import { findRoutineIndex, liveRoutineIdsOf } from '@/models/routine-identity';
 import { RemoteData } from '@/models/remote';
 import { EmptySession, Session } from '@/models/session-models';
 import { createAction, createSelector, createSlice, isDraft, original, PayloadAction } from '@reduxjs/toolkit';
@@ -11,6 +12,10 @@ export type ProgramSessionLocation = {
   programId: string;
   sessionIndex: number;
 };
+
+function assignRoutineIds(programs: { [programId: string]: ProgramBlueprint }) {
+  return Object.fromEntries(Object.entries(programs).map(([id, program]) => [id, withAssignedRoutineIds(program)]));
+}
 
 function updateProgramIn(
   state: { savedPrograms: { [programId: string]: unknown } },
@@ -101,17 +106,15 @@ const programSlice = createSlice({
     },
 
     applyDiffToPlan(state, action: PayloadAction<PlanDiff>) {
+      const liveRoutineIds = new Set(liveRoutineIdsOf(Object.values(state.savedPrograms)));
       updateProgramIn(state, action.payload.programId, (program) => {
         if (action.payload.type === 'add') {
           return program.withAddedSession(applySessionBlueprintDiff(EmptySession.blueprint, action.payload.diff));
         }
         // The plan can have been edited between the diff being computed and the user confirming it, so
-        // trust the name over the index it was found at.
+        // find the routine again: its id, then its name when unstamped or deleted.
         const { originalSession } = action.payload.diff;
-        const index =
-          program.sessions[action.payload.sessionIndex]?.name === originalSession.name
-            ? action.payload.sessionIndex
-            : program.sessions.findIndex((s) => s.name === originalSession.name);
+        const index = findRoutineIndex(program.sessions, originalSession, liveRoutineIds);
         return program.withSession(index, (session) => applySessionBlueprintDiff(session, action.payload.diff));
       });
     },
@@ -125,7 +128,10 @@ const programSlice = createSlice({
       }>,
     ) {
       updateProgramIn(state, action.payload.programId, (program) =>
-        program.withSession(action.payload.sessionIndex, () => action.payload.sessionBlueprint),
+        program.withSession(action.payload.sessionIndex, (current) => {
+          const next = action.payload.sessionBlueprint;
+          return next.id ? next : next.with({ id: current.id });
+        }),
       );
     },
 
@@ -151,11 +157,13 @@ const programSlice = createSlice({
     },
 
     setSavedPlans(state, action: PayloadAction<{ [programId: string]: ProgramBlueprint }>) {
-      state.savedPrograms = action.payload;
+      state.savedPrograms = assignRoutineIds(action.payload);
     },
 
     upsertSavedPlans(state, action: PayloadAction<{ [programId: string]: ProgramBlueprint }>) {
-      Object.entries(action.payload).forEach(([id, program]) => (state.savedPrograms[id] = program));
+      Object.entries(action.payload).forEach(
+        ([id, program]) => (state.savedPrograms[id] = withAssignedRoutineIds(program)),
+      );
     },
 
     moveSessionBlueprintUpInProgram(
@@ -205,7 +213,7 @@ const programSlice = createSlice({
         programBlueprint: ProgramBlueprint;
       }>,
     ) {
-      state.savedPrograms[action.payload.programId] = action.payload.programBlueprint;
+      state.savedPrograms[action.payload.programId] = withAssignedRoutineIds(action.payload.programBlueprint);
     },
 
     setPendingImport(state, action: PayloadAction<{ programBlueprint: ProgramBlueprint }>) {
@@ -263,6 +271,10 @@ const programSlice = createSlice({
           }))
           .orderBy((x) => x.program.name)
           .toArray(),
+    ),
+    selectLiveRoutineIds: createSelector(
+      (state: ProgramState) => state.savedPrograms,
+      (programMap) => liveRoutineIdsOf(Object.values(programMap)),
     ),
     selectProgram: (state: ProgramState, id: string) => state.savedPrograms[id]!,
     selectPendingImport: (state: ProgramState) => state.pendingImport,
@@ -325,6 +337,7 @@ export const {
   selectActiveProgram,
   selectProgram,
   selectAllPrograms,
+  selectLiveRoutineIds,
   selectNewWorkoutName,
   selectPendingImport,
   selectPendingPlanDiff,

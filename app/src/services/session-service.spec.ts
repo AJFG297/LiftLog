@@ -105,6 +105,38 @@ describe('SessionService.getUpcomingSessions', () => {
     expect(upcoming.map((s) => s.blueprint.name)).toEqual(['Legs', 'Push', 'Pull']);
   });
 
+  it('keeps the plan position after the last completed routine is renamed', async () => {
+    const push = bp('Push').with({ id: 'push' });
+    const pull = bp('Pull').with({ id: 'pull' });
+    const legs = bp('Legs').with({ id: 'legs' });
+    const completed = makeService(makeState()).hydrateSessionFromBlueprint(push, {});
+    const renamedPlan = [push.withName('Press'), pull, legs];
+
+    const upcoming = await collect(makeService(makeState(), [completed]).getUpcomingSessions(renamedPlan, {}), 3);
+
+    expect(upcoming.map((s) => s.blueprint.name)).toEqual(['Pull', 'Legs', 'Press']);
+  });
+
+  it('does not match a workout stamped to a live routine in another program by name', async () => {
+    const activePull = bp('Pull').with({ id: 'active-pull' });
+    const otherPull = bp('Pull').with({ id: 'other-pull' });
+    const plan = [bp('Push').with({ id: 'active-push' }), activePull, bp('Legs').with({ id: 'active-legs' })];
+    const state = {
+      ...makeState(),
+      program: {
+        savedPrograms: {
+          active: { sessions: plan },
+          other: { sessions: [otherPull] },
+        },
+      },
+    } as unknown as RootState;
+    const completed = makeService(state).hydrateSessionFromBlueprint(otherPull, {});
+
+    const upcoming = await collect(makeService(state, [completed]).getUpcomingSessions(plan, {}), 3);
+
+    expect(upcoming.map((s) => s.blueprint.name)).toEqual(['Push', 'Pull', 'Legs']);
+  });
+
   it('restarts the plan when the last session is no longer in the plan', async () => {
     const plan = [bp('Push'), bp('Pull')];
     const stale = makeService(makeState()).hydrateSessionFromBlueprint(bp('Removed'), {});

@@ -8,6 +8,7 @@ import {
 } from '@/models/blueprint-models';
 import { RecordedWeightedExercise } from '@/models/session-models';
 import { makeSession, makeWeightedBlueprint } from '@/models/session-models/__test__/helpers';
+import programReducer, { applyDiffToPlan, savePlan } from '@/store/program';
 import { getPlanDiff } from '@/store/program/helpers';
 
 function programWith(sessions: SessionBlueprint[]) {
@@ -35,6 +36,55 @@ describe('getPlanDiff', () => {
       expect(result.sessionIndex).toBe(0);
       expect(result.diff.hasChanges).toBe(true);
     }
+  });
+
+  it('keeps a renamed routine when the workout still carries its id', () => {
+    const done = makeSession([makeWeightedBlueprint({ name: 'Squat' })]);
+    const routine = done.blueprint.with({ id: 'push', name: 'Press' });
+    const workout = done.with({ blueprint: done.blueprint.with({ id: 'push' }) });
+    const edited = workout.withAddedExercise(
+      RecordedWeightedExercise.empty(makeWeightedBlueprint({ name: 'Bench' }), 'kilograms'),
+    );
+
+    expect(getPlanDiff(programWith([routine]), workout, 'plan-id')).toBeUndefined();
+    const result = getPlanDiff(programWith([routine]), edited, 'plan-id')!;
+    expect(result.type).toBe('diff');
+    expect(result.diff.originalSession.name).toBe('Press');
+    expect(result.diff.sessionChanges.map((change) => change.kind)).not.toContain('sessionName');
+
+    const before = programReducer(
+      undefined,
+      savePlan({ programId: 'plan-id', programBlueprint: programWith([routine]) }),
+    );
+    const after = programReducer(before, applyDiffToPlan(result));
+    expect(after.savedPrograms['plan-id']?.sessions[0]?.name).toBe('Press');
+    expect(after.savedPrograms['plan-id']?.sessions[0]?.id).toBe('push');
+    expect(after.savedPrograms['plan-id']?.sessions[0]?.exercises.map((exercise) => exercise.name)).toEqual([
+      'Squat',
+      'Bench',
+    ]);
+  });
+
+  it('treats a workout stamped to a live routine in another program as a new routine rather than diffing by name', () => {
+    const activeRoutine = makeSession([makeWeightedBlueprint({ name: 'Squat' })]).blueprint.with({
+      id: 'active-push',
+      name: 'Push',
+    });
+    const otherWorkout = makeSession([makeWeightedBlueprint({ name: 'Bench' })]).with({
+      blueprint: makeSession([makeWeightedBlueprint({ name: 'Bench' })]).blueprint.with({
+        id: 'other-push',
+        name: 'Push',
+      }),
+    });
+
+    const result = getPlanDiff(
+      programWith([activeRoutine]),
+      otherWorkout,
+      'plan-id',
+      new Set(['active-push', 'other-push']),
+    )!;
+
+    expect(result.type).toBe('add');
   });
 
   it('returns an add diff when no session shares the name', () => {

@@ -20,6 +20,7 @@ import {
   setProgramSessions,
   setSavedPlanName,
 } from '@/store/program';
+import { uuid } from '@/utils/uuid';
 import { useTranslate } from '@tolgee/react';
 import { Stack, useRouter } from 'expo-router';
 import { useState } from 'react';
@@ -208,7 +209,10 @@ function ProgramRoutineCard(props: {
     dispatch(
       addProgramSession({
         programId,
-        sessionBlueprint: routine.with({ name: t('routines.program_editor.copy_name.label', { name: routine.name }) }),
+        sessionBlueprint: routine.with({
+          id: uuid(),
+          name: t('routines.program_editor.copy_name.label', { name: routine.name }),
+        }),
       }),
     );
     toast.show({
